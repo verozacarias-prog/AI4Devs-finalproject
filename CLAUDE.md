@@ -1,0 +1,98 @@
+# CLAUDE.md — contrato operativo
+
+Índice de restricciones para asistentes de IA que trabajen en este repositorio. No es la
+especificación: la especificación vive en `docs/`.
+
+## 1. Qué es Platita
+
+Asistente financiero personal y familiar que funciona por WhatsApp: el usuario registra gastos,
+ingresos y presupuestos conversando en lenguaje natural y los consulta en un dashboard web.
+Una capa de IA interpreta, categoriza e imputa cada movimiento a una cuenta y a un presupuesto.
+
+Qué **no** es: no es un agregador bancario y no scrapea bancos. No se conecta a home banking,
+no pide credenciales bancarias y no lee saldos de ninguna entidad. Todo dato entra por el canal
+conversacional, por una regla recurrente, o por los emails de aviso que el usuario habilita.
+
+## 2. Idioma
+
+Toda la documentación va en español. El código, las entidades, las columnas de base de datos,
+los endpoints y los nombres de archivo de código van en inglés. Los mensajes al usuario final
+(WhatsApp) van en español.
+
+## 3. Regla de dependencia hexagonal
+
+`domain/` no importa nada de `adapters/` ni de librerías de infraestructura.
+
+Imports prohibidos dentro de `domain/`: `sqlalchemy`, `fastapi`, `httpx`, `psycopg`, el cliente
+de LLM. Los casos de uso hablan solo con puertos.
+
+## 4. Mapa de carpetas
+
+- `backend/app/domain/entities/` — User, Account, Budget, Transaction, Category, RecurringExpense, AdviceDocument.
+- `backend/app/domain/use_cases/` — RegisterTransaction, GetBudgetStatus, CalculateAccountBalance, GenerateProactiveAlert.
+- `backend/app/domain/ports/` — interfaces que el dominio declara y no implementa.
+- `backend/app/adapters/inbound/api/` — routers de FastAPI: traducen HTTP a llamadas a casos de uso.
+- `backend/app/adapters/inbound/whatsapp_webhook/` — traduce payloads de WhatsApp a llamadas a casos de uso.
+- `backend/app/adapters/outbound/postgres/` — repositorios SQLAlchemy que implementan los puertos `*_repository`.
+- `backend/app/adapters/outbound/pgvector/` — implementación de `VectorStorePort`.
+- `backend/app/adapters/outbound/whatsapp_client/` — envío de mensajes salientes de WhatsApp.
+- `backend/app/adapters/outbound/email_reader/` — integración IMAP/Gmail (could-have, fuera del MVP).
+- `backend/app/adapters/outbound/exchange_rate_client/` — proveedor de cotizaciones.
+- `backend/app/adapters/outbound/llm_client/` — cliente de LLM (interpretación y RAG).
+- `backend/tests/` — tests unitarios, de integración y end-to-end.
+- `backend/migrations/` — migraciones de Alembic.
+- `frontend/` — dashboard web.
+- `docs/` — la especificación del proyecto.
+
+## 5. Invariantes que un asistente rompe por defecto
+
+- Nunca usar una cuenta por defecto. Si el mensaje no la menciona, preguntar.
+- Nunca asignar `budget_period_id` sin confirmación explícita del usuario.
+- Los defaults derivables permitidos son solo fecha, moneda y categoría, y los tres van siempre listados en el mensaje de confirmación.
+- Montos en `Decimal`, nunca `float`.
+- La moneda viaja siempre junto al monto, nunca implícita.
+- El saldo de una cuenta se calcula, no se almacena como campo mutable.
+- Una categoría nueva no se crea sin confirmación.
+
+Para cualquier ticket de dominio, leer `docs/reglas-de-dominio.md` completo antes de escribir código.
+
+## 6. Convenciones de código
+
+- Tipado obligatorio en todas las firmas.
+- Pydantic solo en el borde, es decir en los adaptadores. El dominio no conoce Pydantic.
+- Sin lógica de negocio en adaptadores: traducen y delegan.
+- Sin `Any`.
+
+## 7. Seguridad
+
+- Nunca loggear teléfono, monto ni texto del usuario sin enmascarar.
+- Secretos solo por variables de entorno, nunca hardcodeados ni versionados.
+- Verificar la firma del webhook antes de procesar.
+
+## 8. Base de datos
+
+- Todo cambio de esquema va en una migración Alembic nueva.
+- Jamás editar una migración ya aplicada.
+- Los `CHECK` van en la base, no solo en la aplicación.
+
+## 9. Librerías
+
+Antes de proponer una librería nueva, justificar por qué no alcanza lo instalado.
+
+## 10. Especificación contra código
+
+Cuando la especificación y el código difieran, detenete y reportá la divergencia. No asumas que
+la documentación describe la realidad, ni corrijas la documentación para que coincida con el
+código. La divergencia se resuelve decidiendo cuál de los dos lados está mal, y esa decisión es
+humana. Por defecto la especificación manda y lo que se corrige es el código. Para conocer el
+estado real, analizá el código; para decidir qué es correcto, la autoridad es la especificación.
+
+## 11. Comandos de verificación
+
+Se completa en la entrega 2.
+
+## 12. Qué leer antes de qué
+
+- Ticket de dominio → `docs/reglas-de-dominio.md` y `docs/03-modelo-de-datos.md`.
+- Ticket de API → `docs/04-api.md`.
+- Decisión de arquitectura → `docs/adr/`.
