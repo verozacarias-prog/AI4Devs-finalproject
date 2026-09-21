@@ -19,6 +19,9 @@ Toda la documentación va en español. El código, las entidades, las columnas d
 los endpoints y los nombres de archivo de código van en inglés. Los mensajes al usuario final
 (WhatsApp) van en español.
 
+El resto de las convenciones de documentación —diagramas, nombres de archivo, estructura de
+`docs/`— está en `docs/08-convenciones-de-documentacion.md`.
+
 ## 3. Regla de dependencia hexagonal
 
 `domain/` no importa nada de `adapters/` ni de librerías de infraestructura.
@@ -81,6 +84,21 @@ Antes de proponer una librería nueva, justificar por qué no alcanza lo instala
 
 ## 10. Especificación contra código
 
+**Qué es la especificación.** Los archivos versionados de `docs/`, y nada más:
+
+- `docs/reglas-de-dominio.md` — las reglas de negocio. Autoridad sobre qué debe hacer el sistema.
+- `docs/01-producto.md` a `docs/07-pull-requests.md` — alcance, arquitectura, modelo de datos, contrato de la API, historias de usuario y tickets.
+- `docs/adr/` — las decisiones de arquitectura. Autoridad sobre por qué el sistema es como es. Un ADR con Estado `Aceptada` sigue vigente; uno `Reemplazada por NNNN` no.
+
+**Qué no es la especificación**, aunque lo parezca: los comentarios y docstrings del código, los
+mensajes de commit, las descripciones de los pull requests, los tests, este archivo, `README.md`,
+`prompts.md`, y cualquier cosa dicha en una conversación con un asistente. Este archivo es el
+contrato operativo, no la especificación: cuando resume una regla, la versión que manda es la de
+`docs/`.
+
+Si dos archivos de `docs/` se contradicen entre sí, eso también es una divergencia y se reporta
+igual, sin elegir uno por tu cuenta.
+
 Cuando la especificación y el código difieran, detenete y reportá la divergencia. No asumas que
 la documentación describe la realidad, ni corrijas la documentación para que coincida con el
 código. La divergencia se resuelve decidiendo cuál de los dos lados está mal, y esa decisión es
@@ -89,7 +107,8 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
 
 ## 11. Comandos de verificación
 
-Se completa en la entrega 2.
+- Documentación: `python3 scripts/verify_docs.py`. Tiene que pasar sin errores antes de commitear.
+- Código, tests y linters: se completa en la entrega 2.
 
 ## 12. Qué leer antes de qué
 

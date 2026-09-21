@@ -18,7 +18,7 @@ Verónica Noemi Zacarías
 
 **Platita** — asistente financiero personal y familiar por WhatsApp
 
-> *(Nombre de producto en español porque el público objetivo es hispanohablante; el código, el modelo de datos y la API van en inglés — ver nota de idioma en [la sección 2](docs/02-arquitectura.md).)*
+> *(Nombre de producto en español porque el público objetivo es hispanohablante; el código, el modelo de datos y la API van en inglés — ver [nota de idioma](docs/08-convenciones-de-documentacion.md#81-idioma).)*
 
 ### 0.3. Descripción breve del proyecto:
 
@@ -45,6 +45,7 @@ https://github.com/verozacarias-prog/AI4Devs-finalproject
 | [5. Historias de usuario](docs/05-historias-de-usuario.md) | Las cinco historias con sus criterios de aceptación, prioridad y estimación. |
 | [6. Tickets de trabajo](docs/06-tickets.md) | Los tres tickets de backend, frontend y base de datos. |
 | [7. Pull requests](docs/07-pull-requests.md) | Los pull requests de la entrega final. |
+| [8. Convenciones de documentación](docs/08-convenciones-de-documentacion.md) | Idioma, diagramas, nombres de archivo y estructura de `docs/`. |
 | [Reglas de dominio](docs/reglas-de-dominio.md) | Dueño único de las reglas de negocio, agrupadas por tema. |
 
 Las decisiones de arquitectura, una por archivo y en formato Michael Nygard, viven en [`docs/adr/`](docs/adr/).
@@ -52,6 +53,15 @@ Las decisiones de arquitectura, una por archivo y en formato Michael Nygard, viv
 El registro de uso de IA durante el proyecto está en [`prompts.md`](prompts.md), con la [conversación completa de la reestructuración](docs/conversacion-reestructuracion-docs.md) como anexo.
 
 ---
+
+## Verificar la documentación
+
+```
+git config core.hooksPath .githooks   # una vez por clon
+python3 scripts/verify_docs.py
+```
+
+Enlaces, anclas, duplicación de contenido y bloques Mermaid. Detalle en las [convenciones de documentación](docs/08-convenciones-de-documentacion.md#87-verificación-automática).
 
 ## Cómo ejecutar localmente
 

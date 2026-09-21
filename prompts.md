@@ -2,7 +2,7 @@
 >
 > Para cada prompt se indica: herramienta y modelo, qué devolvió, y qué decisión se tomó a partir de eso.
 >
-> La numeración de secciones de este archivo se corresponde con `docs/01-producto.md` a `docs/07-pull-requests.md`. La reestructuración que produjo esa división se registra en su propia sección, sin número, porque tocó todas.
+> La numeración de secciones de este archivo se corresponde con `docs/01-producto.md` a `docs/07-pull-requests.md`, las siete de la plantilla oficial. `docs/08-convenciones-de-documentacion.md` es un agregado del proyecto y no tiene sección propia acá. La reestructuración que produjo esa división se registra en su propia sección, sin número, porque tocó todas.
 
 ---
 

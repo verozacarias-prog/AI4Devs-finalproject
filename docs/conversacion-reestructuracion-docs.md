@@ -206,7 +206,7 @@ y los cinco ADR, y corrió una verificación automatizada de los ocho puntos ped
 
 **Dos errores propios detectados por esa verificación, no por lectura:**
 
-1. Al partir la sección 4 se comió el ` ``` ` de cierre del último bloque YAML, por un
+1. Al partir la sección 4 se comió la marca de cierre del último bloque YAML, por un
    off-by-one en el rango de líneas. Lo detectó el chequeo de fences pares y regeneró el
    archivo desde `git show HEAD:readme.md`.
 2. El heredoc sin comillas del ADR 0004 dejó que el shell interpretara `` `ADVICE_DOCUMENT` ``

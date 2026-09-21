@@ -96,8 +96,8 @@ Ver también: [1.2, gastos recurrentes](01-producto.md#12-características-y-fun
 
 ## 9. Trazabilidad de origen (`source`)
 
-Cada movimiento guarda si se cargó manual (WhatsApp) o automático (gasto recurrente, o email
-cuando se implemente). El valor no es opcional ni inferible después: se fija al crear la fila y
-habilita tanto la auditoría como el chequeo de duplicados del grupo 7.
+El valor de `source` no es opcional ni inferible después: se fija al crear la fila y habilita
+tanto la auditoría como el chequeo de duplicados del grupo 7. Qué registra y para qué, en los
+enlaces de abajo.
 
 Ver: [1.2, trazabilidad de origen](01-producto.md#12-características-y-funcionalidades-principales) · [TRANSACTION en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [HU4](05-historias-de-usuario.md).

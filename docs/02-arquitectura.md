@@ -1,10 +1,8 @@
 # 2. Arquitectura del sistema
 
-> **Nota de idioma:** todo el desarrollo (código, nombres de tablas y campos, endpoints, payloads) va en **inglés**, de acá en adelante en todo el documento. El texto explicativo de esta entrega queda en español porque es el idioma de la documentación del curso; lo que el usuario final lee o le dice al asistente por WhatsApp también sigue en español, porque el público objetivo del producto es hispanohablante.
-
 ### **2.1. Diagrama de arquitectura:**
 
-La arquitectura se documenta siguiendo el **modelo C4 de Simon Brown**, en tres niveles de zoom: contexto (quién usa el sistema y con qué se integra), contenedores (las piezas desplegables) y componentes (el interior del backend). Los diagramas están escritos en **Mermaid** con sintaxis `flowchart` y no con la extensión `C4Context`/`C4Container`: el renderizador Mermaid de GitHub no soporta esa extensión, así que los diagramas no se verían en el repositorio. Usar `flowchart` con subgrafos es la práctica habitual para representar C4 en Markdown de GitHub y mantiene el diagrama versionado junto al código, sin depender de imágenes exportadas que quedan desactualizadas.
+La arquitectura se documenta siguiendo el **modelo C4 de Simon Brown**, en tres niveles de zoom: contexto (quién usa el sistema y con qué se integra), contenedores (las piezas desplegables) y componentes (el interior del backend). Están escritos en Mermaid, según las [convenciones de documentación](08-convenciones-de-documentacion.md#82-diagramas).
 
 #### Nivel 1 — Contexto
 
@@ -113,11 +111,9 @@ flowchart TB
     style PARSE stroke-dasharray: 5 5
 ```
 
-**Patrón elegido:** **arquitectura hexagonal (ports & adapters)**, con el dominio (entidades + casos de uso) aislado de los detalles de infraestructura detrás de puertos, y **backend y frontend desacoplados**, comunicados únicamente por API REST. Justificación:
+**Patrón elegido:** **arquitectura hexagonal (ports & adapters)**, con el dominio (entidades + casos de uso) aislado de los detalles de infraestructura detrás de puertos, y **backend y frontend desacoplados**, comunicados únicamente por API REST.
 
-- **Por qué este patrón y no otro:** con varias integraciones externas (WhatsApp, email, LLM, base vectorial, cotizaciones, REM) que van a cambiar con el tiempo —y donde ya se identificó al menos un reemplazo probable, el motor de vectores—, conviene que el dominio no conozca esos detalles. Cada integración es un adaptador detrás de un puerto; cambiarla es reemplazar el adaptador, no tocar la lógica de negocio. Separar front de back, además, deja la puerta abierta a una futura app móvil que consuma la misma API sin tocar lógica de negocio.
-- **Beneficios:** los casos de uso (registrar un movimiento, evaluar un presupuesto, generar un consejo) se pueden testear sin levantar WhatsApp, un LLM real ni una base de datos — se testean contra los puertos, con dobles de prueba. Es además el mismo patrón que ya se usa en otros proyectos propios en Go, así que la disciplina de diseño ya es conocida, solo cambia el lenguaje.
-- **Sacrificios:** más carpetas e indirección que un CRUD directo controlador-a-base de datos; para un proyecto de este tamaño el volumen de casos de uso reales (los tickets de la [sección 6](06-tickets.md) y los que sigan) justifica el costo. Se mitiga manteniendo los puertos chicos y con una sola responsabilidad cada uno, en vez de una interfaz gigante.
+El contexto que llevó a elegirlo, sus beneficios, los sacrificios asumidos y la alternativa descartada están en el [ADR 0001](adr/0001-arquitectura-hexagonal.md).
 
 ### **2.2. Descripción de componentes principales:**
 
@@ -133,7 +129,7 @@ flowchart TB
 | Base de datos vectorial | pgvector (extensión de PostgreSQL) | Adaptador de salida: embeddings del contenido de consejos financieros |
 | Frontend | Aplicación web responsiva | Dashboard de visualización y configuración de usuario |
 
-*(pgvector sobre PostgreSQL en vez de una base vectorial dedicada, como decisión de arranque — no definitiva. El acceso a la base vectorial se aísla detrás de un puerto propio, de forma que el motor real sea un detalle de infraestructura reemplazable: si en el futuro el volumen de consultas o el tamaño de la base de conocimiento lo justifica, se cambia el adaptador por Pinecone/Qdrant/Weaviate sin tocar el servicio de RAG. Mientras tanto, pgvector con índice HNSW sostiene sin problema volúmenes bastante mayores al de este proyecto — la ventaja de arrancar así no es solo "es más simple ahora", es no pagar el costo operativo de un segundo motor de base de datos hasta que haya una razón real para necesitarlo.)*
+*(pgvector sobre PostgreSQL en vez de una base vectorial dedicada, como decisión de arranque — no definitiva, y aislada detrás de un puerto propio para poder reemplazarla. Ver [ADR 0004](adr/0004-postgres-con-pgvector-como-unico-almacen.md).)*
 
 ### **2.3. Descripción de alto nivel del proyecto y estructura de ficheros**
 
@@ -175,6 +171,7 @@ docs/
   05-historias-de-usuario.md
   06-tickets.md
   07-pull-requests.md
+  08-convenciones-de-documentacion.md
   reglas-de-dominio.md      # dueño único de las reglas de negocio
   adr/                      # decisiones de arquitectura, formato Michael Nygard
 README.md                   # portada, ficha del proyecto e índice
@@ -236,7 +233,7 @@ flowchart TB
 
 ### **2.5. Seguridad**
 
-- **Login sin contraseñas**: el usuario pide acceder al dashboard, recibe un código de un solo uso por WhatsApp (mismo canal ya verificado) y lo intercambia por un JWT de corta duración. Se evita así almacenar y gestionar contraseñas, y se reutiliza la identidad que el sistema ya valida por otro lado. Rate limiting sobre el endpoint de login para evitar fuerza bruta sobre el código.
+- **Login sin contraseñas**: código de un solo uso por WhatsApp intercambiado por un JWT de corta duración, con rate limiting sobre el endpoint de login para evitar fuerza bruta sobre el código. El fundamento de la decisión está en el [ADR 0003](adr/0003-login-por-codigo-unico.md).
 - **Consentimiento explícito y revocable** para el acceso a la casilla de email (configuración de usuario, no un permiso obligatorio del sistema).
 - **Verificación de firma del webhook de WhatsApp** en cada request entrante, para descartar mensajes falsificados.
 - **Nunca loggear en crudo** número de teléfono, montos ni texto de usuario sin enmascarar.

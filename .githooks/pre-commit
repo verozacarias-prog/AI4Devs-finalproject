@@ -1,0 +1,19 @@
+#!/bin/sh
+# Verifica la documentación antes de cada commit.
+# Se activa con:  git config core.hooksPath .githooks
+# Para saltearlo puntualmente:  git commit --no-verify
+
+# Sólo corre si el commit toca documentación.
+if git diff --cached --name-only --diff-filter=ACMR | grep -qE '\.md$|^scripts/verify_docs\.py$'; then
+    root=$(git rev-parse --show-toplevel)
+    if command -v python3 >/dev/null 2>&1; then
+        ( cd "$root" && python3 scripts/verify_docs.py ) || {
+            echo ""
+            echo "Commit cancelado: la verificación de documentación falló."
+            echo "Corregí los errores, o usá 'git commit --no-verify' si sabés lo que hacés."
+            exit 1
+        }
+    else
+        echo "pre-commit: python3 no está disponible, se omite la verificación."
+    fi
+fi
