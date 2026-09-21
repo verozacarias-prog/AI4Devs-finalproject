@@ -27,7 +27,11 @@ En consecuencia, para cualquier diagrama nuevo:
 - Kebab-case, sin acentos ni ñ: rompen en Linux y en CI.
 - Sin espacios.
 - Conservan su nombre canónico, porque las herramientas los buscan así: `README.md`,
-  `CLAUDE.md`, `AGENTS.md`, `LICENSE`, `prompts.md`.
+  `AGENTS.md`, `CLAUDE.md`, `LICENSE`, `prompts.md`.
+- `CLAUDE.md` es un enlace simbólico a `AGENTS.md`, que es la fuente única del contrato para
+  asistentes de IA ([ADR 0007](adr/0007-agents-md-como-fuente-unica.md)). GitHub no renderiza un
+  `.md` que es symlink: muestra el puntero. Por eso **ningún enlace de la documentación apunta a
+  `CLAUDE.md`**; todos apuntan a `AGENTS.md`.
 
 ## 8.4. Estructura de `docs/`
 
@@ -45,6 +49,12 @@ En consecuencia, para cualquier diagrama nuevo:
   asumidos) y Alternativas descartadas.
 - Los ADR son inmutables. Si una decisión queda sin efecto, no se edita su archivo: se crea uno
   nuevo y el Estado del anterior pasa a `Reemplazada por NNNN`.
+- **Única excepción: el mantenimiento de enlaces.** Un ADR se edita para corregir un enlace que
+  quedó roto porque el archivo destino cambió de nombre o de ruta, nunca para revisar la decisión,
+  su contexto o sus consecuencias. La corrección se anota en una línea `Mantenimiento:` en la
+  cabecera del propio ADR, con fecha y motivo. Sin esta excepción, la alternativa era reemplazar
+  un ADR entero por un enlace, que es peor: ensucia el historial de decisiones con reemplazos que
+  no cambian ninguna decisión.
 
 ## 8.6. Un solo dueño por hecho
 
@@ -99,6 +109,6 @@ El hook está versionado en `.githooks/pre-commit`. Se saltea con `git commit --
 
 ## 8.8. Qué tiene autoridad
 
-Los archivos de `docs/` son la especificación del proyecto. `CLAUDE.md` es el contrato
+Los archivos de `docs/` son la especificación del proyecto. `AGENTS.md` es el contrato
 operativo para asistentes de IA y resume algunas de estas reglas: cuando difieran, manda
-`docs/`. El criterio completo está en [`CLAUDE.md`](../CLAUDE.md), sección 10.
+`docs/`. El criterio completo está en [`AGENTS.md`](../AGENTS.md), sección 10.

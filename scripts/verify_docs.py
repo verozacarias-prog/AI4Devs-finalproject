@@ -50,7 +50,9 @@ def read(path):
 def markdown_files():
     out = [README]
     for name in ('CLAUDE.md', 'AGENTS.md', 'prompts.md'):
-        if os.path.exists(name):
+        # CLAUDE.md es un symlink a AGENTS.md (ADR 0007). Si entrara al corpus, el mismo
+        # contenido se compararía contra sí mismo y check_duplicates fallaría en cada commit.
+        if os.path.exists(name) and not os.path.islink(name):
             out.append(name)
     for root, _, names in os.walk(DOCS_DIR):
         for n in sorted(names):

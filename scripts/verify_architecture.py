@@ -41,7 +41,7 @@ FORBIDDEN_IN_DOMAIN = {
     'boto3': 'infraestructura: pertenece a un adaptador de salida',
 }
 
-# CLAUDE.md §6 — Pydantic sólo en el borde
+# AGENTS.md §6 — Pydantic sólo en el borde
 EDGE_ONLY_IN_DOMAIN = {
     'pydantic': 'Pydantic va sólo en el borde (adaptadores), no en el dominio',
 }
@@ -123,7 +123,7 @@ def check_domain_imports():
 
 
 def check_money_types():
-    """CLAUDE.md §5: montos en Decimal, nunca float. Aviso, no error."""
+    """AGENTS.md §5: montos en Decimal, nunca float. Aviso, no error."""
     if not os.path.isdir(DOMAIN_DIR):
         return
     money = re.compile(r'(amount|balance|limit|income|total|price|monto|saldo)', re.I)

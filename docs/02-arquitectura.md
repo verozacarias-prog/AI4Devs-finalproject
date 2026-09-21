@@ -175,10 +175,11 @@ docs/
   reglas-de-dominio.md      # dueño único de las reglas de negocio
   adr/                      # decisiones de arquitectura, formato Michael Nygard
 README.md                   # portada, ficha del proyecto e índice
-CLAUDE.md                   # contrato operativo para asistentes de IA
-AGENTS.md
+AGENTS.md                   # contrato para asistentes de IA (fuente única)
+CLAUDE.md -> AGENTS.md      # symlink, por compatibilidad de herramientas
 LICENSE
 prompts.md
+llms.txt                    # descripción del proyecto para agentes de IA
 ```
 
 `/backend` y `/frontend` son la estructura prevista para la Entrega 2; el resto es la estructura real del repositorio hoy.

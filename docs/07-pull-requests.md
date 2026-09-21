@@ -51,7 +51,7 @@ desde [`features/TEMPLATE/pr.md`](features/TEMPLATE/pr.md).
 ### Documentación
 
 - [ ] `python3 scripts/verify_docs.py` pasa sin errores.
-- [ ] Si el comportamiento cambió respecto de lo documentado, la divergencia se resolvió según [`CLAUDE.md`](../CLAUDE.md) sección 10, no ajustando la documentación al código.
+- [ ] Si el comportamiento cambió respecto de lo documentado, la divergencia se resolvió según [`AGENTS.md`](../AGENTS.md) sección 10, no ajustando la documentación al código.
 
 ## Los tres pull requests
 

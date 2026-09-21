@@ -7,8 +7,8 @@ repositorio, no en la máquina de quien lo escribe.
 
 | Archivo | Qué contiene | Quién lo lee |
 |---|---|---|
-| [`AGENTS.md`](../AGENTS.md) | La regla de dependencia hexagonal y las siete invariantes de dominio | Cualquier asistente, sea cual sea la herramienta |
-| [`CLAUDE.md`](../CLAUDE.md) | El contrato operativo completo: carpetas, convenciones, seguridad, base de datos y qué leer antes de qué | Claude Code |
+| [`AGENTS.md`](../AGENTS.md) | El contrato completo: regla de dependencia hexagonal, siete invariantes de dominio, carpetas, convenciones, seguridad, base de datos y qué leer antes de qué | Cualquier asistente, sea cual sea la herramienta |
+| `CLAUDE.md` | Enlace simbólico a `AGENTS.md`. Existe para que las herramientas que buscan ese nombre encuentren el contrato, no porque tenga contenido propio | Claude Code |
 | [`docs/`](.) | La especificación del proyecto. Manda sobre los dos anteriores | Personas y asistentes |
 
 ## Skill

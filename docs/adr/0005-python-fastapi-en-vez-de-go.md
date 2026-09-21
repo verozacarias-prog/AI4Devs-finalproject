@@ -2,6 +2,9 @@
 
 - Estado: Aceptada
 - Fecha: 2026-09-20
+- Mantenimiento: 2026-09-21 — se corrigió el enlace a `CLAUDE.md`, que pasó a ser un enlace
+  simbólico a `AGENTS.md` ([ADR 0007](0007-agents-md-como-fuente-unica.md)). La decisión, su
+  contexto y sus consecuencias no se modificaron.
 
 ## Contexto
 
@@ -41,7 +44,7 @@ la autora. Razones:
 - Menor rendimiento y mayor consumo de memoria que Go en el runtime.
 - El tipado de Python es opcional y hay que imponerlo por convención y herramientas, no lo
   garantiza el compilador: de ahí la regla de tipado obligatorio y prohibición de `Any` en
-  [CLAUDE.md](../../CLAUDE.md).
+  [AGENTS.md](../../AGENTS.md).
 - Menor velocidad inicial de desarrollo por ser un stack menos frecuente para la autora.
 - Gestión de dependencias y entornos virtuales más frágil que el sistema de módulos de Go.
 

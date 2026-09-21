@@ -25,4 +25,4 @@ Reglas de este comando, sin excepción:
   humana: vos reportás, no resolvés.
 - Si no encontrás ninguna divergencia, decilo en una línea y terminá.
 
-El criterio completo está en `CLAUDE.md`, sección 10.
+El criterio completo está en `AGENTS.md`, sección 10.
