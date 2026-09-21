@@ -22,10 +22,10 @@
 |---|---|
 | `AGENTS.md` — contrato de agentes | **Versionado.** Dueño de la regla de dependencia hexagonal, con la lista negra de imports en `domain/`, y de las siete invariantes que un asistente rompe por defecto. Está en `AGENTS.md` y no en `CLAUDE.md` para que lo lea cualquier herramienta, no sólo Claude Code |
 | `CLAUDE.md` — rules del proyecto | **Versionado.** Contrato operativo completo: idioma, mapa de carpetas, convenciones de código, seguridad, migraciones, método de trabajo y la regla de precedencia entre especificación y código |
-| Comandos personalizados | **Tres, versionados en `.claude/commands/`**: `/domain-rules`, `/ui-states` y `/spec-drift`. Descritos en el [README](README.md#commands) |
+| Skills | **Uno, versionado en `.claude/skills/`**: `domain-rules`. Es skill y no command porque conviene que se dispare solo al empezar un ticket de dominio, sin depender de que la persona se acuerde de invocarlo |
+| Comandos personalizados | **Dos, versionados en `.claude/commands/`**: `/ui-states` y `/spec-drift`. Son verificaciones, y una verificación se corre cuando la persona decide. Descritos en el [README](README.md#commands) |
 | Hooks | **Uno, versionado en `.githooks/pre-commit`**, que corre los dos verificadores antes de cada commit |
-| Skills | No se usaron. Para un proyecto individual, los tres commands cubren lo que haría un skill sin el costo de mantenerlos |
-| Subagentes | No se usaron |
+| Subagentes | Ninguno todavía. Decisión abierta en la [hoja de ruta](docs/hoja-de-ruta.md): rinden cuando hay trabajo para paralelizar o búsquedas grandes que aislar, y las tareas actuales leen uno o dos archivos |
 | MCP | Google Calendar, Google Drive y `claude-mermaid` (previsualización de diagramas). El MCP de GitHub está configurado pero falla al conectar por un error de header de autorización — sigue pendiente de revisión |
 
 La auditoría de repos de referencia (ver §1, Prompt 2) recomendó configurar y versionar las rules antes de empezar a codear, porque **ninguno de los dos proyectos de ejemplo del curso lo había hecho**. `CLAUDE.md` y `AGENTS.md` se escribieron al cierre de la Entrega 1 siguiendo esa recomendación, de modo que la Entrega 2 arranque con el contrato ya puesto. Los commands, el hook y los dos verificadores se sumaron después, a partir del análisis de un tercer repositorio (ver la sección «Adopciones desde un repositorio de referencia»).

@@ -17,7 +17,7 @@ en [`prompts.md`](../prompts.md), no acá.
 | Rellenar un [`ui_contract.md`](features/TEMPLATE/ui_contract.md) por pantalla | Haya pantallas | La plantilla ya está; el contenido sale al escribir cada especificación |
 | Completar `CLAUDE.md` §11 con los comandos de tests y linters | Exista el scaffold | Hoy están los dos verificadores; faltan las herramientas de código |
 | Los tres pull requests de [7. Pull requests](07-pull-requests.md) | Se implemente la primera funcionalidad | Salen solos de los tres [cortes verticales](convenciones-de-desarrollo.md#1-cortes-verticales), no hay que fabricarlos al cierre |
-| Definir hooks y subagentes | Exista el scaffold | Se evaluaron y se aplazaron a la fase de código, donde tienen sentido |
+| Definir subagentes, si hacen falta | Haya tareas que lo justifiquen | Ver la decisión abierta de abajo |
 
 ## Más adelante — aplicación móvil
 
@@ -34,5 +34,11 @@ en [`prompts.md`](../prompts.md), no acá.
   contenido normativo vive en el catálogo de funcionalidades de
   [1.2](01-producto.md#12-características-y-funcionalidades-principales) y no se duplicó. Darles
   texto propio exige escribir contenido nuevo, no reorganizar el existente.
+- **Subagentes: sin decidir.** Un subagente corre en su propio contexto, así que hay que volver a
+  explicarle la tarea entera y devuelve un resumen en vez del trabajo. Eso se paga cuando hay algo
+  para paralelizar o una búsqueda grande que conviene mantener fuera del contexto. Ninguna de las
+  tareas actuales es así —el skill y los dos commands leen uno o dos archivos cada uno—, pero eso
+  puede cambiar cuando exista código. No se descarta: se deja pendiente hasta que aparezca una
+  tarea que lo justifique.
 - El `README.md` superó el límite que tenía de portada e índice para incluir el flujo de trabajo
   con IA. Si vuelve a crecer, esa sección sale a un documento propio.

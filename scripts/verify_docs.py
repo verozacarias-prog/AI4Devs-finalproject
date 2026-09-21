@@ -9,6 +9,7 @@ Run it from the repository root:
 Exits with 1 if any check fails. Warnings never fail the run.
 Conventions enforced here are documented in docs/08-convenciones-de-documentacion.md.
 """
+import glob
 import io
 import itertools
 import os
@@ -21,6 +22,7 @@ README = 'README.md'
 DOCS_DIR = 'docs'
 ADR_DIR = os.path.join(DOCS_DIR, 'adr')
 COMMANDS_DIR = os.path.join('.claude', 'commands')
+SKILLS_DIR = os.path.join('.claude', 'skills')
 CANONICAL = {'README.md', 'CLAUDE.md', 'AGENTS.md', 'LICENSE', 'prompts.md'}
 
 README_SOFT_LIMIT = 130       # ficha, índice y flujo de trabajo con IA
@@ -58,6 +60,8 @@ def markdown_files():
         for n in sorted(os.listdir(COMMANDS_DIR)):
             if n.endswith('.md'):
                 out.append(os.path.join(COMMANDS_DIR, n))
+    for p in sorted(glob.glob(os.path.join(SKILLS_DIR, '*', 'SKILL.md'))):
+        out.append(p)
     return out
 
 
@@ -248,7 +252,41 @@ def check_adrs():
     return found
 
 
-# --- 9. los commands tienen frontmatter válido ------------------------------------
+# --- 9. commands y skills tienen frontmatter válido -------------------------------
+def _check_frontmatter(path, label, required):
+    """Un frontmatter roto no avisa: el command no se carga y el skill pierde todos
+    sus campos, cayendo al nombre del directorio y a la primera línea del cuerpo."""
+    n = os.path.relpath(path)
+    lines = read(path).split('\n')
+    if not lines or lines[0].strip() != '---':
+        fail('%s %s no abre con un delimitador "---" de frontmatter (primera línea: %r)'
+             % (label, n, lines[0][:20] if lines else ''))
+        return
+    try:
+        end = next(i for i in range(1, len(lines)) if lines[i].strip() == '---')
+    except StopIteration:
+        fail('%s %s no cierra el frontmatter' % (label, n))
+        return
+    body = '\n'.join(lines[1:end])
+    for field in required:
+        if not re.search(r'^%s:\s*\S' % field, body, re.M):
+            fail('%s %s no declara "%s" en el frontmatter' % (label, n, field))
+    if not '\n'.join(lines[end + 1:]).strip():
+        fail('%s %s no tiene instrucciones debajo del frontmatter' % (label, n))
+
+
+def check_skills():
+    found = sorted(glob.glob(os.path.join(SKILLS_DIR, '*', 'SKILL.md')))
+    for p in found:
+        _check_frontmatter(p, 'el skill', ('name', 'description'))
+        declared = re.search(r'^name:\s*(\S+)', read(p), re.M)
+        folder = os.path.basename(os.path.dirname(p))
+        if declared and declared.group(1).strip() != folder:
+            fail('el skill %s declara name "%s" pero vive en el directorio "%s"'
+                 % (os.path.relpath(p), declared.group(1).strip(), folder))
+    return found
+
+
 def check_commands():
     if not os.path.isdir(COMMANDS_DIR):
         return []
@@ -288,6 +326,7 @@ def main():
     numbered = check_series()
     adrs = check_adrs()
     commands = check_commands()
+    skills = check_skills()
 
     print('Verificación de documentación')
     print('  archivos markdown revisados : %d' % len(files))
@@ -295,6 +334,7 @@ def main():
     print('  documentos numerados        : %d' % len(numbered))
     print('  ADR                         : %d' % len(adrs))
     print('  commands                    : %d' % len(commands))
+    print('  skills                      : %d' % len(skills))
     print('  %s                   : %d líneas' % (README, readme_lines))
     print('')
 

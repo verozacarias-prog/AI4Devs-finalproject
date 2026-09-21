@@ -1,5 +1,6 @@
 ---
-description: Lista qué reglas de dominio aplican a un ticket antes de escribir código, y qué decisiones exigen confirmación del usuario. Usar al empezar cualquier ticket de dominio.
+name: domain-rules
+description: Determina qué reglas de dominio de Platita aplican a un ticket antes de escribir código, y qué valores exigen confirmación del usuario en vez de resolverse por defecto. Usar al empezar cualquier trabajo que toque movimientos, cuentas, presupuestos, categorías o transacciones pendientes, tanto en el backend como en el asistente de WhatsApp.
 ---
 
 Antes de escribir una línea de código para este ticket, hacé lo siguiente y no avances hasta
