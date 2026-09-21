@@ -30,6 +30,7 @@ nombres de archivo de código están en inglés.
 - [7. Pull requests](https://verozacarias-prog.github.io/AI4Devs-finalproject/07-pull-requests/)
 - [8. Convenciones de documentación](https://verozacarias-prog.github.io/AI4Devs-finalproject/08-convenciones-de-documentacion/)
 - [Convenciones de desarrollo](https://verozacarias-prog.github.io/AI4Devs-finalproject/convenciones-de-desarrollo/)
+- [Documentación viva](https://verozacarias-prog.github.io/AI4Devs-finalproject/documentacion-viva/)
 - [Pull request — FEAT-XXX · <título>](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/template/pr/)
 - [Plan de pruebas — FEAT-XXX · <título>](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/template/qa_plan/)
 - [Especificación — FEAT-XXX · <título>](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/template/spec/)
@@ -47,6 +48,8 @@ nombres de archivo de código están en inglés.
 - [0005 — Python + FastAPI en vez de Go](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0005-python-fastapi-en-vez-de-go/)
 - [0006 — Se mantiene el formato Nygard y la numeración correlativa en los ADR](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0006-formato-nygard-para-los-adr/)
 - [0007 — AGENTS.md como fuente única y CLAUDE.md como enlace simbólico](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0007-agents-md-como-fuente-unica/)
+- [0008 — Astro Starlight como portal de documentación](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0008-astro-starlight-como-portal/)
+- [0009 — Validación de documentación en integración continua](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0009-validacion-de-documentacion-en-ci/)
 
 ## Contrato para asistentes de IA
 

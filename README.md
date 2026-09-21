@@ -50,6 +50,11 @@ https://github.com/verozacarias-prog/AI4Devs-finalproject
 | [Convenciones de desarrollo](docs/convenciones-de-desarrollo.md) | Cortes verticales y los cuatro estados de una pantalla. |
 | [Hoja de ruta](docs/hoja-de-ruta.md) | Qué queda para la entrega 2 y para la app móvil, y por qué. |
 | [Flujo de trabajo con IA](docs/flujo-de-trabajo-con-ia.md) | Contratos, skill, commands, verificadores y hooks. |
+| [Documentación viva](docs/documentacion-viva.md) | Cómo se mantiene sincronizada la documentación: fuente única, portal, `llms.txt` y las tres barreras de validación. |
+
+La documentación también se publica como sitio navegable en
+**<https://verozacarias-prog.github.io/AI4Devs-finalproject/>**, generado desde `docs/` en cada
+integración a `main`.
 
 Las decisiones de arquitectura, una por archivo y en formato Michael Nygard, viven en [`docs/adr/`](docs/adr/).
 
@@ -73,7 +78,9 @@ python3 scripts/verify_docs.py            # enlaces, anclas, duplicación, Merma
 python3 scripts/verify_architecture.py    # regla hexagonal y aislamiento del frontend
 ```
 
-El hook de pre-commit los corre solo. Detalle en las [convenciones de documentación](docs/08-convenciones-de-documentacion.md#87-verificación-automática).
+El hook de pre-commit los corre solo, y GitHub Actions los repite en cada pull request junto con
+el formato del Markdown, los enlaces externos y la construcción del portal. El sistema completo
+está en [documentación viva](docs/documentacion-viva.md).
 
 ## Cómo ejecutar localmente
 

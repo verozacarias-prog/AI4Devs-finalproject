@@ -107,22 +107,17 @@ git config core.hooksPath .githooks
 
 El hook está versionado en `.githooks/pre-commit`. Se saltea con `git commit --no-verify`.
 
-Porque se saltea, y porque depende de que cada clon lo active, las mismas comprobaciones se
-repiten en integración continua, donde no hay forma de evitarlas. El flujo de trabajo
-`.github/workflows/docs-quality.yml` corre en cada pull request y suma dos herramientas que el
-script propio no cubre:
+Las mismas comprobaciones se repiten en `.github/workflows/docs-quality.yml`, junto con dos
+herramientas más y la construcción del portal. El fundamento está en el
+[ADR 0009](adr/0009-validacion-de-documentacion-en-ci.md).
 
 | Herramienta | Qué agrega | Configuración |
 |---|---|---|
-| `markdownlint-cli2` | Formato del Markdown: listas, títulos, bloques de código con lenguaje | `.markdownlint-cli2.yaml` |
-| `lychee` | Enlaces **externos**, que `verify_docs.py` saltea a propósito | `.lychee.toml` |
+| `markdownlint-cli2` | Formato del Markdown | `.markdownlint-cli2.yaml` |
+| `lychee` | Enlaces externos, semanalmente además de en cada pull request | `.lychee.toml` |
 
-`lychee` corre además todos los lunes por `cron`, porque un enlace externo se rompe sin que nadie
-toque la documentación.
-
-Los registros —`prompts.md` y los `conversacion-*.md`— quedan exentos de las dos herramientas.
-Citan texto y URLs ajenos por definición, que es el mismo criterio por el que `verify_docs.py`
-los excluye de la comprobación de texto duplicado.
+Los registros quedan exentos de las dos, igual que ya lo estaban de la comprobación de texto
+duplicado.
 
 ## 8.8. Qué tiene autoridad
 

@@ -288,6 +288,10 @@ La corrección humana que vino después es la más valiosa: la primera lista de 
 | 14 | Ubicar `/spec-drift` después del commit | Encontrar la divergencia ahí implica haber commiteado código incorrecto. Se movió antes del último commit del corte |
 | 15 | Escribir toda una convención sobre «vertical slices» sin definir el término | Se renombró a «corte vertical», por la regla de idioma, y se antepuso la definición |
 | 16 | Nombrar los commands en español (`regla`, `estado`, `divergencia`) | Los nombres de archivo de código van en inglés. Renombrados a `domain-rules`, `ui-states` y `spec-drift` |
+| 17 | Aplicar el módulo 5 tal cual: MADR, `log4brains` y nombres de ADR con fecha | Se contrastó contra `docs/` antes de ejecutar. Los ADR existentes ya tenían lo único que MADR aporta, y la fecha rompía la referencia corta `NNNN` usada en cinco lugares. Descartado en el ADR 0006 |
+| 18 | Recomendar mantener `AGENTS.md` y `CLAUDE.md` separados | La autora priorizó tener una sola fuente por encima de conservar un contrato corto que se lea entero. Se fusionó con enlace simbólico, asumiendo el costo en el ADR 0007 |
+| 19 | Recomendar diferir el portal de documentación a la Entrega 2 | La autora priorizó tener la documentación publicada y visible. Se montó Starlight, asumiendo la entrada de Node antes de decidir el stack del dashboard (ADR 0008) |
+| 20 | Dar por buenas las recetas del módulo 5 sin probarlas | Dos fallaron en el spike: Astro no reescribe los enlaces `.md` que llevan ancla, y un bloque HTML en Markdown termina en la primera línea en blanco, lo que partía los diagramas. Se detectaron construyendo, no leyendo |
 
 El patrón que se repite: la IA tiende a **resolver la ambigüedad por su cuenta** eligiendo un valor por defecto razonable, y a **justificar decisiones técnicas por el esfuerzo** que ahorran en vez de por sus propiedades de diseño. Las dos cosas hay que detectarlas leyendo, porque el resultado siempre suena defendible.
 
@@ -297,9 +301,11 @@ En la fase de reestructuración aparece un patrón distinto, propio de trabajar 
 
 ## Pendiente para las próximas entregas
 
-- ~~Configurar y versionar `CLAUDE.md`~~ — hecho al cierre de la Entrega 1, junto con `AGENTS.md`, tres commands y un hook de pre-commit.
+- ~~Configurar y versionar `CLAUDE.md`~~ — hecho al cierre de la Entrega 1, junto con `AGENTS.md`, tres commands y un hook de pre-commit. `CLAUDE.md` pasó después a ser un enlace simbólico a `AGENTS.md`.
+- ~~Montar el sistema de documentación viva del módulo 5~~ — hecho al cierre de la Entrega 1: portal, integración continua, `llms.txt` y cuatro ADR. Descrito en [documentación viva](docs/documentacion-viva.md).
+- Comprobar en un navegador real que los diagramas del portal se renderizan. Está anotado también en la hoja de ruta.
 - Revisar el MCP de GitHub, que falla al conectar por un error de header de autorización. Quedó desactivado al cierre de la Entrega 1; hay que reautenticarlo antes de usarlo para los pull requests.
 - Registrar los prompts de código, tests y despliegue a medida que se escriben, no al cierre.
-- Verificar la sincronización entre la documentación (`docs/02-arquitectura.md` §2.3, `docs/03-modelo-de-datos.md`, `docs/04-api.md`) y el código real antes de cada entrega, aplicando la regla de precedencia de `CLAUDE.md` §10: la especificación manda, lo que se corrige es el código.
+- Verificar la sincronización entre la documentación (`docs/02-arquitectura.md` §2.3, `docs/03-modelo-de-datos.md`, `docs/04-api.md`) y el código real antes de cada entrega, aplicando la regla de precedencia de `AGENTS.md` §10: la especificación manda, lo que se corrige es el código.
 
 Lo que depende de que exista código —el cliente generado desde el OpenAPI, el verificador del contrato de API, los tokens del Design System, los comandos de tests y linters, y los hooks y subagentes— está en la [hoja de ruta](docs/hoja-de-ruta.md).
