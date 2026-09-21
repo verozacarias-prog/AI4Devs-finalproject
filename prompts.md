@@ -1,8 +1,8 @@
-> **Nota de estructura:** la numeración de secciones de este archivo se corresponde con `docs/01-producto.md` a `docs/07-pull-requests.md`.
-
 > Registro del uso de IA en el desarrollo de **Platita**. Sigue la estructura de la plantilla oficial (secciones 1 a 7, máximo 3 prompts por sección). Cada prompt se transcribe **textual**, tal como se escribió, sin corregir la redacción ni limpiar las dudas — incluidos los que rechazaron o corrigieron una propuesta de la IA, que son los que mejor muestran dónde estuvo el criterio humano.
 >
 > Para cada prompt se indica: herramienta y modelo, qué devolvió, y qué decisión se tomó a partir de eso.
+>
+> La numeración de secciones de este archivo se corresponde con `docs/01-producto.md` a `docs/07-pull-requests.md`. La reestructuración que produjo esa división se registra en su propia sección, sin número, porque tocó todas.
 
 ---
 
@@ -10,12 +10,27 @@
 
 | Fase | Herramienta | Modelo | Para qué |
 |---|---|---|---|
-| Ideación y definición de producto | Claude (claude.ai) | Claude Opus `[confirmar versión exacta]` | Iterar la idea sin generar documentación, discutir alcance y decisiones de producto |
-| Análisis de repositorios de referencia | Claude Code | `[confirmar modelo]` | Auditar la plantilla oficial y dos proyectos de ejemplo del curso, con acceso al código y al historial git local |
-| Documentación técnica (readme.md) | Claude (claude.ai) | Claude Opus `[confirmar versión exacta]` | Redactar y refinar arquitectura, modelo de datos, HU y tickets |
+| Ideación y definición de producto | Claude (claude.ai) | Claude Opus 4.1 | Iterar la idea sin generar documentación, discutir alcance y decisiones de producto |
+| Análisis de repositorios de referencia | Claude Code | Claude Sonnet 4.5 | Auditar la plantilla oficial y dos proyectos de ejemplo del curso, con acceso al código y al historial git local |
+| Documentación técnica (readme.md) | Claude (claude.ai) | Claude Opus 4.1 | Redactar y refinar arquitectura, modelo de datos, HU y tickets |
+| Reestructuración de la documentación | Claude Code | Claude Opus 5, contexto 1M (`claude-opus-5[1m]`) | Partir el readme monolítico en `docs/`, extraer las reglas de dominio, redactar `CLAUDE.md` y los ADR |
 | Código, tests y despliegue | *(pendiente — Entrega 2)* | | |
 
-**Configuración de contexto para la IA:** a la fecha de la Entrega 1 el proyecto todavía no tiene `CLAUDE.md`, subagentes ni hooks versionados en el repositorio. La auditoría de repos de referencia (ver §1, Prompt 2) recomendó configurarlos antes de empezar a codear; queda como tarea previa a la Entrega 2. Los MCP disponibles en el entorno durante esta fase fueron Google Calendar, Google Drive y `claude-mermaid` (previsualización de diagramas). El MCP de GitHub está configurado pero falló al conectar por un error de header de autorización — pendiente de revisión.
+## Skills, subagentes, rules y comandos personalizados
+
+| Recurso | Estado en la Entrega 1 |
+|---|---|
+| `CLAUDE.md` — rules del proyecto | **Versionado.** Contrato operativo para asistentes de IA: regla de idioma, regla de dependencia hexagonal con lista negra de imports en `domain/`, siete invariantes que un asistente rompe por defecto, convenciones de código, seguridad, migraciones, y la regla de precedencia entre especificación y código |
+| `AGENTS.md` | **Versionado.** Tres líneas que remiten a `CLAUDE.md`, para que otros asistentes lo encuentren sin duplicar su contenido |
+| Skills | No se usaron |
+| Subagentes | No se usaron |
+| Hooks | No se configuraron |
+| Comandos personalizados | No se crearon |
+| MCP | Google Calendar, Google Drive y `claude-mermaid` (previsualización de diagramas). El MCP de GitHub está configurado pero falla al conectar por un error de header de autorización — sigue pendiente de revisión |
+
+La auditoría de repos de referencia (ver §1, Prompt 2) recomendó configurar y versionar las rules antes de empezar a codear, porque **ninguno de los dos proyectos de ejemplo del curso lo había hecho**. `CLAUDE.md` y `AGENTS.md` se escribieron al cierre de la Entrega 1 siguiendo esa recomendación, de modo que la Entrega 2 arranque con el contrato ya puesto. Los hooks, skills y subagentes quedan para la fase de código, donde tienen sentido.
+
+Hay un detalle operativo que vale registrar: `CLAUDE.md` estaba siendo ignorado por el `.gitignore` global del entorno de trabajo, así que existía en disco pero no entraba al repositorio. Se detectó al revisar `git status` después de crearlo y se resolvió con `git add -f`.
 
 **Nota de método:** ninguna cifra, métrica ni porcentaje de este proyecto fue generado por IA sin verificación. Esa decisión salió directamente de un hallazgo de la auditoría de repos: los dos proyectos de ejemplo del curso declaraban métricas (cobertura de tests, ROI) que no se correspondían con su código.
 
@@ -202,6 +217,40 @@
 
 ---
 
+## Reestructuración de la documentación
+
+> Fase posterior a la redacción del contenido: el readme monolítico de 760 líneas se partió en `docs/`. Trabajo hecho con **Claude Code sobre Claude Opus 5 (contexto 1M)**, no en claude.ai, porque requería acceso al árbol de archivos, a `git` y a la ejecución de scripts de verificación.
+>
+> La conversación completa está en [`docs/conversacion-reestructuracion-docs.md`](docs/conversacion-reestructuracion-docs.md). Acá van los tres prompts decisivos.
+
+**Prompt 1** — *Claude Code · brief de reestructuración con reglas inviolables*
+
+> "Tu tarea es REESTRUCTURAR la documentación existente. Es un trabajo de extracción y reorganización, NO de redacción de contenido nuevo. [...] NO inventes contenido. Todo el texto de `docs/00-` a `docs/07-` y de `reglas-de-dominio.md` sale del README actual, copiado literal. Si algo te parece incompleto, dejalo como está y reportámelo al final. No lo completes vos. [...] Un solo dueño por hecho. Ningún contenido puede quedar en dos archivos. [...] Mostrame primero el plan [...] Esperá mi aprobación antes de tocar archivos."
+
+*(prompt completo: ~130 líneas con las siete tareas y una lista de verificación de ocho puntos)*
+
+*Qué devolvió y qué se decidió:* el plan previo evitó el problema que más caro sale en este tipo de tarea. Al mapear las referencias cruzadas antes de mover nada, la IA detectó que el Ticket 2 apuntaba a un "endpoint de 6.1" que **nunca existió** —la sección 6 no tiene subsecciones numeradas— y, en vez de corregirlo por su cuenta, lo reportó. La regla de pedir el plan primero también expuso que el fundamento del ADR 0005 no estaba escrito en ninguna parte del readme (ver Prompt 2).
+
+---
+
+**Prompt 2** — *Claude Code · aporte del fundamento que faltaba y corrección de un corte de razonamiento*
+
+> "ADR 0005 — la razón existe, no la dejes pendiente. Escribí el ADR completo con este fundamento: [...]"
+>
+> "Una cosa más antes de arrancar: en tu plan de la Tarea 3, la explicación de por qué las descripciones de entidades de 3.2 se quedan donde están quedó cortada a mitad de frase. El criterio es correcto, pero terminá de explicarlo antes de empezar: es el punto donde más fácil se cuela una duplicación entre 03-modelo-de-datos.md y reglas-de-dominio.md."
+
+*Qué devolvió y qué se decidió:* dos correcciones humanas de naturaleza distinta. La primera **aporta información que la IA no tenía y con razón no inventó**: la elección de Python sobre Go nunca se había justificado por escrito, y el ADR habría quedado con las secciones vacías. La segunda detecta que el asistente había dejado un criterio a medio explicar y exige cerrarlo *antes* de ejecutar, no después — el criterio en cuestión (frase descriptiva se queda en 3.2, frase prescriptiva se muda a reglas de dominio) es exactamente el que evita duplicar contenido entre los dos archivos. Al explicitarlo, el asistente cambió su propio plan: las viñetas del catálogo must/should/could de 1.2 dejaron de mudarse, porque son el entregable calificado del curso.
+
+---
+
+**Prompt 3** — *Claude Code · verificación automatizada como parte del entregable*
+
+> *(de la lista de verificación del Prompt 1)* "Revisá y reportá el resultado de cada punto: 1. Todos los enlaces relativos del README y de los docs resuelven a un archivo que existe. [...] 4. Los bloques Mermaid siguen siendo sintácticamente válidos y están completos. [...] 7. El total de líneas de `docs/` más `README.md` es aproximadamente igual al del README original, más lo nuevo. Si perdiste contenido en el camino, se nota acá."
+
+*Qué devolvió y qué se decidió:* exigir una verificación **ejecutable** en vez de una revisión por lectura fue lo que encontró los errores. El asistente escribió un script que valida los 70 enlaces relativos contra archivo y ancla, busca bloques repetidos entre archivos, cuenta fences de código y compara volumen contra el original. Encontró dos errores propios que una lectura no habría detectado: un bloque YAML sin cerrar por un off-by-one al partir la sección 4, y una palabra borrada por el shell al interpretar backticks dentro de un heredoc. El punto 7 confirmó que las 41 líneas del original ausentes en la estructura nueva eran todas ediciones deliberadas, sin pérdida involuntaria.
+
+---
+
 ## Ajustes humanos sobre el output de la IA — resumen
 
 | # | Qué propuso la IA | Qué se corrigió y por qué |
@@ -214,14 +263,22 @@
 | 6 | Generalizar "no suponer nada" a todos los campos | Exceso opuesto: fecha, moneda y categoría sí tienen default derivable. Se acotó la regla |
 | 7 | Dar por implementado el presupuesto en gastos recurrentes | No estaba. Se detectó al preguntar explícitamente en vez de asumir |
 | 8 | Documentar 14 funcionalidades con 3 historias de usuario | Brecha entre lo prometido y lo comprometido. Se clasificó en must/should/could-have |
+| 9 | Dejar el ADR 0005 con las secciones en `[pendiente de completar]` | Correcto no inventarlo, pero la razón existía sin escribir. La aportó la autora y el ADR se completó |
+| 10 | Separar la ficha del proyecto en un `docs/00-ficha.md` propio | Información que nunca cambia y que el curso busca en la portada. Se eliminó el archivo y la ficha quedó en el README |
+| 11 | Mudar todo el catálogo must/should/could de 1.2 a las reglas de dominio | Es el entregable calificado del curso. Solo se mudó el bloque normativo; el resto se enlaza |
+| 12 | Tratar las viñetas de alcance técnico del Ticket 1 como reglas de dominio en bloque | Seis eran regla, cinco eran tarea de ingeniería. Vaciar el ticket lo habría dejado sin contenido |
 
 El patrón que se repite: la IA tiende a **resolver la ambigüedad por su cuenta** eligiendo un valor por defecto razonable, y a **justificar decisiones técnicas por el esfuerzo** que ahorran en vez de por sus propiedades de diseño. Las dos cosas hay que detectarlas leyendo, porque el resultado siempre suena defendible.
+
+En la fase de reestructuración aparece un patrón distinto, propio de trabajar con la IA sobre archivos en vez de sobre texto en un chat: los errores dejan de ser de criterio y pasan a ser **mecánicos y silenciosos** —un bloque de código sin cerrar, una palabra que se come el shell—. No se detectan leyendo el resultado, porque el archivo sigue pareciendo correcto. Se detectan ejecutando una verificación. De ahí que la lista de comprobaciones vaya dentro del prompt y no después.
 
 ---
 
 ## Pendiente para las próximas entregas
 
-- Configurar y versionar `CLAUDE.md`, hooks y subagentes antes de empezar a codear (recomendación de la auditoría de §1, Prompt 2).
+- ~~Configurar y versionar `CLAUDE.md`~~ — hecho al cierre de la Entrega 1. Faltan los hooks y los subagentes, que se definen en la fase de código.
+- Completar en `CLAUDE.md` la sección 11, «Comandos de verificación», que hoy dice «Se completa en la entrega 2».
 - Revisar el MCP de GitHub, que falla al conectar por un error de header de autorización.
 - Registrar los prompts de código, tests y despliegue a medida que se escriben, no al cierre.
-- Verificar la sincronización entre `readme.md` (§2.3, §3, §4) y el código real antes de cada entrega.
+- Verificar la sincronización entre la documentación (`docs/02-arquitectura.md` §2.3, `docs/03-modelo-de-datos.md`, `docs/04-api.md`) y el código real antes de cada entrega, aplicando la regla de precedencia de `CLAUDE.md` §10: la especificación manda, lo que se corrige es el código.
+- Dar contenido propio a los grupos 6 (multimoneda) y 9 (trazabilidad de origen) de `docs/reglas-de-dominio.md`, que hoy son grupos de enlace: su texto normativo vive en el catálogo de funcionalidades de §1.2 y no se duplicó.
