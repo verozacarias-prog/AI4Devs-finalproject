@@ -1,0 +1,20 @@
+# Toolchain del portal de documentación (site/, Astro + Starlight)
+node_modules/
+dist/
+.astro/
+
+# Contenido del portal generado desde docs/ por site/scripts/sync-docs.mjs.
+# La fuente es docs/; esto se regenera en cada build y no se versiona.
+site/src/content/docs/
+
+# Caché de lychee (verificación de enlaces externos)
+.lycheecache
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Sistema operativo y editores
+.DS_Store
