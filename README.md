@@ -55,14 +55,15 @@ El registro de uso de IA durante el proyecto está en [`prompts.md`](prompts.md)
 
 ---
 
-## Verificar la documentación
+## Verificación
 
 ```
-git config core.hooksPath .githooks   # una vez por clon
-python3 scripts/verify_docs.py
+git config core.hooksPath .githooks       # una vez por clon
+python3 scripts/verify_docs.py            # enlaces, anclas, duplicación, Mermaid
+python3 scripts/verify_architecture.py    # regla hexagonal y aislamiento del frontend
 ```
 
-Enlaces, anclas, duplicación de contenido y bloques Mermaid. Detalle en las [convenciones de documentación](docs/08-convenciones-de-documentacion.md#87-verificación-automática).
+El hook de pre-commit los corre solo. Detalle en las [convenciones de documentación](docs/08-convenciones-de-documentacion.md#87-verificación-automática).
 
 ## Cómo ejecutar localmente
 

@@ -1,19 +1,36 @@
 #!/bin/sh
-# Verifica la documentación antes de cada commit.
+# Verifica documentación y arquitectura antes de cada commit.
 # Se activa con:  git config core.hooksPath .githooks
 # Para saltearlo puntualmente:  git commit --no-verify
 
-# Sólo corre si el commit toca documentación.
-if git diff --cached --name-only --diff-filter=ACMR | grep -qE '\.md$|^scripts/verify_docs\.py$'; then
-    root=$(git rev-parse --show-toplevel)
-    if command -v python3 >/dev/null 2>&1; then
-        ( cd "$root" && python3 scripts/verify_docs.py ) || {
-            echo ""
-            echo "Commit cancelado: la verificación de documentación falló."
-            echo "Corregí los errores, o usá 'git commit --no-verify' si sabés lo que hacés."
-            exit 1
-        }
-    else
-        echo "pre-commit: python3 no está disponible, se omite la verificación."
-    fi
+root=$(git rev-parse --show-toplevel)
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+status=0
+
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "pre-commit: python3 no está disponible, se omiten las verificaciones."
+    exit 0
 fi
+
+run() {
+    ( cd "$root" && python3 "$1" ) || status=1
+}
+
+# Documentación: cuando cambia un .md o el propio verificador.
+if echo "$staged" | grep -qE '\.md$|^scripts/verify_docs\.py$'; then
+    run scripts/verify_docs.py
+fi
+
+# Arquitectura: cuando cambia código de backend/frontend o el propio verificador.
+if echo "$staged" | grep -qE '^(backend|frontend)/|^scripts/verify_architecture\.py$'; then
+    echo ""
+    run scripts/verify_architecture.py
+fi
+
+if [ "$status" -ne 0 ]; then
+    echo ""
+    echo "Commit cancelado: la verificación falló."
+    echo "Corregí los errores, o usá 'git commit --no-verify' si sabés lo que hacés."
+fi
+
+exit "$status"

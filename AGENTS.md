@@ -19,6 +19,9 @@ Backend y frontend están desacoplados y se comunican únicamente por API REST. 
 importa nada de `backend/` ni accede a la base de datos. Fundamento en el
 [ADR 0001](docs/adr/0001-arquitectura-hexagonal.md).
 
+Las dos reglas se verifican con `python3 scripts/verify_architecture.py`, que corre en el hook
+de pre-commit. No son una recomendación: rompen el commit.
+
 ## Invariantes de dominio
 
 - Nunca usar una cuenta por defecto. Si el mensaje no la menciona, preguntar.

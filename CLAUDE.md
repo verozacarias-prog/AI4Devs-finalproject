@@ -100,8 +100,11 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
 
 ## 11. Comandos de verificación
 
-- Documentación: `python3 scripts/verify_docs.py`. Tiene que pasar sin errores antes de commitear.
-- Código, tests y linters: se completa en la entrega 2.
+- Documentación: `python3 scripts/verify_docs.py`.
+- Arquitectura: `python3 scripts/verify_architecture.py`. Valida la regla de dependencia del
+  dominio y el aislamiento del frontend. Tolerante mientras `backend/` y `frontend/` no existan.
+- Los dos tienen que pasar sin errores antes de commitear; el hook de pre-commit los corre solo.
+- Tests y linters: se completa en la entrega 2.
 
 ## 12. Qué leer antes de qué
 
