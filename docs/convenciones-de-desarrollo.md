@@ -79,11 +79,16 @@ Cada funcionalidad tiene su carpeta en `docs/features/FEAT-XXX/`, creada copiand
 | Archivo | Cuándo se escribe | Para qué |
 |---|---|---|
 | `spec.md` | Antes del corte 1 | Alcance, criterios de aceptación, reglas de dominio que aplican y los cuatro estados |
+| `ui_contract.md` | Antes del corte 1, si hay pantalla | Componentes, tokens del Design System, máquina de estados y accesibilidad |
 | `qa_plan.md` | Antes del corte 2 | Camino feliz, casos límite, errores, y un test por invariante en riesgo |
 | `pr.md` | Al cerrar cada corte | Cuerpo del pull request, con el Definition of Done |
 
-Son tres y no siete a propósito: para un proyecto individual, un contrato de UI y un registro de
-riesgos separados son ceremonia. Lo que aportarían ya vive en `spec.md`.
+Son cuatro y no siete a propósito. Se dejó afuera el registro de riesgos, que para un proyecto
+individual es ceremonia: lo que aportaría ya vive en `spec.md`. El contrato de UI **sí** está
+separado, y no por simetría: los tokens y la máquina de estados pertenecen al contrato de la
+pantalla y no a la tecnología que la renderiza, así que la aplicación móvil prevista los
+reutiliza tal cual. Si vivieran dentro de los componentes del dashboard, habría que
+reconstruirlos leyendo código.
 
 La carpeta va sin número, porque la serie de `docs/` está cerrada en 08.
 

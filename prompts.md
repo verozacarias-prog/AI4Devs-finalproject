@@ -316,10 +316,9 @@ En la fase de reestructuración aparece un patrón distinto, propio de trabajar 
 
 ## Pendiente para las próximas entregas
 
-- ~~Configurar y versionar `CLAUDE.md`~~ — hecho al cierre de la Entrega 1. Faltan los hooks y los subagentes, que se definen en la fase de código.
-- Completar en `CLAUDE.md` la sección 11 con los comandos de tests y linters; los dos verificadores de documentación y arquitectura ya están.
-- Sumar un tercer verificador que compare el OpenAPI generado por FastAPI contra el contrato de `docs/04-api.md`, para automatizar la parte de `/spec-drift` que sí es binaria.
-- Revisar el MCP de GitHub, que falla al conectar por un error de header de autorización.
+- ~~Configurar y versionar `CLAUDE.md`~~ — hecho al cierre de la Entrega 1, junto con `AGENTS.md`, tres commands y un hook de pre-commit.
+- Revisar el MCP de GitHub, que falla al conectar por un error de header de autorización. Quedó desactivado al cierre de la Entrega 1; hay que reautenticarlo antes de usarlo para los pull requests.
 - Registrar los prompts de código, tests y despliegue a medida que se escriben, no al cierre.
 - Verificar la sincronización entre la documentación (`docs/02-arquitectura.md` §2.3, `docs/03-modelo-de-datos.md`, `docs/04-api.md`) y el código real antes de cada entrega, aplicando la regla de precedencia de `CLAUDE.md` §10: la especificación manda, lo que se corrige es el código.
-- Dar contenido propio a los grupos 6 (multimoneda) y 9 (trazabilidad de origen) de `docs/reglas-de-dominio.md`, que hoy son grupos de enlace: su texto normativo vive en el catálogo de funcionalidades de §1.2 y no se duplicó.
+
+Lo que depende de que exista código —el cliente generado desde el OpenAPI, el verificador del contrato de API, los tokens del Design System, los comandos de tests y linters, y los hooks y subagentes— está en la [hoja de ruta](docs/hoja-de-ruta.md).
