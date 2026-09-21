@@ -2,7 +2,9 @@
 >
 > Para cada prompt se indica: herramienta y modelo, qué devolvió, y qué decisión se tomó a partir de eso.
 >
-> La numeración de secciones de este archivo se corresponde con `docs/01-producto.md` a `docs/07-pull-requests.md`, las siete de la plantilla oficial. `docs/08-convenciones-de-documentacion.md` es un agregado del proyecto y no tiene sección propia acá. La reestructuración que produjo esa división se registra en su propia sección, sin número, porque tocó todas.
+> La numeración de secciones se corresponde con `docs/01-producto.md` a `docs/07-pull-requests.md`, las siete de la plantilla oficial. Los prompts que produjeron esa división y el resto de la estructura del repositorio están en §2.3, que es donde la plantilla pide la estructura de ficheros.
+>
+> Dos bloques quedan fuera de la numeración porque la consigna los pide aparte: la tabla de herramientas y modelos, acá arriba, y el resumen de ajustes humanos sobre el output de la IA, al final.
 
 ---
 
@@ -16,19 +18,7 @@
 | Reestructuración de la documentación | Claude Code | Claude Opus 5, contexto 1M (`claude-opus-5[1m]`) | Partir el readme monolítico en `docs/`, extraer las reglas de dominio, redactar `CLAUDE.md` y los ADR |
 | Código, tests y despliegue | *(pendiente — Entrega 2)* | | |
 
-## Skills, subagentes, rules y comandos personalizados
-
-| Recurso | Estado en la Entrega 1 |
-|---|---|
-| `AGENTS.md` — contrato de agentes | **Versionado.** Dueño de la regla de dependencia hexagonal, con la lista negra de imports en `domain/`, y de las siete invariantes que un asistente rompe por defecto. Está en `AGENTS.md` y no en `CLAUDE.md` para que lo lea cualquier herramienta, no sólo Claude Code |
-| `CLAUDE.md` — rules del proyecto | **Versionado.** Contrato operativo completo: idioma, mapa de carpetas, convenciones de código, seguridad, migraciones, método de trabajo y la regla de precedencia entre especificación y código |
-| Skills | **Uno, versionado en `.claude/skills/`**: `domain-rules`. Es skill y no command porque conviene que se dispare solo al empezar un ticket de dominio, sin depender de que la persona se acuerde de invocarlo |
-| Comandos personalizados | **Dos, versionados en `.claude/commands/`**: `/ui-states` y `/spec-drift`. Son verificaciones, y una verificación se corre cuando la persona decide. Descritos en el [flujo de trabajo con IA](docs/flujo-de-trabajo-con-ia.md#commands) |
-| Hooks | **Uno, versionado en `.githooks/pre-commit`**, que corre los dos verificadores antes de cada commit |
-| Subagentes | Ninguno todavía. Decisión abierta en la [hoja de ruta](docs/hoja-de-ruta.md): rinden cuando hay trabajo para paralelizar o búsquedas grandes que aislar, y las tareas actuales leen uno o dos archivos |
-| MCP | Google Calendar, Google Drive y `claude-mermaid` (previsualización de diagramas). El MCP de GitHub está configurado pero falla al conectar por un error de header de autorización — sigue pendiente de revisión |
-
-La auditoría de repos de referencia (ver §1, Prompt 2) recomendó configurar y versionar las rules antes de empezar a codear, porque **ninguno de los dos proyectos de ejemplo del curso lo había hecho**. `CLAUDE.md` y `AGENTS.md` se escribieron al cierre de la Entrega 1 siguiendo esa recomendación, de modo que la Entrega 2 arranque con el contrato ya puesto. Los commands, el hook y los dos verificadores se sumaron después, a partir del análisis de un tercer repositorio (ver la sección «Adopciones desde un repositorio de referencia»).
+La auditoría de repos de referencia (ver §1, Prompt 2) recomendó configurar y versionar las rules antes de empezar a codear, porque **ninguno de los dos proyectos de ejemplo del curso lo había hecho**. Esa recomendación se siguió al cierre de la Entrega 1. La configuración resultante —contratos, skill, commands, verificadores y hook— está descrita en [`docs/flujo-de-trabajo-con-ia.md`](docs/flujo-de-trabajo-con-ia.md) y no se repite acá.
 
 Hay un detalle operativo que vale registrar: `CLAUDE.md` estaba siendo ignorado por el `.gitignore` global del entorno de trabajo, así que existía en disco pero no entraba al repositorio. Se detectó al revisar `git status` después de crearlo y se resolvió con `git add -f`.
 
@@ -109,7 +99,37 @@ Hay un detalle operativo que vale registrar: `CLAUDE.md` estaba siendo ignorado 
 
 ### 2.3. Estructura de ficheros
 
-*Se completa en la Entrega 2, con el scaffold real generado. La estructura prevista (carpetas `domain/ports`, `adapters/inbound`, `adapters/outbound`) se definió en los prompts de 2.1.*
+> La estructura real del repositorio —`docs/` numerado, reglas de dominio con dueño único, ADR, plantillas por funcionalidad y scripts de verificación— se construyó con **Claude Code sobre Claude Opus 5 (contexto 1M)**, no en claude.ai, porque requería acceso al árbol de archivos, a `git` y a la ejecución de scripts. La conversación completa está en [`docs/conversacion-reestructuracion-docs.md`](docs/conversacion-reestructuracion-docs.md).
+>
+> *La estructura de `backend/` y `frontend/` se completa en la Entrega 2 con el scaffold real; la prevista se definió en los prompts de §2.1.*
+
+**Prompt 1** — *Claude Code · reestructurar el readme monolítico con reglas inviolables*
+
+> "Tu tarea es REESTRUCTURAR la documentación existente. Es un trabajo de extracción y reorganización, NO de redacción de contenido nuevo. [...] NO inventes contenido. Todo el texto de `docs/00-` a `docs/07-` y de `reglas-de-dominio.md` sale del README actual, copiado literal. Si algo te parece incompleto, dejalo como está y reportámelo al final. No lo completes vos. [...] Un solo dueño por hecho. Ningún contenido puede quedar en dos archivos. [...] Mostrame primero el plan [...] Esperá mi aprobación antes de tocar archivos."
+
+*(prompt completo: ~130 líneas con siete tareas y una lista de verificación de ocho puntos)*
+
+*Qué devolvió y qué se decidió:* de acá salió la estructura actual — el readme de 760 líneas partido en `docs/01-` a `docs/07-`, las reglas de negocio extraídas a un archivo con dueño único, y los cinco ADR. Exigir el plan **antes** de tocar archivos evitó el problema que más caro sale: al mapear las referencias cruzadas, la IA detectó que el Ticket 2 apuntaba a un "endpoint de 6.1" que **nunca existió** —la sección 6 no tiene subsecciones numeradas— y, en vez de corregirlo por su cuenta, lo reportó. El mismo plan expuso que el fundamento del ADR 0005 no estaba escrito en ninguna parte del readme, y la autora tuvo que aportarlo (ver el ajuste 9 del resumen).
+
+---
+
+**Prompt 2** — *Claude Code · verificación ejecutable en vez de revisión por lectura*
+
+> *(de la lista de verificación del Prompt 1)* "Revisá y reportá el resultado de cada punto: 1. Todos los enlaces relativos del README y de los docs resuelven a un archivo que existe. [...] 4. Los bloques Mermaid siguen siendo sintácticamente válidos y están completos. [...] 7. El total de líneas de `docs/` más `README.md` es aproximadamente igual al del README original, más lo nuevo. Si perdiste contenido en el camino, se nota acá."
+
+*Qué devolvió y qué se decidió:* exigir una verificación **ejecutable** en vez de una revisión por lectura fue lo que encontró los errores, y terminó agregando `scripts/` y `.githooks/` a la estructura del repositorio. El script valida enlaces contra archivo y ancla, busca texto duplicado entre archivos, cuenta bloques de código y compara volumen contra el original. Encontró dos errores propios que una lectura no habría detectado: un bloque YAML sin cerrar por un off-by-one al partir la sección 4, y una palabra borrada por el shell al interpretar backticks dentro de un heredoc. Más tarde detectó una frase idéntica en dos archivos y un enlace roto al mover una sección. El punto 7 confirmó que las 41 líneas del original ausentes en la estructura nueva eran todas ediciones deliberadas.
+
+---
+
+**Prompt 3** — *Claude Code · analizar un repositorio de referencia, y corregir el supuesto de alcance*
+
+> "Explora el siguiente repositorio misproyectos/ai4devs/mobile-facephi y analiza ÚNICAMENTE cómo está estructurada su documentación. No modifiques ningún archivo, realiza solo análisis. [...] Identifica entre 3 y 5 brechas o puntos ciegos (información crítica del proyecto que la documentación actual NO explica o no deja clara [...])."
+>
+> *(y después, sobre la lista de adopciones que devolvió)* "pero mi proyecto no es solo backend, tambien va a tener un front que es la web de visualizacion, metricas y dashboard, y pensando a futura en ampliar eso a una app mobil"
+
+*Qué devolvió y qué se decidió:* el análisis del repositorio ajeno —2.371 líneas de documentación contra seis archivos Kotlin, cuatro de ellos andamiaje— encontró brechas concretas y verificables: comandos de lint documentados que no existen porque el plugin no está instalado, cuatro skills sin frontmatter que por eso no se cargan, un command que abre con `-****---` y no parsea, y una sección de «gotchas» que describe un módulo y un endpoint inexistentes. El patrón de fondo es el mismo hallazgo de §1, Prompt 2: la documentación describe el estado deseado y nada marca la diferencia con el real.
+
+La corrección humana que vino después es la más valiosa: la primera lista de adopciones optimizaba para un backend con un dashboard accesorio y **descartaba el contrato de UI por sobrecarga**. Con las tres superficies a la vista —web, móvil futura y la API como frontera— todo se reordenó. De ahí salieron `docs/convenciones-de-desarrollo.md`, `docs/features/TEMPLATE/`, `scripts/verify_architecture.py` y `docs/hoja-de-ruta.md`. La IA no se equivocó razonando: partió de un supuesto incompleto que sólo la autora podía corregir.
 
 ---
 
@@ -214,76 +234,6 @@ Hay un detalle operativo que vale registrar: `CLAUDE.md` estaba siendo ignorado 
 ## 7. Pull Requests
 
 *No aplica a esta entrega. Se completa en la Entrega final con 3 pull requests reales enlazados.*
-
----
-
-## Reestructuración de la documentación
-
-> Fase posterior a la redacción del contenido: el readme monolítico de 760 líneas se partió en `docs/`. Trabajo hecho con **Claude Code sobre Claude Opus 5 (contexto 1M)**, no en claude.ai, porque requería acceso al árbol de archivos, a `git` y a la ejecución de scripts de verificación.
->
-> La conversación completa está en [`docs/conversacion-reestructuracion-docs.md`](docs/conversacion-reestructuracion-docs.md). Acá van los tres prompts decisivos.
-
-**Prompt 1** — *Claude Code · brief de reestructuración con reglas inviolables*
-
-> "Tu tarea es REESTRUCTURAR la documentación existente. Es un trabajo de extracción y reorganización, NO de redacción de contenido nuevo. [...] NO inventes contenido. Todo el texto de `docs/00-` a `docs/07-` y de `reglas-de-dominio.md` sale del README actual, copiado literal. Si algo te parece incompleto, dejalo como está y reportámelo al final. No lo completes vos. [...] Un solo dueño por hecho. Ningún contenido puede quedar en dos archivos. [...] Mostrame primero el plan [...] Esperá mi aprobación antes de tocar archivos."
-
-*(prompt completo: ~130 líneas con las siete tareas y una lista de verificación de ocho puntos)*
-
-*Qué devolvió y qué se decidió:* el plan previo evitó el problema que más caro sale en este tipo de tarea. Al mapear las referencias cruzadas antes de mover nada, la IA detectó que el Ticket 2 apuntaba a un "endpoint de 6.1" que **nunca existió** —la sección 6 no tiene subsecciones numeradas— y, en vez de corregirlo por su cuenta, lo reportó. La regla de pedir el plan primero también expuso que el fundamento del ADR 0005 no estaba escrito en ninguna parte del readme (ver Prompt 2).
-
----
-
-**Prompt 2** — *Claude Code · aporte del fundamento que faltaba y corrección de un corte de razonamiento*
-
-> "ADR 0005 — la razón existe, no la dejes pendiente. Escribí el ADR completo con este fundamento: [...]"
->
-> "Una cosa más antes de arrancar: en tu plan de la Tarea 3, la explicación de por qué las descripciones de entidades de 3.2 se quedan donde están quedó cortada a mitad de frase. El criterio es correcto, pero terminá de explicarlo antes de empezar: es el punto donde más fácil se cuela una duplicación entre 03-modelo-de-datos.md y reglas-de-dominio.md."
-
-*Qué devolvió y qué se decidió:* dos correcciones humanas de naturaleza distinta. La primera **aporta información que la IA no tenía y con razón no inventó**: la elección de Python sobre Go nunca se había justificado por escrito, y el ADR habría quedado con las secciones vacías. La segunda detecta que el asistente había dejado un criterio a medio explicar y exige cerrarlo *antes* de ejecutar, no después — el criterio en cuestión (frase descriptiva se queda en 3.2, frase prescriptiva se muda a reglas de dominio) es exactamente el que evita duplicar contenido entre los dos archivos. Al explicitarlo, el asistente cambió su propio plan: las viñetas del catálogo must/should/could de 1.2 dejaron de mudarse, porque son el entregable calificado del curso.
-
----
-
-**Prompt 3** — *Claude Code · verificación automatizada como parte del entregable*
-
-> *(de la lista de verificación del Prompt 1)* "Revisá y reportá el resultado de cada punto: 1. Todos los enlaces relativos del README y de los docs resuelven a un archivo que existe. [...] 4. Los bloques Mermaid siguen siendo sintácticamente válidos y están completos. [...] 7. El total de líneas de `docs/` más `README.md` es aproximadamente igual al del README original, más lo nuevo. Si perdiste contenido en el camino, se nota acá."
-
-*Qué devolvió y qué se decidió:* exigir una verificación **ejecutable** en vez de una revisión por lectura fue lo que encontró los errores. El asistente escribió un script que valida los 70 enlaces relativos contra archivo y ancla, busca bloques repetidos entre archivos, cuenta fences de código y compara volumen contra el original. Encontró dos errores propios que una lectura no habría detectado: un bloque YAML sin cerrar por un off-by-one al partir la sección 4, y una palabra borrada por el shell al interpretar backticks dentro de un heredoc. El punto 7 confirmó que las 41 líneas del original ausentes en la estructura nueva eran todas ediciones deliberadas, sin pérdida involuntaria.
-
----
-
-## Adopciones desde un repositorio de referencia
-
-> Al cierre de la Entrega 1 se analizó un tercer repositorio del máster, `mobile-facephi`, un proyecto Android con un sistema de agentes de IA de cinco etapas. El análisis fue **sólo de lectura**: se mapearon sus 25 archivos de documentación para ver qué resolvía bien y qué no.
-
-**Prompt 1** — *Claude Code · análisis de la estructura documental de un repo ajeno*
-
-> "Explora el siguiente repositorio misproyectos/ai4devs/mobile-facephi y analiza ÚNICAMENTE cómo está estructurada su documentación. No modifiques ningún archivo, realiza solo análisis. [...] Identifica entre 3 y 5 brechas o puntos ciegos (información crítica del proyecto que la documentación actual NO explica o no deja clara, como scripts de build no evidentes, convenciones de naming o reglas del dominio)."
-
-*Qué devolvió y qué se decidió:* el repositorio tiene 2.371 líneas de documentación de muy buena calidad contra seis archivos Kotlin, de los cuales cuatro son el andamiaje de Android Studio. Las brechas encontradas fueron concretas y verificables: los comandos de lint documentados (`./gradlew ktlintCheck`) **no existen**, porque el plugin no está instalado; los cuatro skills **no tienen frontmatter**, así que no se cargan, mientras la documentación afirma que se activan solos; un command abre con `-****---` en vez de `---` y no parsea; y la sección «Gotchas del proyecto» describe un módulo `legacy-auth`, un endpoint y una base Room que **no existen en ese repositorio**. El patrón de fondo resultó ser el mismo hallazgo de §1, Prompt 2: la documentación describe el estado deseado y nada marca la diferencia con el estado real.
-
----
-
-**Prompt 2** — *Claude Code · qué adoptar, ordenado por impacto*
-
-> "que puedo tomar de este repo que resuelve bien para implementar en platita que me traeria mas beneficios? hace una lista de 5 cosas en order de mayor a menor de impacto positivo"
->
-> *(y a continuación, la corrección que cambió el orden)* "pero mi proyecto no es solo backend, tambien va a tener un front que es la web de visualizacion, metricas y dashboard, y pensando a futura en ampliar eso a una app mobil"
-
-*Qué devolvió y qué se decidió:* la primera lista optimizaba para un backend con un dashboard accesorio y **descartaba el contrato de UI por considerarlo sobrecarga**. La corrección humana reordenó todo: con tres superficies —web, móvil futura y la API como frontera— los cortes verticales pasaron al primer puesto, apareció el contrato de API como pieza de infraestructura y no de documentación, y el contrato de UI pasó de descartado a cuarto. Es un caso donde la IA no se equivocó razonando, sino partiendo de un supuesto incompleto que sólo la autora podía corregir.
-
-De la lista resultante se implementaron siete puntos en dos tandas: los cuatro estados, los cortes verticales, `AGENTS.md` como contrato de agentes, el verificador de arquitectura, el Definition of Done, las plantillas por funcionalidad y los tres commands. Lo que se decidió **no** copiar: el stack aspiracional, los gates sin ejecutor y los cinco agentes con roles, que son ceremonia para un proyecto individual.
-
----
-
-**Prompt 3** — *Claude Code · dos correcciones de vocabulario y de oportunidad*
-
-> "no entiendo los dos ultimos 'Abro el pR' y 'antes de entregar', si yo estoy en condiciones de abri pr es porque el commit ya lo hice, que sentido tiene hacer commit y despues ejecutar el spec-drift? aparte eso no lo hace el hook verify_docs?"
->
-> "que es un slice?????"
-
-*Qué devolvió y qué se decidió:* dos correcciones distintas y las dos sobre trabajo ya escrito. La primera detectó un error de secuencia: se había ubicado `/spec-drift` **después** del commit, cuando encontrar una divergencia ahí implica haber commiteado código incorrecto. Se corrigió a «antes del último commit del corte». La misma pregunta obligó a explicitar una distinción que estaba implícita: los verificadores automáticos comparan la documentación consigo misma y el código con su estructura, pero **ninguno compara lo que la documentación dice que pasa contra lo que el código hace** — eso requiere criterio y por eso es un command, no un hook.
-
-La segunda corrección es más elemental y más grave: se había redactado una convención entera alrededor del término «vertical slice» **sin definirlo en ningún lado**. Se renombró a «corte vertical», por la regla de idioma del proyecto, y la sección ahora empieza por la definición y por el contraste con cortar por capa.
 
 ---
 
