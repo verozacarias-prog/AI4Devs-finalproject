@@ -1,5 +1,5 @@
 ---
-description: Verifica que una pantalla del dashboard implementa y testea los cuatro estados obligatorios. Usar antes de cerrar el slice 2 de cualquier funcionalidad con interfaz.
+description: Verifica que una pantalla del dashboard implementa y testea los cuatro estados obligatorios. Usar antes de cerrar el corte vertical 2 de cualquier funcionalidad con interfaz.
 ---
 
 Revisá la pantalla indicada contra la regla de los cuatro estados de
@@ -16,7 +16,7 @@ Una consulta que funcionó y no devolvió datos está vacía, no falló. En Plat
 un presupuesto confirmado sin movimientos todavía: mostrarle un error al usuario sería mentirle.
 
 Si encontrás que el estado vacío está resuelto como error, como pantalla en blanco o como un
-spinner infinito, marcalo como error del slice, no como mejora pendiente.
+spinner infinito, marcalo como error del corte, no como mejora pendiente.
 
 Terminá con un veredicto de una línea: si los cuatro estados están completos y testeados, el
-slice 2 puede cerrarse; si no, listá exactamente qué falta.
+corte 2 puede cerrarse; si no, listá exactamente qué falta.

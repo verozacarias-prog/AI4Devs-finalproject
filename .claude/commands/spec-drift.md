@@ -1,5 +1,5 @@
 ---
-description: Compara la especificación de docs/ contra el código real y reporta las diferencias sin resolverlas. Usar antes de una entrega o cuando el comportamiento no coincide con lo documentado.
+description: Compara la especificación de docs/ contra el código real y reporta las diferencias sin resolverlas. Usar al cerrar un corte vertical, antes de su último commit, y como barrido antes de cada entrega.
 ---
 
 Compará lo que dice la especificación con lo que hace el código, en el alcance que se te indique.

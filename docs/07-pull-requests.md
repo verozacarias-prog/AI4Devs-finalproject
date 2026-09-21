@@ -2,8 +2,10 @@
 
 `No aplica a esta entrega — es documentación previa al código. Se completa en la Entrega final con 3 PRs reales enlazados.`
 
-Los tres pull requests de la entrega final son los tres vertical slices de una funcionalidad, no
-tres cortes arbitrarios. Ver [convenciones de desarrollo](convenciones-de-desarrollo.md#1-vertical-slices).
+Los tres pull requests de la entrega final son los tres cortes verticales de una misma
+funcionalidad, no tres recortes arbitrarios. Un corte vertical atraviesa base de datos, backend
+y frontend, y queda funcionando de punta a punta. Ver
+[convenciones de desarrollo](convenciones-de-desarrollo.md#1-cortes-verticales).
 
 ## Definition of Done
 
@@ -14,7 +16,7 @@ desde [`features/TEMPLATE/pr.md`](features/TEMPLATE/pr.md).
 
 - [ ] Cumple los criterios de aceptación de la historia de usuario enlazada.
 - [ ] Si toca una pantalla, los cuatro estados están implementados y se ven en las capturas.
-- [ ] El slice está completo de punta a punta: no quedó backend sin frontend ni al revés.
+- [ ] El corte está completo de punta a punta: no quedó backend sin frontend ni al revés.
 
 ### Dominio
 
@@ -55,7 +57,7 @@ desde [`features/TEMPLATE/pr.md`](features/TEMPLATE/pr.md).
 
 Se enlazan acá en la entrega final.
 
-| # | Slice | Pull request |
+| # | Corte | Pull request |
 |---|---|---|
 | 1 | Camino feliz y carga | `[pendiente]` |
 | 2 | Errores, estado vacío y confirmaciones | `[pendiente]` |

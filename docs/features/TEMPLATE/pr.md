@@ -1,6 +1,6 @@
 # Pull request — FEAT-XXX · <título>
 
-- **Slice:** 1 (camino feliz) | 2 (errores y vacío) | 3 (observabilidad)
+- **Corte vertical:** 1 (camino feliz) | 2 (errores y vacío) | 3 (observabilidad)
 - **Historia de usuario:** [HU-X](../../05-historias-de-usuario.md)
 - **Especificación:** [spec.md](spec.md)
 

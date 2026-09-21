@@ -115,8 +115,11 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
 
 ## 13. Método de trabajo
 
-Toda funcionalidad se corta en tres vertical slices —camino feliz, errores y estado vacío,
-observabilidad— y cada uno atraviesa backend y frontend y termina en su propio commit.
+Toda funcionalidad se parte en tres cortes verticales —camino feliz, errores y estado vacío,
+observabilidad—. Un corte vertical atraviesa todas las capas, de la base de datos a la pantalla
+o al mensaje de WhatsApp, queda funcionando de punta a punta y termina en su propio commit.
+Lo contrario, cortar por capa, deja la interfaz para el final y es como se llega a una entrega
+sin nada que mostrar.
 Toda pantalla implementa y testea los cuatro estados: cargando, con contenido, vacío y error.
 
 Vacío y error no son el mismo estado. Detalle y gates en `docs/convenciones-de-desarrollo.md`.
