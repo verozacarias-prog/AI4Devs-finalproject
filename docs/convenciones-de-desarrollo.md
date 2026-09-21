@@ -55,7 +55,23 @@ diferencia es de dominio, no cosmética:
 Esta regla aplica igual a la futura aplicación móvil: la máquina de estados es del contrato de
 la pantalla, no de la tecnología que la renderiza.
 
-## 3. Relación con los otros documentos
+## 3. Artefactos de una funcionalidad
+
+Cada funcionalidad tiene su carpeta en `docs/features/FEAT-XXX/`, creada copiando
+[`features/TEMPLATE/`](features/TEMPLATE/):
+
+| Archivo | Cuándo se escribe | Para qué |
+|---|---|---|
+| `spec.md` | Antes del slice 1 | Alcance, criterios de aceptación, reglas de dominio que aplican y los cuatro estados |
+| `qa_plan.md` | Antes del slice 2 | Camino feliz, casos límite, errores, y un test por invariante en riesgo |
+| `pr.md` | Al cerrar cada slice | Cuerpo del pull request, con el Definition of Done |
+
+Son tres y no siete a propósito: para un proyecto individual, un contrato de UI y un registro de
+riesgos separados son ceremonia. Lo que aportarían ya vive en `spec.md`.
+
+La carpeta va sin número, porque la serie de `docs/` está cerrada en 08.
+
+## 4. Relación con los otros documentos
 
 - Qué debe hacer el sistema → [`reglas-de-dominio.md`](reglas-de-dominio.md)
 - Qué se le promete al usuario en cada pantalla → [`05-historias-de-usuario.md`](05-historias-de-usuario.md)

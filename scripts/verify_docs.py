@@ -20,6 +20,7 @@ from difflib import SequenceMatcher
 README = 'README.md'
 DOCS_DIR = 'docs'
 ADR_DIR = os.path.join(DOCS_DIR, 'adr')
+COMMANDS_DIR = os.path.join('.claude', 'commands')
 CANONICAL = {'README.md', 'CLAUDE.md', 'AGENTS.md', 'LICENSE', 'prompts.md'}
 
 README_SOFT_LIMIT = 80        # portada: ficha + una línea por documento
@@ -53,6 +54,10 @@ def markdown_files():
         for n in sorted(names):
             if n.endswith('.md'):
                 out.append(os.path.join(root, n))
+    if os.path.isdir(COMMANDS_DIR):
+        for n in sorted(os.listdir(COMMANDS_DIR)):
+            if n.endswith('.md'):
+                out.append(os.path.join(COMMANDS_DIR, n))
     return out
 
 
@@ -113,13 +118,24 @@ def check_links(files):
 # --- 2. ningún documento de docs/ queda sin enlazar desde el README -------------
 def check_orphans():
     index = read(README)
+
+    def linked(path):
+        if path in index:
+            return True
+        # un enlace al directorio (docs/adr/, docs/features/) cubre su contenido
+        parent = os.path.dirname(path)
+        while parent and os.path.normpath(parent) != os.path.normpath(DOCS_DIR):
+            if (parent.replace(os.sep, '/') + '/') in index:
+                return True
+            parent = os.path.dirname(parent)
+        return False
+
     for root, _, names in os.walk(DOCS_DIR):
         for n in sorted(names):
             if not n.endswith('.md'):
                 continue
             path = os.path.join(root, n)
-            linked = path in index or (is_adr(path) and (ADR_DIR + '/') in index)
-            if not linked:
+            if not linked(path):
                 fail('documento huérfano, no enlazado desde %s: %s' % (README, path))
 
 
@@ -232,6 +248,31 @@ def check_adrs():
     return found
 
 
+# --- 9. los commands tienen frontmatter válido ------------------------------------
+def check_commands():
+    if not os.path.isdir(COMMANDS_DIR):
+        return []
+    found = sorted(n for n in os.listdir(COMMANDS_DIR) if n.endswith('.md'))
+    for n in found:
+        path = os.path.join(COMMANDS_DIR, n)
+        lines = read(path).split('\n')
+        if not lines or lines[0].strip() != '---':
+            fail('el command %s no abre con un delimitador "---" de frontmatter (primera línea: %r)'
+                 % (n, lines[0][:20] if lines else ''))
+            continue
+        try:
+            end = next(i for i in range(1, len(lines)) if lines[i].strip() == '---')
+        except StopIteration:
+            fail('el command %s no cierra el frontmatter' % n)
+            continue
+        body = '\n'.join(lines[1:end])
+        if not re.search(r'^description:\s*\S', body, re.M):
+            fail('el command %s no declara "description" en el frontmatter' % n)
+        if not lines[end + 1:] or not '\n'.join(lines[end + 1:]).strip():
+            fail('el command %s no tiene instrucciones debajo del frontmatter' % n)
+    return found
+
+
 def main():
     if not os.path.exists(README) or not os.path.isdir(DOCS_DIR):
         print('Ejecutá este script desde la raíz del repositorio.')
@@ -246,12 +287,14 @@ def main():
     readme_lines = check_readme_size()
     numbered = check_series()
     adrs = check_adrs()
+    commands = check_commands()
 
     print('Verificación de documentación')
     print('  archivos markdown revisados : %d' % len(files))
     print('  enlaces relativos validados : %d' % links)
     print('  documentos numerados        : %d' % len(numbered))
     print('  ADR                         : %d' % len(adrs))
+    print('  commands                    : %d' % len(commands))
     print('  %s                   : %d líneas' % (README, readme_lines))
     print('')
 

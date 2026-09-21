@@ -79,8 +79,12 @@ python3 scripts/verify_docs.py
 Chequea que los enlaces relativos resuelvan a un archivo y a un ancla que existen, que ningún
 documento de `docs/` quede sin enlazar desde el `README.md`, que no haya texto duplicado entre
 archivos, que los bloques de código y de Mermaid estén completos, que los nombres de archivo no
-tengan acentos ni espacios, que la serie numerada no tenga huecos, y que los ADR conserven su
-plantilla. Los avisos no frenan nada; los errores sí.
+tengan acentos ni espacios, que la serie numerada no tenga huecos, que los ADR conserven su
+plantilla y que los commands de `.claude/commands/` abran y cierren su frontmatter y declaren
+`description`. Los avisos no frenan nada; los errores sí.
+
+Un enlace a un directorio cubre su contenido: alcanza con que el `README.md` enlace
+`docs/adr/` o `docs/features/` para que sus archivos no cuenten como huérfanos.
 
 Para que corra solo antes de cada commit que toque documentación, una vez por clon:
 

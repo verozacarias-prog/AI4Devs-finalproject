@@ -51,6 +51,8 @@ https://github.com/verozacarias-prog/AI4Devs-finalproject
 
 Las decisiones de arquitectura, una por archivo y en formato Michael Nygard, viven en [`docs/adr/`](docs/adr/).
 
+Las plantillas que se copian al abrir una funcionalidad nueva están en [`docs/features/`](docs/features/).
+
 El registro de uso de IA durante el proyecto está en [`prompts.md`](prompts.md), con la [conversación completa de la reestructuración](docs/conversacion-reestructuracion-docs.md) como anexo.
 
 ---
