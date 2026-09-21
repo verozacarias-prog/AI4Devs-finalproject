@@ -87,7 +87,10 @@ repositorio de origen. De ahí salen tres restricciones que no son evidentes:
   base**, no los de este. Por eso la validación depende del push y no del pull request.
 - **El entorno `github-pages` solo acepta despliegues desde la rama por defecto.** La rama de la
   entrega en curso tiene que estar configurada como rama por defecto de este fork, en
-  `Settings → Branches`, o el despliegue se rechaza aunque el workflow corra entero.
+  `Settings → Branches`, o el despliegue se rechaza aunque el workflow corra entero. La
+  alternativa es autorizar la rama en `Settings → Environments → github-pages`, en
+  `Deployment branches and tags`, con el desplegable en «Selected branches and tags» y una regla
+  `feature/*`. No hace falta ninguna regla de protección de rama: es otra cosa.
 
 Al abrir la rama de una entrega nueva hay que cambiar la rama por defecto del fork. El patrón
 `feature/**` de los disparadores evita tener que tocar los workflows además.
