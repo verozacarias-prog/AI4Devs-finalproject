@@ -24,10 +24,9 @@ El resto de las convenciones de documentación —diagramas, nombres de archivo,
 
 ## 3. Regla de dependencia hexagonal
 
-`domain/` no importa nada de `adapters/` ni de librerías de infraestructura.
-
-Imports prohibidos dentro de `domain/`: `sqlalchemy`, `fastapi`, `httpx`, `psycopg`, el cliente
-de LLM. Los casos de uso hablan solo con puertos.
+`domain/` no importa nada de `adapters/` ni de librerías de infraestructura, y `frontend/` no
+importa nada de `backend/`. La lista negra de imports y el enunciado completo están en
+`AGENTS.md`, que es el dueño de esta regla.
 
 ## 4. Mapa de carpetas
 
@@ -49,15 +48,9 @@ de LLM. Los casos de uso hablan solo con puertos.
 
 ## 5. Invariantes que un asistente rompe por defecto
 
-- Nunca usar una cuenta por defecto. Si el mensaje no la menciona, preguntar.
-- Nunca asignar `budget_period_id` sin confirmación explícita del usuario.
-- Los defaults derivables permitidos son solo fecha, moneda y categoría, y los tres van siempre listados en el mensaje de confirmación.
-- Montos en `Decimal`, nunca `float`.
-- La moneda viaja siempre junto al monto, nunca implícita.
-- El saldo de una cuenta se calcula, no se almacena como campo mutable.
-- Una categoría nueva no se crea sin confirmación.
-
-Para cualquier ticket de dominio, leer `docs/reglas-de-dominio.md` completo antes de escribir código.
+Las siete invariantes están en `AGENTS.md`, que es el dueño: cuenta, presupuesto, defaults
+derivables, `Decimal`, moneda explícita, saldo calculado y creación de categorías. Se leen antes de tocar
+cualquier caso de uso, junto con la regla que las cierra.
 
 ## 6. Convenciones de código
 
@@ -114,4 +107,13 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
 
 - Ticket de dominio → `docs/reglas-de-dominio.md` y `docs/03-modelo-de-datos.md`.
 - Ticket de API → `docs/04-api.md`.
+- Pantalla nueva → `docs/convenciones-de-desarrollo.md`.
 - Decisión de arquitectura → `docs/adr/`.
+
+## 13. Método de trabajo
+
+Toda funcionalidad se corta en tres vertical slices —camino feliz, errores y estado vacío,
+observabilidad— y cada uno atraviesa backend y frontend y termina en su propio commit.
+Toda pantalla implementa y testea los cuatro estados: cargando, con contenido, vacío y error.
+
+Vacío y error no son el mismo estado. Detalle y gates en `docs/convenciones-de-desarrollo.md`.

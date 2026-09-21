@@ -47,6 +47,7 @@ https://github.com/verozacarias-prog/AI4Devs-finalproject
 | [7. Pull requests](docs/07-pull-requests.md) | Los pull requests de la entrega final. |
 | [8. Convenciones de documentación](docs/08-convenciones-de-documentacion.md) | Idioma, diagramas, nombres de archivo y estructura de `docs/`. |
 | [Reglas de dominio](docs/reglas-de-dominio.md) | Dueño único de las reglas de negocio, agrupadas por tema. |
+| [Convenciones de desarrollo](docs/convenciones-de-desarrollo.md) | Vertical slices y los cuatro estados de una pantalla. |
 
 Las decisiones de arquitectura, una por archivo y en formato Michael Nygard, viven en [`docs/adr/`](docs/adr/).
 
