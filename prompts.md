@@ -20,15 +20,15 @@
 
 | Recurso | Estado en la Entrega 1 |
 |---|---|
-| `CLAUDE.md` — rules del proyecto | **Versionado.** Contrato operativo para asistentes de IA: regla de idioma, regla de dependencia hexagonal con lista negra de imports en `domain/`, siete invariantes que un asistente rompe por defecto, convenciones de código, seguridad, migraciones, y la regla de precedencia entre especificación y código |
-| `AGENTS.md` | **Versionado.** Tres líneas que remiten a `CLAUDE.md`, para que otros asistentes lo encuentren sin duplicar su contenido |
-| Skills | No se usaron |
+| `AGENTS.md` — contrato de agentes | **Versionado.** Dueño de la regla de dependencia hexagonal, con la lista negra de imports en `domain/`, y de las siete invariantes que un asistente rompe por defecto. Está en `AGENTS.md` y no en `CLAUDE.md` para que lo lea cualquier herramienta, no sólo Claude Code |
+| `CLAUDE.md` — rules del proyecto | **Versionado.** Contrato operativo completo: idioma, mapa de carpetas, convenciones de código, seguridad, migraciones, método de trabajo y la regla de precedencia entre especificación y código |
+| Comandos personalizados | **Tres, versionados en `.claude/commands/`**: `/domain-rules`, `/ui-states` y `/spec-drift`. Descritos en el [README](README.md#commands) |
+| Hooks | **Uno, versionado en `.githooks/pre-commit`**, que corre los dos verificadores antes de cada commit |
+| Skills | No se usaron. Para un proyecto individual, los tres commands cubren lo que haría un skill sin el costo de mantenerlos |
 | Subagentes | No se usaron |
-| Hooks | No se configuraron |
-| Comandos personalizados | No se crearon |
 | MCP | Google Calendar, Google Drive y `claude-mermaid` (previsualización de diagramas). El MCP de GitHub está configurado pero falla al conectar por un error de header de autorización — sigue pendiente de revisión |
 
-La auditoría de repos de referencia (ver §1, Prompt 2) recomendó configurar y versionar las rules antes de empezar a codear, porque **ninguno de los dos proyectos de ejemplo del curso lo había hecho**. `CLAUDE.md` y `AGENTS.md` se escribieron al cierre de la Entrega 1 siguiendo esa recomendación, de modo que la Entrega 2 arranque con el contrato ya puesto. Los hooks, skills y subagentes quedan para la fase de código, donde tienen sentido.
+La auditoría de repos de referencia (ver §1, Prompt 2) recomendó configurar y versionar las rules antes de empezar a codear, porque **ninguno de los dos proyectos de ejemplo del curso lo había hecho**. `CLAUDE.md` y `AGENTS.md` se escribieron al cierre de la Entrega 1 siguiendo esa recomendación, de modo que la Entrega 2 arranque con el contrato ya puesto. Los commands, el hook y los dos verificadores se sumaron después, a partir del análisis de un tercer repositorio (ver la sección «Adopciones desde un repositorio de referencia»).
 
 Hay un detalle operativo que vale registrar: `CLAUDE.md` estaba siendo ignorado por el `.gitignore` global del entorno de trabajo, así que existía en disco pero no entraba al repositorio. Se detectó al revisar `git status` después de crearlo y se resolvió con `git add -f`.
 
@@ -251,6 +251,42 @@ Hay un detalle operativo que vale registrar: `CLAUDE.md` estaba siendo ignorado 
 
 ---
 
+## Adopciones desde un repositorio de referencia
+
+> Al cierre de la Entrega 1 se analizó un tercer repositorio del máster, `mobile-facephi`, un proyecto Android con un sistema de agentes de IA de cinco etapas. El análisis fue **sólo de lectura**: se mapearon sus 25 archivos de documentación para ver qué resolvía bien y qué no.
+
+**Prompt 1** — *Claude Code · análisis de la estructura documental de un repo ajeno*
+
+> "Explora el siguiente repositorio misproyectos/ai4devs/mobile-facephi y analiza ÚNICAMENTE cómo está estructurada su documentación. No modifiques ningún archivo, realiza solo análisis. [...] Identifica entre 3 y 5 brechas o puntos ciegos (información crítica del proyecto que la documentación actual NO explica o no deja clara, como scripts de build no evidentes, convenciones de naming o reglas del dominio)."
+
+*Qué devolvió y qué se decidió:* el repositorio tiene 2.371 líneas de documentación de muy buena calidad contra seis archivos Kotlin, de los cuales cuatro son el andamiaje de Android Studio. Las brechas encontradas fueron concretas y verificables: los comandos de lint documentados (`./gradlew ktlintCheck`) **no existen**, porque el plugin no está instalado; los cuatro skills **no tienen frontmatter**, así que no se cargan, mientras la documentación afirma que se activan solos; un command abre con `-****---` en vez de `---` y no parsea; y la sección «Gotchas del proyecto» describe un módulo `legacy-auth`, un endpoint y una base Room que **no existen en ese repositorio**. El patrón de fondo resultó ser el mismo hallazgo de §1, Prompt 2: la documentación describe el estado deseado y nada marca la diferencia con el estado real.
+
+---
+
+**Prompt 2** — *Claude Code · qué adoptar, ordenado por impacto*
+
+> "que puedo tomar de este repo que resuelve bien para implementar en platita que me traeria mas beneficios? hace una lista de 5 cosas en order de mayor a menor de impacto positivo"
+>
+> *(y a continuación, la corrección que cambió el orden)* "pero mi proyecto no es solo backend, tambien va a tener un front que es la web de visualizacion, metricas y dashboard, y pensando a futura en ampliar eso a una app mobil"
+
+*Qué devolvió y qué se decidió:* la primera lista optimizaba para un backend con un dashboard accesorio y **descartaba el contrato de UI por considerarlo sobrecarga**. La corrección humana reordenó todo: con tres superficies —web, móvil futura y la API como frontera— los cortes verticales pasaron al primer puesto, apareció el contrato de API como pieza de infraestructura y no de documentación, y el contrato de UI pasó de descartado a cuarto. Es un caso donde la IA no se equivocó razonando, sino partiendo de un supuesto incompleto que sólo la autora podía corregir.
+
+De la lista resultante se implementaron siete puntos en dos tandas: los cuatro estados, los cortes verticales, `AGENTS.md` como contrato de agentes, el verificador de arquitectura, el Definition of Done, las plantillas por funcionalidad y los tres commands. Lo que se decidió **no** copiar: el stack aspiracional, los gates sin ejecutor y los cinco agentes con roles, que son ceremonia para un proyecto individual.
+
+---
+
+**Prompt 3** — *Claude Code · dos correcciones de vocabulario y de oportunidad*
+
+> "no entiendo los dos ultimos 'Abro el pR' y 'antes de entregar', si yo estoy en condiciones de abri pr es porque el commit ya lo hice, que sentido tiene hacer commit y despues ejecutar el spec-drift? aparte eso no lo hace el hook verify_docs?"
+>
+> "que es un slice?????"
+
+*Qué devolvió y qué se decidió:* dos correcciones distintas y las dos sobre trabajo ya escrito. La primera detectó un error de secuencia: se había ubicado `/spec-drift` **después** del commit, cuando encontrar una divergencia ahí implica haber commiteado código incorrecto. Se corrigió a «antes del último commit del corte». La misma pregunta obligó a explicitar una distinción que estaba implícita: los verificadores automáticos comparan la documentación consigo misma y el código con su estructura, pero **ninguno compara lo que la documentación dice que pasa contra lo que el código hace** — eso requiere criterio y por eso es un command, no un hook.
+
+La segunda corrección es más elemental y más grave: se había redactado una convención entera alrededor del término «vertical slice» **sin definirlo en ningún lado**. Se renombró a «corte vertical», por la regla de idioma del proyecto, y la sección ahora empieza por la definición y por el contraste con cortar por capa.
+
+---
+
 ## Ajustes humanos sobre el output de la IA — resumen
 
 | # | Qué propuso la IA | Qué se corrigió y por qué |
@@ -267,6 +303,10 @@ Hay un detalle operativo que vale registrar: `CLAUDE.md` estaba siendo ignorado 
 | 10 | Separar la ficha del proyecto en un `docs/00-ficha.md` propio | Información que nunca cambia y que el curso busca en la portada. Se eliminó el archivo y la ficha quedó en el README |
 | 11 | Mudar todo el catálogo must/should/could de 1.2 a las reglas de dominio | Es el entregable calificado del curso. Solo se mudó el bloque normativo; el resto se enlaza |
 | 12 | Tratar las viñetas de alcance técnico del Ticket 1 como reglas de dominio en bloque | Seis eran regla, cinco eran tarea de ingeniería. Vaciar el ticket lo habría dejado sin contenido |
+| 13 | Descartar el contrato de UI por «sobrecarga para tu escala» | Supuesto incompleto: el proyecto tiene frontend y una app móvil prevista. Pasó de descartado a prioridad |
+| 14 | Ubicar `/spec-drift` después del commit | Encontrar la divergencia ahí implica haber commiteado código incorrecto. Se movió antes del último commit del corte |
+| 15 | Escribir toda una convención sobre «vertical slices» sin definir el término | Se renombró a «corte vertical», por la regla de idioma, y se antepuso la definición |
+| 16 | Nombrar los commands en español (`regla`, `estado`, `divergencia`) | Los nombres de archivo de código van en inglés. Renombrados a `domain-rules`, `ui-states` y `spec-drift` |
 
 El patrón que se repite: la IA tiende a **resolver la ambigüedad por su cuenta** eligiendo un valor por defecto razonable, y a **justificar decisiones técnicas por el esfuerzo** que ahorran en vez de por sus propiedades de diseño. Las dos cosas hay que detectarlas leyendo, porque el resultado siempre suena defendible.
 
@@ -277,7 +317,8 @@ En la fase de reestructuración aparece un patrón distinto, propio de trabajar 
 ## Pendiente para las próximas entregas
 
 - ~~Configurar y versionar `CLAUDE.md`~~ — hecho al cierre de la Entrega 1. Faltan los hooks y los subagentes, que se definen en la fase de código.
-- Completar en `CLAUDE.md` la sección 11, «Comandos de verificación», que hoy dice «Se completa en la entrega 2».
+- Completar en `CLAUDE.md` la sección 11 con los comandos de tests y linters; los dos verificadores de documentación y arquitectura ya están.
+- Sumar un tercer verificador que compare el OpenAPI generado por FastAPI contra el contrato de `docs/04-api.md`, para automatizar la parte de `/spec-drift` que sí es binaria.
 - Revisar el MCP de GitHub, que falla al conectar por un error de header de autorización.
 - Registrar los prompts de código, tests y despliegue a medida que se escriben, no al cierre.
 - Verificar la sincronización entre la documentación (`docs/02-arquitectura.md` §2.3, `docs/03-modelo-de-datos.md`, `docs/04-api.md`) y el código real antes de cada entrega, aplicando la regla de precedencia de `CLAUDE.md` §10: la especificación manda, lo que se corrige es el código.

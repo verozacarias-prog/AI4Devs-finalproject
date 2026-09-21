@@ -23,7 +23,7 @@ ADR_DIR = os.path.join(DOCS_DIR, 'adr')
 COMMANDS_DIR = os.path.join('.claude', 'commands')
 CANONICAL = {'README.md', 'CLAUDE.md', 'AGENTS.md', 'LICENSE', 'prompts.md'}
 
-README_SOFT_LIMIT = 80        # portada: ficha + una línea por documento
+README_SOFT_LIMIT = 130       # ficha, índice y flujo de trabajo con IA
 MIN_SENTENCE = 90             # ignora frases cortas, que coinciden por vocabulario
 SIM_ERROR = 0.90              # entre documentos vivos: duplicación real
 SIM_WARN = 0.85               # entre documentos vivos: revisar a mano

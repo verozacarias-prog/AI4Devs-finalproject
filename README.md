@@ -57,6 +57,53 @@ El registro de uso de IA durante el proyecto está en [`prompts.md`](prompts.md)
 
 ---
 
+## Flujo de trabajo con IA
+
+El proyecto se desarrolla con asistentes de IA y la configuración está versionada en el
+repositorio, no en la máquina de quien lo escribe.
+
+### Contratos
+
+| Archivo | Qué contiene | Quién lo lee |
+|---|---|---|
+| [`AGENTS.md`](AGENTS.md) | La regla de dependencia hexagonal y las siete invariantes de dominio | Cualquier asistente, sea cual sea la herramienta |
+| [`CLAUDE.md`](CLAUDE.md) | El contrato operativo completo: carpetas, convenciones, seguridad, base de datos y qué leer antes de qué | Claude Code |
+| [`docs/`](docs/) | La especificación del proyecto. Manda sobre los dos anteriores | Personas y asistentes |
+
+### Commands
+
+Tres comandos versionados en `.claude/commands/`. Imponen un orden de lectura y una forma de
+responder; se invocan escribiendo `/nombre`.
+
+| Command | Cuándo | Qué hace |
+|---|---|---|
+| `/domain-rules` | Al abrir un ticket de dominio | Lee las reglas completas y devuelve qué grupos aplican, qué se resuelve solo, qué exige confirmación del usuario y qué invariante está en riesgo |
+| `/ui-states` | Al cerrar el corte vertical 2 | Verifica que la pantalla implemente y testee los cuatro estados, con foco en que *vacío* no esté resuelto como *error* |
+| `/spec-drift` | Antes del último commit de un corte, y antes de cada entrega | Compara la especificación contra el código y reporta las diferencias **sin resolverlas** |
+
+### Verificación automática
+
+Dos scripts que corren solos en el hook de pre-commit. Lo que se responde con sí o no va acá; lo
+que requiere criterio es un command.
+
+| Script | Qué valida |
+|---|---|
+| [`scripts/verify_docs.py`](scripts/verify_docs.py) | Enlaces y anclas, documentos huérfanos, texto duplicado entre archivos, bloques Mermaid, nombres de archivo, plantilla de los ADR y frontmatter de los commands |
+| [`scripts/verify_architecture.py`](scripts/verify_architecture.py) | Que `domain/` no importe infraestructura ni adaptadores, y que `frontend/` no alcance la base de datos. Tolerante mientras no exista el código |
+
+### Método de trabajo
+
+Toda funcionalidad se parte en tres [cortes verticales](docs/convenciones-de-desarrollo.md#1-cortes-verticales)
+que atraviesan backend y frontend, y toda pantalla implementa
+[cuatro estados](docs/convenciones-de-desarrollo.md#2-los-cuatro-estados-de-una-pantalla).
+Cada corte se cierra contra el [Definition of Done](docs/07-pull-requests.md#definition-of-done).
+
+### Skills, subagentes y hooks
+
+No se usan skills ni subagentes: para un proyecto individual, los tres commands cubren lo que
+haría un subagente sin el costo de coordinarlos. El único hook es el de pre-commit, en
+[`.githooks/`](.githooks/). Se activa con `git config core.hooksPath .githooks`, una vez por clon.
+
 ## Verificación
 
 ```
