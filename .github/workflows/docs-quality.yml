@@ -4,15 +4,13 @@
 name: Documentación — calidad
 
 on:
-  pull_request:
-    paths:
-      - 'docs/**'
-      - '*.md'
-      - 'scripts/**'
-      - 'site/**'
-      - '.github/workflows/docs-quality.yml'
+  # El repositorio es un fork del repo del curso y la entrega va como pull
+  # request al upstream. En un pull request contra otro repositorio, GitHub
+  # ejecuta los workflows del repositorio base, no los de este, así que el
+  # disparador que de verdad sirve acá es el push a la rama de trabajo.
   push:
-    branches: [main]
+    branches: [main, 'feature/**']
+  pull_request:
   schedule:
     # Los enlaces externos se rompen sin que nadie toque la documentación.
     - cron: '0 9 * * 1'

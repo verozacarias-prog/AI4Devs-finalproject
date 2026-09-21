@@ -3,8 +3,15 @@
 name: Documentación — despliegue
 
 on:
+  # Ver la nota de docs-quality.yml: el trabajo vive en una rama, no en main,
+  # porque main es el espejo del repositorio del curso.
+  #
+  # El entorno github-pages solo acepta despliegues desde la rama por defecto
+  # del repositorio. La rama de trabajo de la entrega en curso tiene que estar
+  # configurada como rama por defecto de este fork, o el despliegue se rechaza
+  # aunque el workflow corra entero.
   push:
-    branches: [main]
+    branches: [main, 'feature/**']
     paths:
       - 'docs/**'
       - 'site/**'

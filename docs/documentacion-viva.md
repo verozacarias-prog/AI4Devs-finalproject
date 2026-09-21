@@ -74,9 +74,23 @@ npm run dev          # servidor local
 npm run build        # construye, y regenera llms.txt
 ```
 
-El portal se publica solo en cada integración a la rama principal, con
-`.github/workflows/docs.yml`. Requiere que GitHub Pages esté configurado en el repositorio con
-origen «GitHub Actions».
+El portal se publica solo, con `.github/workflows/docs.yml`, en cada push a la rama de trabajo.
+
+## 6. El modelo de ramas condiciona el despliegue
+
+Este repositorio es un fork del repositorio del curso, y la entrega va como pull request al
+repositorio de origen. De ahí salen tres restricciones que no son evidentes:
+
+- **`main` es el espejo del repositorio del curso** y no recibe el trabajo de la entrega. Los
+  workflows se disparan con push a `feature/**`, no a `main`.
+- **En un pull request contra otro repositorio, GitHub ejecuta los workflows del repositorio
+  base**, no los de este. Por eso la validación depende del push y no del pull request.
+- **El entorno `github-pages` solo acepta despliegues desde la rama por defecto.** La rama de la
+  entrega en curso tiene que estar configurada como rama por defecto de este fork, en
+  `Settings → Branches`, o el despliegue se rechaza aunque el workflow corra entero.
+
+Al abrir la rama de una entrega nueva hay que cambiar la rama por defecto del fork. El patrón
+`feature/**` de los disparadores evita tener que tocar los workflows además.
 
 Si se agrega un documento a `docs/`, hay que sumarlo a la barra lateral en `site/astro.config.mjs`
 salvo que vaya dentro de `adr/` o `features/`, que se indexan solos.
