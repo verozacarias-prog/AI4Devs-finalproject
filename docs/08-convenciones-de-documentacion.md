@@ -33,9 +33,9 @@ En consecuencia, para cualquier diagrama nuevo:
 
 - La serie numerada `01-` a `08-` está cerrada. No se crean archivos nuevos con número.
 - Todo documento futuro va en `docs/` con nombre descriptivo y sin número.
-- `README.md` es portada e índice: contiene la ficha del proyecto, una línea por documento y la
-  descripción del flujo de trabajo con IA (contratos, commands y verificadores). Nunca el
-  resumen de una sección: para eso está el documento enlazado.
+- `README.md` es portada e índice: la ficha del proyecto, una línea por documento y los enlaces.
+  Nunca el resumen de una sección ni la descripción de un subsistema: para eso está el documento
+  enlazado.
 - Todo archivo de `docs/` tiene que estar enlazado desde el `README.md`.
 
 ## 8.5. Decisiones de arquitectura

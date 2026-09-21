@@ -40,5 +40,3 @@ en [`prompts.md`](../prompts.md), no acá.
   tareas actuales es así —el skill y los dos commands leen uno o dos archivos cada uno—, pero eso
   puede cambiar cuando exista código. No se descarta: se deja pendiente hasta que aparezca una
   tarea que lo justifique.
-- El `README.md` superó el límite que tenía de portada e índice para incluir el flujo de trabajo
-  con IA. Si vuelve a crecer, esa sección sale a un documento propio.
