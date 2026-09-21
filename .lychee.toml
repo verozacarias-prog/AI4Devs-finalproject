@@ -9,9 +9,12 @@ exclude = [
   "^https://127\\.0\\.0\\.1",
   # Anclas de línea de GitHub: el fragmento no existe como ancla HTML.
   "^https://github\\.com/.*#L[0-9]+",
+  # El portal devuelve 404 hasta que GitHub Pages esté habilitado y se haya
+  # desplegado por primera vez. QUITAR esta línea después del primer despliegue:
+  # hasta entonces oculta un enlace legítimamente roto en el README.
+  "^https://verozacarias-prog\\.github\\.io/",
 ]
 
-# El sitio de documentación devuelve 404 hasta el primer despliegue a GitHub Pages.
 exclude_loopback = true
 
 timeout = 30
