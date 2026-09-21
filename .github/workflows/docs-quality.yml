@@ -1,0 +1,56 @@
+# Calidad de la documentación. Lleva a CI lo que el hook de .githooks/pre-commit
+# corre en local, para que no dependa de que cada clon configure core.hooksPath
+# ni de que nadie use --no-verify.
+name: Documentación — calidad
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - '*.md'
+      - 'scripts/**'
+      - '.github/workflows/docs-quality.yml'
+  push:
+    branches: [main]
+  schedule:
+    # Los enlaces externos se rompen sin que nadie toque la documentación.
+    - cron: '0 9 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  verificadores:
+    name: Verificadores del proyecto
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Convenciones de documentación
+        run: python3 scripts/verify_docs.py
+      - name: Regla de dependencia hexagonal
+        run: python3 scripts/verify_architecture.py
+
+  markdown:
+    name: Formato Markdown
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: markdownlint
+        # La configuración, incluidas las exclusiones, está en .markdownlint-cli2.yaml.
+        uses: DavidAnson/markdownlint-cli2-action@v20
+
+  enlaces:
+    name: Enlaces externos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: lychee
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --config .lychee.toml --no-progress './**/*.md'
+          fail: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

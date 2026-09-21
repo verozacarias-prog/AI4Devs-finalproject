@@ -83,7 +83,7 @@ porque hace falta para leer el diagrama, y manda al
 
 Estas convenciones se verifican con un script, no a ojo:
 
-```
+```sh
 python3 scripts/verify_docs.py
 ```
 
@@ -101,11 +101,28 @@ Un enlace a un directorio cubre su contenido: alcanza con que el `README.md` enl
 
 Para que corra solo antes de cada commit que toque documentación, una vez por clon:
 
-```
+```sh
 git config core.hooksPath .githooks
 ```
 
 El hook está versionado en `.githooks/pre-commit`. Se saltea con `git commit --no-verify`.
+
+Porque se saltea, y porque depende de que cada clon lo active, las mismas comprobaciones se
+repiten en integración continua, donde no hay forma de evitarlas. El flujo de trabajo
+`.github/workflows/docs-quality.yml` corre en cada pull request y suma dos herramientas que el
+script propio no cubre:
+
+| Herramienta | Qué agrega | Configuración |
+|---|---|---|
+| `markdownlint-cli2` | Formato del Markdown: listas, títulos, bloques de código con lenguaje | `.markdownlint-cli2.yaml` |
+| `lychee` | Enlaces **externos**, que `verify_docs.py` saltea a propósito | `.lychee.toml` |
+
+`lychee` corre además todos los lunes por `cron`, porque un enlace externo se rompe sin que nadie
+toque la documentación.
+
+Los registros —`prompts.md` y los `conversacion-*.md`— quedan exentos de las dos herramientas.
+Citan texto y URLs ajenos por definición, que es el mismo criterio por el que `verify_docs.py`
+los excluye de la comprobación de texto duplicado.
 
 ## 8.8. Qué tiene autoridad
 

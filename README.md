@@ -67,7 +67,7 @@ Todo está descrito en el [flujo de trabajo con IA](docs/flujo-de-trabajo-con-ia
 
 ## Verificación
 
-```
+```sh
 git config core.hooksPath .githooks       # una vez por clon
 python3 scripts/verify_docs.py            # enlaces, anclas, duplicación, Mermaid
 python3 scripts/verify_architecture.py    # regla hexagonal y aislamiento del frontend

@@ -6,6 +6,7 @@
 **HU relacionada:** [HU3](05-historias-de-usuario.md)
 **Descripción:** Endpoint `POST /webhook/whatsapp` (adaptador de entrada) que recibe el mensaje y lo pasa al caso de uso `RegisterTransaction`, el cual extrae los datos, exige los que dependen del usuario, y responde por el mismo canal.
 **Alcance técnico:**
+
 - Verificación de la firma del webhook antes de procesar.
 - Extracción estructurada del mensaje vía LLM (puerto `LLMPort`) con salida validada (monto, moneda, tipo, fecha, categoría candidata, cuenta si se menciona).
 - Las reglas de resolución de defaults, cuenta, categoría y presupuesto, y el contenido del mensaje de confirmación, están en [reglas de dominio](reglas-de-dominio.md) § 1, § 3 y § 4. Se implementan tal como están escritas ahí; este ticket no las redefine.
@@ -23,6 +24,7 @@
 **HU relacionada:** [HU4](05-historias-de-usuario.md)
 **Descripción:** Pantalla del dashboard que consume `GET /budgets/{id}` y muestra límite, gastado y porcentaje usado, con el detalle de movimientos de esa categoría en el período.
 **Alcance técnico:**
+
 - Componente de barra de progreso con estado (normal / cerca del límite / excedido).
 - Tabla de movimientos del período, con badge de `source` (manual / automático) y de la cuenta afectada.
 - Manejo de estado de carga y error de la petición.
@@ -37,6 +39,7 @@
 **Título:** Esquema inicial y migraciones (users, accounts, budget_periods, budgets, transactions, categories)
 **Descripción:** Migraciones de Alembic para las entidades del [modelo de datos](03-modelo-de-datos.md), incluida la restricción de integridad de `BUDGET_PERIOD` (individual XOR familiar), el índice de soporte para el chequeo de duplicados, y los `CHECK` de `TRANSACTION.type`, `TRANSACTION.source`, `BUDGET_PERIOD.period_type` y `BUDGET_PERIOD.status`.
 **Alcance técnico:**
+
 - Migración inicial con las tablas `user`, `family_group`, `user_group`, `account`, `budget_period`, `budget`, `category`, `transaction` (con `account_id`, `budget_period_id` y `category_id` `NOT NULL`; `duplicate_of` nullable autoreferenciado), `pending_transaction`, `recurring_expense`, `advice_document`.
 - Índice sobre `transaction (user_id, source, amount, transaction_date)` para que el chequeo de duplicados del Ticket 1 sea una consulta rápida, no un escaneo completo.
 - Extensión `pgvector` habilitada para `advice_document.embedding`.

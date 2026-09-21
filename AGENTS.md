@@ -128,7 +128,9 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
 - Documentación: `python3 scripts/verify_docs.py`.
 - Arquitectura: `python3 scripts/verify_architecture.py`. Valida la regla de dependencia del
   dominio y el aislamiento del frontend. Tolerante mientras `backend/` y `frontend/` no existan.
-- Los dos tienen que pasar sin errores antes de commitear; el hook de pre-commit los corre solo.
+- Los dos tienen que pasar sin errores antes de commitear; el hook de pre-commit los corre solo,
+  y el flujo `.github/workflows/docs-quality.yml` los repite en cada pull request junto con
+  `markdownlint-cli2` y `lychee`.
 - Tests y linters: se completa en la entrega 2.
 
 ## 12. Qué leer antes de qué

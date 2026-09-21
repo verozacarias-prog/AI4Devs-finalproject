@@ -9,6 +9,7 @@
 **Para** saber mi situación real sin entrar a cada banco o billetera por separado
 
 *Criterios de aceptación:*
+
 - Puedo crear una cuenta indicando nombre, institución, tipo (banco, billetera, broker, efectivo), moneda y saldo inicial.
 - El saldo de cada cuenta se muestra calculado a partir del saldo inicial más los movimientos imputados a ella, no como un valor que yo tenga que actualizar.
 - El dashboard lista mis cuentas con su saldo actual, agrupadas por moneda.
@@ -26,6 +27,7 @@
 **Para** empezar el mes sabiendo con cuánto cuento y cuánto puedo gastar en cada rubro
 
 *Criterios de aceptación:*
+
 - Puedo crear un período de presupuesto individual o familiar, eligiendo cadencia mensual o quincenal.
 - Cargo el ingreso estimado del período y un tope por cada categoría que quiera controlar.
 - Mientras está en armado, el período figura como borrador y no se usa para calcular nada.
@@ -44,6 +46,7 @@
 **Para** no tener que abrir una app ni completar un formulario cada vez que gasto algo
 
 *Criterios de aceptación:*
+
 - El mensaje se interpreta y se ubica la categoría entre las existentes del usuario; si ninguna encaja, el asistente sugiere crear una nueva en vez de forzar una que no corresponde.
 - Si el mensaje no indica fecha, se toma la del día; si no indica moneda, se toma la primaria del usuario.
 - El asistente propone a qué presupuesto imputar el gasto (según la fecha y los períodos activos del usuario) y **el usuario lo confirma siempre** — ninguna transacción manual se imputa a un presupuesto sin visto bueno explícito.
@@ -65,6 +68,7 @@
 **Para** saber si estamos dentro de lo planeado sin tener que sumar manualmente
 
 *Criterios de aceptación:*
+
 - El dashboard muestra, para el período seleccionado, el ingreso estimado y el tope, lo gastado y el porcentaje usado de cada categoría.
 - Se distingue visualmente entre presupuestos individuales y familiares.
 - Puedo ver el detalle de movimientos de una categoría, con la cuenta afectada y el origen (manual / automático) de cada uno.
@@ -82,6 +86,7 @@
 **Para** poder corregir antes de pasarme, sin tener que estar revisando el dashboard
 
 *Criterios de aceptación:*
+
 - El sistema revisa periódicamente los presupuestos activos contra lo gastado hasta el momento.
 - Al superar un umbral configurado (ej. 80%) se envía una alerta proactiva por WhatsApp.
 - La alerta incluye un consejo relacionado, generado por el sistema de RAG a partir de la base de conocimiento curada por el producto.

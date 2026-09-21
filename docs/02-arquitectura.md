@@ -135,7 +135,7 @@ El contexto que llevó a elegirlo, sus beneficios, los sacrificios asumidos y la
 
 `Se completa en la Entrega 2 junto con el scaffold real. Estructura prevista (arquitectura hexagonal dentro del backend, nombres de carpetas y ficheros en inglés):`
 
-```
+```text
 /backend
   /app
     /domain
