@@ -6,6 +6,29 @@
 >
 > Dos bloques quedan fuera de la numeración porque la consigna los pide aparte: la tabla de herramientas y modelos, acá arriba, y el resumen de ajustes humanos sobre el output de la IA, al final.
 
+**De dónde salió esta documentación.** Las secciones 1 a 6 nacieron de una conversación
+iterativa en claude.ai, un ida y vuelta largo de preguntas y ajustes que no se adjunta por su
+extensión. Sus prompts decisivos están transcritos en cada sección; lo que esa conversación
+dejó, en síntesis:
+
+- **La elección del dominio.** Se evaluaron dos ideas y ganó la financiera por ser una necesidad
+  propia y concreta: varias cuentas, dos monedas y un presupuesto familiar resueltos a mano en
+  planillas.
+- **El alcance, acotado y declarado.** Las funcionalidades quedaron clasificadas en must, should
+  y could-have, y las historias de usuario subieron de tres a cinco para que ninguna funcionalidad
+  comprometida quedara sin una que la respalde.
+- **El patrón arquitectónico, nombrado.** La documentación describía el sistema como «por capas»
+  sin comprometerse; pasó a declarar arquitectura hexagonal, con la regla de dependencia escrita
+  y reflejada en el diagrama y en la estructura de carpetas.
+- **Las decisiones justificadas por diseño, no por esfuerzo.** Se rechazó explícitamente el
+  argumento de «es un proyecto corto» como fundamento técnico, y se lo reemplazó por propiedades
+  verificables, como la reversibilidad de un motor detrás de un puerto.
+- **Las reglas de dominio más duras.** De ahí salieron las que hoy están en
+  [`docs/reglas-de-dominio.md`](docs/reglas-de-dominio.md): ninguna cuenta por defecto, ningún
+  presupuesto imputado sin confirmación, y sólo tres valores derivables sin preguntar.
+- **El criterio de verificación.** Ninguna cifra ni métrica se dio por buena sin comprobarla, y
+  se prefirió dejar una sección incompleta antes que completarla con algo plausible.
+
 ---
 
 ## Herramientas y modelos por fase
@@ -32,7 +55,15 @@ Hay un detalle operativo que vale registrar: `CLAUDE.md` estaba siendo ignorado 
 
 > "Sí, quiero eh, contarte la idea del proyecto y ir iterándola. Eh, en la primera entrega de, de este proyecto final es solo documentación, o sea, desarrollar la idea igual después te voy a pasar bien el documento pero es desarrollar la idea y presentar toda la documentación ahora solo quiero que iteremos la idea sin generar ningún tipo de documentación Eh, ellos especifican que tiene que ser todo desarrollado de punta a punta con IA"
 
-*Qué devolvió y qué se decidió:* la instrucción explícita de **no generar documentación todavía** fue deliberada, para evitar que el asistente saltara a producir el entregable antes de que la idea estuviera decidida. Se evaluaron dos dominios (asistente financiero y asistente de hábitos/fitness) y se eligió el financiero por ser una necesidad real propia: manejo de dos monedas y presupuesto familiar resueltos hoy en planillas.
+*Qué devolvió y qué se decidió:* la instrucción explícita de **no generar documentación todavía** fue deliberada, para evitar que el asistente saltara a producir el entregable antes de que la idea estuviera decidida. Se evaluaron dos dominios —asistente financiero y asistente de hábitos/fitness— y se eligió el financiero por ser una necesidad real propia: manejo de dos monedas y presupuesto familiar resueltos hoy en planillas.
+
+Este prompt abrió una conversación iterativa larga, un ida y vuelta de preguntas y ajustes que produjo el contenido de las secciones 1 a 6 de este documento. No se adjunta completa por su extensión; sus intervenciones decisivas están transcritas en cada sección, y lo que dejó en conjunto fue esto:
+
+- **El alcance, acotado y declarado.** Las funcionalidades quedaron clasificadas en must, should y could-have, y las historias de usuario subieron de tres a cinco para que ninguna funcionalidad comprometida quedara sin una que la respalde.
+- **El patrón arquitectónico, nombrado.** La documentación describía el sistema como «por capas» sin comprometerse; pasó a declarar arquitectura hexagonal, con la regla de dependencia escrita y reflejada en el diagrama y en la estructura de carpetas.
+- **Las decisiones justificadas por diseño, no por esfuerzo.** Se rechazó el argumento de «es un proyecto corto» como fundamento técnico y se lo reemplazó por propiedades verificables, como la reversibilidad de un motor de vectores detrás de un puerto.
+- **Las reglas de dominio más duras.** De acá salieron las que hoy viven en [`docs/reglas-de-dominio.md`](docs/reglas-de-dominio.md): ninguna cuenta por defecto, ningún presupuesto imputado sin confirmación explícita, y sólo tres valores derivables sin preguntar.
+- **El criterio de verificación.** Ninguna cifra ni métrica se dio por buena sin comprobarla, y se prefirió dejar una sección marcada como incompleta antes que completarla con algo plausible.
 
 ---
 
