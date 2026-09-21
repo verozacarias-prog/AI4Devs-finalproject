@@ -9,6 +9,7 @@ on:
       - 'docs/**'
       - '*.md'
       - 'scripts/**'
+      - 'site/**'
       - '.github/workflows/docs-quality.yml'
   push:
     branches: [main]
@@ -41,6 +42,25 @@ jobs:
       - name: markdownlint
         # La configuración, incluidas las exclusiones, está en .markdownlint-cli2.yaml.
         uses: DavidAnson/markdownlint-cli2-action@v20
+
+  portal:
+    name: El portal compila y llms.txt está al día
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci
+        working-directory: site
+      - run: npm run build
+        working-directory: site
+      - name: llms.txt se regenera sin diferencias
+        # Está versionado porque un agente que clona el repositorio no ve el
+        # sitio. Si docs/ cambió y no se regeneró, acá se nota.
+        run: git diff --exit-code -- llms.txt
 
   enlaces:
     name: Enlaces externos
