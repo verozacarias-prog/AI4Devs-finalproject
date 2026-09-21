@@ -51,6 +51,10 @@ desde [`features/TEMPLATE/pr.md`](features/TEMPLATE/pr.md).
 ### Documentación
 
 - [ ] `python3 scripts/verify_docs.py` pasa sin errores.
+- [ ] Si el pull request cambia un endpoint o el contrato de uno —ruta, método, campos de entrada o de salida, códigos de error—, [`04-api.md`](04-api.md) va actualizado **en este mismo pull request**.
+- [ ] Si el pull request cambia el esquema de la base de datos, [`03-modelo-de-datos.md`](03-modelo-de-datos.md) va actualizado en este mismo pull request.
+- [ ] Si el pull request cambia una regla de negocio, [`reglas-de-dominio.md`](reglas-de-dominio.md) va actualizado en este mismo pull request.
+- [ ] `/spec-drift` corrió antes del último commit del corte y no quedó ninguna divergencia sin reportar.
 - [ ] Si el comportamiento cambió respecto de lo documentado, la divergencia se resolvió según [`AGENTS.md`](../AGENTS.md) sección 10, no ajustando la documentación al código.
 
 ## Los tres pull requests

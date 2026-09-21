@@ -64,7 +64,19 @@ Cuando la especificación y el código difieren, un asistente no elige un lado: 
 divergencia. El procedimiento completo está en [AGENTS.md](../AGENTS.md) sección 10, y el command
 [`/spec-drift`](../.claude/commands/spec-drift.md) existe para correrlo antes de cada entrega.
 
-## 5. Trabajar con el portal
+## 5. La documentación viaja en el commit del código
+
+Un pull request que cambia un endpoint, el esquema de la base de datos o una regla de negocio
+actualiza el documento que lo describe **en ese mismo pull request**, no después. Esa es la única
+forma de que la documentación no se desactualice: si el cambio se aplaza, no ocurre.
+
+La lista completa está en la sección Documentación del
+[Definition of Done](07-pull-requests.md#definition-of-done). Hoy se verifica leyendo, con la
+ayuda de `/spec-drift`. La parte que es binaria —comparar el contrato generado por FastAPI contra
+[`04-api.md`](04-api.md)— se automatiza con `verify_api_contract.py` cuando exista la API, y está
+en la [hoja de ruta](hoja-de-ruta.md).
+
+## 6. Trabajar con el portal
 
 ```sh
 cd site
@@ -76,7 +88,7 @@ npm run build        # construye, y regenera llms.txt
 
 El portal se publica solo, con `.github/workflows/docs.yml`, en cada push a la rama de trabajo.
 
-## 6. El modelo de ramas condiciona el despliegue
+## 7. El modelo de ramas condiciona el despliegue
 
 Este repositorio es un fork del repositorio del curso, y la entrega va como pull request al
 repositorio de origen. De ahí salen tres restricciones que no son evidentes:
