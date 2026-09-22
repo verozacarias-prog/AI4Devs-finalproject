@@ -4,7 +4,7 @@ Asistente financiero personal y familiar que funciona por WhatsApp: el usuario r
 Un módulo complementario lee automáticamente los emails de notificación bancaria y de servicios para reducir la carga manual.
 Toda la información —cuentas y su saldo, presupuestos multimoneda, comparación contra inflación y consejos financieros generados con RAG— se visualiza desde una aplicación web con dashboards.
 
-**Estado:** Entrega 1 — documentación. Entregada el 24 de septiembre de 2026.
+**Estado:** Entrega 1 — documentación. Fecha límite de entrega: 24 de septiembre de 2026.
 
 ---
 

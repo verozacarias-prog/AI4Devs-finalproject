@@ -22,7 +22,9 @@ backend no está implementado. Ver la [hoja de ruta](hoja-de-ruta.md).
 
 ## 2. Una sola fuente
 
-`docs/` es la fuente. Todo lo demás se deriva de ella y está en `.gitignore`:
+`docs/` es la fuente. Todo lo demás se deriva de ella y está en `.gitignore`, con una sola
+excepción: `llms.txt`, que se genera igual que el resto pero **sí se versiona**, porque un agente
+que clona el repositorio no ve el sitio publicado.
 
 ```text
 docs/  ──┬──▶  GitHub lo renderiza directamente, incluidos los diagramas Mermaid

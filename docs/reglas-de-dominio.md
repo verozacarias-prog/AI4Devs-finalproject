@@ -32,7 +32,7 @@ Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-princip
 
 ## 2. Cuentas y saldo calculado
 
-El **saldo no se guarda como columna**: se calcula como `initial_balance` más la suma de ingresos menos egresos de sus `TRANSACTION` — así nunca queda desincronizado de los movimientos reales.
+El **saldo no se guarda como columna**: se calcula como `initial_balance` más la suma de ingresos menos egresos de sus `TRANSACTION` —excluidas las marcadas como duplicado, ver § 7— así nunca queda desincronizado de los movimientos reales.
 
 Y del alcance técnico del Ticket 1, la contracara en el registro:
 
@@ -67,6 +67,7 @@ Cuando el usuario responde, se completa y se promueve a `TRANSACTION` (quedando 
 Del alcance técnico del Ticket 1:
 
 - Si falta algún campo que depende del usuario (`amount`, `type` ambiguo, `account_id`, o el `budget_period_id` sin confirmar): crear una `PENDING_TRANSACTION` con lo interpretado y la lista de faltantes, y responder preguntando solo por esos, ofreciendo las opciones disponibles del usuario. Manejar el mensaje de respuesta como continuación de ese pendiente, no como un movimiento nuevo.
+- La categoría entra en esa lista cuando ninguna existente encaja. Es el único caso en que `category_id` deja de resolverse solo: como una categoría nueva no se crea sin confirmación (§ 4), `category` se agrega a `missing_fields` y se pregunta ofreciendo elegir una del catálogo del usuario o confirmar la creación de la propuesta. La respuesta se procesa como continuación del pendiente, y el movimiento no se promueve a `TRANSACTION` hasta tener un `category_id` válido.
 
 Ver también: [PENDING_TRANSACTION en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [HU3](05-historias-de-usuario.md).
 
@@ -81,7 +82,11 @@ Ver: [1.2, soporte multimoneda](01-producto.md#12-características-y-funcionalid
 
 ## 7. Chequeo de duplicados entre origen manual y automático
 
-`duplicate_of` es el mecanismo previsto de detección de duplicados entre carga manual y automática: antes de crear una `TRANSACTION` nueva se busca, para el mismo usuario, otra transacción reciente de la vía contraria con monto y moneda iguales y `transaction_date` dentro de una ventana de un par de días — si aparece una candidata, no se crea una segunda fila: se enlaza vía `duplicate_of` y el registro nuevo aporta lo que le falte al original.
+`duplicate_of` es el mecanismo previsto de detección de duplicados entre carga manual y automática: antes de crear una `TRANSACTION` nueva se busca, para el mismo usuario, otra transacción reciente de la vía contraria con monto y moneda iguales y `transaction_date` dentro de una ventana de un par de días.
+
+Si aparece una candidata, **la fila nueva se guarda igual**, con `duplicate_of` apuntando a la original. Se guarda y no se descarta porque cada vía aporta algo distinto —el mensaje de WhatsApp la intención del usuario, el mail del banco el dato del movimiento real— y porque descartar en silencio lo que el usuario acaba de escribir es indistinguible de un movimiento perdido.
+
+Lo que no se duplica es el dinero: **una fila con `duplicate_of` no nulo no entra en ninguna agregación** — ni en el saldo de la cuenta (§ 2), ni en el gastado de un presupuesto, ni en las alertas. Cuenta el original; la fila enlazada queda como evidencia de la otra vía y como el lugar donde el usuario deshace el enlace si el sistema se equivocó y en realidad eran dos gastos distintos.
 
 `TRANSACTION.duplicate_of` referencia otra `TRANSACTION` del mismo usuario cuando el sistema detecta que probablemente describen el mismo gasto real (mismo monto y moneda, fecha cercana, un origen manual y el otro automático). La columna se crea desde la migración inicial, pero la lógica que la puebla depende de la carga por email, que es could-have (ver [1.2](01-producto.md#12-características-y-funcionalidades-principales)).
 

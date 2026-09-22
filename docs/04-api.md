@@ -45,20 +45,28 @@ responses:
 
 ### `POST /transactions`
 
-Registra un movimiento manualmente (usado por el dashboard, y también internamente por el flujo de WhatsApp una vez confirmado, y por el motor de recurrentes). `amount`, `type`, `category_id`, `account_id` y `budget_period_id` son obligatorios: si falta alguno se rechaza con `422`. Los dos últimos no se derivan acá porque dependen de una decisión del usuario, que se resuelve antes de llegar a este endpoint. `transaction_date` y `currency` son opcionales y se resuelven por defecto (hoy y moneda primaria del usuario, respectivamente). Antes de insertar, el caso de uso corre el chequeo de duplicados contra la vía automática (ver [3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales), [HU1](05-historias-de-usuario.md) y [reglas de dominio § 7](reglas-de-dominio.md#7-chequeo-de-duplicados-entre-origen-manual-y-automático)).
+Registra un movimiento manualmente desde el dashboard. `amount`, `type`, `category_id`, `account_id` y `budget_period_id` son obligatorios: si falta alguno se rechaza con `422`. Los dos últimos no se derivan acá porque dependen de una decisión del usuario, que se resuelve antes de llegar a este endpoint.
+
+Lo que el cliente **no** manda:
+
+- `user_id` no viaja en el cuerpo: sale del `sub` del JWT autenticado. Aceptarlo del cliente sería dejar que cualquiera escriba movimientos en la cuenta de otro.
+- `source` lo fija el servidor en `"manual"`, ignorando cualquier valor recibido. Los movimientos `automatic` —el flujo de WhatsApp ya confirmado y el motor de recurrentes— nacen del caso de uso `RegisterTransaction` por dentro, no de este endpoint, así que la trazabilidad de origen ([reglas de dominio § 9](reglas-de-dominio.md#9-trazabilidad-de-origen-source)) no depende de la buena fe del cliente.
+
+Validaciones de pertenencia, antes de insertar: `account_id` tiene que ser una cuenta del usuario autenticado, y `budget_period_id` un período de ese usuario o de un grupo familiar al que pertenezca. Si no, `404` —no `403`— para no confirmar que el recurso existe.
+
+`transaction_date` y `currency` son opcionales y se resuelven por defecto (hoy y moneda primaria del usuario, respectivamente). Antes de insertar, el caso de uso corre el chequeo de duplicados contra la vía automática (ver [3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales), [HU1](05-historias-de-usuario.md) y [reglas de dominio § 7](reglas-de-dominio.md#7-chequeo-de-duplicados-entre-origen-manual-y-automático)).
 
 ```yaml
 requestBody:
   content:
     application/json:
       example:
-        user_id: "u1..."
+        # user_id no se manda: se deriva del JWT
         account_id: "a1..."
         budget_period_id: "bp1..."
         amount: 3500
         type: "expense"
         category_id: "cat-food"
-        source: "manual"
         currency: "ARS"              # opcional — default: user's primary_currency
         transaction_date: "2026-09-15" # opcional — default: today
 responses:
@@ -78,4 +86,6 @@ responses:
         example:
           detail: "missing required fields"
           missing_fields: ["account_id", "budget_period_id"]
+  404:
+    description: account_id or budget_period_id does not belong to the authenticated user
 ```
