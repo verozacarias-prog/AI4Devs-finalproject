@@ -303,7 +303,7 @@ En la fase de reestructuración aparece un patrón distinto, propio de trabajar 
 
 - ~~Configurar y versionar `CLAUDE.md`~~ — hecho al cierre de la Entrega 1, junto con `AGENTS.md`, tres commands y un hook de pre-commit. `CLAUDE.md` pasó después a ser un enlace simbólico a `AGENTS.md`.
 - ~~Montar el sistema de documentación viva del módulo 5~~ — hecho al cierre de la Entrega 1: portal, integración continua, `llms.txt` y cuatro ADR. Descrito en [documentación viva](docs/documentacion-viva.md).
-- Comprobar en un navegador real que los diagramas del portal se renderizan. Está anotado también en la hoja de ruta.
+- ~~Comprobar en un navegador real que los diagramas del portal se renderizan~~ — verificado sobre el sitio publicado al cierre de la Entrega 1.
 - Revisar el MCP de GitHub, que falla al conectar por un error de header de autorización. Quedó desactivado al cierre de la Entrega 1; hay que reautenticarlo antes de usarlo para los pull requests.
 - Registrar los prompts de código, tests y despliegue a medida que se escriben, no al cierre.
 - Verificar la sincronización entre la documentación (`docs/02-arquitectura.md` §2.3, `docs/03-modelo-de-datos.md`, `docs/04-api.md`) y el código real antes de cada entrega, aplicando la regla de precedencia de `AGENTS.md` §10: la especificación manda, lo que se corrige es el código.

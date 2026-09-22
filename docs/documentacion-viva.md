@@ -34,7 +34,8 @@ docs/  ──┬──▶  GitHub lo renderiza directamente, incluidos los diagr
 ```
 
 `docs/` no se modifica para alimentar al portal: el script agrega el frontmatter que Starlight
-exige, reescribe los enlaces y extrae los diagramas. El fundamento y los problemas concretos que
+exige, reescribe los enlaces y extrae los diagramas, que se renderizan en el cliente y se
+verificaron sobre el sitio publicado. El fundamento y los problemas concretos que
 resuelve están en el [ADR 0008](adr/0008-astro-starlight-como-portal.md).
 
 `llms.txt` está versionado, a diferencia de los otros dos, porque un agente que clona el
