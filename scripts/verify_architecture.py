@@ -53,6 +53,9 @@ DB_LEAK_PATTERNS = [
     (re.compile(r'\bfrom\s+[\'"][^\'"]*\.\./backend', re.I), 'import desde backend/'),
     (re.compile(r'\brequire\([\'"][^\'"]*\.\./backend', re.I), 'require desde backend/'),
     (re.compile(r'\bfrom\s+[\'"]@backend/', re.I), 'alias de import hacia backend/'),
+    (re.compile(r'\b(?:from|require\()\s*[\'"](?:pg|postgres|pg-promise|@prisma/client|drizzle-orm'
+                r'|knex|typeorm|mysql2?|sequelize)[\'"]', re.I),
+     'cliente de base de datos en el frontend'),
 ]
 FRONTEND_SOURCE_EXT = ('.ts', '.tsx', '.js', '.jsx', '.vue', '.svelte', '.mjs')
 SKIP_DIRS = {'node_modules', '.git', '__pycache__', 'dist', 'build', '.next', '.venv', 'venv'}
@@ -100,11 +103,14 @@ def check_domain_imports():
             if isinstance(node, ast.Import):
                 targets = [(a.name, node.lineno) for a in node.names]
             elif isinstance(node, ast.ImportFrom):
-                # from . import x  -> node.module is None; los relativos se revisan aparte
+                # from . import x  -> node.module is None; los relativos se revisan aparte.
+                # El paquete importado también puede ser un nombre y no el módulo:
+                # "from backend.app import adapters" o "from . import adapters".
                 targets = [(node.module, node.lineno)]
-                if node.level and node.module and ADAPTERS_PKG in node.module.split('.'):
+                if any(a.name == ADAPTERS_PKG for a in node.names):
                     errors.append('%s:%d el dominio importa de %s/ — debe hablar sólo con puertos'
                                   % (path, node.lineno, ADAPTERS_PKG))
+                    continue
 
             for module, line in targets:
                 if not module:

@@ -12,8 +12,28 @@ if ! command -v python3 >/dev/null 2>&1; then
     exit 0
 fi
 
+# Los verificadores tienen que ver lo que se va a commitear, no el árbol de
+# trabajo: si no, un cambio sin agregar al índice puede hacer pasar —o fallar—
+# un commit que no lo contiene. Se materializa el índice en un directorio
+# temporal y se corre ahí.
+snapshot=""
+
+cleanup() {
+    if [ -n "$snapshot" ]; then
+        rm -rf "$snapshot"
+    fi
+}
+trap cleanup EXIT
+
 run() {
-    ( cd "$root" && python3 "$1" ) || status=1
+    if [ -z "$snapshot" ]; then
+        snapshot=$(mktemp -d) || exit 1
+        git -C "$root" checkout-index -a -f --prefix="$snapshot/" || {
+            echo "pre-commit: no se pudo materializar el índice; se omiten las verificaciones."
+            exit 0
+        }
+    fi
+    ( cd "$snapshot" && python3 "$1" ) || status=1
 }
 
 # Documentación: cuando cambia un .md o el propio verificador.
