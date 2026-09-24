@@ -12,7 +12,7 @@ terminarlo.
 
 Después devolvé, sin escribir código todavía:
 
-- **Grupos que aplican.** Cuáles de los once grupos de `docs/reglas-de-dominio.md` rigen este
+- **Grupos que aplican.** Cuáles de los doce grupos de `docs/reglas-de-dominio.md` rigen este
   ticket, con el número y el título de cada uno, y una línea diciendo por qué aplica.
 - **Qué se resuelve solo.** Qué valores puede completar el sistema sin preguntar. Recordá que los
   únicos defaults derivables permitidos son fecha, moneda y categoría.

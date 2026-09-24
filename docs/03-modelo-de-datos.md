@@ -20,6 +20,7 @@ erDiagram
     BUDGET ||--o{ SENT_ALERT : "was alerted"
     USER ||--o| FINANCIAL_PROFILE : "describes"
     USER ||--o{ LOGIN_CODE : "requests"
+    USER ||--o{ LLM_USAGE : "consumes"
     USER ||--o{ ACCOUNT : owns
     ACCOUNT ||--o{ TRANSACTION : affects
     USER ||--o{ PENDING_TRANSACTION : "must complete"
@@ -181,6 +182,15 @@ erDiagram
         timestamp sent_at "DEFAULT now()"
     }
 
+    LLM_USAGE {
+        uuid user_id FK "NOT NULL"
+        date usage_date "NOT NULL — calendar day in the user's country time zone"
+        string quota "NOT NULL, CHECK IN ('registration','advice'), PK (user_id, usage_date, quota)"
+        int message_count "NOT NULL, DEFAULT 0, CHECK (message_count >= 0)"
+        int input_tokens "NOT NULL, DEFAULT 0"
+        int output_tokens "NOT NULL, DEFAULT 0"
+    }
+
     LOGIN_CODE {
         uuid id PK
         uuid user_id FK "NOT NULL"
@@ -291,6 +301,7 @@ erDiagram
 - **EXCHANGE_RATE**: historial de cotizaciones obtenidas de las fuentes configuradas. No pertenece a ningún usuario: la comparten todos los que eligieron esa fuente en `exchange_rate_reference`. La conversión usa la fila más reciente de la fuente del usuario, nunca una consulta al proveedor en el momento. Las fuentes en sí no son una tabla: viven en un archivo de configuración versionado, por el [ADR 0011](adr/0011-cotizaciones-con-adaptador-generico-configurable.md). La cotización que efectivamente se usó en un movimiento queda copiada en `TRANSACTION.exchange_rate`, así el historial del movimiento no depende de esta tabla.
 - **FINANCIAL_PROFILE**: respuestas opcionales del usuario que permiten que un consejo se cruce con su situación real, más allá de sus gastos. Todo es nulable porque cada pregunta se puede saltear, y `updated_at` indica si el dato puede haber quedado viejo. El ingreso se guarda por rango y no exacto. Son datos sensibles, por lo que la política de privacidad tiene que cubrirlos explícitamente. Las preguntas están en [reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos).
 - **SENT_ALERT**: registro de las alertas de presupuesto ya enviadas. Existe para que el proceso periódico que revisa presupuestos sepa que ya avisó: sin él, un presupuesto que pasó el umbral recibiría una alerta en cada corrida hasta fin de mes (ver [HU5](05-historias-de-usuario.md)). `threshold` deja lugar a más de un umbral por presupuesto (por ejemplo 80% y 100%) sin cambiar el esquema.
+- **LLM_USAGE**: consumo diario de cada usuario, por cuota. Se suma en la misma transacción que procesa el mensaje, y la cuota se consulta antes de llamar al LLM. Los tokens no deciden el límite, que es por cantidad de mensajes, pero permiten saber cuánto cuesta cada usuario y ajustar los límites con datos. La regla está en [reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente).
 - **LOGIN_CODE**: códigos de un solo uso para entrar al dashboard, enviados por WhatsApp ([ADR 0003](adr/0003-login-por-codigo-unico.md)). Se guarda el hash y no el código, para que una filtración de la tabla no permita entrar con los códigos vigentes. El límite de pedidos por número se calcula contando las filas recientes del usuario, sin una tabla aparte. El contrato está en [la API](04-api.md).
 - **RECURRING_RULE**: regla que el usuario configura una vez (ej. alquiler, una suscripción, el sueldo), de gasto o de ingreso según `type`, y que el sistema ejecuta sola en cada ciclo según `frequency`, generando la `TRANSACTION` correspondiente sin intervención manual. La regla define desde el alta todo lo que un movimiento necesita, que es lo que le permite no volver a preguntar mes a mes (ver [reglas de dominio § 8](reglas-de-dominio.md#8-movimientos-recurrentes-la-excepción-a-la-confirmación)). Guarda el dueño y no un `budget_period_id` concreto porque la regla vive a lo largo de muchos períodos: en cada ejecución se resuelve el período de ese dueño que cubre la fecha. `next_execution` es lo que consulta el proceso periódico para saber qué reglas ejecutar hoy; `active` permite pausarla sin borrar el historial de lo ya generado.
 - **INBOUND_MESSAGE**: todo mensaje que llega por el webhook de WhatsApp, guardado antes de procesarlo. Es a la vez la cola de trabajo del worker y el registro de lo que entró por el canal. `status` recorre `pending` → `processing` → `processed`, o termina en `failed` tras agotar los reintentos, y en ese caso el usuario recibe un aviso. `sent_at` ordena los mensajes de un mismo remitente, que se procesan de a uno y en orden. `user_id` es nulo mientras el número no corresponde a un usuario registrado. Cómo se toma, se reintenta y se procesa está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).

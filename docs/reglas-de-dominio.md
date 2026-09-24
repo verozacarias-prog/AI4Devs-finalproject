@@ -336,3 +336,39 @@ Las que hacen falta son:
 | Recurrente sin período | Utilidad | Cuando un recurrente no encuentra período confirmado |
 
 Ver también: [HU6](05-historias-de-usuario.md) · [USER y FINANCIAL_PROFILE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [OUTBOUND_MESSAGE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
+
+## 12. Límites de uso del asistente
+
+Cada mensaje que el asistente interpreta o responde con IA tiene un costo, y Platita está
+abierta a cualquier persona. Sin límites, un uso abusivo, o un error que dispare mensajes en
+bucle, se traslada directo a la factura del proveedor de LLM.
+
+**Dos cuotas diarias por usuario, separadas.**
+
+| Cuota | Qué cuenta | Límite inicial |
+|---|---|---|
+| Registro | Mensajes interpretados para cargar, completar o corregir movimientos, incluidas las respuestas del alta | 50 por día |
+| Consejos | Consultas respondidas con la base de conocimiento financiero | 10 por día |
+
+Están separadas porque registrar es el núcleo del producto y no puede quedar bloqueado porque el
+usuario hizo muchas preguntas. El día es el día calendario en la zona horaria del país del
+usuario. Los límites son configuración, no valores escritos en el código, para poder ajustarlos
+sin desplegar.
+
+**Superar una cuota no pierde nada.**
+
+- **Registro:** el mensaje se guarda igual y queda sin procesar hasta que la cuota se renueva al
+  día siguiente. El asistente responde con un texto fijo, sin llamar al LLM, que avisa que lo va
+  a procesar mañana. Perder un gasto que el usuario escribió sería peor que demorarlo.
+- **Consejos:** el asistente responde con un texto fijo que avisa que llegó al límite de
+  consultas del día. Registrar movimientos sigue funcionando.
+
+**Un tope global mensual como corte de emergencia.** Además de las cuotas por usuario, la cuenta
+del proveedor de LLM tiene un límite de gasto mensual de 20 dólares, configurado en la consola
+del proveedor y no en Platita. Es el último resguardo: si algo se sale de control, la factura no
+pasa de ese monto. Cuando se alcanza, el proveedor rechaza las llamadas y el worker lo trata como
+una caída del LLM: reintenta y, si se agotan los intentos, el mensaje queda en `failed` y el
+usuario recibe el aviso de que no se pudo procesar. Además avisa a quien opera Platita, que
+decide si subir el tope. Hasta entonces, el asistente no puede interpretar mensajes de nadie.
+
+Ver también: [LLM_USAGE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md), por cómo se reintentan los mensajes.

@@ -238,6 +238,8 @@ flowchart TB
     style CLIENTES fill:#f6f8fa,stroke:#8b949e
 ```
 
+**Límite de gasto en el proveedor de LLM:** la cuenta del proveedor se configura con un tope mensual de 20 dólares, como corte de emergencia además de las cuotas por usuario de [reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente).
+
 **Proceso de despliegue previsto:** push a `main` dispara el build y deploy automático del servicio web y del sitio estático. Las migraciones de Alembic corren como paso previo al arranque del contenedor. Los secretos (credenciales de WhatsApp, LLM y base de datos) se configuran como variables de entorno en la plataforma, nunca versionados. Los mensajes de WhatsApp se procesan en un worker aparte del servicio web: el webhook solo verifica la firma, guarda el mensaje y responde, y el worker lo interpreta y contesta. Así un reintento del proveedor no duplica movimientos y una caída del LLM demora la respuesta sin perder el mensaje ([ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md)). Todo mensaje saliente, incluidas las alertas, pasa por la tabla de salida que envía ese worker. Los procesos programados corren como cron jobs separados del servicio web, de modo que un fallo en el motor de recurrentes o de alertas no afecte la disponibilidad del webhook — es la mitigación concreta del riesgo de acoplamiento señalado en [2.1](#21-diagrama-de-arquitectura).
 
 ### **2.5. Seguridad**
