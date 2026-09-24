@@ -42,6 +42,7 @@ dejó, en síntesis:
 | Diagnóstico arquitectónico y cierre de la especificación | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Auditar la especificación contra el código, resolver los hallazgos con la autora y escribir las decisiones en `docs/` y en cuatro ADR |
 | Diseño de la capa de datos | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Revisar el modelo de datos en modo de solo lectura, resolver las divergencias con la autora y escribir las decisiones en `docs/` y en dos ADR |
 | Modelo de amenazas | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Analizar la seguridad de la especificación en modo de solo lectura, resolver con la autora las decisiones de sesión y de login, y escribirlas en `docs/` y en dos ADR |
+| Diseño de infraestructura y operación | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Diseñar en modo de solo lectura el despliegue, las copias de respaldo y la observabilidad, y registrarlo en `docs/` como propuesta sin decidir |
 | Código, tests y despliegue | *(pendiente — Entrega 2)* | | |
 
 La auditoría de repos de referencia (ver §1, Prompt 2) recomendó configurar y versionar las rules antes de empezar a codear, porque **ninguno de los dos proyectos de ejemplo del curso lo había hecho**. Esa recomendación se siguió al cierre de la Entrega 1. La configuración resultante —contratos, skill, commands, verificadores y hook— está descrita en [`docs/flujo-de-trabajo-con-ia.md`](docs/flujo-de-trabajo-con-ia.md) y no se repite acá.
@@ -186,6 +187,20 @@ La corrección humana que vino después es la más valiosa: la primera lista de 
 ### 2.4. Infraestructura y despliegue
 
 *Ver Prompt 1 de §2.2. Decisión pendiente de confirmación final; se documenta en la Entrega 2 junto con el despliegue real.*
+
+**Prompt 1** — *Claude Code · diseño de infraestructura y operación de solo lectura, registrado como propuesta*
+
+> "Actuá como Lead DevOps / Site Reliability Engineer con experiencia en productos de consumo operados por una sola persona. Tu criterio prioriza, en este orden: recuperabilidad de los datos, simplicidad operativa, costo, y recién después escalabilidad. Cada componente de infraestructura que agregues debe justificarse con un requisito concreto; lo que no se justifica, no va. [...] Esta tarea es de SOLO LECTURA. [...] Si falta información que cambiaría la topología de forma sustancial (en particular el destino de despliegue o el presupuesto), listá hasta 3 preguntas BLOQUEANTES y DETENTE."
+>
+> *(ante las preguntas bloqueantes sobre destino, presupuesto y pérdida de datos tolerable)* "va a ser un mvp de prueba de un producto, lo minimo que pueda gastar y que tenga las mejores prestaciones dentro de su categoria"
+>
+> *(sobre el diseño resultante)* "fijate como podria sumarlo a la documentacion que tengo hoy en el proyecto, no voy a tomar la decicion ahora"
+
+*(prompt completo: ~150 líneas con rol, contexto, modo de trabajo, objetivo en dos fases, restricciones, formato de salida y criterio de calidad)*
+
+*Qué devolvió y qué se decidió:* el inventario confirmó que no hay todavía contenedores, pipeline de la aplicación, infraestructura como código ni registros definidos, y la IA se detuvo con tres preguntas: destino, presupuesto y pérdida de datos tolerable. La respuesta de la autora fue un criterio y no una cifra, y la IA lo tradujo en supuestos marcados: Render en su plan pago más chico, por unos US$23 a 25 por mes, antes que un servidor propio de unos US$6, porque la diferencia compra casi toda la operación de una persona sola. El diseño suma una copia diaria cifrada fuera de Render, un guardia para que revertir un despliegue no se trabe con una migración que la versión anterior no conoce, y siete alertas, cada una con qué hacer. También encontró dos divergencias en la especificación: la rama de despliegue y quién genera las alertas proactivas.
+
+La autora no tomó la decisión. El diseño entró como [Operación](docs/operacion.md), con la misma marca de propuesta que ya usaba §2.4, y lo que falta decidir, incluidas las dos divergencias, pasó a las decisiones abiertas de la [hoja de ruta](docs/hoja-de-ruta.md). No se escribió ningún ADR, porque un ADR registra una decisión tomada.
 
 ---
 
@@ -371,6 +386,7 @@ La corrección citada arriba muestra el ajuste más importante de la sesión. La
 | 30 | Interpretar "bueno esta bien asi" como no aplicar la solución propuesta | La autora quería aplicarla. Ante una respuesta ambigua, la IA eligió una interpretación en vez de preguntar |
 | 31 | Un dominio propio como condición para que la cookie de sesión funcione | La autora cuestionó el costo en un MVP sin usuarios. La IA buscó una alternativa sin costo: la API sirve también el dashboard, en el mismo origen (ADR 0016). El dominio quedó para antes de abrir a usuarios reales, como defensa contra el phishing |
 | 32 | Un plan de remediación con varios riesgos "Altos", sin decir cuándo había que resolver cada uno | La autora preguntó si algo era crítico. Nada lo era: sin usuarios, no había nada expuesto. Se reordenó por cuándo conviene resolver cada cosa. Lo que cambiaba el esquema antes de programar el login se resolvió en el ADR 0017; el resto pasó a la hoja de ruta |
+| 33 | Un diseño de operación completo, con una recomendación de proveedor y próximos pasos que empezaban por confirmarlo | La autora no iba a decidir todavía. El diseño entró a `docs/` como propuesta, con la marca que ya usa §2.4, y lo pendiente pasó a la hoja de ruta, en vez de forzar la decisión para poder documentarlo |
 
 El patrón que se repite: la IA tiende a **resolver la ambigüedad por su cuenta** eligiendo un valor por defecto razonable, y a **justificar decisiones técnicas por el esfuerzo** que ahorran en vez de por sus propiedades de diseño. Las dos cosas hay que detectarlas leyendo, porque el resultado siempre suena defendible.
 
