@@ -20,6 +20,9 @@ erDiagram
     ACCOUNT ||--o{ TRANSACTION : affects
     USER ||--o{ PENDING_TRANSACTION : "must complete"
     PENDING_TRANSACTION ||--o| TRANSACTION : "becomes, once complete"
+    USER |o--o{ INBOUND_MESSAGE : sends
+    USER |o--o{ OUTBOUND_MESSAGE : receives
+    INBOUND_MESSAGE |o--o{ OUTBOUND_MESSAGE : "is answered by"
 
     USER {
         uuid id PK
@@ -138,6 +141,37 @@ erDiagram
         timestamp created_at "DEFAULT now()"
     }
 
+    INBOUND_MESSAGE {
+        uuid id PK
+        string provider "NOT NULL, CHECK IN ('meta','twilio')"
+        string provider_message_id "NOT NULL, UNIQUE (provider, provider_message_id) — Meta's wamid"
+        uuid user_id FK "NULLABLE — null while the sender is not a registered user"
+        string from_phone "NOT NULL"
+        jsonb payload "NOT NULL — message as received, never logged unmasked"
+        timestamp sent_at "NOT NULL — provider timestamp, orders the messages of one sender"
+        string status "NOT NULL, CHECK IN ('pending','processing','processed','failed'), DEFAULT 'pending'"
+        int attempts "NOT NULL, DEFAULT 0"
+        timestamp next_attempt_at "NOT NULL, DEFAULT now()"
+        timestamp locked_until "NULLABLE — lease while a worker processes it"
+        timestamp processed_at "NULLABLE"
+        timestamp created_at "DEFAULT now()"
+    }
+
+    OUTBOUND_MESSAGE {
+        uuid id PK
+        string provider "NOT NULL, CHECK IN ('meta','twilio')"
+        uuid user_id FK "NULLABLE — null only when answering a sender who is not registered yet"
+        string to_phone "NOT NULL"
+        uuid inbound_message_id FK "NULLABLE — the message this one answers; null for alerts and reminders"
+        jsonb content "NOT NULL — free text or template name and parameters"
+        string status "NOT NULL, CHECK IN ('pending','sent','failed'), DEFAULT 'pending'"
+        int attempts "NOT NULL, DEFAULT 0"
+        timestamp next_attempt_at "NOT NULL, DEFAULT now()"
+        string provider_message_id "NULLABLE — set once the provider accepts it"
+        timestamp sent_at "NULLABLE"
+        timestamp created_at "DEFAULT now()"
+    }
+
     ADVICE_DOCUMENT {
         uuid id PK
         text content "NOT NULL"
@@ -162,6 +196,8 @@ erDiagram
 - `TRANSACTION.amount` lleva `CHECK (amount > 0)`: guarda la magnitud, nunca el signo. Si el movimiento resta o suma lo dice `type`, que es el único lugar donde vive esa distinción — un monto negativo con `type = 'expense'` sumaría al saldo en vez de restar.
 - La moneda de un movimiento es la de su cuenta, y la base lo impone: `TRANSACTION (account_id, currency)` es una clave foránea compuesta contra `ACCOUNT (id, currency)`, apoyada en un `UNIQUE (id, currency)` en `ACCOUNT`. Con `ON UPDATE RESTRICT`, esa misma clave impide cambiar la moneda de una cuenta que ya tiene movimientos. Lo mismo vale para `RECURRING_EXPENSE (account_id, currency)`. La regla está en [reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado).
 - En `TRANSACTION`, `original_amount`, `original_currency` y `exchange_rate` van los tres nulos o los tres informados (`CHECK`), y si están informados `original_currency` es distinta de `currency` y `exchange_rate > 0`. Guardan el gasto tal como lo dijo el usuario cuando fue en otra moneda que la de la cuenta: el saldo usa siempre `amount`, y estas columnas son la evidencia de la conversión que el usuario confirmó.
+- En `TRANSACTION`, `UNIQUE (recurring_expense_id, transaction_date)`: una regla recurrente genera como mucho un movimiento por fecha de ejecución. Si el proceso programado corre dos veces o se reintenta, el segundo insert choca con la clave en vez de duplicar el cargo. Las filas con `recurring_expense_id` nulo no entran en la restricción.
+- En `INBOUND_MESSAGE`, `UNIQUE (provider, provider_message_id)`: un mensaje del proveedor se guarda una sola vez, así un reintento del webhook no genera un segundo procesamiento. El fundamento está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
 - `TRANSACTION.duplicate_of` referencia otra `TRANSACTION` **del mismo usuario** cuando ambas describen probablemente el mismo gasto real. Esa pertenencia se impone en la base: la autorreferencia es una clave foránea compuesta `(user_id, duplicate_of)` contra `(user_id, id)`, apoyada en un `UNIQUE (user_id, id)` en `TRANSACTION`; la columna sigue siendo nullable. Sin eso un movimiento podría enlazarse al de otro usuario. El criterio de detección, y cuándo se puebla la columna, están en [reglas de dominio § 7](reglas-de-dominio.md#7-chequeo-de-duplicados-entre-origen-manual-y-automático).
 
 ### **3.2. Descripción de entidades principales:**
@@ -175,4 +211,6 @@ erDiagram
 - **TRANSACTION**: gasto o ingreso ya completo y válido — si está en esta tabla, tiene cuenta, categoría y período de presupuesto asignados, sin excepción (ver restricción arriba). Guarda tanto el monto original (`amount`, `currency`) como el convertido a la moneda primaria del período (`converted_amount`), y el `source` (manual o automático) para auditoría y para medir cuánto resuelve cada vía. `recurring_expense_id` distingue, dentro de los automáticos, cuáles vinieron del motor de recurrencia. `duplicate_of` es el mecanismo previsto de detección de duplicados entre carga manual y automática (criterio en [reglas de dominio § 7](reglas-de-dominio.md#7-chequeo-de-duplicados-entre-origen-manual-y-automático)). La columna existe desde el esquema inicial; la lógica llega junto con la carga por email (could-have).
 - **PENDING_TRANSACTION**: movimiento a medio completar, todavía no registrado. Cuándo se crea y cuándo no, cómo continúa la conversación, cómo se promueve y cómo expira está en [reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración). Será también el estado natural de lo que detecte el parser de emails cuando se implemente: un mail de aviso trae monto, fecha y normalmente la cuenta, pero nunca a qué presupuesto imputarlo, así que esperará acá la confirmación. Guarda lo interpretado (`parsed_data`), la lista de `missing_fields`, y el asistente pregunta por WhatsApp. Tener una tabla aparte, en vez de un `status` dentro de `TRANSACTION` con columnas nullables, es lo que permite que `TRANSACTION` mantenga sus `NOT NULL` reales: los datos incompletos no contaminan la tabla de la que salen saldos y presupuestos.
 - **RECURRING_EXPENSE**: regla que el usuario configura una vez (ej. alquiler, una suscripción) y que el sistema ejecuta sola en cada ciclo según `frequency`, generando la `TRANSACTION` correspondiente sin intervención manual. La regla define desde el alta todo lo que un movimiento necesita, que es lo que le permite no volver a preguntar mes a mes (ver [reglas de dominio § 8](reglas-de-dominio.md#8-gastos-recurrentes-la-excepción-a-la-confirmación)). Guarda el dueño y no un `budget_period_id` concreto porque la regla vive a lo largo de muchos períodos: en cada ejecución se resuelve el período de ese dueño que cubre la fecha. `next_execution` es lo que consulta el proceso periódico para saber qué reglas ejecutar hoy; `active` permite pausarla sin borrar el historial de lo ya generado.
+- **INBOUND_MESSAGE**: todo mensaje que llega por el webhook de WhatsApp, guardado antes de procesarlo. Es a la vez la cola de trabajo del worker y el registro de lo que entró por el canal. `status` recorre `pending` → `processing` → `processed`, o termina en `failed` tras agotar los reintentos, y en ese caso el usuario recibe un aviso. `sent_at` ordena los mensajes de un mismo remitente, que se procesan de a uno y en orden. `user_id` es nulo mientras el número no corresponde a un usuario registrado. Cómo se toma, se reintenta y se procesa está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
+- **OUTBOUND_MESSAGE**: todo mensaje que Platita manda por WhatsApp, ya sea una respuesta, una alerta o un recordatorio. Se escribe en la misma transacción que lo origina y el worker lo envía después, de modo que un cambio en la base y su aviso al usuario no pueden separarse. `content` distingue texto libre de plantilla, porque fuera de la ventana de conversación Meta solo acepta plantillas preaprobadas.
 - **ADVICE_DOCUMENT**: base de conocimiento financiero curada por el equipo del producto (no por cada usuario final) — es contenido compartido que cualquier usuario puede consultar vía RAG, no datos personales. `topic` clasifica el fragmento (tarjeta de crédito, fondo de emergencia, inversión básica, etc.) para poder acotar la búsqueda además de la similitud semántica. `status` y `last_reviewed_at` existen para poder listar qué contenido lleva mucho sin revisarse y decidir si actualizarlo — no hay actualización automática en el MVP, es un chequeo periódico manual apoyado en esa marca.

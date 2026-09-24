@@ -48,18 +48,20 @@ flowchart TB
     subgraph PLATITA["Platita"]
         SPA["<b>Aplicación web</b><br/><i>[Contenedor: SPA]</i><br/>Dashboard de presupuestos,<br/>saldos y configuración"]
         API["<b>API Backend</b><br/><i>[Contenedor: Python + FastAPI]</i><br/>Casos de uso, reglas de negocio<br/>y orquestación de integraciones"]
+        MSGW["<b>Worker de mensajes</b><br/><i>[Contenedor: Python]</i><br/>Interpreta los mensajes recibidos<br/>y envía las respuestas"]
         WORKER["<b>Procesos programados</b><br/><i>[Contenedor: Python]</i><br/>Gastos recurrentes, alertas de<br/>presupuesto y expiración de pendientes"]
         DB[("<b>Base de datos</b><br/><i>[Contenedor: PostgreSQL + pgvector]</i><br/>Datos del usuario y base de<br/>conocimiento vectorizada")]
     end
 
     USER -->|"mensajes"| WACLOUD
     USER -->|"HTTPS"| SPA
-    WACLOUD <-->|"webhook y respuestas<br/>(firma verificada)"| API
+    WACLOUD -->|"webhook<br/>(firma verificada)"| API
+    MSGW -->|"mensajes salientes"| WACLOUD
     SPA -->|"JSON/HTTPS"| API
     API -->|"SQL"| DB
-    API -->|"API"| LLM
-    WORKER -->|"SQL"| DB
-    WORKER -->|"alertas"| WACLOUD
+    MSGW -->|"SQL: toma entrada,<br/>escribe salida"| DB
+    MSGW -->|"API"| LLM
+    WORKER -->|"SQL: alertas a la<br/>tabla de salida"| DB
 
     style API fill:#1f6feb,stroke:#0d419d,color:#fff
     style PLATITA fill:#f6f8fa,stroke:#8b949e
@@ -74,7 +76,8 @@ El interior del contenedor API, donde se ve el patrón arquitectónico elegido.
 flowchart TB
     subgraph INBOUND["Adaptadores de entrada"]
         ROUTERS["Routers REST<br/><i>FastAPI</i>"]
-        HOOK["Webhook handler<br/><i>WhatsApp</i>"]
+        HOOK["Webhook handler<br/><i>WhatsApp: verifica y guarda</i>"]
+        MSGWK["Worker de mensajes<br/><i>procesa lo guardado</i>"]
         PARSE["Email parser<br/><i>could-have</i>"]
     end
 
@@ -96,6 +99,7 @@ flowchart TB
 
     ROUTERS --> UC
     HOOK --> UC
+    MSGWK --> UC
     PARSE -.-> UC
     UC --> ENT
     UC --> PORTS
@@ -203,6 +207,7 @@ flowchart TB
         direction LR
         STATIC["<b>Static Site</b><br/>dashboard web"]
         WEBSVC["<b>Web Service</b><br/><i>contenedor Python</i><br/>API FastAPI"]
+        BGW["<b>Background Worker</b><br/><i>contenedor Python</i><br/>worker de mensajes"]
         CRON["<b>Cron Jobs</b><br/><i>contenedor Python</i><br/>recurrentes · alertas · expiración"]
         PG[("<b>PostgreSQL gestionado</b><br/><i>extensión pgvector</i><br/>backups automáticos")]
     end
@@ -216,12 +221,13 @@ flowchart TB
     PHONE <--> WACLOUD
     BROWSER -->|"HTTPS"| STATIC
     DEV -.->|"deploy"| RENDER
-    WACLOUD <-->|"webhook y mensajes salientes<br/>(HTTPS, firma verificada)"| WEBSVC
+    WACLOUD -->|"webhook<br/>(HTTPS, firma verificada)"| WEBSVC
+    BGW -->|"mensajes salientes"| WACLOUD
     STATIC -->|"JSON/HTTPS"| WEBSVC
     WEBSVC --> PG
+    BGW --> PG
+    BGW --> LLMAPI
     CRON --> PG
-    CRON -->|"alertas"| WACLOUD
-    WEBSVC --> LLMAPI
     WEBSVC --> FXAPI
 
     style WEBSVC fill:#1f6feb,stroke:#0d419d,color:#fff
@@ -230,7 +236,7 @@ flowchart TB
     style CLIENTES fill:#f6f8fa,stroke:#8b949e
 ```
 
-**Proceso de despliegue previsto:** push a `main` dispara el build y deploy automático del servicio web y del sitio estático. Las migraciones de Alembic corren como paso previo al arranque del contenedor. Los secretos (credenciales de WhatsApp, LLM y base de datos) se configuran como variables de entorno en la plataforma, nunca versionados. Los procesos programados corren como cron jobs separados del servicio web, de modo que un fallo en el motor de recurrentes o de alertas no afecte la disponibilidad del webhook — es la mitigación concreta del riesgo de acoplamiento señalado en [2.1](#21-diagrama-de-arquitectura).
+**Proceso de despliegue previsto:** push a `main` dispara el build y deploy automático del servicio web y del sitio estático. Las migraciones de Alembic corren como paso previo al arranque del contenedor. Los secretos (credenciales de WhatsApp, LLM y base de datos) se configuran como variables de entorno en la plataforma, nunca versionados. Los mensajes de WhatsApp se procesan en un worker aparte del servicio web: el webhook solo verifica la firma, guarda el mensaje y responde, y el worker lo interpreta y contesta. Así un reintento del proveedor no duplica movimientos y una caída del LLM demora la respuesta sin perder el mensaje ([ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md)). Todo mensaje saliente, incluidas las alertas, pasa por la tabla de salida que envía ese worker. Los procesos programados corren como cron jobs separados del servicio web, de modo que un fallo en el motor de recurrentes o de alertas no afecte la disponibilidad del webhook — es la mitigación concreta del riesgo de acoplamiento señalado en [2.1](#21-diagrama-de-arquitectura).
 
 ### **2.5. Seguridad**
 

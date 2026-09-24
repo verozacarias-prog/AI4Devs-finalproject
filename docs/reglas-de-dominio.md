@@ -120,6 +120,11 @@ Ver también: [1.2, detección de duplicados](01-producto.md#12-características
 
 Para que eso sea posible sin preguntar nada mes a mes, la regla define desde el alta **todo lo que un movimiento necesita**: categoría, cuenta (`account_id`) y dueño del presupuesto (`budget_user_id` o `budget_family_group_id`).
 
+**Una regla genera como mucho un movimiento por fecha de ejecución.** Si el proceso programado
+corre dos veces el mismo día o se reintenta después de un fallo, no se genera un segundo cargo.
+La base lo garantiza con una clave única, y el avance de `next_execution` ocurre en la misma
+transacción que inserta el movimiento.
+
 Ver también: [1.2, gastos recurrentes](01-producto.md#12-características-y-funcionalidades-principales) · [RECURRING_EXPENSE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [restricción XOR en 3.1](03-modelo-de-datos.md#31-diagrama-del-modelo-de-datos).
 
 ## 9. Trazabilidad de origen (`source`)

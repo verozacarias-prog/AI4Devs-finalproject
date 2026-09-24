@@ -50,6 +50,7 @@ nombres de archivo de código están en inglés.
 - [0007 — AGENTS.md como fuente única y CLAUDE.md como enlace simbólico](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0007-agents-md-como-fuente-unica/)
 - [0008 — Astro Starlight como portal de documentación](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0008-astro-starlight-como-portal/)
 - [0009 — Validación de documentación en integración continua](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0009-validacion-de-documentacion-en-ci/)
+- [0010 — Webhook de WhatsApp asíncrono, con tabla de entrada y de salida en PostgreSQL](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0010-webhook-asincrono-con-tabla-de-entrada/)
 
 ## Contrato para asistentes de IA
 

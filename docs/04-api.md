@@ -4,25 +4,44 @@
 
 ### `POST /webhook/whatsapp`
 
-Recibe los mensajes entrantes desde el proveedor de WhatsApp Business y dispara la interpretación por IA. El contenido del mensaje viaja en el idioma real del usuario (español).
+Recibe los mensajes entrantes desde la Cloud API de Meta. **No los procesa**: verifica la firma, los guarda y confirma la recepción. La interpretación por IA, el registro y la respuesta al usuario ocurren después, en el worker, y la respuesta viaja por WhatsApp, no en este response. El fundamento está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
+
+- La firma `X-Hub-Signature-256` se verifica sobre el cuerpo crudo antes de parsearlo. Si no es válida: `401` y no se guarda nada.
+- Cada mensaje se guarda una sola vez por `(provider, provider_message_id)`, donde el identificador es el `wamid` de Meta. Un reintento de Meta del mismo mensaje responde `200` y no genera nada nuevo.
+- Los eventos de estado (`statuses`: entregado, leído) responden `200` y no se guardan.
+- El texto del mensaje viaja en el idioma real del usuario (español).
 
 ```yaml
+parameters:
+  - in: header
+    name: X-Hub-Signature-256
+    required: true
+    example: "sha256=<HMAC-SHA256 of the raw body with the app secret>"
 requestBody:
   content:
     application/json:
       example:
-        from: "+5491100000000"
-        message: "gasté 3500 pesos en el super con la Galicia"
-        timestamp: "2026-09-15T14:32:00Z"
+        # Recortado a los campos que se usan; el resto del payload de Meta se ignora.
+        object: "whatsapp_business_account"
+        entry:
+          - changes:
+              - field: "messages"
+                value:
+                  messages:
+                    - id: "wamid.HBgN..."   # provider_message_id
+                      from: "5491100000000"
+                      timestamp: "1789482720"
+                      type: "text"
+                      text:
+                        body: "gasté 3500 pesos en el super con la Galicia"
 responses:
   200:
-    description: Message processed; the assistant replies over the same channel
-    content:
-      application/json:
-        example:
-          status: "processed"
-          transaction_created: true
+    description: Received and stored (or already stored, or a status event); processing happens later
+  401:
+    description: Missing or invalid signature; nothing is stored
 ```
+
+La misma ruta atiende la verificación de la URL que Meta hace al configurar el webhook: `GET /webhook/whatsapp` con `hub.mode=subscribe`, `hub.verify_token` y `hub.challenge`. Si el token coincide con el configurado, responde `200` con el valor de `hub.challenge` como texto plano. Si no, `403`.
 
 ### `GET /budgets/{budget_id}`
 
