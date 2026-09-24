@@ -17,7 +17,7 @@ Antes de escribir código para cualquier ticket de dominio, leer este documento 
 
 **Campos obligatorios de un movimiento.** Una fila en `TRANSACTION` solo existe con todos estos datos presentes: `amount`, `currency`, `type`, `transaction_date`, `category_id`, `account_id` y `budget_period_id` — todos `NOT NULL` en la base de datos, así que ninguna vía de carga puede insertar un movimiento a medias. Lo que cambia entre ellos es **de dónde sale el valor**, no si es obligatorio:
 
-- **Resueltos por el sistema, sin preguntar:** `transaction_date` (hoy, salvo que el mensaje indique otra fecha), `currency` (la primaria del usuario, salvo indicación contraria) y `category_id` (resuelto contra las categorías existentes; si ninguna encaja, se sugiere crear una). Quedan visibles en el mensaje de confirmación, que es donde el usuario los corrige.
+- **Resueltos por el sistema, sin preguntar:** `transaction_date` (hoy en la zona horaria del usuario, salvo que el mensaje indique otra fecha), `currency` (la primaria del usuario, salvo indicación contraria) y `category_id` (resuelto contra las categorías existentes; si ninguna encaja, se sugiere crear una). Quedan visibles en el mensaje de confirmación, que es donde el usuario los corrige.
 - **Pedidos o confirmados por el usuario:** `amount`, `type` si el mensaje no lo deja claro, `account_id` siempre que no se mencione una cuenta, y `budget_period_id` **siempre**. Con el presupuesto el sistema no decide solo: `transaction_date` acota los períodos candidatos (y si el usuario pertenece a un grupo familiar, esa fecha cae dentro de su período individual y del familiar a la vez), pero cuál de ellos absorbe el gasto es una decisión del usuario, no algo derivable. El asistente propone el candidato más probable y el usuario confirma o elige otro; ninguna transacción se imputa a un presupuesto sin ese visto bueno. Hay dos excepciones a que ese visto bueno lo dé el propio usuario en el momento: las reglas recurrentes (§ 8) y el dueño de un grupo familiar que saca a un miembro con pendientes abiertos (§ 10).
 
 Si falta o queda sin confirmar alguno de los campos que dependen del usuario, el movimiento no se registra: queda como `PENDING_TRANSACTION` hasta que responda. La misma regla aplicará a los movimientos detectados por el parser de emails cuando se implemente (could-have): traen monto, fecha y normalmente cuenta, pero nunca el presupuesto, así que quedarán pendientes de confirmación igual que los manuales incompletos.
@@ -101,6 +101,14 @@ Se usa cuando falta algo que **depende de una decisión del usuario** — la cue
 
 Cuando el usuario responde, se completa y se promueve a `TRANSACTION` (quedando enlazada por `resulting_transaction_id`). `expires_at` evita que se acumulen pendientes eternos de mensajes que nunca se contestaron.
 
+**Un pendiente también puede ser una transferencia o una compra con tarjeta.** Las dos se
+confirman conversando igual que un gasto (§ 13): a una transferencia le puede faltar la cuenta
+de origen o de destino, o la confirmación de la cotización si las monedas difieren; a una compra
+con tarjeta, la tarjeta, la cantidad de cuotas o a qué presupuesto va. Mientras tanto quedan como
+pendiente, con `intent` indicando en qué se van a convertir, y al completarse se promueven a
+`TRANSFER` o a `CARD_PURCHASE` en vez de a `TRANSACTION`. Lotes, recordatorios y vencimiento son
+los mismos para los tres.
+
 **Los pendientes de un recurrente no vencen.** Un pendiente generado por una regla recurrente
 (§ 8) representa un gasto que ocurre sí o sí, como el alquiler: descartarlo sería perder el
 registro de ese mes. Por eso no tiene `expires_at` y, en vez de vencer, se vuelve a recordar
@@ -147,7 +155,9 @@ Ver también: [PENDING_TRANSACTION y PENDING_BATCH en 3.2](03-modelo-de-datos.md
 
 Un presupuesto recibe movimientos en varias monedas y los convierte a su moneda primaria. La
 `TRANSACTION` guarda tanto el monto en la moneda de su cuenta (`amount`, `currency`) como el
-convertido a la moneda del presupuesto (`converted_amount`).
+convertido a la moneda del presupuesto (`converted_amount`), junto con la cotización usada en
+ese paso (`budget_exchange_rate`), para que el dashboard pueda mostrarla y la conversión se
+pueda reproducir después.
 
 **Dos conversiones distintas.** Hay dos momentos en que se convierte, y conviene no confundirlos:
 
@@ -205,6 +215,13 @@ completo salvo el período, que entra en la fila de lotes como cualquier otro pe
 El asistente avisa, por ejemplo: "Se generó el alquiler de $500.000, pero no tenés presupuesto
 confirmado para octubre. ¿Lo confirmás?". La misma clave de unicidad aplica al pendiente, así
 una doble ejecución tampoco duplica el aviso.
+
+**Si hace falta convertir, el recurrente también queda pendiente.** Cuando la moneda de la
+cuenta de la regla no es la del período que cubre la fecha, el motor no aplica una cotización
+por su cuenta, porque ninguna se aplica sin que el usuario vea el resultado (§ 6). Crea una
+`PENDING_TRANSACTION` con todo completo salvo la cotización del presupuesto, con el valor
+sugerido a la vista, y sigue el mismo camino que el pendiente sin período: no vence y se recuerda
+cada 3 días.
 
 Ver también: [1.2, movimientos recurrentes](01-producto.md#12-características-y-funcionalidades-principales) · [RECURRING_RULE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [restricción XOR en 3.1](03-modelo-de-datos.md#31-diagrama-del-modelo-de-datos).
 
@@ -295,7 +312,8 @@ versión de los términos.
 1. Consentimiento de términos y política de privacidad.
 2. Nombre y país. Del país se sugiere la moneda primaria, que el usuario confirma, y, si existe,
    la fuente de cotización; en Argentina se le pregunta cuál prefiere (por ejemplo, MEP u
-   oficial).
+   oficial). La zona horaria se deduce del país sin preguntar; solo si el país tiene más de una
+   (por ejemplo, Brasil o México) se le pide que elija.
 3. Permiso para recibir avisos (ver abajo).
 4. Al menos una cuenta, con la opción de dar de alta varias en el mismo mensaje. Por cada una se
    confirma tipo, moneda y saldo inicial.
@@ -323,7 +341,7 @@ perfil guarda cuándo se actualizó, para que un consejo sepa si el dato puede h
 **Mensajes proactivos: solo con permiso.** Un mensaje es proactivo cuando Platita lo inicia sin
 estar respondiendo a algo que el usuario acaba de escribir: alertas de presupuesto (HU5),
 recordatorios de pendientes (§ 5), recordatorio de período sin confirmar (§ 3) y aviso de
-recurrente sin período (§ 8). Si el usuario no dio permiso para avisos, Platita nunca le envía
+recurrente o cuota por confirmar (§ 8 y § 13). Si el usuario no dio permiso para avisos, Platita nunca le envía
 uno. Lo que sí puede hacer es mencionarlo dentro de una respuesta a algo que el usuario
 escribió, por ejemplo al confirmar un gasto: "Listo. Ojo, vas al 82% del rubro". El permiso se
 puede dar o retirar en cualquier momento.
@@ -342,7 +360,7 @@ Las que hacen falta son:
 | Alerta de presupuesto | Utilidad | Al pasar un umbral |
 | Pendientes sin confirmar | Utilidad | Antes de vencer, o cada 3 días si son de un recurrente |
 | Período sin confirmar | Utilidad | Cerca del inicio de un período que sigue en `draft` |
-| Recurrente sin período | Utilidad | Cuando un recurrente no encuentra período confirmado |
+| Recurrente o cuota por confirmar | Utilidad | Cuando un recurrente o una cuota de tarjeta no encuentra período confirmado, o necesita que el usuario confirme la cotización |
 
 Ver también: [HU6](05-historias-de-usuario.md) · [USER y FINANCIAL_PROFILE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [OUTBOUND_MESSAGE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
 
@@ -360,8 +378,8 @@ bucle, se traslada directo a la factura del proveedor de LLM.
 | Consejos | Consultas respondidas con la base de conocimiento financiero | 10 por día |
 
 Están separadas porque registrar es el núcleo del producto y no puede quedar bloqueado porque el
-usuario hizo muchas preguntas. El día es el día calendario en la zona horaria del país del
-usuario. Los límites son configuración, no valores escritos en el código, para poder ajustarlos
+usuario hizo muchas preguntas. El día es el día calendario en la zona horaria del usuario
+(`time_zone`). Los límites son configuración, no valores escritos en el código, para poder ajustarlos
 sin desplegar.
 
 **Superar una cuota no pierde nada.**
@@ -411,8 +429,9 @@ diferencia de redondeo.
 
 **Sin período confirmado, la cuota queda pendiente.** Si el período del vencimiento no está
 confirmado, la cuota queda como `PENDING_TRANSACTION` y, como las de una regla recurrente (§ 5 y
-§ 8), no vence y se recuerda cada 3 días. Una compra genera como mucho un movimiento, o un
-pendiente, por cuota.
+§ 8), no vence y se recuerda cada 3 días. Lo mismo pasa si la moneda de la tarjeta no es la del
+período: la cuota espera a que el usuario confirme la cotización del presupuesto (§ 6). Una
+compra genera como mucho un movimiento, o un pendiente, por cuota.
 
 **Resúmenes.** Las fechas de cierre y vencimiento de cada resumen se generan a partir de los días
 fijos de la tarjeta, y el usuario puede corregirlas para un resumen puntual, porque los bancos a
@@ -466,7 +485,9 @@ dashboard:
 
 - **Acceso:** puede descargar en cualquier momento todos sus datos en Excel desde el dashboard.
 - **Rectificación:** puede corregir sus datos desde el dashboard, y sus movimientos también por
-  WhatsApp.
+  WhatsApp. Un movimiento ya confirmado que se corrige queda marcado con cuándo y quién lo
+  corrigió por última vez; el valor anterior no se conserva
+  ([ADR 0014](adr/0014-marca-de-edicion-en-movimientos.md)).
 - **Supresión:** el borrado de cuenta descrito arriba.
 
 **Datos que salen hacia el proveedor de LLM.** Nunca se envían identificadores (teléfono, nombre,

@@ -16,7 +16,7 @@ erDiagram
     USER ||--o{ CATEGORY : "creates (custom)"
     USER ||--o{ RECURRING_RULE : configures
     RECURRING_RULE ||--o{ TRANSACTION : "generates (automatic)"
-    RECURRING_RULE ||--o{ PENDING_TRANSACTION : "generates, when no confirmed period"
+    RECURRING_RULE ||--o{ PENDING_TRANSACTION : "generates, when no confirmed period or rate"
     BUDGET ||--o{ SENT_ALERT : "was alerted"
     USER ||--o| FINANCIAL_PROFILE : "describes"
     USER ||--o{ LOGIN_CODE : "requests"
@@ -25,7 +25,7 @@ erDiagram
     ACCOUNT ||--o{ CARD_STATEMENT : "closes (credit card)"
     CARD_STATEMENT ||--o{ TRANSACTION : "bills, as installments"
     CARD_PURCHASE ||--o{ TRANSACTION : "generates, one per installment"
-    CARD_PURCHASE ||--o{ PENDING_TRANSACTION : "generates, when no confirmed period"
+    CARD_PURCHASE ||--o{ PENDING_TRANSACTION : "generates, when no confirmed period or rate"
     ACCOUNT ||--o{ TRANSFER : "sends"
     ACCOUNT ||--o{ TRANSFER : "receives"
     USER ||--o{ ACCOUNT : owns
@@ -35,6 +35,8 @@ erDiagram
     PENDING_BATCH ||--|{ PENDING_TRANSACTION : groups
     OUTBOUND_MESSAGE |o--o{ PENDING_BATCH : "asks about"
     PENDING_TRANSACTION ||--o| TRANSACTION : "becomes, once complete"
+    PENDING_TRANSACTION |o--o| TRANSFER : "becomes, once complete"
+    PENDING_TRANSACTION |o--o| CARD_PURCHASE : "becomes, once complete"
     USER |o--o{ INBOUND_MESSAGE : sends
     USER |o--o{ OUTBOUND_MESSAGE : receives
     INBOUND_MESSAGE |o--o{ OUTBOUND_MESSAGE : "is answered by"
@@ -46,6 +48,7 @@ erDiagram
         string email "NULLABLE"
         boolean email_connected "DEFAULT FALSE"
         string country "NULLABLE until onboarding is completed"
+        string time_zone "NULLABLE until onboarding is completed, IANA name, e.g. America/Argentina/Buenos_Aires"
         string primary_currency "NULLABLE until onboarding is completed, ISO 4217"
         string inflation_source "NULLABLE, e.g. REM_BCRA"
         string exchange_rate_reference "NULLABLE, e.g. DOLAR_MEP — id of a configured source; null means no suggestion"
@@ -92,7 +95,7 @@ erDiagram
         string period_type "NOT NULL, CHECK IN ('monthly','biweekly')"
         date period_start "NOT NULL"
         date period_end "NOT NULL, CHECK (period_end >= period_start)"
-        string primary_currency "NOT NULL"
+        string primary_currency "NOT NULL, UNIQUE (id, primary_currency)"
         decimal estimated_income "NOT NULL, DEFAULT 0"
         string status "NOT NULL, CHECK IN ('draft','confirmed'), DEFAULT 'draft'"
         timestamp created_at "DEFAULT now()"
@@ -128,6 +131,8 @@ erDiagram
         decimal amount "NOT NULL, CHECK (amount > 0) — magnitude only, the sign lives in type"
         string currency "NOT NULL, ISO 4217"
         decimal converted_amount "NOT NULL, in the budget period's primary_currency"
+        string budget_currency "NOT NULL, ISO 4217 — the budget period's primary_currency; FK (budget_period_id, budget_currency)"
+        decimal budget_exchange_rate "NULLABLE, > 0 — rate used to convert amount into budget_currency; null when both currencies match"
         decimal original_amount "NULLABLE, > 0 — amount as the user said it, when in another currency than the account"
         string original_currency "NULLABLE, ISO 4217 — set together with original_amount and exchange_rate"
         decimal exchange_rate "NULLABLE, > 0 — rate used to convert original_amount into the account currency"
@@ -136,22 +141,27 @@ erDiagram
         string description "NULLABLE"
         date transaction_date "NOT NULL"
         timestamp created_at "DEFAULT now()"
+        timestamp updated_at "NULLABLE — last change; null while never modified; set by trigger"
+        uuid updated_by FK "NULLABLE — user who made the last change; null if never modified or changed by a scheduled process"
     }
 
     PENDING_TRANSACTION {
         uuid id PK
         uuid user_id FK "NOT NULL"
+        string intent "NOT NULL, CHECK IN ('transaction','transfer','card_purchase'), DEFAULT 'transaction' — what it becomes once complete"
         jsonb parsed_data "NOT NULL — whatever was successfully extracted so far"
         string missing_fields "NOT NULL — array of required fields still unanswered"
         string source "NOT NULL, CHECK IN ('manual','automatic')"
         uuid batch_id FK "NOT NULL, FK (batch_id, source) to PENDING_BATCH (id, source)"
         int position "NOT NULL, 1 to 10 — number shown to the user inside the batch"
-        uuid recurring_rule_id FK "NULLABLE — set when a recurring rule found no confirmed period"
-        uuid card_purchase_id FK "NULLABLE — set when a card installment found no confirmed period"
+        uuid recurring_rule_id FK "NULLABLE — set when a recurring rule found no confirmed period, or needs a budget rate confirmed"
+        uuid card_purchase_id FK "NULLABLE — set when a card installment found no confirmed period, or needs a budget rate confirmed"
         int installment_number "NULLABLE — set together with card_purchase_id"
         date occurrence_date "NULLABLE — execution date of that rule; set together with recurring_rule_id"
         string raw_input "NULLABLE — original message or email body, for audit; purged after the retention period"
-        uuid resulting_transaction_id FK "NULLABLE — set once completed and promoted"
+        uuid resulting_transaction_id FK "NULLABLE — set once promoted, when intent = 'transaction'"
+        uuid resulting_transfer_id FK "NULLABLE — set once promoted, when intent = 'transfer'"
+        uuid resulting_card_purchase_id FK "NULLABLE — set once promoted, when intent = 'card_purchase'"
         string status "NOT NULL, CHECK IN ('open','promoted','rejected','expired'), DEFAULT 'open'"
         uuid resolved_by FK "NULLABLE — user who promoted or rejected it; differs from user_id only when a family group owner resolved it"
         timestamp expires_at "NULLABLE — discarded if never completed; null only for pendings of a recurring rule, which never expire"
@@ -212,6 +222,8 @@ erDiagram
         string description "NULLABLE"
         string source "NOT NULL, CHECK IN ('manual','automatic')"
         timestamp created_at "DEFAULT now()"
+        timestamp updated_at "NULLABLE — last change; null while never modified; set by trigger"
+        uuid updated_by FK "NULLABLE — user who made the last change; null if never modified or changed by a scheduled process"
     }
 
     CARD_STATEMENT {
@@ -236,11 +248,13 @@ erDiagram
         string description "NULLABLE"
         string source "NOT NULL, CHECK IN ('manual','automatic')"
         timestamp created_at "DEFAULT now()"
+        timestamp updated_at "NULLABLE — last change; null while never modified; set by trigger"
+        uuid updated_by FK "NULLABLE — user who made the last change; null if never modified or changed by a scheduled process"
     }
 
     LLM_USAGE {
         uuid user_id FK "NOT NULL"
-        date usage_date "NOT NULL — calendar day in the user's country time zone"
+        date usage_date "NOT NULL — calendar day in the user's time_zone"
         string quota "NOT NULL, CHECK IN ('registration','advice'), PK (user_id, usage_date, quota)"
         int message_count "NOT NULL, DEFAULT 0, CHECK (message_count >= 0)"
         int input_tokens "NOT NULL, DEFAULT 0"
@@ -279,7 +293,7 @@ erDiagram
         string provider "NOT NULL, CHECK IN ('meta','twilio')"
         string provider_message_id "NOT NULL, UNIQUE (provider, provider_message_id) — Meta's wamid"
         uuid user_id FK "NULLABLE — null while the sender is not a registered user"
-        string from_phone "NOT NULL"
+        string from_phone "NULLABLE — null once purged"
         jsonb payload "NULLABLE — message as received, never logged unmasked; null once purged"
         timestamp purged_at "NULLABLE — when the content was removed after the retention period"
         timestamp sent_at "NOT NULL — provider timestamp, orders the messages of one sender"
@@ -295,7 +309,7 @@ erDiagram
         uuid id PK
         string provider "NOT NULL, CHECK IN ('meta','twilio')"
         uuid user_id FK "NULLABLE — null only when answering a sender who is not registered yet"
-        string to_phone "NOT NULL"
+        string to_phone "NULLABLE — null once purged"
         uuid inbound_message_id FK "NULLABLE — the message this one answers; null for alerts and reminders"
         jsonb content "NULLABLE — free text or template name and parameters; null once purged"
         timestamp purged_at "NULLABLE — when the content was removed after the retention period"
@@ -325,7 +339,7 @@ erDiagram
 - En `BUDGET_PERIOD`, exactamente uno de `user_id` / `family_group_id` debe ser no nulo (`CHECK` a nivel de base de datos) — un período de presupuesto es individual o familiar, nunca ambos ni ninguno.
 - **Campos obligatorios de un movimiento.** Una fila en `TRANSACTION` solo existe con `amount`, `currency`, `type`, `transaction_date`, `category_id`, `account_id` y `budget_period_id` presentes, todos `NOT NULL` en la base de datos. De dónde sale cada valor —lo que el sistema resuelve solo, lo que exige confirmación del usuario, y la excepción de las reglas recurrentes— está en [reglas de dominio § 1](reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma) y [§ 8](reglas-de-dominio.md#8-movimientos-recurrentes-la-excepción-a-la-confirmación).
 - En `USER_GROUP`, un grupo tiene como mucho un dueño vigente: índice único parcial sobre `family_group_id` donde `role = 'owner'` y `left_at` es nulo. `left_at`, si está, es posterior a `joined_at` (`CHECK`). La regla de salida y de visibilidad está en [reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad).
-- En `PENDING_TRANSACTION`, `status = 'promoted'` si y solo si `resulting_transaction_id` no es nulo (`CHECK`). Un pendiente `open` es el que bloquea la salida de un grupo familiar.
+- En `PENDING_TRANSACTION`, `status = 'promoted'` si y solo si está informada la columna de resultado que corresponde a su `intent` —`resulting_transaction_id`, `resulting_transfer_id` o `resulting_card_purchase_id`—, y las otras dos son siempre nulas (`CHECK`). Un pendiente generado por una regla recurrente o por una cuota de tarjeta tiene `intent = 'transaction'` (`CHECK`), porque lo que genera es un gasto o un ingreso. Un pendiente `open` es el que bloquea la salida de un grupo familiar.
 - En `PENDING_BATCH`, un usuario tiene como mucho un lote en conversación: índice único parcial sobre `user_id` donde `awaiting_reply` es verdadero. Un lote cerrado no puede estar en conversación (`CHECK`).
 - En `PENDING_TRANSACTION`, un pendiente tiene el mismo `source` que su lote: clave foránea compuesta `(batch_id, source)` contra `PENDING_BATCH (id, source)`, así un lote nunca mezcla manuales y automáticos. `UNIQUE (batch_id, position)` y `CHECK (position BETWEEN 1 AND 10)` garantizan que cada número que ve el usuario señala un solo pendiente, y que un lote no pasa de 10. La regla de lotes está en [reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración).
 - En `BUDGET_PERIOD`, los períodos de un mismo dueño no se solapan: dos restricciones de exclusión (`EXCLUDE USING gist`), una sobre `user_id` y otra sobre `family_group_id`, cada una con el rango `[period_start, period_end]` y el operador de superposición. Requieren la extensión `btree_gist`. La regla está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio).
@@ -338,8 +352,8 @@ erDiagram
 - En `TRANSACTION` y en `PENDING_TRANSACTION`, `card_purchase_id` e `installment_number` van los dos nulos o los dos informados (`CHECK`), con `UNIQUE (card_purchase_id, installment_number)`: una compra genera como mucho un movimiento, o un pendiente, por cuota. Un movimiento no puede venir a la vez de una regla recurrente y de una compra con tarjeta (`CHECK`).
 - En `TRANSFER`, origen y destino son cuentas distintas del mismo usuario, cada monto en la moneda de su cuenta (claves foráneas compuestas contra `ACCOUNT (id, currency)`). Si las monedas coinciden, los montos son iguales y `exchange_rate` es nulo; si difieren, `exchange_rate` es obligatorio (`CHECK`).
 - En `USER`, `whatsapp_phone` es nulo si y solo si `account_status = 'deleted'`, y `deactivated_at` es obligatorio si la cuenta está desactivada o borrada (`CHECK`). Una cuenta borrada conserva su fila sin datos personales, porque los movimientos familiares anonimizados siguen apuntando a ella. La regla está en [reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos).
-- En `INBOUND_MESSAGE` y `OUTBOUND_MESSAGE`, el contenido es nulo si y solo si `purged_at` está informado (`CHECK`).
-- En `USER`, `onboarding_status = 'completed'` exige `name`, `country` y `primary_currency` no nulos (`CHECK`). La fila se crea recién cuando el usuario acepta los términos: antes de eso solo existe su mensaje en `INBOUND_MESSAGE`. La regla está en [reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos).
+- En `INBOUND_MESSAGE` y `OUTBOUND_MESSAGE`, el contenido y el teléfono (`payload` y `from_phone` en la entrada, `content` y `to_phone` en la salida) son nulos si y solo si `purged_at` está informado (`CHECK`): la purga borra los dos a la vez, como pide [reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos). Solo se purgan mensajes ya procesados, así que el worker, que identifica al remitente por `from_phone` cuando no hay `user_id`, nunca encuentra un pendiente sin teléfono.
+- En `USER`, `onboarding_status = 'completed'` exige `name`, `country`, `time_zone` y `primary_currency` no nulos (`CHECK`). `time_zone` es un nombre de la base IANA, validado en el adaptador de entrada: la fecha de "hoy" de un movimiento, el día de las cuotas de uso y las fechas de los procesos programados se calculan en esa zona. La fila se crea recién cuando el usuario acepta los términos: antes de eso solo existe su mensaje en `INBOUND_MESSAGE`. La regla está en [reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos).
 - La categoría de un movimiento es del mismo tipo que el movimiento: `TRANSACTION (category_id, type)` es una clave foránea compuesta contra `CATEGORY (id, kind)`, apoyada en el `UNIQUE (id, kind)`. Los valores de `type` y de `kind` son los mismos (`expense`, `income`) para que la clave funcione. Lo mismo vale para `RECURRING_RULE (category_id, type)`: una regla de ingreso usa una categoría de ingreso.
 - En `CATEGORY`, un usuario no tiene dos categorías con el mismo nombre, sin distinguir mayúsculas: índice único sobre `(user_id, lower(name))`, más un índice único parcial sobre `lower(name)` donde `user_id` es nulo para el catálogo base, porque en un `UNIQUE` dos nulos no chocan.
 - En `RECURRING_RULE`, exactamente uno de `budget_user_id` / `budget_family_group_id` debe ser no nulo (`CHECK`), por el mismo criterio que en `BUDGET_PERIOD`.
@@ -347,20 +361,22 @@ erDiagram
 - `TRANSACTION.amount` lleva `CHECK (amount > 0)`: guarda la magnitud, nunca el signo. Si el movimiento resta o suma lo dice `type`, que es el único lugar donde vive esa distinción — un monto negativo con `type = 'expense'` sumaría al saldo en vez de restar.
 - La moneda de un movimiento es la de su cuenta, y la base lo impone: `TRANSACTION (account_id, currency)` es una clave foránea compuesta contra `ACCOUNT (id, currency)`, apoyada en un `UNIQUE (id, currency)` en `ACCOUNT`. Con `ON UPDATE RESTRICT`, esa misma clave impide cambiar la moneda de una cuenta que ya tiene movimientos. Lo mismo vale para `RECURRING_RULE (account_id, currency)`. La regla está en [reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado).
 - En `TRANSACTION`, `original_amount`, `original_currency` y `exchange_rate` van los tres nulos o los tres informados (`CHECK`), y si están informados `original_amount > 0`, `original_currency` es distinta de `currency` y `exchange_rate > 0`. Guardan el gasto tal como lo dijo el usuario cuando fue en otra moneda que la de la cuenta: el saldo usa siempre `amount`, y estas columnas son la evidencia de la conversión que el usuario confirmó.
+- La conversión a la moneda del presupuesto también queda guardada. `TRANSACTION (budget_period_id, budget_currency)` es una clave foránea compuesta contra `BUDGET_PERIOD (id, primary_currency)`, apoyada en un `UNIQUE (id, primary_currency)`, así `budget_currency` es siempre la moneda del período. Si `budget_currency` es igual a `currency`, `budget_exchange_rate` es nulo y `converted_amount = amount`; si difieren, `budget_exchange_rate` es obligatorio y mayor que cero (`CHECK`). Es la cotización que el usuario vio y confirmó ([reglas de dominio § 6](reglas-de-dominio.md#6-multimoneda-y-cotización)), y la que el dashboard muestra junto al movimiento ([HU4](05-historias-de-usuario.md)).
 - En `TRANSACTION`, `UNIQUE (recurring_rule_id, transaction_date)`: una regla recurrente genera como mucho un movimiento por fecha de ejecución. Si el proceso programado corre dos veces o se reintenta, el segundo insert choca con la clave en vez de duplicar el cargo. Las filas con `recurring_rule_id` nulo no entran en la restricción.
+- En `TRANSACTION`, `TRANSFER` y `CARD_PURCHASE`, `updated_at` y `updated_by` los fija un trigger `BEFORE UPDATE`: la hora del cambio, y el usuario que la aplicación indicó con `SET LOCAL app.actor_id`, o nulo si el cambio lo hace un proceso programado. `updated_by` informado exige `updated_at` informado (`CHECK`). No se guarda el valor anterior; la decisión está en el [ADR 0014](adr/0014-marca-de-edicion-en-movimientos.md).
 - En `INBOUND_MESSAGE`, `UNIQUE (provider, provider_message_id)`: un mensaje del proveedor se guarda una sola vez, así un reintento del webhook no genera un segundo procesamiento. El fundamento está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
 - `TRANSACTION.duplicate_of` referencia otra `TRANSACTION` **del mismo usuario** cuando ambas describen probablemente el mismo gasto real. Esa pertenencia se impone en la base: la autorreferencia es una clave foránea compuesta `(user_id, duplicate_of)` contra `(user_id, id)`, apoyada en un `UNIQUE (user_id, id)` en `TRANSACTION`; la columna sigue siendo nullable. Sin eso un movimiento podría enlazarse al de otro usuario. El criterio de detección, y cuándo se puebla la columna, están en [reglas de dominio § 7](reglas-de-dominio.md#7-chequeo-de-duplicados-entre-origen-manual-y-automático).
 
 ### **3.2. Descripción de entidades principales:**
 
-- **USER**: persona que usa el asistente. Guarda su configuración regional (país, moneda primaria, fuente de inflación, cotización de referencia) para que el sistema no esté atado al caso argentino. `whatsapp_phone` es único porque es la clave de entrada del canal conversacional.
+- **USER**: persona que usa el asistente. Guarda su configuración regional (país, zona horaria, moneda primaria, fuente de inflación, cotización de referencia) para que el sistema no esté atado al caso argentino. `whatsapp_phone` es único porque es la clave de entrada del canal conversacional.
 - **FAMILY_GROUP** / **USER_GROUP**: relación muchos-a-muchos entre usuarios y grupos familiares (una persona puede pertenecer a más de un grupo; un grupo tiene varios miembros), con un rol por membresía: el dueño (`owner`) administra los miembros del grupo. La membresía no se borra al salir: se cierra con `left_at`, porque de ese intervalo depende qué períodos del grupo sigue viendo quien salió (ver [reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad)).
 - **ACCOUNT**: cuenta bancaria, billetera virtual, broker de inversión o efectivo que el usuario da de alta (ej. "Galicia en dólares", "Mercado Pago", "Balanz"). El **saldo no se guarda como columna**, se calcula (ver [reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado)). Si el volumen de cuentas/movimientos creciera al punto de que ese cálculo en cada consulta sea un problema de performance, se puede materializar/cachear más adelante sin cambiar el modelo, es una optimización, no un rediseño.
 - **BUDGET_PERIOD**: el "presupuesto del mes" (o de la quincena) como concepto completo — puede pertenecer a un usuario individual o a un grupo familiar (nunca ambos, ver restricción arriba). `period_type` define la cadencia (mensual o quincenal) y determina cómo se calculan `period_start`/`period_end` del siguiente período al generarlo. `estimated_income` guarda el ingreso proyectado para el período completo, para que armar el presupuesto sea contrastar gastos planeados contra ingreso esperado, no solo poner topes por categoría sueltos. `status` distingue un período todavía en armado (`draft`, generado por la sugerencia de IA o creado a mano) de uno ya confirmado por el usuario — cuándo debe estar en `confirmed` y qué recordatorio se dispara si sigue en `draft` está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio).
 - **BUDGET**: el límite de gasto de **una** categoría dentro de un `BUDGET_PERIOD` (ej. "comida: $300.000 en septiembre"). Un mismo período agrupa varios `BUDGET`, uno por categoría con tope definido, y la base lo garantiza con `UNIQUE (budget_period_id, category_id)` (ver restricción arriba) — así `period_start`, `period_end` y `primary_currency` viven una sola vez en el período en vez de repetirse por cada categoría.
 - **CATEGORY**: catálogo mixto — categorías base del sistema (`user_id` nulo, `is_base = true`) más categorías propias por usuario, para evitar que la IA invente una categoría nueva en cada gasto. `kind` separa las de gasto de las de ingreso ([reglas de dominio § 4](reglas-de-dominio.md#4-categorías-catálogo-base-categorías-propias-y-creación-con-confirmación)).
-- **TRANSACTION**: gasto o ingreso ya completo y válido — si está en esta tabla, tiene cuenta, categoría y período de presupuesto asignados, sin excepción (ver restricción arriba). Guarda tanto el monto original (`amount`, `currency`) como el convertido a la moneda primaria del período (`converted_amount`), y el `source` (manual o automático) para auditoría y para medir cuánto resuelve cada vía. `recurring_rule_id` distingue, dentro de los automáticos, cuáles vinieron del motor de recurrencia. `duplicate_of` es el mecanismo previsto de detección de duplicados entre carga manual y automática (criterio en [reglas de dominio § 7](reglas-de-dominio.md#7-chequeo-de-duplicados-entre-origen-manual-y-automático)). La columna existe desde el esquema inicial; la lógica llega junto con la carga por email (could-have).
-- **PENDING_TRANSACTION**: movimiento a medio completar, todavía no registrado. Cuándo se crea y cuándo no, cómo continúa la conversación, cómo se promueve y cómo expira está en [reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración). Será también el estado natural de lo que detecte el parser de emails cuando se implemente: un mail de aviso trae monto, fecha y normalmente la cuenta, pero nunca a qué presupuesto imputarlo, así que esperará acá la confirmación. Guarda lo interpretado (`parsed_data`), la lista de `missing_fields`, y el asistente pregunta por WhatsApp. Tener una tabla aparte, en vez de un `status` dentro de `TRANSACTION` con columnas nullables, es lo que permite que `TRANSACTION` mantenga sus `NOT NULL` reales: los datos incompletos no contaminan la tabla de la que salen saldos y presupuestos.
+- **TRANSACTION**: gasto o ingreso ya completo y válido — si está en esta tabla, tiene cuenta, categoría y período de presupuesto asignados, sin excepción (ver restricción arriba). Guarda tanto el monto original (`amount`, `currency`) como el convertido a la moneda primaria del período (`converted_amount`, con la cotización usada en `budget_exchange_rate`), y el `source` (manual o automático) para auditoría y para medir cuánto resuelve cada vía. `recurring_rule_id` distingue, dentro de los automáticos, cuáles vinieron del motor de recurrencia. `duplicate_of` es el mecanismo previsto de detección de duplicados entre carga manual y automática (criterio en [reglas de dominio § 7](reglas-de-dominio.md#7-chequeo-de-duplicados-entre-origen-manual-y-automático)). La columna existe desde el esquema inicial; la lógica llega junto con la carga por email (could-have).
+- **PENDING_TRANSACTION**: movimiento a medio completar, todavía no registrado. Puede terminar siendo un gasto o ingreso, una transferencia o una compra con tarjeta, según `intent`, y al promoverse queda enlazado a la fila que generó por la columna de resultado de ese tipo. Cuándo se crea y cuándo no, cómo continúa la conversación, cómo se promueve y cómo expira está en [reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración). Será también el estado natural de lo que detecte el parser de emails cuando se implemente: un mail de aviso trae monto, fecha y normalmente la cuenta, pero nunca a qué presupuesto imputarlo, así que esperará acá la confirmación. Guarda lo interpretado (`parsed_data`), la lista de `missing_fields`, y el asistente pregunta por WhatsApp. Tener una tabla aparte, en vez de un `status` dentro de `TRANSACTION` con columnas nullables, es lo que permite que `TRANSACTION` mantenga sus `NOT NULL` reales: los datos incompletos no contaminan la tabla de la que salen saldos y presupuestos.
 - **PENDING_BATCH**: grupo de pendientes que el asistente pregunta juntos, en un solo mensaje numerado. Es la unidad de conversación: el usuario responde sobre el lote, en general ("todos al familiar") o por número. `awaiting_reply` marca el único lote por el que el asistente espera respuesta; `question_message_id` es el mensaje que lo preguntó, y es lo que permite asociar una respuesta que cita ese mensaje aunque el lote no esté en conversación. `reminded_at` marca el último recordatorio enviado. En un lote que vence, es el único recordatorio previo al vencimiento que promete [HU3](05-historias-de-usuario.md), y el proceso que recuerda solo toma lotes sin esa marca; en un lote con pendientes de un recurrente, que no vencen, el proceso vuelve a recordar cuando pasaron 3 días desde `reminded_at`. Un gasto suelto es un lote de uno. Se cierra cuando todos sus pendientes quedan promovidos, rechazados o vencidos.
 - **EXCHANGE_RATE**: historial de cotizaciones obtenidas de las fuentes configuradas. No pertenece a ningún usuario: la comparten todos los que eligieron esa fuente en `exchange_rate_reference`. La conversión usa la fila más reciente de la fuente del usuario, nunca una consulta al proveedor en el momento. Las fuentes en sí no son una tabla: viven en un archivo de configuración versionado, por el [ADR 0011](adr/0011-cotizaciones-con-adaptador-generico-configurable.md). La cotización que efectivamente se usó en un movimiento queda copiada en `TRANSACTION.exchange_rate`, así el historial del movimiento no depende de esta tabla.
 - **FINANCIAL_PROFILE**: respuestas opcionales del usuario que permiten que un consejo se cruce con su situación real, más allá de sus gastos. Todo es nulable porque cada pregunta se puede saltear, y `updated_at` indica si el dato puede haber quedado viejo. El ingreso se guarda por rango y no exacto. Son datos sensibles, por lo que la política de privacidad tiene que cubrirlos explícitamente. Las preguntas están en [reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos).
