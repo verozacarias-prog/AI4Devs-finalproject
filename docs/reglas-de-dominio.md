@@ -48,6 +48,12 @@ se registra siempre en la moneda de la cuenta de la que sale o a la que entra la
 suma montos de monedas distintas. La moneda de una cuenta no se puede cambiar mientras tenga
 movimientos.
 
+**Cada cuenta tiene un nombre distinto.** Un usuario no puede tener dos cuentas con el mismo
+nombre, sin distinguir mayúsculas, porque el asistente las reconoce por el nombre que el usuario
+menciona. Aun así, una mención puede coincidir con más de una: "la Galicia" puede ser "Galicia
+pesos" o "Galicia USD". En ese caso el asistente no elige: pregunta, ofreciendo las cuentas que
+coinciden, igual que cuando no se menciona ninguna.
+
 **Si el usuario nombra otra moneda, el asistente convierte y pide confirmación.** Cuando la
 moneda del mensaje no coincide con la de la cuenta, el asistente convierte el monto a la moneda
 de la cuenta con la cotización de referencia del usuario (§ 6) y le pide que confirme el valor
@@ -495,7 +501,8 @@ dashboard:
 6. Lo compartido se anonimiza en vez de borrarse: los movimientos que imputó a presupuestos
    familiares quedan, porque el grupo los sigue necesitando (§ 10), pero registrados por un "ex
    miembro": se quita quién los registró. Lo mismo vale para la cuenta y la categoría que esos
-   movimientos referencian. La descripción de cada movimiento se conserva tal como la escribió,
+   movimientos referencian, que pasan a tener nombres genéricos numerados ("Cuenta 1", "Cuenta 2"),
+   porque los nombres son únicos por usuario. La descripción de cada movimiento se conserva tal como la escribió,
    porque es parte de lo que el grupo ve, así que puede seguir nombrando personas o lugares.
 
 **Derechos del usuario.**

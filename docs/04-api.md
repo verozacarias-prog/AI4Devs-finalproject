@@ -76,6 +76,8 @@ responses:
 
 Registra un movimiento manualmente desde el dashboard. `amount`, `type`, `category_id`, `account_id` y `budget_period_id` son obligatorios: si falta alguno se rechaza con `422`. Los dos últimos no se derivan acá porque dependen de una decisión del usuario, que se resuelve antes de llegar a este endpoint.
 
+**Un pedido repetido no crea un segundo movimiento.** El cliente manda un header `Idempotency-Key` con un UUID que genera una sola vez por cada movimiento que el usuario quiere cargar, y lo reenvía igual si repite el pedido, por un doble clic o porque se cortó la conexión antes de recibir la respuesta. El servidor lo guarda en `client_request_id`, con una clave única por usuario. Si llega una clave que ese usuario ya usó, no inserta nada y responde `200` con el movimiento que creó la primera vez. Si llegan dos pedidos con la misma clave a la vez, la clave única hace que uno solo inserte. Sin el header, `422`.
+
 Lo que el cliente **no** manda:
 
 - `user_id` no viaja en el cuerpo: sale del `sub` del JWT autenticado. Aceptarlo del cliente sería dejar que cualquiera escriba movimientos en la cuenta de otro.
@@ -90,6 +92,11 @@ La conversión a la moneda del presupuesto sí ocurre acá. Si la moneda de la c
 El chequeo de duplicados contra la vía automática **no corre en esta entrega**: depende de la carga por email, que es could-have, y el [Ticket 1](06-tickets.md) lo deja fuera de alcance dejando identificado el punto de inserción dentro del caso de uso. Por eso `duplicate_of` viene siempre `null` en la respuesta por ahora. El criterio, para cuando llegue, está en [reglas de dominio § 7](reglas-de-dominio.md#7-chequeo-de-duplicados-entre-origen-manual-y-automático) (ver también [3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) y [HU1](05-historias-de-usuario.md)).
 
 ```yaml
+parameters:
+  - in: header
+    name: Idempotency-Key
+    required: true
+    example: "6f1c2a4e-8b3d-4f7a-9c21-0d5e7b3a9f10"  # one UUID per intended movement, reused on retries
 requestBody:
   content:
     application/json:
@@ -114,8 +121,10 @@ responses:
           budget_exchange_rate: null
           duplicate_of: null
           status: "created"
+  200:
+    description: The Idempotency-Key was already used by this user; nothing is inserted and the body is the movement created the first time
   422:
-    description: Missing fields that require a user decision or have no safe default
+    description: Missing fields that require a user decision or have no safe default, or missing Idempotency-Key
     content:
       application/json:
         example:

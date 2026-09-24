@@ -86,7 +86,7 @@ erDiagram
     ACCOUNT {
         uuid id PK
         uuid user_id FK "NOT NULL"
-        string name "NOT NULL, e.g. 'Galicia USD', 'Mercado Pago'"
+        string name "NOT NULL, e.g. 'Galicia USD', 'Mercado Pago'; UNIQUE (user_id, lower(name))"
         string institution "NULLABLE, e.g. 'Banco Galicia', 'Balanz'"
         string type "NOT NULL, CHECK IN ('bank_account','digital_wallet','broker','cash','credit_card')"
         string currency "NOT NULL, FK to CURRENCY"
@@ -148,6 +148,7 @@ erDiagram
         string source "NOT NULL, CHECK IN ('manual','automatic')"
         string description "NULLABLE"
         date transaction_date "NOT NULL"
+        uuid client_request_id "NULLABLE — Idempotency-Key of the dashboard request that created it; UNIQUE (user_id, client_request_id)"
         timestamptz created_at "DEFAULT now()"
         timestamptz updated_at "NULLABLE — last change; null while never modified; set by trigger"
         uuid updated_by FK "NULLABLE — user who made the last change; null if never modified or changed by a scheduled process"
@@ -293,7 +294,7 @@ erDiagram
         uuid account_id FK "NOT NULL — defined once, at setup"
         uuid budget_user_id FK "NULLABLE — budget owner: individual; CHECK equal to user_id"
         uuid budget_family_group_id FK "NULLABLE — budget owner: family"
-        decimal amount "NUMERIC(20,2), NOT NULL"
+        decimal amount "NUMERIC(20,2), NOT NULL, CHECK (amount > 0) — copied to each generated transaction"
         string currency "NOT NULL, FK to CURRENCY"
         string frequency "NOT NULL, CHECK IN ('weekly','monthly','yearly')"
         int execution_day "NULLABLE — 1 to 7 (Monday to Sunday) when weekly, 1 to 31 when monthly, null when yearly"
@@ -387,8 +388,10 @@ erDiagram
 - En `INBOUND_MESSAGE` y `OUTBOUND_MESSAGE`, el contenido y el teléfono (`payload` y `from_phone` en la entrada, `content` y `to_phone` en la salida) son nulos si y solo si `purged_at` está informado (`CHECK`): la purga borra los dos a la vez, como pide [reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos). Solo se purgan mensajes ya procesados, así que el worker, que identifica al remitente por `from_phone` cuando no hay `user_id`, nunca encuentra un pendiente sin teléfono.
 - En `USER`, `onboarding_status = 'completed'` exige `name`, `country`, `time_zone` y `primary_currency` no nulos (`CHECK`). `time_zone` es un nombre de la base IANA, validado en el adaptador de entrada: la fecha de "hoy" de un movimiento, el día de las cuotas de uso y las fechas de los procesos programados se calculan en esa zona. La fila se crea recién cuando el usuario acepta los términos: antes de eso solo existe su mensaje en `INBOUND_MESSAGE`. La regla está en [reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos).
 - La categoría de un movimiento es del mismo tipo que el movimiento: `TRANSACTION (category_id, type)` es una clave foránea compuesta contra `CATEGORY (id, kind)`, apoyada en el `UNIQUE (id, kind)`. Los valores de `type` y de `kind` son los mismos (`expense`, `income`) para que la clave funcione. Lo mismo vale para `RECURRING_RULE (category_id, type)`: una regla de ingreso usa una categoría de ingreso.
+- En `ACCOUNT`, un usuario no tiene dos cuentas con el mismo nombre, sin distinguir mayúsculas: índice único sobre `(user_id, lower(name))`. El asistente resuelve la cuenta por el nombre que el usuario menciona, y dos cuentas "Galicia" harían imposible saber a cuál se refiere ([reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado)).
+- En `TRANSACTION`, `UNIQUE (user_id, client_request_id)`: un pedido repetido del dashboard, con la misma `Idempotency-Key`, no crea un segundo movimiento ([la API](04-api.md)). Las filas con `client_request_id` nulo, las que no vienen del dashboard, no entran en la restricción.
 - En `CATEGORY`, un usuario no tiene dos categorías con el mismo nombre, sin distinguir mayúsculas: índice único sobre `(user_id, lower(name))`, más un índice único parcial sobre `lower(name)` donde `user_id` es nulo para el catálogo base, porque en un `UNIQUE` dos nulos no chocan.
-- En `RECURRING_RULE`, exactamente uno de `budget_user_id` / `budget_family_group_id` debe ser no nulo (`CHECK`), por el mismo criterio que en `BUDGET_PERIOD`.
+- En `RECURRING_RULE`, exactamente uno de `budget_user_id` / `budget_family_group_id` debe ser no nulo (`CHECK`), por el mismo criterio que en `BUDGET_PERIOD`. `amount > 0` (`CHECK`), igual que en `TRANSACTION`: el monto de la regla se copia a cada movimiento que genera, así que una regla con monto cero o negativo no podría generar ninguno.
 - En `RECURRING_RULE` y en `CARD_PURCHASE`, `budget_user_id` es nulo o igual a `user_id` (`CHECK`): un presupuesto individual solo puede ser el propio.
 - En `RECURRING_RULE`, `execution_day` depende de `frequency` (`CHECK`): de 1 a 7 si es `weekly`, de 1 a 31 si es `monthly`, y nulo si es `yearly`, porque un día solo no define una fecha anual. En una regla anual, la fecha la da `next_execution`, que el motor avanza un año por vez. Qué pasa con los días 29 a 31 en meses más cortos está en [reglas de dominio § 8](reglas-de-dominio.md#8-movimientos-recurrentes-la-excepción-a-la-confirmación).
 - En `BUDGET`, `UNIQUE (budget_period_id, category_id)`: un período tiene como mucho un límite por categoría, así el gastado de una categoría se contrasta contra un único tope y no contra dos filas que se contradicen.
