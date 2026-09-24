@@ -38,6 +38,7 @@ nombres de archivo de código están en inglés.
 - [Flujo de trabajo con IA](https://verozacarias-prog.github.io/AI4Devs-finalproject/flujo-de-trabajo-con-ia/)
 - [Hoja de ruta](https://verozacarias-prog.github.io/AI4Devs-finalproject/hoja-de-ruta/)
 - [Reglas de dominio](https://verozacarias-prog.github.io/AI4Devs-finalproject/reglas-de-dominio/)
+- [Términos y política de privacidad: qué tienen que cubrir](https://verozacarias-prog.github.io/AI4Devs-finalproject/terminos-y-privacidad/)
 
 ## Decisiones de arquitectura
 
@@ -53,6 +54,7 @@ nombres de archivo de código están en inglés.
 - [0010 — Webhook de WhatsApp asíncrono, con tabla de entrada y de salida en PostgreSQL](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0010-webhook-asincrono-con-tabla-de-entrada/)
 - [0011 — Cotizaciones con un adaptador genérico, configurable por fuente](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0011-cotizaciones-con-adaptador-generico-configurable/)
 - [0012 — Tarjetas de crédito como cuentas, con compras que generan cuotas, y transferencias entre cuentas propias](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0012-tarjetas-de-credito-y-transferencias/)
+- [0013 — Datos mínimos al proveedor de LLM, y un proveedor que no entrene con ellos](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0013-datos-minimos-al-proveedor-de-llm/)
 
 ## Contrato para asistentes de IA
 

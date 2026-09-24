@@ -428,3 +428,49 @@ comprometido a futuro, las cuotas todavía no generadas, se muestra aparte y por
 dashboard, para que un mes cargado de cuotas no sea una sorpresa.
 
 Ver también: [ADR 0012](adr/0012-tarjetas-de-credito-y-transferencias.md) · [ACCOUNT, CARD_PURCHASE, CARD_STATEMENT y TRANSFER en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
+
+## 14. Privacidad: retención, borrado de cuenta y derechos
+
+**El texto de los mensajes se guarda por un plazo limitado.** Pasado el plazo desde que un
+mensaje se procesó, se borra su contenido (el texto y el teléfono en los mensajes recibidos y
+enviados, y el mensaje original guardado en un pendiente) y quedan solo los metadatos: cuándo
+llegó, si se procesó y la clave que evita duplicados. Los movimientos, saldos y presupuestos que
+salieron de ese mensaje no se tocan. El plazo es configurable, con un valor por defecto de 60
+días. Nada se borra mientras lo necesite un pendiente o un lote todavía abierto.
+
+**Qué se pierde con eso, y por qué se acepta.** Pasado el plazo no se puede mostrar qué escribió
+el usuario ante un reclamo tardío, ni reproducir un error viejo con el mensaje que lo causó. Se
+acepta porque cada movimiento ya fue confirmado por el usuario con un mensaje que lista su monto,
+y porque el usuario conserva su propia copia de la conversación en WhatsApp. Para mejorar la
+interpretación, antes del vencimiento se pueden guardar aparte, a mano y anonimizados, casos de
+prueba elegidos.
+
+**Borrado de cuenta.** El usuario puede pedir borrar su cuenta, por WhatsApp o desde el
+dashboard:
+
+1. Antes de confirmar se le ofrece descargar todos sus datos.
+2. Confirma con un código de un solo uso, igual que el login, para que nadie borre la cuenta de
+   otro con acceso a su teléfono.
+3. Si es dueño de un grupo familiar, primero transfiere el rol, como al salir (§ 10).
+4. La cuenta queda desactivada durante un plazo de gracia, configurable y de 7 días por
+   defecto, en el que puede cancelar el borrado. Durante ese plazo no recibe mensajes proactivos.
+5. Vencido el plazo, se borra lo personal: teléfono, nombre, perfil financiero, cuentas,
+   presupuestos individuales, movimientos que no son de un presupuesto familiar, pendientes,
+   mensajes y códigos de login.
+6. Lo compartido se anonimiza en vez de borrarse: los movimientos que imputó a presupuestos
+   familiares quedan, porque el grupo los sigue necesitando (§ 10), pero registrados por un "ex
+   miembro", sin nada que lo identifique. Lo mismo vale para la cuenta y la categoría que esos
+   movimientos referencian.
+
+**Derechos del usuario.**
+
+- **Acceso:** puede descargar en cualquier momento todos sus datos en Excel desde el dashboard.
+- **Rectificación:** puede corregir sus datos desde el dashboard, y sus movimientos también por
+  WhatsApp.
+- **Supresión:** el borrado de cuenta descrito arriba.
+
+**Datos que salen hacia el proveedor de LLM.** Nunca se envían identificadores (teléfono, nombre,
+email ni ids internos), solo lo necesario para la tarea. El detalle está en el
+[ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md).
+
+Ver también: [Términos y política de privacidad](terminos-y-privacidad.md) · [USER, INBOUND_MESSAGE y OUTBOUND_MESSAGE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).

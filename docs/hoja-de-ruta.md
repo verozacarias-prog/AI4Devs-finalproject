@@ -37,12 +37,8 @@ en [`prompts.md`](../prompts.md), no acá.
   funcionalidades de [1.2](01-producto.md#12-características-y-funcionalidades-principales) y no
   se duplicó. Darle texto propio exige escribir contenido nuevo, no reorganizar el existente. El
   grupo 6 (multimoneda) ya tiene texto propio.
-- **Términos y política de privacidad: sin redactar.** El alta exige aceptarlos antes de guardar
-  nada ([reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos)),
-  así que bloquean abrir Platita a usuarios reales. Tienen que cubrir que los mensajes se
-  procesan con un proveedor de LLM, los datos sensibles del perfil financiero, la retención de
-  los mensajes recibidos y el borrado de la cuenta. Conviene que los revise alguien con
-  conocimiento legal.
+- **Términos y política de privacidad: sin redactar.** Bloquean abrir Platita a usuarios reales.
+  El índice de lo que tienen que cubrir está en [términos y privacidad](terminos-y-privacidad.md).
 - **Subagentes: sin decidir.** Un subagente corre en su propio contexto, así que hay que volver a
   explicarle la tarea entera y devuelve un resumen en vez del trabajo. Eso se paga cuando hay algo
   para paralelizar o una búsqueda grande que conviene mantener fuera del contexto. Ninguna de las

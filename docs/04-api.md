@@ -179,3 +179,35 @@ responses:
   404:
     description: The authenticated user was never a member of this family group
 ```
+
+### `GET /me/export`, `POST /me/deletion` y `DELETE /me/deletion`
+
+Los derechos de acceso y supresión de [reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos).
+
+- `GET /me/export` descarga todos los datos del usuario autenticado en Excel, generado en el
+  momento, igual que la exportación de un grupo familiar.
+- `POST /me/deletion` pide el borrado de la cuenta. Exige un código de un solo uso obtenido con
+  `POST /auth/code`, y responde `409` si el usuario es dueño de un grupo familiar y todavía no
+  transfirió el rol. Si todo está en orden, desactiva la cuenta y devuelve cuándo se hará el
+  borrado.
+- `DELETE /me/deletion` cancela el borrado mientras dure el plazo de gracia.
+
+```yaml
+# POST /me/deletion
+requestBody:
+  content:
+    application/json:
+      example:
+        code: "482913"
+responses:
+  202:
+    content:
+      application/json:
+        example:
+          account_status: "deactivated"
+          deletion_at: "2026-10-01T12:00:00Z"
+  401:
+    description: Invalid, expired, used or exhausted code
+  409:
+    description: The user owns a family group and must transfer the role first
+```

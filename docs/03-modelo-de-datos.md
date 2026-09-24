@@ -42,7 +42,7 @@ erDiagram
     USER {
         uuid id PK
         string name "NULLABLE until onboarding is completed"
-        string whatsapp_phone "UNIQUE, NOT NULL"
+        string whatsapp_phone "UNIQUE, NULLABLE only once the account is deleted"
         string email "NULLABLE"
         boolean email_connected "DEFAULT FALSE"
         string country "NULLABLE until onboarding is completed"
@@ -53,6 +53,8 @@ erDiagram
         string terms_version "NOT NULL — version of the terms and privacy policy accepted"
         boolean notifications_opt_in "NOT NULL, DEFAULT FALSE — permission for proactive messages"
         string onboarding_status "NOT NULL, CHECK IN ('in_progress','completed'), DEFAULT 'in_progress'"
+        string account_status "NOT NULL, CHECK IN ('active','deactivated','deleted'), DEFAULT 'active'"
+        timestamp deactivated_at "NULLABLE — start of the grace period before deletion"
         timestamp created_at "DEFAULT now()"
     }
 
@@ -148,7 +150,7 @@ erDiagram
         uuid card_purchase_id FK "NULLABLE — set when a card installment found no confirmed period"
         int installment_number "NULLABLE — set together with card_purchase_id"
         date occurrence_date "NULLABLE — execution date of that rule; set together with recurring_rule_id"
-        string raw_input "NULLABLE — original message or email body, for audit"
+        string raw_input "NULLABLE — original message or email body, for audit; purged after the retention period"
         uuid resulting_transaction_id FK "NULLABLE — set once completed and promoted"
         string status "NOT NULL, CHECK IN ('open','promoted','rejected','expired'), DEFAULT 'open'"
         uuid resolved_by FK "NULLABLE — user who promoted or rejected it; differs from user_id only when a family group owner resolved it"
@@ -278,7 +280,8 @@ erDiagram
         string provider_message_id "NOT NULL, UNIQUE (provider, provider_message_id) — Meta's wamid"
         uuid user_id FK "NULLABLE — null while the sender is not a registered user"
         string from_phone "NOT NULL"
-        jsonb payload "NOT NULL — message as received, never logged unmasked"
+        jsonb payload "NULLABLE — message as received, never logged unmasked; null once purged"
+        timestamp purged_at "NULLABLE — when the content was removed after the retention period"
         timestamp sent_at "NOT NULL — provider timestamp, orders the messages of one sender"
         string status "NOT NULL, CHECK IN ('pending','processing','processed','failed'), DEFAULT 'pending'"
         int attempts "NOT NULL, DEFAULT 0"
@@ -294,7 +297,8 @@ erDiagram
         uuid user_id FK "NULLABLE — null only when answering a sender who is not registered yet"
         string to_phone "NOT NULL"
         uuid inbound_message_id FK "NULLABLE — the message this one answers; null for alerts and reminders"
-        jsonb content "NOT NULL — free text or template name and parameters"
+        jsonb content "NULLABLE — free text or template name and parameters; null once purged"
+        timestamp purged_at "NULLABLE — when the content was removed after the retention period"
         string status "NOT NULL, CHECK IN ('pending','sent','failed'), DEFAULT 'pending'"
         int attempts "NOT NULL, DEFAULT 0"
         timestamp next_attempt_at "NOT NULL, DEFAULT now()"
@@ -333,6 +337,8 @@ erDiagram
 - En `CARD_PURCHASE`, la cuenta es de tipo `credit_card` y de la misma moneda que la compra (clave foránea compuesta `(account_id, currency)` contra `ACCOUNT`, más un trigger que verifica el tipo), la categoría es de gasto, y exactamente uno de `budget_user_id` / `budget_family_group_id` es no nulo (`CHECK`), como en `RECURRING_RULE`.
 - En `TRANSACTION` y en `PENDING_TRANSACTION`, `card_purchase_id` e `installment_number` van los dos nulos o los dos informados (`CHECK`), con `UNIQUE (card_purchase_id, installment_number)`: una compra genera como mucho un movimiento, o un pendiente, por cuota. Un movimiento no puede venir a la vez de una regla recurrente y de una compra con tarjeta (`CHECK`).
 - En `TRANSFER`, origen y destino son cuentas distintas del mismo usuario, cada monto en la moneda de su cuenta (claves foráneas compuestas contra `ACCOUNT (id, currency)`). Si las monedas coinciden, los montos son iguales y `exchange_rate` es nulo; si difieren, `exchange_rate` es obligatorio (`CHECK`).
+- En `USER`, `whatsapp_phone` es nulo si y solo si `account_status = 'deleted'`, y `deactivated_at` es obligatorio si la cuenta está desactivada o borrada (`CHECK`). Una cuenta borrada conserva su fila sin datos personales, porque los movimientos familiares anonimizados siguen apuntando a ella. La regla está en [reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos).
+- En `INBOUND_MESSAGE` y `OUTBOUND_MESSAGE`, el contenido es nulo si y solo si `purged_at` está informado (`CHECK`).
 - En `USER`, `onboarding_status = 'completed'` exige `name`, `country` y `primary_currency` no nulos (`CHECK`). La fila se crea recién cuando el usuario acepta los términos: antes de eso solo existe su mensaje en `INBOUND_MESSAGE`. La regla está en [reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos).
 - La categoría de un movimiento es del mismo tipo que el movimiento: `TRANSACTION (category_id, type)` es una clave foránea compuesta contra `CATEGORY (id, kind)`, apoyada en el `UNIQUE (id, kind)`. Los valores de `type` y de `kind` son los mismos (`expense`, `income`) para que la clave funcione. Lo mismo vale para `RECURRING_RULE (category_id, type)`: una regla de ingreso usa una categoría de ingreso.
 - En `CATEGORY`, un usuario no tiene dos categorías con el mismo nombre, sin distinguir mayúsculas: índice único sobre `(user_id, lower(name))`, más un índice único parcial sobre `lower(name)` donde `user_id` es nulo para el catálogo base, porque en un `UNIQUE` dos nulos no chocan.

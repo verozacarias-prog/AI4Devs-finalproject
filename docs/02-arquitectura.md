@@ -248,6 +248,8 @@ flowchart TB
 - **Consentimiento explícito y revocable** para el acceso a la casilla de email (configuración de usuario, no un permiso obligatorio del sistema).
 - **Verificación de firma del webhook de WhatsApp** en cada request entrante, para descartar mensajes falsificados.
 - **Nunca loggear en crudo** número de teléfono, montos ni texto de usuario sin enmascarar.
+- **Retención limitada**: el texto de los mensajes se borra pasado un plazo configurable, y al proveedor de LLM nunca se le envían identificadores ([reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos), [ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md)).
+- **Configuración en YAML versionado**: el plazo de retención de mensajes (`message_retention_days`, 60 por defecto), el plazo de gracia del borrado de cuenta (`account_deletion_grace_days`, 7 por defecto), las cuotas de uso del asistente y las fuentes de cotización viven en archivos YAML del repositorio, no en el código ni en la base.
 - **Secretos fuera del código**: credenciales de WhatsApp, LLM y base de datos vía variables de entorno, nunca hardcodeadas ni versionadas.
 - **HTTPS** en toda comunicación externa.
 - Validación de entrada tanto en el webhook de WhatsApp como en los endpoints propios del frontend (cliente y servidor).
