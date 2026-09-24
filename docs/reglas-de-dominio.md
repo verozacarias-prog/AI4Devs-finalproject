@@ -96,6 +96,11 @@ Se usa cuando falta algo que **depende de una decisión del usuario** — la cue
 
 Cuando el usuario responde, se completa y se promueve a `TRANSACTION` (quedando enlazada por `resulting_transaction_id`). `expires_at` evita que se acumulen pendientes eternos de mensajes que nunca se contestaron.
 
+**Los pendientes de un recurrente no vencen.** Un pendiente generado por una regla recurrente
+(§ 8) representa un gasto que ocurre sí o sí, como el alquiler: descartarlo sería perder el
+registro de ese mes. Por eso no tiene `expires_at` y, en vez de vencer, se vuelve a recordar
+cada 3 días hasta que el usuario lo confirme o lo rechace.
+
 Del alcance técnico del Ticket 1:
 
 - Si falta algún campo que depende del usuario (`amount`, `type` ambiguo, `account_id`, o el `budget_period_id` sin confirmar): crear una `PENDING_TRANSACTION` con lo interpretado y la lista de faltantes, y responder preguntando solo por esos, ofreciendo las opciones disponibles del usuario. Manejar el mensaje de respuesta como continuación de ese pendiente, no como un movimiento nuevo.
