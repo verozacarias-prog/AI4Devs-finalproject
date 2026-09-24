@@ -49,6 +49,7 @@ export default defineConfig({
             { label: 'Flujo de trabajo con IA', slug: 'flujo-de-trabajo-con-ia' },
             { label: 'Documentación viva', slug: 'documentacion-viva' },
             { label: 'Hoja de ruta', slug: 'hoja-de-ruta' },
+            { label: 'Operación (propuesta)', slug: 'operacion' },
           ],
         },
         {

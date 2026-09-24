@@ -98,6 +98,27 @@ en [`prompts.md`](../prompts.md), no acá.
   Ley 25.326, la transferencia de datos al proveedor de alojamiento y al de LLM fuera del país, y
   si los consejos que cruzan el perfil de riesgo con los datos del usuario pueden encuadrarse como
   asesoramiento de inversiones regulado. Bloquea abrir a usuarios reales.
+- **Proveedor y plan de despliegue: sin decidir.** [Operación](operacion.md) propone Render en su
+  plan pago más chico, por unos US$23 a 25 por mes, con una copia diaria cifrada fuera de Render.
+  La alternativa es un servidor virtual único por unos US$6, que suma a quien opera parchear el
+  sistema, administrar PostgreSQL y montar las copias. Hay que decidir cuánto vale no operar un
+  servidor.
+- **Pérdida de datos y tiempo de recuperación aceptados: sin decidir.** La propuesta pierde
+  minutos ante un error y hasta 24 horas si se pierde la cuenta del proveedor, y se recupera en
+  una a cuatro horas. Define la frecuencia de las copias y si alcanza el plan de base más chico.
+- **Rama desde la que se despliega la aplicación: divergencia.**
+  [2.4](02-arquitectura.md#24-infraestructura-y-despliegue) dice que el despliegue sale de un push
+  a `main`, pero en este fork `main` es el espejo del repositorio del curso y el trabajo vive en
+  ramas `feature/**` ([documentación viva](documentacion-viva.md#7-el-modelo-de-ramas-condiciona-el-despliegue)).
+  Hay que decidir cuál es la rama de despliegue antes de conectar Render.
+- **Quién genera las alertas proactivas: divergencia.** Las alertas usan el motor RAG, pero en el
+  diagrama de [2.4](02-arquitectura.md#24-infraestructura-y-despliegue) los procesos programados
+  no llegan al LLM, y solo el worker lo hace. O las genera el worker, o al diagrama le falta esa
+  conexión.
+- **Un cron o uno por tarea: sin decidir.** [2.4](02-arquitectura.md#24-infraestructura-y-despliegue)
+  habla de procesos programados separados del servicio web, sin decir cuántos.
+  [Operación](operacion.md) propone uno solo que despacha las tareas vencidas, porque cada cron
+  cuesta aparte; a cambio, una tarea que se cuelga demora a las demás hasta que vence su tiempo.
 - **Subagentes: sin decidir.** Un subagente corre en su propio contexto, así que hay que volver a
   explicarle la tarea entera y devuelve un resumen en vez del trabajo. Eso se paga cuando hay algo
   para paralelizar o una búsqueda grande que conviene mantener fuera del contexto. Ninguna de las

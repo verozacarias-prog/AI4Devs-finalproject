@@ -50,6 +50,7 @@ https://github.com/verozacarias-prog/AI4Devs-finalproject
 | [Convenciones de desarrollo](docs/convenciones-de-desarrollo.md) | Cortes verticales y los cuatro estados de una pantalla. |
 | [Términos y privacidad](docs/terminos-y-privacidad.md) | Qué tienen que cubrir los términos y la política de privacidad, antes de redactarlos. |
 | [Hoja de ruta](docs/hoja-de-ruta.md) | Qué queda para la entrega 2 y para la app móvil, y por qué. |
+| [Operación](docs/operacion.md) | Propuesta sin decidir: entornos, pipeline, despliegue, copias de respaldo y observabilidad. |
 | [Flujo de trabajo con IA](docs/flujo-de-trabajo-con-ia.md) | Contratos, skill, commands, verificadores y hooks. |
 | [Documentación viva](docs/documentacion-viva.md) | Cómo se mantiene sincronizada la documentación: fuente única, portal, `llms.txt` y las tres barreras de validación. |
 
