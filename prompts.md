@@ -41,6 +41,7 @@ dejó, en síntesis:
 | Reestructuración de la documentación | Claude Code | Claude Opus 5, contexto 1M (`claude-opus-5[1m]`) | Partir el readme monolítico en `docs/`, extraer las reglas de dominio, redactar `CLAUDE.md` y los ADR |
 | Diagnóstico arquitectónico y cierre de la especificación | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Auditar la especificación contra el código, resolver los hallazgos con la autora y escribir las decisiones en `docs/` y en cuatro ADR |
 | Diseño de la capa de datos | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Revisar el modelo de datos en modo de solo lectura, resolver las divergencias con la autora y escribir las decisiones en `docs/` y en dos ADR |
+| Modelo de amenazas | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Analizar la seguridad de la especificación en modo de solo lectura, resolver con la autora las decisiones de sesión y de login, y escribirlas en `docs/` y en dos ADR |
 | Código, tests y despliegue | *(pendiente — Entrega 2)* | | |
 
 La auditoría de repos de referencia (ver §1, Prompt 2) recomendó configurar y versionar las rules antes de empezar a codear, porque **ninguno de los dos proyectos de ejemplo del curso lo había hecho**. Esa recomendación se siguió al cierre de la Entrega 1. La configuración resultante —contratos, skill, commands, verificadores y hook— está descrita en [`docs/flujo-de-trabajo-con-ia.md`](docs/flujo-de-trabajo-con-ia.md) y no se repite acá.
@@ -202,6 +203,28 @@ La corrección humana que vino después es la más valiosa: la primera lista de 
 
 ---
 
+**Prompt 2** — *Claude Code · modelo de amenazas de solo lectura, y cierre de las decisiones de login*
+
+> "Actuá como Senior Application Security Engineer (AppSec) con experiencia en fintech de consumo y en equipos muy chicos. Tu criterio prioriza controles de alto impacto y bajo costo operativo por sobre defensas exhaustivas que una sola persona no puede mantener. Pensás como atacante, pero entregás mitigaciones concretas. [...] Esta tarea es de SOLO LECTURA. [...] NUNCA reproduzcas el valor de un secreto, token o credencial. [...] Priorizá controles que una sola persona pueda implementar y operar."
+>
+> *(y más adelante, sobre la recomendación de un dominio propio)* "este proyecto en un mvp, particular por ahora, no se si se justifica un dominio propio, a menos que los haya gratis y se justifique"
+>
+> *(y sobre las decisiones que quedaban abiertas)* "esas deciciones son criticas? o que queda por definir super critico?"
+
+*(prompt completo: ~130 líneas con rol, contexto, modo de trabajo, objetivo en dos fases, restricciones, formato de salida y criterio de calidad)*
+
+*Qué devolvió y qué se decidió:* sin código todavía, el modelo de amenazas se armó sobre la especificación: diagrama de flujo de datos con límites de confianza, STRIDE sobre cada flujo que los cruza, casos de abuso y un plan de diez ítems. No encontró secretos en los commits del proyecto; en el historial heredado del repositorio del curso solo había valores de ejemplo. Ningún riesgo quedó en "Crítico". Tres hallazgos cambiaron la especificación:
+
+- **El JWT de 15 minutos no se podía revocar.** Cerrar sesión o pedir el borrado de la cuenta no cortaba un token ya emitido, y el cliente no tenía dónde guardarlo sin exponerlo.
+- **El límite de pedidos de código delataba a los usuarios.** Se calculaba contando los códigos del usuario, así que solo un número registrado podía llegar al `429`.
+- **El código de borrado no protegía lo que decía proteger.** La especificación lo justificaba contra quien tiene el teléfono en la mano, pero el código llega a ese mismo teléfono.
+
+Salieron dos ADR. El [0016](docs/adr/0016-sesion-de-servidor-en-el-mismo-origen.md) reemplaza al 0003: el código se canjea por una sesión en la base, en una cookie que ningún script puede leer, y la API sirve también el dashboard para que la cookie funcione sin dominio propio. El [0017](docs/adr/0017-limites-del-login-y-codigos-con-proposito.md) cuenta los límites del login por número y por IP, exista o no el usuario, y ata cada código a su propósito.
+
+Lo que queda por decidir antes de abrir a usuarios reales pasó a la [hoja de ruta](docs/hoja-de-ruta.md): qué hacer ante la toma de cuenta por el número, el abuso del tope del LLM, el registro de eventos de seguridad y las obligaciones legales de los datos. La autora confirmó además dos supuestos del análisis: el primer lanzamiento no tiene usuarios fuera de Argentina, y la app móvil no tiene fecha.
+
+---
+
 ### 2.6. Tests
 
 *Se completa en la Entrega final. La estrategia prevista (tests unitarios sobre casos de uso con dobles de prueba en lugar de adaptadores reales, integración sobre adaptadores y endpoints, y un E2E del flujo principal) se definió como consecuencia directa de la arquitectura hexagonal documentada en §2.1.*
@@ -346,12 +369,16 @@ La corrección citada arriba muestra el ajuste más importante de la sesión. La
 | 28 | Ilustrar el problema de las correcciones con "el 2 fueron 3800", que es una corrección dentro de un lote de pendientes | La autora notó que el problema solo existe si el movimiento ya está confirmado. El ejemplo era de la etapa previa, donde nadie más lo ve ni pesa en ningún saldo |
 | 29 | Una regla para un caso casi imposible: el worker se cae entre enviar un mensaje y guardar su id | La autora dudó de que aplicara. Al revisarlo apareció el caso frecuente, citar una confirmación o una alerta, y la regla se generalizó a "si el mensaje citado no es pregunta de un lote abierto, se procesa como si no citara nada" |
 | 30 | Interpretar "bueno esta bien asi" como no aplicar la solución propuesta | La autora quería aplicarla. Ante una respuesta ambigua, la IA eligió una interpretación en vez de preguntar |
+| 31 | Un dominio propio como condición para que la cookie de sesión funcione | La autora cuestionó el costo en un MVP sin usuarios. La IA buscó una alternativa sin costo: la API sirve también el dashboard, en el mismo origen (ADR 0016). El dominio quedó para antes de abrir a usuarios reales, como defensa contra el phishing |
+| 32 | Un plan de remediación con varios riesgos "Altos", sin decir cuándo había que resolver cada uno | La autora preguntó si algo era crítico. Nada lo era: sin usuarios, no había nada expuesto. Se reordenó por cuándo conviene resolver cada cosa. Lo que cambiaba el esquema antes de programar el login se resolvió en el ADR 0017; el resto pasó a la hoja de ruta |
 
 El patrón que se repite: la IA tiende a **resolver la ambigüedad por su cuenta** eligiendo un valor por defecto razonable, y a **justificar decisiones técnicas por el esfuerzo** que ahorran en vez de por sus propiedades de diseño. Las dos cosas hay que detectarlas leyendo, porque el resultado siempre suena defendible.
 
 En la fase de reestructuración aparece un patrón distinto, propio de trabajar con la IA sobre archivos en vez de sobre texto en un chat: los errores dejan de ser de criterio y pasan a ser **mecánicos y silenciosos** —un bloque de código sin cerrar, una palabra que se come el shell—. No se detectan leyendo el resultado, porque el archivo sigue pareciendo correcto. Se detectan ejecutando una verificación. De ahí que la lista de comprobaciones vaya dentro del prompt y no después.
 
 En la fase de diseño de datos aparece un tercer patrón: la IA **sobredimensiona la solución con un argumento que suena riguroso** —trazabilidad, auditoría, casos de borde—. La pregunta que lo desarma es para qué sirve en este producto: la mitad de lo que justificaba el historial completo se resolvía con los datos que ya había.
+
+En el modelo de amenazas el mismo patrón toma otra forma: la IA propone **el control estándar de la industria** sin pesar la etapa del producto, y **califica los riesgos sin decir cuándo importan**. Un dominio propio y un riesgo "Alto" son correctos en abstracto. Las preguntas que los ubican son qué protegen hoy, sin usuarios, y qué cuesta más hacer después.
 
 ---
 
