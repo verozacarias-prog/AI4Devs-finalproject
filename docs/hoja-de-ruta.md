@@ -20,6 +20,7 @@ en [`prompts.md`](../prompts.md), no acá.
 | Definir subagentes, si hacen falta | Haya tareas que lo justifiquen | Ver la decisión abierta de abajo |
 | Publicar la referencia de la API en el portal | Corra FastAPI | El OpenAPI lo genera el framework; falta exponerlo como consola navegable y enlazarlo desde [`llms.txt`](../llms.txt), que hoy no puede describir endpoints que no existen |
 | Documentación del código, con docstrings y su generador | Exista el backend | Es la capa que falta de las cuatro de [documentación viva](documentacion-viva.md#1-las-cuatro-capas). El equivalente en Python de lo que el módulo 5 propone con TypeDoc |
+| Verificar las copias de respaldo del plan de base de datos: cuántos días retiene y si permite restaurar a un punto en el tiempo | Se contrate el plan de PostgreSQL en Render | Los datos de una cuenta borrada siguen en las copias hasta que vencen, y la política de privacidad tiene que decir cuánto tardan ([términos y privacidad](terminos-y-privacidad.md)). Restaurar a un punto en el tiempo es lo que permite volver atrás si una migración o un error rompen datos |
 | Cambiar la rama por defecto del fork al abrir la rama de la entrega 2 | Exista esa rama | El entorno `github-pages` solo despliega desde la rama por defecto. Detalle en [documentación viva](documentacion-viva.md#7-el-modelo-de-ramas-condiciona-el-despliegue) |
 
 ## Más adelante — aplicación móvil
@@ -37,6 +38,10 @@ en [`prompts.md`](../prompts.md), no acá.
   funcionalidades de [1.2](01-producto.md#12-características-y-funcionalidades-principales) y no
   se duplicó. Darle texto propio exige escribir contenido nuevo, no reorganizar el existente. El
   grupo 6 (multimoneda) ya tiene texto propio.
+- **Metadatos de los mensajes: sin plazo de borrado.** Pasado el plazo de retención se borran el
+  texto y el teléfono de cada mensaje ([reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos)),
+  pero la fila con sus metadatos queda para siempre. Con pocos usuarios no pesa; se revisa cuando
+  el volumen de mensajes lo justifique.
 - **Términos y política de privacidad: sin redactar.** Bloquean abrir Platita a usuarios reales.
   El índice de lo que tienen que cubrir está en [términos y privacidad](terminos-y-privacidad.md).
 - **Subagentes: sin decidir.** Un subagente corre en su propio contexto, así que hay que volver a

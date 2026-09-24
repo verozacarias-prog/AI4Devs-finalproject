@@ -21,7 +21,7 @@ así que bloquean abrir Platita a usuarios reales.
 | Dónde se alojan los datos | La región del proveedor de alojamiento, que puede estar fuera del país | [2.4. Infraestructura](02-arquitectura.md#24-infraestructura-y-despliegue) |
 | Grupos familiares | Lo que un miembro imputa a un presupuesto familiar lo ven los demás miembros, y sigue visible después de que sale | [Reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad) |
 | Retención | Cuánto se guarda el texto de los mensajes y qué queda después | [Reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos) |
-| Borrado de cuenta | Qué se borra, qué se anonimiza y el plazo de gracia | [Reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos) |
+| Borrado de cuenta | Qué se borra, qué se anonimiza y el plazo de gracia; que la descripción de los movimientos familiares se conserva tal como se escribió; y que los datos borrados siguen en las copias de respaldo de la base hasta que vencen | [Reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos) |
 | Derechos | Acceso, rectificación y supresión, y cómo ejercerlos | [Reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos) |
 | Avisos | Qué mensajes proactivos existen, que requieren permiso y cómo retirarlo | [Reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos) |
 | Registros técnicos | Que los logs no guardan teléfono, montos ni texto sin enmascarar | [2.5. Seguridad](02-arquitectura.md#25-seguridad) |

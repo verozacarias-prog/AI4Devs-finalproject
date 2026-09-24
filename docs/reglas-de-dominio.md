@@ -32,7 +32,14 @@ Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-princip
 
 ## 2. Cuentas y saldo calculado
 
-El **saldo no se guarda como columna**: se calcula como `initial_balance` más la suma de ingresos menos egresos de sus `TRANSACTION` —excluidas las marcadas como duplicado, ver § 7—, más las transferencias que recibe y menos las que envía (§ 13), así nunca queda desincronizado de los movimientos reales.
+El **saldo no se guarda como columna**: se calcula como `initial_balance` más la suma de ingresos menos egresos de sus `TRANSACTION` —excluidas las marcadas como duplicado, ver § 7, y las borradas—, más las transferencias que recibe y menos las que envía (§ 13), así nunca queda desincronizado de los movimientos reales.
+
+**Borrar un movimiento.** El usuario puede borrar un gasto, un ingreso, una transferencia o una
+compra con tarjeta que ya confirmó. El movimiento queda marcado como borrado, con quién y cuándo,
+y deja de contar en el saldo, en el gastado de los presupuestos y en las alertas. Borrar una
+compra con tarjeta corta las cuotas que faltaban generar; las ya generadas se borran una por una
+(§ 13). El fundamento está en el
+[ADR 0015](adr/0015-borrado-logico-de-movimientos.md).
 
 **Una cuenta, una moneda.** Cada cuenta tiene una sola moneda, igual que en el banco, donde una
 cuenta en pesos y otra en dólares de la misma entidad son dos cuentas distintas. Un movimiento
@@ -431,7 +438,8 @@ diferencia de redondeo.
 confirmado, la cuota queda como `PENDING_TRANSACTION` y, como las de una regla recurrente (§ 5 y
 § 8), no vence y se recuerda cada 3 días. Lo mismo pasa si la moneda de la tarjeta no es la del
 período: la cuota espera a que el usuario confirme la cotización del presupuesto (§ 6). Una
-compra genera como mucho un movimiento, o un pendiente, por cuota.
+compra genera como mucho un movimiento, o un pendiente, por cuota, y una compra borrada no genera
+más (§ 2).
 
 **Resúmenes.** Las fechas de cierre y vencimiento de cada resumen se generan a partir de los días
 fijos de la tarjeta, y el usuario puede corregirlas para un resumen puntual, porque los bancos a
@@ -478,8 +486,9 @@ dashboard:
    mensajes y códigos de login.
 6. Lo compartido se anonimiza en vez de borrarse: los movimientos que imputó a presupuestos
    familiares quedan, porque el grupo los sigue necesitando (§ 10), pero registrados por un "ex
-   miembro", sin nada que lo identifique. Lo mismo vale para la cuenta y la categoría que esos
-   movimientos referencian.
+   miembro": se quita quién los registró. Lo mismo vale para la cuenta y la categoría que esos
+   movimientos referencian. La descripción de cada movimiento se conserva tal como la escribió,
+   porque es parte de lo que el grupo ve, así que puede seguir nombrando personas o lugares.
 
 **Derechos del usuario.**
 

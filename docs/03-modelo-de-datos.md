@@ -143,6 +143,8 @@ erDiagram
         timestamp created_at "DEFAULT now()"
         timestamp updated_at "NULLABLE — last change; null while never modified; set by trigger"
         uuid updated_by FK "NULLABLE — user who made the last change; null if never modified or changed by a scheduled process"
+        timestamp deleted_at "NULLABLE — set when the user deletes it; the row stays and leaves every aggregate"
+        uuid deleted_by FK "NULLABLE — user who deleted it; set by trigger"
     }
 
     PENDING_TRANSACTION {
@@ -224,6 +226,8 @@ erDiagram
         timestamp created_at "DEFAULT now()"
         timestamp updated_at "NULLABLE — last change; null while never modified; set by trigger"
         uuid updated_by FK "NULLABLE — user who made the last change; null if never modified or changed by a scheduled process"
+        timestamp deleted_at "NULLABLE — set when the user deletes it; the row stays and leaves every aggregate"
+        uuid deleted_by FK "NULLABLE — user who deleted it; set by trigger"
     }
 
     CARD_STATEMENT {
@@ -250,6 +254,8 @@ erDiagram
         timestamp created_at "DEFAULT now()"
         timestamp updated_at "NULLABLE — last change; null while never modified; set by trigger"
         uuid updated_by FK "NULLABLE — user who made the last change; null if never modified or changed by a scheduled process"
+        timestamp deleted_at "NULLABLE — set when the user deletes it; the row stays and leaves every aggregate"
+        uuid deleted_by FK "NULLABLE — user who deleted it; set by trigger"
     }
 
     LLM_USAGE {
@@ -364,6 +370,7 @@ erDiagram
 - La conversión a la moneda del presupuesto también queda guardada. `TRANSACTION (budget_period_id, budget_currency)` es una clave foránea compuesta contra `BUDGET_PERIOD (id, primary_currency)`, apoyada en un `UNIQUE (id, primary_currency)`, así `budget_currency` es siempre la moneda del período. Si `budget_currency` es igual a `currency`, `budget_exchange_rate` es nulo y `converted_amount = amount`; si difieren, `budget_exchange_rate` es obligatorio y mayor que cero (`CHECK`). Es la cotización que el usuario vio y confirmó ([reglas de dominio § 6](reglas-de-dominio.md#6-multimoneda-y-cotización)), y la que el dashboard muestra junto al movimiento ([HU4](05-historias-de-usuario.md)).
 - En `TRANSACTION`, `UNIQUE (recurring_rule_id, transaction_date)`: una regla recurrente genera como mucho un movimiento por fecha de ejecución. Si el proceso programado corre dos veces o se reintenta, el segundo insert choca con la clave en vez de duplicar el cargo. Las filas con `recurring_rule_id` nulo no entran en la restricción.
 - En `TRANSACTION`, `TRANSFER` y `CARD_PURCHASE`, `updated_at` y `updated_by` los fija un trigger `BEFORE UPDATE`: la hora del cambio, y el usuario que la aplicación indicó con `SET LOCAL app.actor_id`, o nulo si el cambio lo hace un proceso programado. `updated_by` informado exige `updated_at` informado (`CHECK`). No se guarda el valor anterior; la decisión está en el [ADR 0014](adr/0014-marca-de-edicion-en-movimientos.md).
+- En las mismas tres tablas, borrar es fijar `deleted_at`, y el mismo trigger completa `deleted_by`. `deleted_by` informado exige `deleted_at` informado (`CHECK`). El rol de la aplicación no tiene permiso de `DELETE` sobre ellas: solo el proceso de borrado de cuenta elimina filas. El fundamento está en el [ADR 0015](adr/0015-borrado-logico-de-movimientos.md).
 - En `INBOUND_MESSAGE`, `UNIQUE (provider, provider_message_id)`: un mensaje del proveedor se guarda una sola vez, así un reintento del webhook no genera un segundo procesamiento. El fundamento está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
 - `TRANSACTION.duplicate_of` referencia otra `TRANSACTION` **del mismo usuario** cuando ambas describen probablemente el mismo gasto real. Esa pertenencia se impone en la base: la autorreferencia es una clave foránea compuesta `(user_id, duplicate_of)` contra `(user_id, id)`, apoyada en un `UNIQUE (user_id, id)` en `TRANSACTION`; la columna sigue siendo nullable. Sin eso un movimiento podría enlazarse al de otro usuario. El criterio de detección, y cuándo se puebla la columna, están en [reglas de dominio § 7](reglas-de-dominio.md#7-chequeo-de-duplicados-entre-origen-manual-y-automático).
 
