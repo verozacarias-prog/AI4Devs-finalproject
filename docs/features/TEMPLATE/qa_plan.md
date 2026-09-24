@@ -9,6 +9,10 @@ Qué se prueba cuando todo sale bien, de punta a punta.
 Los propios del dominio: montos en cero, moneda distinta a la primaria, período sin confirmar,
 usuario sin cuentas, usuario en más de un grupo familiar.
 
+Siempre, si la funcionalidad lee o escribe datos de un usuario: otro usuario autenticado que
+pide el mismo recurso recibe `404`, y uno que salió del grupo familiar solo ve los períodos en
+que fue miembro.
+
 ## Errores
 
 Qué se prueba cuando falla la consulta, el LLM no interpreta el mensaje, o el proveedor de

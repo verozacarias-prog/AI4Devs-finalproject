@@ -38,6 +38,7 @@ desde [`features/TEMPLATE/pr.md`](features/TEMPLATE/pr.md).
 
 ### Seguridad
 
+- [ ] Todo endpoint o caso de uso que lee o escribe datos de un usuario los limita al usuario autenticado, y tiene un test en el que otro usuario recibe `404` (ver [4. API](04-api.md)).
 - [ ] Ningún dato personal se loggea sin enmascarar.
 - [ ] Ningún secreto quedó en el código ni en el historial.
 - [ ] Si toca el webhook, la firma se verifica antes de procesar.
