@@ -40,6 +40,7 @@ dejó, en síntesis:
 | Documentación técnica (readme.md) | Claude (claude.ai) | Claude Opus 4.1 | Redactar y refinar arquitectura, modelo de datos, HU y tickets |
 | Reestructuración de la documentación | Claude Code | Claude Opus 5, contexto 1M (`claude-opus-5[1m]`) | Partir el readme monolítico en `docs/`, extraer las reglas de dominio, redactar `CLAUDE.md` y los ADR |
 | Diagnóstico arquitectónico y cierre de la especificación | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Auditar la especificación contra el código, resolver los hallazgos con la autora y escribir las decisiones en `docs/` y en cuatro ADR |
+| Diseño de la capa de datos | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Revisar el modelo de datos en modo de solo lectura, resolver las divergencias con la autora y escribir las decisiones en `docs/` y en dos ADR |
 | Código, tests y despliegue | *(pendiente — Entrega 2)* | | |
 
 La auditoría de repos de referencia (ver §1, Prompt 2) recomendó configurar y versionar las rules antes de empezar a codear, porque **ninguno de los dos proyectos de ejemplo del curso lo había hecho**. Esa recomendación se siguió al cierre de la Entrega 1. La configuración resultante —contratos, skill, commands, verificadores y hook— está descrita en [`docs/flujo-de-trabajo-con-ia.md`](docs/flujo-de-trabajo-con-ia.md) y no se repite acá.
@@ -235,6 +236,32 @@ La corrección humana que vino después es la más valiosa: la primera lista de 
 
 ---
 
+**Prompt 4** — *Claude Code · diseño de la capa de datos de solo lectura, y cierre de las divergencias*
+
+> "Actuá como Lead Database Architect especializado/a en modelado de datos para sistemas financieros construidos y operados por equipos muy chicos. Tu criterio prioriza, en este orden: corrección e integridad de los datos, trazabilidad, simplicidad operativa, y recién después rendimiento. [...] Esta tarea es de SOLO LECTURA. [...] Cada afirmación sobre el estado actual cita su ruta de archivo. Lo deducido se marca [INFERIDO]."
+>
+> *(y más adelante, sobre la propuesta de guardar el historial completo de cada movimiento)* "esta pregunta "¿Cuánto había gastado el presupuesto familiar el 15?" se deberia poder responder sin tener un historial, la funcionalidad general de este proyecto es un registro de gastos, no entiendo como solo se puede responder teniendo un historial"
+
+*(prompt completo: ~100 líneas con rol, contexto, modo de trabajo, objetivo en dos fases, restricciones, formato de salida y criterio de calidad)*
+
+*Qué devolvió y qué se decidió:* sin código todavía, el diseño se hizo sobre la especificación. Confirmó PostgreSQL como motor y encontró seis divergencias entre documentos de `docs/`. **La regla de retención borraba el teléfono de los mensajes, pero el modelo lo declaraba obligatorio.** **La conversión a la moneda del presupuesto no guardaba qué cotización se usó.** **Un pendiente no podía convertirse en transferencia ni en compra con tarjeta.** Faltaban además la zona horaria del usuario, un registro de las correcciones y la moneda en el índice de duplicados. Las seis se resolvieron con decisiones de la autora.
+
+La sesión siguió con las recomendaciones de diseño, presentadas de a una y ordenadas por criticidad. Se aplicaron:
+
+- tipos exactos para montos, instantes y monedas, con un catálogo `CURRENCY`;
+- la tabla `app_user`;
+- claves foráneas que incluyen `user_id`, para que un movimiento no pueda usar la cuenta de otro usuario;
+- idempotencia en `POST /transactions`;
+- migraciones en un único paso del despliegue;
+- nombres de cuenta únicos;
+- reglas para las respuestas citadas y para los recurrentes.
+
+Las de menor impacto pasaron a la [hoja de ruta](docs/hoja-de-ruta.md). Salieron dos ADR: el [0014](docs/adr/0014-marca-de-edicion-en-movimientos.md) (las correcciones se marcan con cuándo y quién) y el [0015](docs/adr/0015-borrado-logico-de-movimientos.md) (borrar un movimiento es marcarlo).
+
+La corrección citada arriba muestra el ajuste más importante de la sesión. La IA propuso guardar el historial completo de cada movimiento en una tabla llenada por un trigger, con el argumento de que sin él no se podía saber cuánto se había gastado en una fecha pasada. La autora señaló que eso se responde con los datos actuales. Lo que solo un historial resuelve es qué mostraba el sistema antes de una corrección, y esa es una pregunta de auditoría contable, no de un registro de gastos. El ADR 0014 quedó reducido a dos columnas, `updated_at` y `updated_by`, y el historial pasó a ser una ampliación posible, no una obligación.
+
+---
+
 ## 4. Especificación de la API
 
 *Los tres endpoints principales (`POST /webhook/whatsapp`, `GET /budgets/{budget_id}`, `POST /transactions`) se derivaron de las decisiones de modelo de datos de §3, no de un prompt independiente. El diagnóstico arquitectónico de §2.2 (Prompt 3) sumó siete operaciones más, hasta llegar a diez: la verificación del webhook que exige Meta (`GET /webhook/whatsapp`), el login (`POST /auth/code`, `POST /auth/token`), la exportación de un grupo familiar y los derechos de acceso y supresión (`GET /me/export`, `POST` y `DELETE /me/deletion`). La plantilla pide tres; se documentan todas porque forman parte del alcance comprometido y un contrato incompleto sería justamente la divergencia entre documentación y código que se quiere evitar. El contrato OpenAPI completo se genera desde el código en la Entrega 2 — patrón tomado de la auditoría de repos de referencia (§1, Prompt 2), que identificó los ERD y árboles de carpetas generados **a partir del código real** como marcador de una entrega sólida.*
@@ -315,10 +342,16 @@ La corrección humana que vino después es la más valiosa: la primera lista de 
 | 24 | Imputar el gasto con tarjeta al presupuesto de la fecha de compra, como YNAB y Actual Budget | La autora piensa el presupuesto como flujo de caja: cada cuota pesa en el mes en que vence. Obligó a modelar la compra como una regla que genera cuotas (ADR 0012) |
 | 25 | Un plazo fijo de 30 días para borrar el texto de los mensajes | Configurable en YAML y con 60 días por defecto, para tener margen al afinar la interpretación |
 | 26 | Una tabla con la regla de cuotas que, al escribirla, no tenía la columna necesaria | La IA lo detectó al revisar su propio texto antes de mostrarlo. Otros dos errores de la sesión los encontró la verificación ejecutable, no la lectura: un chequeo que tardaba 111 segundos y una prueba de detección mal armada |
+| 27 | Guardar el historial completo de cada movimiento, argumentando que sin él no se podía saber cuánto se había gastado en una fecha | Eso se responde con los datos actuales; el historial solo resuelve qué mostraba el sistema antes de una corrección, que es auditoría contable. Se redujo a `updated_at` y `updated_by` (ADR 0014) |
+| 28 | Ilustrar el problema de las correcciones con "el 2 fueron 3800", que es una corrección dentro de un lote de pendientes | La autora notó que el problema solo existe si el movimiento ya está confirmado. El ejemplo era de la etapa previa, donde nadie más lo ve ni pesa en ningún saldo |
+| 29 | Una regla para un caso casi imposible: el worker se cae entre enviar un mensaje y guardar su id | La autora dudó de que aplicara. Al revisarlo apareció el caso frecuente, citar una confirmación o una alerta, y la regla se generalizó a "si el mensaje citado no es pregunta de un lote abierto, se procesa como si no citara nada" |
+| 30 | Interpretar "bueno esta bien asi" como no aplicar la solución propuesta | La autora quería aplicarla. Ante una respuesta ambigua, la IA eligió una interpretación en vez de preguntar |
 
 El patrón que se repite: la IA tiende a **resolver la ambigüedad por su cuenta** eligiendo un valor por defecto razonable, y a **justificar decisiones técnicas por el esfuerzo** que ahorran en vez de por sus propiedades de diseño. Las dos cosas hay que detectarlas leyendo, porque el resultado siempre suena defendible.
 
 En la fase de reestructuración aparece un patrón distinto, propio de trabajar con la IA sobre archivos en vez de sobre texto en un chat: los errores dejan de ser de criterio y pasan a ser **mecánicos y silenciosos** —un bloque de código sin cerrar, una palabra que se come el shell—. No se detectan leyendo el resultado, porque el archivo sigue pareciendo correcto. Se detectan ejecutando una verificación. De ahí que la lista de comprobaciones vaya dentro del prompt y no después.
+
+En la fase de diseño de datos aparece un tercer patrón: la IA **sobredimensiona la solución con un argumento que suena riguroso** —trazabilidad, auditoría, casos de borde—. La pregunta que lo desarma es para qué sirve en este producto: la mitad de lo que justificaba el historial completo se resolvía con los datos que ya había.
 
 ---
 
