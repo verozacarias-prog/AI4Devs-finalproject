@@ -1,6 +1,6 @@
 # 5. Historias de usuario
 
-> Cinco historias de usuario: cuatro **must-have**, que componen el flujo end-to-end comprometido para el MVP, y una **should-have**. El orden sigue la secuencia real de uso: primero configuro mis cuentas, después armo el presupuesto del período, ahí empiezo a registrar movimientos, los reviso en el dashboard, y el sistema me avisa si me estoy pasando.
+> Seis historias de usuario: cinco **must-have**, que componen el flujo end-to-end comprometido para el MVP, y una **should-have**. El orden sigue la secuencia real de uso, salvo la HU6, que se sumó después y conserva su número para no renumerar las referencias existentes: en el uso real va primera, porque es el alta. Después configuro mis cuentas, después armo el presupuesto del período, ahí empiezo a registrar movimientos, los reviso en el dashboard, y el sistema me avisa si me estoy pasando.
 
 **Historia de Usuario 1** · *must-have*
 
@@ -93,4 +93,23 @@
 - No se envía más de una alerta por presupuesto y período para evitar spam.
 
 *Prioridad:* Media
+*Estimación:* 8 puntos
+
+---
+
+**Historia de Usuario 6** · *must-have*
+
+**Como** persona que le escribe a Platita por primera vez
+**Quiero** darme de alta conversando por WhatsApp, en pocos minutos
+**Para** empezar a registrar mis gastos sin instalar nada ni completar un formulario
+
+*Criterios de aceptación:*
+
+- Lo primero que recibo es el pedido de aceptar los términos y la política de privacidad. Si no acepto, no se guarda nada mío más allá del mensaje que mandé.
+- La parte obligatoria me pide nombre, país, confirmar mi moneda primaria, si quiero recibir avisos y al menos una cuenta. Puedo dar de alta varias cuentas en un solo mensaje.
+- Si mi primer mensaje fue un gasto, al terminar el alta se retoma sin que tenga que repetirlo.
+- Al terminar, el asistente me ofrece configurar mis categorías y responder unas preguntas para mejorar los consejos. Puedo saltear cualquiera, o todas, y completarlas después desde el dashboard.
+- Si no acepto recibir avisos, Platita nunca me escribe por su cuenta, pero sí me puede mencionar una alerta dentro de una respuesta a algo que escribí. Puedo cambiar ese permiso cuando quiera.
+
+*Prioridad:* Alta
 *Estimación:* 8 puntos

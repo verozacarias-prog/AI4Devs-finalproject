@@ -42,6 +42,12 @@ en [`prompts.md`](../prompts.md), no acá.
   pero falta decidir el formato del archivo y por qué canal lo recibe el usuario: descarga desde
   el dashboard, o documento por WhatsApp, que fuera de la ventana de 24 h exige una plantilla de
   Meta.
+- **Términos y política de privacidad: sin redactar.** El alta exige aceptarlos antes de guardar
+  nada ([reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos)),
+  así que bloquean abrir Platita a usuarios reales. Tienen que cubrir que los mensajes se
+  procesan con un proveedor de LLM, los datos sensibles del perfil financiero, la retención de
+  los mensajes recibidos y el borrado de la cuenta. Conviene que los revise alguien con
+  conocimiento legal.
 - **Tarjetas de crédito: sin modelar.** Los tipos de cuenta son banco, billetera, broker y
   efectivo ([3.1](03-modelo-de-datos.md#31-diagrama-del-modelo-de-datos)). Una compra con
   tarjeta de crédito es un gasto hoy, pero la plata sale de una cuenta recién al pagar el

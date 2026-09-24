@@ -42,7 +42,7 @@ https://github.com/verozacarias-prog/AI4Devs-finalproject
 | [2. Arquitectura del sistema](docs/02-arquitectura.md) | Diagramas C4, componentes, estructura de ficheros, infraestructura, seguridad y tests. |
 | [3. Modelo de datos](docs/03-modelo-de-datos.md) | Diagrama entidad-relación y descripción de cada entidad. |
 | [4. Especificación de la API](docs/04-api.md) | Los endpoints principales con sus contratos de request y response. |
-| [5. Historias de usuario](docs/05-historias-de-usuario.md) | Las cinco historias con sus criterios de aceptación, prioridad y estimación. |
+| [5. Historias de usuario](docs/05-historias-de-usuario.md) | Las seis historias con sus criterios de aceptación, prioridad y estimación. |
 | [6. Tickets de trabajo](docs/06-tickets.md) | Los tres tickets de backend, frontend y base de datos. |
 | [7. Pull requests](docs/07-pull-requests.md) | Los pull requests de la entrega final. |
 | [8. Convenciones de documentación](docs/08-convenciones-de-documentacion.md) | Idioma, diagramas, nombres de archivo y estructura de `docs/`. |

@@ -84,6 +84,11 @@ Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-princip
 
 ## 4. Categorías: catálogo base, categorías propias y creación con confirmación
 
+**Cada categoría es de gasto o de ingreso.** Una categoría declara si clasifica gastos o
+ingresos, y un movimiento solo puede usar una categoría de su mismo tipo: un sueldo no se
+clasifica como "comida". La base lo impone. El catálogo base trae categorías de los dos tipos, y
+el usuario puede sumar propias de cualquiera de ellos.
+
 Del alcance técnico del Ticket 1:
 
 - Resolución de categoría contra el catálogo existente del usuario; si ninguna encaja, proponer crear una nueva, sin crearla sin confirmación.
@@ -182,11 +187,11 @@ Lo que no se duplica es el dinero: **una fila con `duplicate_of` no nulo no entr
 
 Ver también: [1.2, detección de duplicados](01-producto.md#12-características-y-funcionalidades-principales) · [Ticket 3](06-tickets.md), que crea el índice de soporte.
 
-## 8. Gastos recurrentes: la excepción a la confirmación
+## 8. Movimientos recurrentes: la excepción a la confirmación
 
-**Excepción: movimientos generados por una regla recurrente.** Un `RECURRING_EXPENSE` define una sola vez, al configurarse, su cuenta y su dueño de presupuesto (`budget_user_id` o `budget_family_group_id`, exactamente uno). En cada ciclo, el motor resuelve el `BUDGET_PERIOD` concreto de ese dueño que cubre la fecha de ejecución e inserta la `TRANSACTION` ya completa — la confirmación ocurrió al dar de alta la regla, no se vuelve a pedir mes a mes.
+**Excepción: movimientos generados por una regla recurrente.** Un `RECURRING_RULE` define una sola vez, al configurarse, su cuenta y su dueño de presupuesto (`budget_user_id` o `budget_family_group_id`, exactamente uno). En cada ciclo, el motor resuelve el `BUDGET_PERIOD` concreto de ese dueño que cubre la fecha de ejecución e inserta la `TRANSACTION` ya completa — la confirmación ocurrió al dar de alta la regla, no se vuelve a pedir mes a mes.
 
-Para que eso sea posible sin preguntar nada mes a mes, la regla define desde el alta **todo lo que un movimiento necesita**: categoría, cuenta (`account_id`) y dueño del presupuesto (`budget_user_id` o `budget_family_group_id`).
+Para que eso sea posible sin preguntar nada mes a mes, la regla define desde el alta **todo lo que un movimiento necesita**: si es gasto o ingreso (`type`), categoría, cuenta (`account_id`) y dueño del presupuesto (`budget_user_id` o `budget_family_group_id`). Una regla puede generar gastos, como el alquiler, o ingresos, como el sueldo; todo lo de esta sección vale igual para los dos.
 
 **Una regla genera como mucho un movimiento por fecha de ejecución.** Si el proceso programado
 corre dos veces el mismo día o se reintenta después de un fallo, no se genera un segundo cargo.
@@ -201,7 +206,7 @@ El asistente avisa, por ejemplo: "Se generó el alquiler de $500.000, pero no te
 confirmado para octubre. ¿Lo confirmás?". La misma clave de unicidad aplica al pendiente, así
 una doble ejecución tampoco duplica el aviso.
 
-Ver también: [1.2, gastos recurrentes](01-producto.md#12-características-y-funcionalidades-principales) · [RECURRING_EXPENSE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [restricción XOR en 3.1](03-modelo-de-datos.md#31-diagrama-del-modelo-de-datos).
+Ver también: [1.2, movimientos recurrentes](01-producto.md#12-características-y-funcionalidades-principales) · [RECURRING_RULE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [restricción XOR en 3.1](03-modelo-de-datos.md#31-diagrama-del-modelo-de-datos).
 
 ## 9. Trazabilidad de origen (`source`)
 
@@ -253,7 +258,7 @@ nunca se asigna sin confirmación (§ 1), cualquier pendiente podría terminar e
 familiar. Primero confirma o rechaza cada uno. Rechazar es un cierre explícito del pendiente, no
 un vencimiento (§ 5).
 
-**Los recurrentes hacia el grupo se pausan.** Al salir, cada `RECURRING_EXPENSE` del usuario con
+**Los recurrentes hacia el grupo se pausan.** Al salir, cada `RECURRING_RULE` del usuario con
 `budget_family_group_id` de ese grupo pasa a `active = false`. No se borra ni se reasigna: queda
 el historial de lo ya generado, y reactivarla hacia otro presupuesto es una decisión del usuario.
 
@@ -267,4 +272,67 @@ miembro, es decir, los que se superponen con su intervalo de membresía (`joined
 familiar solo si, en ese momento, el usuario sigue siendo miembro del grupo. La validación ocurre
 dentro de la misma transacción de base de datos que la promoción.
 
-Ver también: [FAMILY_GROUP / USER_GROUP en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [§ 5, pendientes](#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración) · [§ 8, recurrentes](#8-gastos-recurrentes-la-excepción-a-la-confirmación) · [decisiones abiertas](hoja-de-ruta.md#decisiones-abiertas).
+Ver también: [FAMILY_GROUP / USER_GROUP en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [§ 5, pendientes](#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración) · [§ 8, recurrentes](#8-movimientos-recurrentes-la-excepción-a-la-confirmación) · [decisiones abiertas](hoja-de-ruta.md#decisiones-abiertas).
+
+## 11. Alta de usuario, consentimiento y mensajes proactivos
+
+**Sin consentimiento no se guarda nada.** Cuando escribe un número que Platita no conoce, lo
+primero es pedirle que acepte los términos y la política de privacidad. Hasta que acepta, no se
+guarda nada más que el mensaje recibido, y no se procesa con IA. Se registra cuándo aceptó y qué
+versión de los términos.
+
+**El alta tiene una parte obligatoria y corta.** Es lo mínimo para registrar el primer gasto:
+
+1. Consentimiento de términos y política de privacidad.
+2. Nombre y país. Del país se sugiere la moneda primaria, que el usuario confirma, y, si existe,
+   la fuente de cotización; en Argentina se le pregunta cuál prefiere (por ejemplo, MEP u
+   oficial).
+3. Permiso para recibir avisos (ver abajo).
+4. Al menos una cuenta, con la opción de dar de alta varias en el mismo mensaje. Por cada una se
+   confirma tipo, moneda y saldo inicial.
+
+Hasta completarla, el usuario no puede registrar movimientos.
+
+**El primer mensaje no se pierde.** Si lo primero que escribió fue un gasto, queda guardado y,
+al terminar la parte obligatoria, se retoma como un pendiente normal (§ 5), sin pedirle que lo
+repita.
+
+**La configuración y el perfil son opcionales.** Al terminar la parte obligatoria, el asistente
+ofrece seguir, o dejarlo para otro día:
+
+- **Categorías.** El usuario ya tiene el catálogo base, así que nunca queda sin categorías. Se
+  le muestran y puede sumar propias, de gasto o de ingreso (§ 4).
+- **Perfil financiero**, para que los consejos se crucen con su situación real: ingreso mensual
+  aproximado (por rangos, no exacto), cuántas personas dependen de ese ingreso, si tiene deudas,
+  si tiene fondo de emergencia y de cuántos meses, su objetivo principal (ahorrar, salir de
+  deudas, armar un fondo de emergencia o empezar a invertir) y con cuánto riesgo se siente
+  cómodo al invertir.
+
+Cada pregunta se puede saltear, y todo se completa o cambia después desde el dashboard. El
+perfil guarda cuándo se actualizó, para que un consejo sepa si el dato puede haber quedado viejo.
+
+**Mensajes proactivos: solo con permiso.** Un mensaje es proactivo cuando Platita lo inicia sin
+estar respondiendo a algo que el usuario acaba de escribir: alertas de presupuesto (HU5),
+recordatorios de pendientes (§ 5), recordatorio de período sin confirmar (§ 3) y aviso de
+recurrente sin período (§ 8). Si el usuario no dio permiso para avisos, Platita nunca le envía
+uno. Lo que sí puede hacer es mencionarlo dentro de una respuesta a algo que el usuario
+escribió, por ejemplo al confirmar un gasto: "Listo. Ojo, vas al 82% del rubro". El permiso se
+puede dar o retirar en cualquier momento.
+
+**El código de login no es un aviso.** Se envía porque el usuario lo pidió en ese momento desde
+el dashboard, así que no depende del permiso para avisos.
+
+**Fuera de la ventana de conversación, plantilla.** WhatsApp permite responder con texto libre
+solo dentro de las 24 horas posteriores al último mensaje del usuario. Pasado ese plazo, todo
+mensaje de Platita tiene que ser una plantilla aprobada por Meta, que además se paga por envío.
+Las que hacen falta son:
+
+| Plantilla | Categoría en Meta | Cuándo se usa |
+|---|---|---|
+| Código de login | Autenticación | Al pedir entrar al dashboard |
+| Alerta de presupuesto | Utilidad | Al pasar un umbral |
+| Pendientes sin confirmar | Utilidad | Antes de vencer, o cada 3 días si son de un recurrente |
+| Período sin confirmar | Utilidad | Cerca del inicio de un período que sigue en `draft` |
+| Recurrente sin período | Utilidad | Cuando un recurrente no encuentra período confirmado |
+
+Ver también: [HU6](05-historias-de-usuario.md) · [USER y FINANCIAL_PROFILE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [OUTBOUND_MESSAGE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).

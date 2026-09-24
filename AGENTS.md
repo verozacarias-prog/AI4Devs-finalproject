@@ -47,7 +47,7 @@ de pre-commit. No son una recomendación: rompen el commit.
 
 ## 4. Mapa de carpetas
 
-- `backend/app/domain/entities/` — User, Account, Budget, Transaction, Category, RecurringExpense, AdviceDocument.
+- `backend/app/domain/entities/` — User, Account, Budget, Transaction, Category, RecurringRule, AdviceDocument.
 - `backend/app/domain/use_cases/` — RegisterTransaction, GetBudgetStatus, CalculateAccountBalance, GenerateProactiveAlert.
 - `backend/app/domain/ports/` — interfaces que el dominio declara y no implementa.
 - `backend/app/adapters/inbound/api/` — routers de FastAPI: traducen HTTP a llamadas a casos de uso.

@@ -50,7 +50,7 @@ flowchart TB
         SPA["<b>Aplicación web</b><br/><i>[Contenedor: SPA]</i><br/>Dashboard de presupuestos,<br/>saldos y configuración"]
         API["<b>API Backend</b><br/><i>[Contenedor: Python + FastAPI]</i><br/>Casos de uso, reglas de negocio<br/>y orquestación de integraciones"]
         MSGW["<b>Worker de mensajes</b><br/><i>[Contenedor: Python]</i><br/>Interpreta los mensajes recibidos<br/>y envía las respuestas"]
-        WORKER["<b>Procesos programados</b><br/><i>[Contenedor: Python]</i><br/>Gastos recurrentes, alertas de<br/>presupuesto, expiración de pendientes<br/>y actualización de cotizaciones"]
+        WORKER["<b>Procesos programados</b><br/><i>[Contenedor: Python]</i><br/>Movimientos recurrentes, alertas de<br/>presupuesto, expiración de pendientes<br/>y actualización de cotizaciones"]
         DB[("<b>Base de datos</b><br/><i>[Contenedor: PostgreSQL + pgvector]</i><br/>Datos del usuario y base de<br/>conocimiento vectorizada")]
     end
 
@@ -145,7 +145,7 @@ El contexto que llevó a elegirlo, sus beneficios, los sacrificios asumidos y la
 /backend
   /app
     /domain
-      /entities         # User, Account, Budget, Transaction, Category, RecurringExpense, AdviceDocument
+      /entities         # User, Account, Budget, Transaction, Category, RecurringRule, AdviceDocument
       /use_cases         # RegisterTransaction, GetBudgetStatus, CalculateAccountBalance, GenerateProactiveAlert...
       /ports             # interfaces the domain depends on but does not implement
         - transaction_repository_port.py
