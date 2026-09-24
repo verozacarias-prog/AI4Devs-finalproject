@@ -56,7 +56,7 @@ Registra un movimiento manualmente desde el dashboard. `amount`, `type`, `catego
 Lo que el cliente **no** manda:
 
 - `user_id` no viaja en el cuerpo: sale del `sub` del JWT autenticado. Aceptarlo del cliente sería dejar que cualquiera escriba movimientos en la cuenta de otro.
-- `source` lo fija el servidor en `"manual"`, ignorando cualquier valor recibido. Los movimientos `automatic` —el flujo de WhatsApp ya confirmado y el motor de recurrentes— nacen del caso de uso `RegisterTransaction` por dentro, no de este endpoint, así que la trazabilidad de origen ([reglas de dominio § 9](reglas-de-dominio.md#9-trazabilidad-de-origen-source)) no depende de la buena fe del cliente.
+- `source` lo fija el servidor en `"manual"`, ignorando cualquier valor recibido. Los movimientos `automatic` —el motor de recurrentes y, cuando se implemente, la carga por email— nacen del caso de uso `RegisterTransaction` por dentro, no de este endpoint. Lo que el usuario escribe por WhatsApp y confirma también es `manual`, igual que lo cargado acá, porque lo ingresó él (ver [HU3](05-historias-de-usuario.md)). Así, así que la trazabilidad de origen ([reglas de dominio § 9](reglas-de-dominio.md#9-trazabilidad-de-origen-source)) no depende de la buena fe del cliente.
 
 Validaciones de pertenencia, antes de insertar: `account_id` tiene que ser una cuenta del usuario autenticado; `budget_period_id`, un período de ese usuario o de un grupo familiar al que pertenezca; y `category_id`, una categoría propia del usuario o una del catálogo base del sistema (`user_id` nulo e `is_base = true`), que es exactamente lo que el catálogo mixto de [CATEGORY](03-modelo-de-datos.md#32-descripción-de-entidades-principales) permite. Si no, `404` —no `403`— para no confirmar que el recurso existe.
 

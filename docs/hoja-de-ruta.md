@@ -42,6 +42,12 @@ en [`prompts.md`](../prompts.md), no acá.
   pero falta decidir el formato del archivo y por qué canal lo recibe el usuario: descarga desde
   el dashboard, o documento por WhatsApp, que fuera de la ventana de 24 h exige una plantilla de
   Meta.
+- **Tarjetas de crédito: sin modelar.** Los tipos de cuenta son banco, billetera, broker y
+  efectivo ([3.1](03-modelo-de-datos.md#31-diagrama-del-modelo-de-datos)). Una compra con
+  tarjeta de crédito es un gasto hoy, pero la plata sale de una cuenta recién al pagar el
+  resumen, a veces en otra moneda, y pagar el resumen no es un gasto nuevo. Falta investigar
+  cómo funciona en la práctica, incluidos los consumos en moneda extranjera, antes de decidir
+  cómo representarlo.
 - **Subagentes: sin decidir.** Un subagente corre en su propio contexto, así que hay que volver a
   explicarle la tarea entera y devuelve un resumen en vez del trabajo. Eso se paga cuando hay algo
   para paralelizar o una búsqueda grande que conviene mantener fuera del contexto. Ninguna de las

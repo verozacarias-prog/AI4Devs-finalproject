@@ -34,6 +34,28 @@ Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-princip
 
 El **saldo no se guarda como columna**: se calcula como `initial_balance` más la suma de ingresos menos egresos de sus `TRANSACTION` —excluidas las marcadas como duplicado, ver § 7— así nunca queda desincronizado de los movimientos reales.
 
+**Una cuenta, una moneda.** Cada cuenta tiene una sola moneda, igual que en el banco, donde una
+cuenta en pesos y otra en dólares de la misma entidad son dos cuentas distintas. Un movimiento
+se registra siempre en la moneda de la cuenta de la que sale o a la que entra la plata:
+`TRANSACTION.currency` es igual a `ACCOUNT.currency`, sin excepción. Por eso el saldo nunca
+suma montos de monedas distintas. La moneda de una cuenta no se puede cambiar mientras tenga
+movimientos.
+
+**Si el usuario nombra otra moneda, el asistente convierte y pide confirmación.** Cuando la
+moneda del mensaje no coincide con la de la cuenta, el asistente convierte el monto a la moneda
+de la cuenta con la cotización de referencia del usuario (§ 6) y le pide que confirme el valor
+convertido antes de registrar. Por ejemplo, con "gasté 50 dólares con la Galicia pesos" y una
+cotización de 1.000, responde "Serían $50.000 de Galicia pesos, ¿está bien?". El monto
+convertido es un `amount` más y, como todo monto, exige confirmación (§ 1): mientras tanto el
+movimiento queda como `PENDING_TRANSACTION`. Si el banco debitó otra cifra, el usuario la
+corrige en la respuesta y vale la suya. El movimiento guarda el monto original, su moneda y la
+cotización usada (`original_amount`, `original_currency`, `exchange_rate`), para que se sepa
+después que fue un gasto en otra moneda y con qué valor se convirtió. Si el usuario no tiene cotización de referencia
+configurada, el asistente no inventa una: le pregunta cuánto se debitó en la moneda de la cuenta.
+
+La conversión a la moneda primaria del presupuesto (§ 6) es otra cosa: no toca el saldo de la
+cuenta, solo cuánto pesa el movimiento en el presupuesto.
+
 Y del alcance técnico del Ticket 1, la contracara en el registro:
 
 - Resolución de cuenta por nombre si se menciona — **sin fallback ni cuenta por defecto**: si no se menciona, se pregunta.

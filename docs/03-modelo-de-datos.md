@@ -98,6 +98,9 @@ erDiagram
         decimal amount "NOT NULL, CHECK (amount > 0) — magnitude only, the sign lives in type"
         string currency "NOT NULL, ISO 4217"
         decimal converted_amount "NOT NULL, in the budget period's primary_currency"
+        decimal original_amount "NULLABLE — amount as the user said it, when in another currency than the account"
+        string original_currency "NULLABLE, ISO 4217 — set together with original_amount and exchange_rate"
+        decimal exchange_rate "NULLABLE, > 0 — rate used to convert original_amount into the account currency"
         string type "NOT NULL, CHECK IN ('expense','income')"
         string source "NOT NULL, CHECK IN ('manual','automatic')"
         string description "NULLABLE"
@@ -157,6 +160,8 @@ erDiagram
 - En `RECURRING_EXPENSE`, exactamente uno de `budget_user_id` / `budget_family_group_id` debe ser no nulo (`CHECK`), por el mismo criterio que en `BUDGET_PERIOD`.
 - En `BUDGET`, `UNIQUE (budget_period_id, category_id)`: un período tiene como mucho un límite por categoría, así el gastado de una categoría se contrasta contra un único tope y no contra dos filas que se contradicen.
 - `TRANSACTION.amount` lleva `CHECK (amount > 0)`: guarda la magnitud, nunca el signo. Si el movimiento resta o suma lo dice `type`, que es el único lugar donde vive esa distinción — un monto negativo con `type = 'expense'` sumaría al saldo en vez de restar.
+- La moneda de un movimiento es la de su cuenta, y la base lo impone: `TRANSACTION (account_id, currency)` es una clave foránea compuesta contra `ACCOUNT (id, currency)`, apoyada en un `UNIQUE (id, currency)` en `ACCOUNT`. Con `ON UPDATE RESTRICT`, esa misma clave impide cambiar la moneda de una cuenta que ya tiene movimientos. Lo mismo vale para `RECURRING_EXPENSE (account_id, currency)`. La regla está en [reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado).
+- En `TRANSACTION`, `original_amount`, `original_currency` y `exchange_rate` van los tres nulos o los tres informados (`CHECK`), y si están informados `original_currency` es distinta de `currency` y `exchange_rate > 0`. Guardan el gasto tal como lo dijo el usuario cuando fue en otra moneda que la de la cuenta: el saldo usa siempre `amount`, y estas columnas son la evidencia de la conversión que el usuario confirmó.
 - `TRANSACTION.duplicate_of` referencia otra `TRANSACTION` **del mismo usuario** cuando ambas describen probablemente el mismo gasto real. Esa pertenencia se impone en la base: la autorreferencia es una clave foránea compuesta `(user_id, duplicate_of)` contra `(user_id, id)`, apoyada en un `UNIQUE (user_id, id)` en `TRANSACTION`; la columna sigue siendo nullable. Sin eso un movimiento podría enlazarse al de otro usuario. El criterio de detección, y cuándo se puebla la columna, están en [reglas de dominio § 7](reglas-de-dominio.md#7-chequeo-de-duplicados-entre-origen-manual-y-automático).
 
 ### **3.2. Descripción de entidades principales:**
