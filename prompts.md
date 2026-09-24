@@ -39,6 +39,7 @@ dejó, en síntesis:
 | Análisis de repositorios de referencia | Claude Code | Claude Sonnet 4.5 | Auditar la plantilla oficial y dos proyectos de ejemplo del curso, con acceso al código y al historial git local |
 | Documentación técnica (readme.md) | Claude (claude.ai) | Claude Opus 4.1 | Redactar y refinar arquitectura, modelo de datos, HU y tickets |
 | Reestructuración de la documentación | Claude Code | Claude Opus 5, contexto 1M (`claude-opus-5[1m]`) | Partir el readme monolítico en `docs/`, extraer las reglas de dominio, redactar `CLAUDE.md` y los ADR |
+| Diagnóstico arquitectónico y cierre de la especificación | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Auditar la especificación contra el código, resolver los hallazgos con la autora y escribir las decisiones en `docs/` y en cuatro ADR |
 | Código, tests y despliegue | *(pendiente — Entrega 2)* | | |
 
 La auditoría de repos de referencia (ver §1, Prompt 2) recomendó configurar y versionar las rules antes de empezar a codear, porque **ninguno de los dos proyectos de ejemplo del curso lo había hecho**. Esa recomendación se siguió al cierre de la Entrega 1. La configuración resultante —contratos, skill, commands, verificadores y hook— está descrita en [`docs/flujo-de-trabajo-con-ia.md`](docs/flujo-de-trabajo-con-ia.md) y no se repite acá.
@@ -125,6 +126,22 @@ Este prompt abrió una conversación iterativa larga, un ida y vuelta de pregunt
 > "Lo que yo quiero tambien con la base de datos, es que si en algun en el futuro quiero escalar esto no sea tan complicado. No nos centremos en las 30 horas de trabajo, mismo en ai4devs, dice tambien que muchos chicos le dedican mucho mas de eso."
 
 *Qué devolvió y qué se decidió:* la IA había justificado pgvector con "es un proyecto de 30 horas", un argumento de esfuerzo que no resuelve el problema de fondo. Se rechazó y se reescribió la decisión en términos de **reversibilidad**: el acceso a la base vectorial queda detrás de un puerto propio (`VectorStorePort`), de modo que cambiar a Pinecone/Qdrant/Weaviate sea reemplazar un adaptador y no tocar el dominio. La decisión dejó de apoyarse en el tiempo disponible y pasó a apoyarse en el diseño.
+
+---
+
+**Prompt 3** — *Claude Code · diagnóstico arquitectónico de solo lectura, y cierre de la especificación*
+
+> "Actuá como Arquitecto/a de Software Principal con experiencia en sistemas financieros y en productos construidos por equipos muy chicos. Tu criterio prioriza, en este orden: corrección e integridad de los datos, simplicidad operativa, costo, y recién después escalabilidad. [...] Esta tarea es de SOLO LECTURA. No crees, modifiques ni borres archivos. [...] Producir un diagnóstico arquitectónico accionable de Platita. [...] Cada hallazgo debe citar su evidencia con ruta de archivo [...] Distinguí siempre "según docs" de "según código"."
+>
+> *(y más adelante, sobre la primera propuesta de la IA para las cotizaciones)* "un adapter por cada pais, me parece un poco mucho, no se podria hacer un adapter generico y cosas particulares que necesita el adapter hacerlo por configuracion, con configuracion me refiero a que a mi como developer, incluir un nuevo pais no me cueste un adapter nuevo, si no que solo tenga que agregar configuracion"
+
+*(prompt completo: ~110 líneas con rol, contexto, modo de trabajo, objetivo en dos fases, restricciones, formato de salida y criterio de calidad)*
+
+*Qué devolvió y qué se decidió:* como todavía no existe código, el diagnóstico se hizo sobre la especificación y encontró 18 hallazgos, tres de ellos críticos. **El saldo podía sumar pesos con dólares**, porque nada obligaba a que un movimiento estuviera en la moneda de su cuenta. **Un reintento de WhatsApp duplicaba movimientos**, porque el webhook procesaba de forma síncrona y sin clave de idempotencia. **Una doble ejecución de recurrentes generaba dos cargos.** Las respuestas de la autora a las preguntas del diagnóstico cambiaron el supuesto de partida: Platita es para público general, no solo para la autora y su familia, y eso sumó diez hallazgos más, sobre privacidad, alta de usuarios, costo del LLM y plantillas de Meta.
+
+La sesión no terminó en el informe. Cada hallazgo se resolvió con una decisión humana, se escribió en `docs/` y se commiteó por separado. De ahí salieron cuatro ADR: el [0010](docs/adr/0010-webhook-asincrono-con-tabla-de-entrada.md) (webhook asíncrono con tabla de entrada), el [0011](docs/adr/0011-cotizaciones-con-adaptador-generico-configurable.md) (cotizaciones con un adaptador genérico configurable), el [0012](docs/adr/0012-tarjetas-de-credito-y-transferencias.md) (tarjetas de crédito y transferencias) y el [0013](docs/adr/0013-datos-minimos-al-proveedor-de-llm.md) (datos mínimos al proveedor de LLM). También salieron los grupos 10 a 14 de las reglas de dominio y la HU6.
+
+La corrección citada arriba muestra el patrón de la sesión. La primera propuesta de la IA para buscar cotizaciones era un adaptador por país: correcta, pero con un costo de código por cada país nuevo. La autora pidió que sumar un país fuera solo configuración, y el resultado, un adaptador HTTP genérico con las fuentes descritas en YAML, es mejor diseño que el original.
 
 ---
 
@@ -220,7 +237,7 @@ La corrección humana que vino después es la más valiosa: la primera lista de 
 
 ## 4. Especificación de la API
 
-*Los tres endpoints documentados (`POST /webhook/whatsapp`, `GET /budgets/{budget_id}`, `POST /transactions`) se derivaron de las decisiones de modelo de datos de §3, no de un prompt independiente. El contrato OpenAPI completo se genera desde el código en la Entrega 2 y se recorta a los 3 endpoints que pide la plantilla — patrón tomado de la auditoría de repos de referencia (§1, Prompt 2), que identificó los ERD y árboles de carpetas generados **a partir del código real** como marcador de una entrega sólida.*
+*Los tres endpoints principales (`POST /webhook/whatsapp`, `GET /budgets/{budget_id}`, `POST /transactions`) se derivaron de las decisiones de modelo de datos de §3, no de un prompt independiente. El diagnóstico arquitectónico de §2.2 (Prompt 3) sumó siete operaciones más, hasta llegar a diez: la verificación del webhook que exige Meta (`GET /webhook/whatsapp`), el login (`POST /auth/code`, `POST /auth/token`), la exportación de un grupo familiar y los derechos de acceso y supresión (`GET /me/export`, `POST` y `DELETE /me/deletion`). La plantilla pide tres; se documentan todas porque forman parte del alcance comprometido y un contrato incompleto sería justamente la divergencia entre documentación y código que se quiere evitar. El contrato OpenAPI completo se genera desde el código en la Entrega 2 — patrón tomado de la auditoría de repos de referencia (§1, Prompt 2), que identificó los ERD y árboles de carpetas generados **a partir del código real** como marcador de una entrega sólida.*
 
 ---
 
@@ -292,6 +309,12 @@ La corrección humana que vino después es la más valiosa: la primera lista de 
 | 18 | Recomendar mantener `AGENTS.md` y `CLAUDE.md` separados | La autora priorizó tener una sola fuente por encima de conservar un contrato corto que se lea entero. Se fusionó con enlace simbólico, asumiendo el costo en el ADR 0007 |
 | 19 | Recomendar diferir el portal de documentación a la Entrega 2 | La autora priorizó tener la documentación publicada y visible. Se montó Starlight, asumiendo la entrada de Node antes de decidir el stack del dashboard (ADR 0008) |
 | 20 | Dar por buenas las recetas del módulo 5 sin probarlas | Dos fallaron en el spike: Astro no reescribe los enlaces `.md` que llevan ancla, y un bloque HTML en Markdown termina en la primera línea en blanco, lo que partía los diagramas. Se detectaron construyendo, no leyendo |
+| 21 | Un solo pendiente abierto por usuario, para que la respuesta no fuera ambigua | Con la carga por email entran varios gastos juntos. Se separó cuántos pendientes existen de sobre cuál se pregunta: lotes numerados, con uno solo en conversación |
+| 22 | Si la moneda no coincide con la de la cuenta, el asistente no convierte: pregunta | Fricción innecesaria. El asistente convierte con la cotización y pide confirmar el valor, como con cualquier monto |
+| 23 | Un adaptador de cotizaciones por país | Sumar un país tiene que costar configuración, no código. Un adaptador genérico con fuentes en YAML (ADR 0011) |
+| 24 | Imputar el gasto con tarjeta al presupuesto de la fecha de compra, como YNAB y Actual Budget | La autora piensa el presupuesto como flujo de caja: cada cuota pesa en el mes en que vence. Obligó a modelar la compra como una regla que genera cuotas (ADR 0012) |
+| 25 | Un plazo fijo de 30 días para borrar el texto de los mensajes | Configurable en YAML y con 60 días por defecto, para tener margen al afinar la interpretación |
+| 26 | Una tabla con la regla de cuotas que, al escribirla, no tenía la columna necesaria | La IA lo detectó al revisar su propio texto antes de mostrarlo. Otros dos errores de la sesión los encontró la verificación ejecutable, no la lectura: un chequeo que tardaba 111 segundos y una prueba de detección mal armada |
 
 El patrón que se repite: la IA tiende a **resolver la ambigüedad por su cuenta** eligiendo un valor por defecto razonable, y a **justificar decisiones técnicas por el esfuerzo** que ahorran en vez de por sus propiedades de diseño. Las dos cosas hay que detectarlas leyendo, porque el resultado siempre suena defendible.
 
