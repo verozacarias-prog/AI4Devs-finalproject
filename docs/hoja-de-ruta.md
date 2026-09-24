@@ -43,12 +43,6 @@ en [`prompts.md`](../prompts.md), no acá.
   procesan con un proveedor de LLM, los datos sensibles del perfil financiero, la retención de
   los mensajes recibidos y el borrado de la cuenta. Conviene que los revise alguien con
   conocimiento legal.
-- **Tarjetas de crédito: sin modelar.** Los tipos de cuenta son banco, billetera, broker y
-  efectivo ([3.1](03-modelo-de-datos.md#31-diagrama-del-modelo-de-datos)). Una compra con
-  tarjeta de crédito es un gasto hoy, pero la plata sale de una cuenta recién al pagar el
-  resumen, a veces en otra moneda, y pagar el resumen no es un gasto nuevo. Falta investigar
-  cómo funciona en la práctica, incluidos los consumos en moneda extranjera, antes de decidir
-  cómo representarlo.
 - **Subagentes: sin decidir.** Un subagente corre en su propio contexto, así que hay que volver a
   explicarle la tarea entera y devuelve un resumen en vez del trabajo. Eso se paga cuando hay algo
   para paralelizar o una búsqueda grande que conviene mantener fuera del contexto. Ninguna de las

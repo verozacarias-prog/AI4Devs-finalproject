@@ -32,7 +32,7 @@ Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-princip
 
 ## 2. Cuentas y saldo calculado
 
-El **saldo no se guarda como columna**: se calcula como `initial_balance` más la suma de ingresos menos egresos de sus `TRANSACTION` —excluidas las marcadas como duplicado, ver § 7— así nunca queda desincronizado de los movimientos reales.
+El **saldo no se guarda como columna**: se calcula como `initial_balance` más la suma de ingresos menos egresos de sus `TRANSACTION` —excluidas las marcadas como duplicado, ver § 7—, más las transferencias que recibe y menos las que envía (§ 13), así nunca queda desincronizado de los movimientos reales.
 
 **Una cuenta, una moneda.** Cada cuenta tiene una sola moneda, igual que en el banco, donde una
 cuenta en pesos y otra en dólares de la misma entidad son dos cuentas distintas. Un movimiento
@@ -381,3 +381,50 @@ usuario recibe el aviso de que no se pudo procesar. Además avisa a quien opera 
 decide si subir el tope. Hasta entonces, el asistente no puede interpretar mensajes de nadie.
 
 Ver también: [LLM_USAGE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md), por cómo se reintentan los mensajes.
+
+## 13. Tarjetas de crédito y transferencias
+
+**Transferencias entre cuentas propias.** Mover plata entre dos cuentas del mismo usuario (sacar
+efectivo, pasar de un banco a una billetera, comprar dólares, pagar la tarjeta) es una
+transferencia, no un gasto ni un ingreso. Baja el saldo de una cuenta y sube el de otra, y no
+entra en ningún presupuesto ni en ninguna alerta. Cada lado va en la moneda de su cuenta; si las
+monedas difieren, se guarda la cotización usada y, como toda conversión, se confirma con el
+usuario (§ 6). Origen y destino son cuentas distintas del mismo usuario.
+
+**La tarjeta es una cuenta.** Una tarjeta de crédito es una cuenta de tipo `credit_card`, con un
+día de cierre y un día de vencimiento. Por la regla de una moneda por cuenta (§ 2), una tarjeta
+con consumos en pesos y en dólares se da de alta como dos cuentas, igual que los dos saldos de su
+resumen.
+
+**Un gasto con tarjeta pesa en el presupuesto del mes en que vence, no en el de la compra.** El
+presupuesto se piensa como flujo de caja: una compra del 20 de septiembre que vence el 5 de
+octubre afecta octubre. Una compra hecha después del cierre entra en el resumen siguiente y
+afecta el mes de ese vencimiento.
+
+**La compra se registra una vez y genera sus cuotas.** Al comprar se registra una compra con
+tarjeta: monto, moneda, categoría, fecha, tarjeta y cantidad de cuotas, una si es en un pago. El
+usuario confirma en ese momento, una sola vez, si va a su presupuesto o al familiar. Al cerrar
+cada resumen, el sistema genera por cada cuota que entra en él un gasto sobre la cuenta de la
+tarjeta, con fecha igual al vencimiento, imputado al período confirmado de ese dueño que cubre
+esa fecha. Las cuotas se calculan dividiendo el monto en partes iguales, y la última absorbe la
+diferencia de redondeo.
+
+**Sin período confirmado, la cuota queda pendiente.** Si el período del vencimiento no está
+confirmado, la cuota queda como `PENDING_TRANSACTION` y, como las de una regla recurrente (§ 5 y
+§ 8), no vence y se recuerda cada 3 días. Una compra genera como mucho un movimiento, o un
+pendiente, por cuota.
+
+**Resúmenes.** Las fechas de cierre y vencimiento de cada resumen se generan a partir de los días
+fijos de la tarjeta, y el usuario puede corregirlas para un resumen puntual, porque los bancos a
+veces las corren. Un resumen ya cerrado no se corrige.
+
+**Pagar el resumen es una transferencia** de una cuenta del usuario a la tarjeta. Si paga el
+saldo en dólares con pesos, la transferencia tiene un monto en cada moneda, y la percepción
+impositiva que cobre el banco se registra aparte como un gasto que el usuario confirma.
+
+**Saldo y comprometido.** El saldo de la cuenta de la tarjeta es lo facturado y no pagado, igual
+que en el resumen del banco: las cuotas generadas menos las transferencias recibidas. Lo
+comprometido a futuro, las cuotas todavía no generadas, se muestra aparte y por período en el
+dashboard, para que un mes cargado de cuotas no sea una sorpresa.
+
+Ver también: [ADR 0012](adr/0012-tarjetas-de-credito-y-transferencias.md) · [ACCOUNT, CARD_PURCHASE, CARD_STATEMENT y TRANSFER en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
