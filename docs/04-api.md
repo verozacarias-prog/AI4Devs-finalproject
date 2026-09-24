@@ -1,6 +1,6 @@
 # 4. Especificación de la API
 
-> Los tres endpoints principales del flujo descrito en esta entrega. El contrato completo (OpenAPI autogenerado por FastAPI en `/docs`) se agrega en la Entrega 2.
+> Los endpoints principales del flujo descrito en esta entrega. El contrato completo (OpenAPI autogenerado por FastAPI en `/docs`) se agrega en la Entrega 2.
 
 ### `POST /webhook/whatsapp`
 
@@ -47,7 +47,7 @@ La misma ruta atiende la verificación de la URL que Meta hace al configurar el 
 
 ### `GET /budgets/{budget_id}`
 
-Devuelve el estado actual del límite de **una categoría** dentro de un período de presupuesto: límite, gastado hasta el momento (convertido a la moneda primaria del período) y movimientos asociados. El dashboard arma la vista completa del período ([HU2](05-historias-de-usuario.md)) iterando los `BUDGET` de un mismo `budget_period_id` — agregar un endpoint de rollup a nivel de período es candidato para la Entrega 2, no se fuerza acá para no superar los 3 endpoints de esta entrega.
+Devuelve el estado actual del límite de **una categoría** dentro de un período de presupuesto: límite, gastado hasta el momento (convertido a la moneda primaria del período) y movimientos asociados. El dashboard arma la vista completa del período ([HU2](05-historias-de-usuario.md)) iterando los `BUDGET` de un mismo `budget_period_id` — agregar un endpoint de rollup a nivel de período es candidato para la Entrega 2.
 
 Quién puede leerlo: si el período es individual, solo su dueño. Si es familiar, cualquier miembro
 vigente del grupo, que ve todos los movimientos del período sin importar quién los registró, y
@@ -115,4 +115,44 @@ responses:
           missing_fields: ["account_id", "budget_period_id"]
   404:
     description: account_id or budget_period_id does not belong to the authenticated user
+```
+
+### `POST /auth/code` y `POST /auth/token`
+
+El login del dashboard, sin contraseñas: el usuario pide un código, lo recibe por WhatsApp y lo canjea por un JWT de corta duración. El fundamento está en el [ADR 0003](adr/0003-login-por-codigo-unico.md) y las restricciones del código en [LOGIN_CODE](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
+
+`POST /auth/code` pide un código para un número. Responde `202` **siempre igual**, exista o no un usuario con ese número, para no revelar quién usa Platita; solo si existe se genera y se envía el código. Admite como mucho 3 pedidos por número cada 15 minutos: pasado ese límite responde `429` y no envía nada, porque cada envío es un mensaje de plantilla que se paga y que el dueño del número recibe.
+
+`POST /auth/token` canjea el código. Si es válido, no venció, no se usó y no agotó sus 5 intentos, lo marca como usado y devuelve el JWT. En cualquier otro caso responde `401` con el mismo mensaje, sin decir cuál de las condiciones falló.
+
+```yaml
+# POST /auth/code
+requestBody:
+  content:
+    application/json:
+      example:
+        phone: "+5491100000000"
+responses:
+  202:
+    description: Accepted; a code is sent over WhatsApp only if the number belongs to a user
+  429:
+    description: Too many code requests for this number; nothing is sent
+
+# POST /auth/token
+requestBody:
+  content:
+    application/json:
+      example:
+        phone: "+5491100000000"
+        code: "482913"
+responses:
+  200:
+    content:
+      application/json:
+        example:
+          access_token: "eyJhbGciOi..."
+          token_type: "bearer"
+          expires_in: 900
+  401:
+    description: Invalid, expired, used or exhausted code — same response for all
 ```

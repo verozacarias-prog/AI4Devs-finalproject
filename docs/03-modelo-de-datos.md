@@ -16,6 +16,9 @@ erDiagram
     USER ||--o{ CATEGORY : "creates (custom)"
     USER ||--o{ RECURRING_EXPENSE : configures
     RECURRING_EXPENSE ||--o{ TRANSACTION : "generates (automatic)"
+    RECURRING_EXPENSE ||--o{ PENDING_TRANSACTION : "generates, when no confirmed period"
+    BUDGET ||--o{ SENT_ALERT : "was alerted"
+    USER ||--o{ LOGIN_CODE : "requests"
     USER ||--o{ ACCOUNT : owns
     ACCOUNT ||--o{ TRANSACTION : affects
     USER ||--o{ PENDING_TRANSACTION : "must complete"
@@ -71,7 +74,7 @@ erDiagram
         uuid family_group_id FK "NULLABLE"
         string period_type "NOT NULL, CHECK IN ('monthly','biweekly')"
         date period_start "NOT NULL"
-        date period_end "NOT NULL"
+        date period_end "NOT NULL, CHECK (period_end >= period_start)"
         string primary_currency "NOT NULL"
         decimal estimated_income "NOT NULL, DEFAULT 0"
         string status "NOT NULL, CHECK IN ('draft','confirmed'), DEFAULT 'draft'"
@@ -122,6 +125,8 @@ erDiagram
         string source "NOT NULL, CHECK IN ('manual','automatic')"
         uuid batch_id FK "NOT NULL, FK (batch_id, source) to PENDING_BATCH (id, source)"
         int position "NOT NULL, 1 to 10 — number shown to the user inside the batch"
+        uuid recurring_expense_id FK "NULLABLE — set when a recurring rule found no confirmed period"
+        date occurrence_date "NULLABLE — execution date of that rule; set together with recurring_expense_id"
         string raw_input "NULLABLE — original message or email body, for audit"
         uuid resulting_transaction_id FK "NULLABLE — set once completed and promoted"
         string status "NOT NULL, CHECK IN ('open','promoted','rejected','expired'), DEFAULT 'open'"
@@ -137,6 +142,7 @@ erDiagram
         boolean awaiting_reply "NOT NULL, DEFAULT FALSE — at most one TRUE per user"
         uuid question_message_id FK "NULLABLE — last outbound message that asked about this batch"
         string status "NOT NULL, CHECK IN ('open','closed'), DEFAULT 'open'"
+        timestamp reminded_at "NULLABLE — set when the one reminder before expiry was sent"
         timestamp created_at "DEFAULT now()"
     }
 
@@ -148,6 +154,24 @@ erDiagram
         decimal rate "NOT NULL, CHECK (rate > 0) — quote units per base unit"
         timestamp rate_at "NOT NULL — when the provider published it, UNIQUE (source, base_currency, quote_currency, rate_at)"
         timestamp fetched_at "NOT NULL, DEFAULT now()"
+    }
+
+    SENT_ALERT {
+        uuid id PK
+        uuid budget_id FK "NOT NULL"
+        int threshold "NOT NULL, CHECK (threshold BETWEEN 1 AND 100), percentage, UNIQUE (budget_id, threshold)"
+        uuid outbound_message_id FK "NOT NULL — the alert that was queued"
+        timestamp sent_at "DEFAULT now()"
+    }
+
+    LOGIN_CODE {
+        uuid id PK
+        uuid user_id FK "NOT NULL"
+        string code_hash "NOT NULL — never the code itself"
+        timestamp expires_at "NOT NULL — created_at + 5 minutes"
+        int attempts "NOT NULL, DEFAULT 0, CHECK (attempts BETWEEN 0 AND 5)"
+        timestamp used_at "NULLABLE — set on the one successful exchange"
+        timestamp created_at "DEFAULT now()"
     }
 
     RECURRING_EXPENSE {
@@ -218,6 +242,12 @@ erDiagram
 - En `PENDING_TRANSACTION`, `status = 'promoted'` si y solo si `resulting_transaction_id` no es nulo (`CHECK`). Un pendiente `open` es el que bloquea la salida de un grupo familiar.
 - En `PENDING_BATCH`, un usuario tiene como mucho un lote en conversación: índice único parcial sobre `user_id` donde `awaiting_reply` es verdadero. Un lote cerrado no puede estar en conversación (`CHECK`).
 - En `PENDING_TRANSACTION`, un pendiente tiene el mismo `source` que su lote: clave foránea compuesta `(batch_id, source)` contra `PENDING_BATCH (id, source)`, así un lote nunca mezcla manuales y automáticos. `UNIQUE (batch_id, position)` y `CHECK (position BETWEEN 1 AND 10)` garantizan que cada número que ve el usuario señala un solo pendiente, y que un lote no pasa de 10. La regla de lotes está en [reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración).
+- En `BUDGET_PERIOD`, los períodos de un mismo dueño no se solapan: dos restricciones de exclusión (`EXCLUDE USING gist`), una sobre `user_id` y otra sobre `family_group_id`, cada una con el rango `[period_start, period_end]` y el operador de superposición. Requieren la extensión `btree_gist`. La regla está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio).
+- Un `TRANSACTION` solo se imputa a un `BUDGET_PERIOD` con `status = 'confirmed'`, y un período con movimientos no vuelve a `draft`. Como un `CHECK` no puede mirar otra tabla, lo imponen dos triggers: uno en `TRANSACTION` al insertar o cambiar `budget_period_id`, y otro en `BUDGET_PERIOD` al cambiar `status`.
+- En `PENDING_TRANSACTION`, `recurring_expense_id` y `occurrence_date` van los dos nulos o los dos informados (`CHECK`), con `UNIQUE (recurring_expense_id, occurrence_date)`: una regla recurrente genera como mucho un pendiente por fecha, igual que como mucho un movimiento.
+- En `SENT_ALERT`, `UNIQUE (budget_id, threshold)`: un presupuesto recibe como mucho una alerta por umbral. Como cada `BUDGET` pertenece a un solo período, eso equivale a una por período. La fila se inserta en la misma transacción que encola el mensaje, así una segunda corrida del proceso choca con la clave en vez de mandar otra alerta.
+- En `LOGIN_CODE`, un código se canjea una sola vez (`used_at`), vence a los 5 minutos y admite como mucho 5 intentos fallidos; al quinto queda inutilizable. Se guarda solo su hash.
+- En `CATEGORY`, un usuario no tiene dos categorías con el mismo nombre, sin distinguir mayúsculas: índice único sobre `(user_id, lower(name))`, más un índice único parcial sobre `lower(name)` donde `user_id` es nulo para el catálogo base, porque en un `UNIQUE` dos nulos no chocan.
 - En `RECURRING_EXPENSE`, exactamente uno de `budget_user_id` / `budget_family_group_id` debe ser no nulo (`CHECK`), por el mismo criterio que en `BUDGET_PERIOD`.
 - En `BUDGET`, `UNIQUE (budget_period_id, category_id)`: un período tiene como mucho un límite por categoría, así el gastado de una categoría se contrasta contra un único tope y no contra dos filas que se contradicen.
 - `TRANSACTION.amount` lleva `CHECK (amount > 0)`: guarda la magnitud, nunca el signo. Si el movimiento resta o suma lo dice `type`, que es el único lugar donde vive esa distinción — un monto negativo con `type = 'expense'` sumaría al saldo en vez de restar.
@@ -237,8 +267,10 @@ erDiagram
 - **CATEGORY**: catálogo mixto — categorías base del sistema (`user_id` nulo, `is_base = true`) más categorías propias por usuario, para evitar que la IA invente una categoría nueva en cada gasto.
 - **TRANSACTION**: gasto o ingreso ya completo y válido — si está en esta tabla, tiene cuenta, categoría y período de presupuesto asignados, sin excepción (ver restricción arriba). Guarda tanto el monto original (`amount`, `currency`) como el convertido a la moneda primaria del período (`converted_amount`), y el `source` (manual o automático) para auditoría y para medir cuánto resuelve cada vía. `recurring_expense_id` distingue, dentro de los automáticos, cuáles vinieron del motor de recurrencia. `duplicate_of` es el mecanismo previsto de detección de duplicados entre carga manual y automática (criterio en [reglas de dominio § 7](reglas-de-dominio.md#7-chequeo-de-duplicados-entre-origen-manual-y-automático)). La columna existe desde el esquema inicial; la lógica llega junto con la carga por email (could-have).
 - **PENDING_TRANSACTION**: movimiento a medio completar, todavía no registrado. Cuándo se crea y cuándo no, cómo continúa la conversación, cómo se promueve y cómo expira está en [reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración). Será también el estado natural de lo que detecte el parser de emails cuando se implemente: un mail de aviso trae monto, fecha y normalmente la cuenta, pero nunca a qué presupuesto imputarlo, así que esperará acá la confirmación. Guarda lo interpretado (`parsed_data`), la lista de `missing_fields`, y el asistente pregunta por WhatsApp. Tener una tabla aparte, en vez de un `status` dentro de `TRANSACTION` con columnas nullables, es lo que permite que `TRANSACTION` mantenga sus `NOT NULL` reales: los datos incompletos no contaminan la tabla de la que salen saldos y presupuestos.
-- **PENDING_BATCH**: grupo de pendientes que el asistente pregunta juntos, en un solo mensaje numerado. Es la unidad de conversación: el usuario responde sobre el lote, en general ("todos al familiar") o por número. `awaiting_reply` marca el único lote por el que el asistente espera respuesta; `question_message_id` es el mensaje que lo preguntó, y es lo que permite asociar una respuesta que cita ese mensaje aunque el lote no esté en conversación. Un gasto suelto es un lote de uno. Se cierra cuando todos sus pendientes quedan promovidos, rechazados o vencidos.
+- **PENDING_BATCH**: grupo de pendientes que el asistente pregunta juntos, en un solo mensaje numerado. Es la unidad de conversación: el usuario responde sobre el lote, en general ("todos al familiar") o por número. `awaiting_reply` marca el único lote por el que el asistente espera respuesta; `question_message_id` es el mensaje que lo preguntó, y es lo que permite asociar una respuesta que cita ese mensaje aunque el lote no esté en conversación. `reminded_at` marca que ya se mandó el único recordatorio previo al vencimiento que promete [HU3](05-historias-de-usuario.md); el proceso que recuerda solo toma lotes sin esa marca. Un gasto suelto es un lote de uno. Se cierra cuando todos sus pendientes quedan promovidos, rechazados o vencidos.
 - **EXCHANGE_RATE**: historial de cotizaciones obtenidas de las fuentes configuradas. No pertenece a ningún usuario: la comparten todos los que eligieron esa fuente en `exchange_rate_reference`. La conversión usa la fila más reciente de la fuente del usuario, nunca una consulta al proveedor en el momento. Las fuentes en sí no son una tabla: viven en un archivo de configuración versionado, por el [ADR 0011](adr/0011-cotizaciones-con-adaptador-generico-configurable.md). La cotización que efectivamente se usó en un movimiento queda copiada en `TRANSACTION.exchange_rate`, así el historial del movimiento no depende de esta tabla.
+- **SENT_ALERT**: registro de las alertas de presupuesto ya enviadas. Existe para que el proceso periódico que revisa presupuestos sepa que ya avisó: sin él, un presupuesto que pasó el umbral recibiría una alerta en cada corrida hasta fin de mes (ver [HU5](05-historias-de-usuario.md)). `threshold` deja lugar a más de un umbral por presupuesto (por ejemplo 80% y 100%) sin cambiar el esquema.
+- **LOGIN_CODE**: códigos de un solo uso para entrar al dashboard, enviados por WhatsApp ([ADR 0003](adr/0003-login-por-codigo-unico.md)). Se guarda el hash y no el código, para que una filtración de la tabla no permita entrar con los códigos vigentes. El límite de pedidos por número se calcula contando las filas recientes del usuario, sin una tabla aparte. El contrato está en [la API](04-api.md).
 - **RECURRING_EXPENSE**: regla que el usuario configura una vez (ej. alquiler, una suscripción) y que el sistema ejecuta sola en cada ciclo según `frequency`, generando la `TRANSACTION` correspondiente sin intervención manual. La regla define desde el alta todo lo que un movimiento necesita, que es lo que le permite no volver a preguntar mes a mes (ver [reglas de dominio § 8](reglas-de-dominio.md#8-gastos-recurrentes-la-excepción-a-la-confirmación)). Guarda el dueño y no un `budget_period_id` concreto porque la regla vive a lo largo de muchos períodos: en cada ejecución se resuelve el período de ese dueño que cubre la fecha. `next_execution` es lo que consulta el proceso periódico para saber qué reglas ejecutar hoy; `active` permite pausarla sin borrar el historial de lo ya generado.
 - **INBOUND_MESSAGE**: todo mensaje que llega por el webhook de WhatsApp, guardado antes de procesarlo. Es a la vez la cola de trabajo del worker y el registro de lo que entró por el canal. `status` recorre `pending` → `processing` → `processed`, o termina en `failed` tras agotar los reintentos, y en ese caso el usuario recibe un aviso. `sent_at` ordena los mensajes de un mismo remitente, que se procesan de a uno y en orden. `user_id` es nulo mientras el número no corresponde a un usuario registrado. Cómo se toma, se reintenta y se procesa está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
 - **OUTBOUND_MESSAGE**: todo mensaje que Platita manda por WhatsApp, ya sea una respuesta, una alerta o un recordatorio. Se escribe en la misma transacción que lo origina y el worker lo envía después, de modo que un cambio en la base y su aviso al usuario no pueden separarse. `content` distingue texto libre de plantilla, porque fuera de la ventana de conversación Meta solo acepta plantillas preaprobadas.

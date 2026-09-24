@@ -66,6 +66,16 @@ Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-princip
 
 La regla de negocio es que, para un período mensual, tiene que estar en `confirmed` antes de que arranque el mes (`period_start`); el mismo criterio aplica a quincenal con su propio `period_start`. El sistema genera el borrador del próximo período con anticipación y manda un recordatorio proactivo por WhatsApp si sigue en `draft` cerca de la fecha límite — mismo mecanismo que ya dispara las alertas de [HU3](05-historias-de-usuario.md), aplicado a un caso distinto.
 
+**Los períodos de un mismo dueño no se solapan.** Un usuario, o un grupo familiar, no puede
+tener dos períodos que cubran el mismo día, y un período termina en su fecha de inicio o
+después. Así, para una fecha y un dueño hay como mucho un período candidato, y resolverlo es
+determinista. La base lo impone.
+
+**Solo un período confirmado recibe movimientos.** Mientras está en `draft` no se le imputa
+nada, sea cual sea la vía de carga, y un período confirmado que ya tiene movimientos no vuelve
+a `draft`. La base lo impone también, porque un movimiento imputado a un borrador pesaría en un
+presupuesto que el usuario todavía no aprobó.
+
 Del alcance técnico del Ticket 1:
 
 - Resolución de `budget_period_id`: a partir de `transaction_date` se arman los períodos candidatos del usuario (individual y de sus grupos familiares) y se propone el más probable — **nunca se asigna sin confirmación explícita del usuario**.
@@ -177,6 +187,14 @@ Para que eso sea posible sin preguntar nada mes a mes, la regla define desde el 
 corre dos veces el mismo día o se reintenta después de un fallo, no se genera un segundo cargo.
 La base lo garantiza con una clave única, y el avance de `next_execution` ocurre en la misma
 transacción que inserta el movimiento.
+
+**Sin período confirmado, el recurrente queda pendiente.** Si en la fecha de ejecución el dueño
+no tiene un período confirmado que la cubra, porque no existe o porque sigue en `draft`, el
+motor no descarta el gasto ni lo imputa a un borrador: crea una `PENDING_TRANSACTION` con todo
+completo salvo el período, que entra en la fila de lotes como cualquier otro pendiente (§ 5).
+El asistente avisa, por ejemplo: "Se generó el alquiler de $500.000, pero no tenés presupuesto
+confirmado para octubre. ¿Lo confirmás?". La misma clave de unicidad aplica al pendiente, así
+una doble ejecución tampoco duplica el aviso.
 
 Ver también: [1.2, gastos recurrentes](01-producto.md#12-características-y-funcionalidades-principales) · [RECURRING_EXPENSE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [restricción XOR en 3.1](03-modelo-de-datos.md#31-diagrama-del-modelo-de-datos).
 

@@ -242,7 +242,7 @@ flowchart TB
 
 ### **2.5. Seguridad**
 
-- **Login sin contraseñas**: código de un solo uso por WhatsApp intercambiado por un JWT de corta duración, con rate limiting sobre el endpoint de login para evitar fuerza bruta sobre el código. El fundamento de la decisión está en el [ADR 0003](adr/0003-login-por-codigo-unico.md).
+- **Login sin contraseñas**: código de un solo uso por WhatsApp intercambiado por un JWT de corta duración, con rate limiting sobre el endpoint de login para evitar fuerza bruta sobre el código. El contrato y los límites concretos están en [la API](04-api.md). El fundamento de la decisión está en el [ADR 0003](adr/0003-login-por-codigo-unico.md).
 - **Consentimiento explícito y revocable** para el acceso a la casilla de email (configuración de usuario, no un permiso obligatorio del sistema).
 - **Verificación de firma del webhook de WhatsApp** en cada request entrante, para descartar mensajes falsificados.
 - **Nunca loggear en crudo** número de teléfono, montos ni texto de usuario sin enmascarar.
