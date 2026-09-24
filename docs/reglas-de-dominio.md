@@ -18,7 +18,7 @@ Antes de escribir código para cualquier ticket de dominio, leer este documento 
 **Campos obligatorios de un movimiento.** Una fila en `TRANSACTION` solo existe con todos estos datos presentes: `amount`, `currency`, `type`, `transaction_date`, `category_id`, `account_id` y `budget_period_id` — todos `NOT NULL` en la base de datos, así que ninguna vía de carga puede insertar un movimiento a medias. Lo que cambia entre ellos es **de dónde sale el valor**, no si es obligatorio:
 
 - **Resueltos por el sistema, sin preguntar:** `transaction_date` (hoy, salvo que el mensaje indique otra fecha), `currency` (la primaria del usuario, salvo indicación contraria) y `category_id` (resuelto contra las categorías existentes; si ninguna encaja, se sugiere crear una). Quedan visibles en el mensaje de confirmación, que es donde el usuario los corrige.
-- **Pedidos o confirmados por el usuario:** `amount`, `type` si el mensaje no lo deja claro, `account_id` siempre que no se mencione una cuenta, y `budget_period_id` **siempre**. Con el presupuesto el sistema no decide solo: `transaction_date` acota los períodos candidatos (y si el usuario pertenece a un grupo familiar, esa fecha cae dentro de su período individual y del familiar a la vez), pero cuál de ellos absorbe el gasto es una decisión del usuario, no algo derivable. El asistente propone el candidato más probable y el usuario confirma o elige otro; ninguna transacción se imputa a un presupuesto sin ese visto bueno.
+- **Pedidos o confirmados por el usuario:** `amount`, `type` si el mensaje no lo deja claro, `account_id` siempre que no se mencione una cuenta, y `budget_period_id` **siempre**. Con el presupuesto el sistema no decide solo: `transaction_date` acota los períodos candidatos (y si el usuario pertenece a un grupo familiar, esa fecha cae dentro de su período individual y del familiar a la vez), pero cuál de ellos absorbe el gasto es una decisión del usuario, no algo derivable. El asistente propone el candidato más probable y el usuario confirma o elige otro; ninguna transacción se imputa a un presupuesto sin ese visto bueno. Hay dos excepciones a que ese visto bueno lo dé el propio usuario en el momento: las reglas recurrentes (§ 8) y el dueño de un grupo familiar que saca a un miembro con pendientes abiertos (§ 10).
 
 Si falta o queda sin confirmar alguno de los campos que dependen del usuario, el movimiento no se registra: queda como `PENDING_TRANSACTION` hasta que responda. La misma regla aplicará a los movimientos detectados por el parser de emails cuando se implemente (could-have): traen monto, fecha y normalmente cuenta, pero nunca el presupuesto, así que quedarán pendientes de confirmación igual que los manuales incompletos.
 
@@ -107,3 +107,61 @@ tanto la auditoría como el chequeo de duplicados del grupo 7. Qué registra y p
 enlaces de abajo.
 
 Ver: [1.2, trazabilidad de origen](01-producto.md#12-características-y-funcionalidades-principales) · [TRANSACTION en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [HU4](05-historias-de-usuario.md).
+
+## 10. Grupos familiares: administración, salida y visibilidad
+
+**Quién administra.** Cada grupo familiar tiene un dueño (`role = 'owner'` en `USER_GROUP`), que
+es quien administra sus miembros: agrega y saca usuarios del grupo. El resto de los miembros
+tiene `role = 'member'`.
+
+**El dueño también puede salir.** Al hacerlo elige a otro miembro vigente del grupo como nuevo
+dueño, y el rol pasa sin que el elegido tenga que aceptarlo. En la misma transacción se cierra la
+membresía del que sale y se asigna `role = 'owner'` al elegido, de modo que el grupo nunca queda
+sin dueño vigente. Las demás reglas de salida de esta sección le aplican igual. La única
+excepción es que sea el último miembro: ahí no hay a quién pasarle el rol (ver abajo).
+
+**Sacar a un miembro: el dueño resuelve sus pendientes.** Cuando el dueño saca a un miembro que
+tiene `PENDING_TRANSACTION` abiertas, las resuelve él: confirma o rechaza cada una. Es la única
+excepción a que el propio usuario confirme cuenta y presupuesto (§ 1), y vale solo dentro de ese
+flujo: fuera de él, el dueño no ve ni resuelve los pendientes de otros miembros. Al confirmar, se
+aplican las mismas validaciones que si confirmara el miembro: la cuenta tiene que ser del
+miembro, y el período, uno suyo o de un grupo al que pertenezca. Cada pendiente guarda quién lo
+resolvió (`resolved_by`), para que quede claro en la auditoría que no fue su autor. Una vez
+cerrados todos los pendientes, la salida sigue las mismas reglas que una salida voluntaria.
+
+**El último miembro.** Cuando sale el último miembro vigente, se genera una exportación a
+archivo de los movimientos y períodos del grupo para ese usuario, y su membresía se cierra como
+cualquier otra. No se deshabilita al usuario, que sigue usando Platita con sus cuentas,
+presupuestos individuales y otros grupos, ni se borra el grupo. El grupo queda sin miembros
+vigentes y, por lo tanto, nadie puede imputarle movimientos nuevos. Quien salió conserva la
+lectura de sus períodos, igual que en cualquier salida.
+
+**La membresía se cierra, no se borra.** Cuando un usuario sale de un grupo, su fila en
+`USER_GROUP` queda con `left_at` informado en vez de eliminarse. Así se sigue sabiendo en qué
+períodos fue miembro, que es lo que definen las dos reglas siguientes.
+
+**Lo registrado no cambia al salir.** Los movimientos que el usuario ya imputó a un período del
+grupo siguen imputados ahí: siguen pesando en el gastado del presupuesto familiar y siguen
+visibles para los miembros del grupo. Salir no reescribe la historia del presupuesto.
+
+**No se sale con pendientes abiertos.** Un usuario no puede salir de un grupo mientras tenga
+alguna `PENDING_TRANSACTION` abierta, sea cual sea el presupuesto al que apunte: como el período
+nunca se asigna sin confirmación (§ 1), cualquier pendiente podría terminar en el presupuesto
+familiar. Primero confirma o rechaza cada uno. Rechazar es un cierre explícito del pendiente, no
+un vencimiento (§ 5).
+
+**Los recurrentes hacia el grupo se pausan.** Al salir, cada `RECURRING_EXPENSE` del usuario con
+`budget_family_group_id` de ese grupo pasa a `active = false`. No se borra ni se reasigna: queda
+el historial de lo ya generado, y reactivarla hacia otro presupuesto es una decisión del usuario.
+
+**Quién ve el presupuesto familiar.** Los miembros actuales del grupo ven todos sus períodos y
+todos los movimientos imputados a ellos, sin importar qué miembro los registró. Un
+usuario que salió conserva acceso **de solo lectura** a los períodos del grupo en los que fue
+miembro, es decir, los que se superponen con su intervalo de membresía (`joined_at` a
+`left_at`). No ve los posteriores ni puede imputarles movimientos.
+
+**La pertenencia se valida al imputar, no al preguntar.** Un pendiente se promueve a un período
+familiar solo si, en ese momento, el usuario sigue siendo miembro del grupo. La validación ocurre
+dentro de la misma transacción de base de datos que la promoción.
+
+Ver también: [FAMILY_GROUP / USER_GROUP en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [§ 5, pendientes](#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración) · [§ 8, recurrentes](#8-gastos-recurrentes-la-excepción-a-la-confirmación) · [decisiones abiertas](hoja-de-ruta.md#decisiones-abiertas).

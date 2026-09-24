@@ -41,9 +41,11 @@ erDiagram
     }
 
     USER_GROUP {
-        uuid user_id FK
-        uuid family_group_id FK
-        string role "DEFAULT 'member'"
+        uuid user_id FK "PK (user_id, family_group_id)"
+        uuid family_group_id FK "PK (user_id, family_group_id)"
+        string role "NOT NULL, CHECK IN ('owner','member'), DEFAULT 'member'"
+        timestamp joined_at "NOT NULL, DEFAULT now()"
+        timestamp left_at "NULLABLE — set when the member leaves; the row is never deleted"
     }
 
     ACCOUNT {
@@ -111,6 +113,8 @@ erDiagram
         string source "NOT NULL, CHECK IN ('manual','automatic')"
         string raw_input "NULLABLE — original message or email body, for audit"
         uuid resulting_transaction_id FK "NULLABLE — set once completed and promoted"
+        string status "NOT NULL, CHECK IN ('open','promoted','rejected','expired'), DEFAULT 'open'"
+        uuid resolved_by FK "NULLABLE — user who promoted or rejected it; differs from user_id only when a family group owner resolved it"
         timestamp expires_at "NOT NULL — discarded if never completed"
         timestamp created_at "DEFAULT now()"
     }
@@ -148,6 +152,8 @@ erDiagram
 
 - En `BUDGET_PERIOD`, exactamente uno de `user_id` / `family_group_id` debe ser no nulo (`CHECK` a nivel de base de datos) — un período de presupuesto es individual o familiar, nunca ambos ni ninguno.
 - **Campos obligatorios de un movimiento.** Una fila en `TRANSACTION` solo existe con `amount`, `currency`, `type`, `transaction_date`, `category_id`, `account_id` y `budget_period_id` presentes, todos `NOT NULL` en la base de datos. De dónde sale cada valor —lo que el sistema resuelve solo, lo que exige confirmación del usuario, y la excepción de las reglas recurrentes— está en [reglas de dominio § 1](reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma) y [§ 8](reglas-de-dominio.md#8-gastos-recurrentes-la-excepción-a-la-confirmación).
+- En `USER_GROUP`, un grupo tiene como mucho un dueño vigente: índice único parcial sobre `family_group_id` donde `role = 'owner'` y `left_at` es nulo. `left_at`, si está, es posterior a `joined_at` (`CHECK`). La regla de salida y de visibilidad está en [reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad).
+- En `PENDING_TRANSACTION`, `status = 'promoted'` si y solo si `resulting_transaction_id` no es nulo (`CHECK`). Un pendiente `open` es el que bloquea la salida de un grupo familiar.
 - En `RECURRING_EXPENSE`, exactamente uno de `budget_user_id` / `budget_family_group_id` debe ser no nulo (`CHECK`), por el mismo criterio que en `BUDGET_PERIOD`.
 - En `BUDGET`, `UNIQUE (budget_period_id, category_id)`: un período tiene como mucho un límite por categoría, así el gastado de una categoría se contrasta contra un único tope y no contra dos filas que se contradicen.
 - `TRANSACTION.amount` lleva `CHECK (amount > 0)`: guarda la magnitud, nunca el signo. Si el movimiento resta o suma lo dice `type`, que es el único lugar donde vive esa distinción — un monto negativo con `type = 'expense'` sumaría al saldo en vez de restar.
@@ -156,7 +162,7 @@ erDiagram
 ### **3.2. Descripción de entidades principales:**
 
 - **USER**: persona que usa el asistente. Guarda su configuración regional (país, moneda primaria, fuente de inflación, cotización de referencia) para que el sistema no esté atado al caso argentino. `whatsapp_phone` es único porque es la clave de entrada del canal conversacional.
-- **FAMILY_GROUP** / **USER_GROUP**: relación muchos-a-muchos entre usuarios y grupos familiares (una persona puede pertenecer a más de un grupo; un grupo tiene varios miembros), con un rol por membresía.
+- **FAMILY_GROUP** / **USER_GROUP**: relación muchos-a-muchos entre usuarios y grupos familiares (una persona puede pertenecer a más de un grupo; un grupo tiene varios miembros), con un rol por membresía: el dueño (`owner`) administra los miembros del grupo. La membresía no se borra al salir: se cierra con `left_at`, porque de ese intervalo depende qué períodos del grupo sigue viendo quien salió (ver [reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad)).
 - **ACCOUNT**: cuenta bancaria, billetera virtual, broker de inversión o efectivo que el usuario da de alta (ej. "Galicia en dólares", "Mercado Pago", "Balanz"). El **saldo no se guarda como columna**, se calcula (ver [reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado)). Si el volumen de cuentas/movimientos creciera al punto de que ese cálculo en cada consulta sea un problema de performance, se puede materializar/cachear más adelante sin cambiar el modelo, es una optimización, no un rediseño.
 - **BUDGET_PERIOD**: el "presupuesto del mes" (o de la quincena) como concepto completo — puede pertenecer a un usuario individual o a un grupo familiar (nunca ambos, ver restricción arriba). `period_type` define la cadencia (mensual o quincenal) y determina cómo se calculan `period_start`/`period_end` del siguiente período al generarlo. `estimated_income` guarda el ingreso proyectado para el período completo, para que armar el presupuesto sea contrastar gastos planeados contra ingreso esperado, no solo poner topes por categoría sueltos. `status` distingue un período todavía en armado (`draft`, generado por la sugerencia de IA o creado a mano) de uno ya confirmado por el usuario — cuándo debe estar en `confirmed` y qué recordatorio se dispara si sigue en `draft` está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio).
 - **BUDGET**: el límite de gasto de **una** categoría dentro de un `BUDGET_PERIOD` (ej. "comida: $300.000 en septiembre"). Un mismo período agrupa varios `BUDGET`, uno por categoría con tope definido, y la base lo garantiza con `UNIQUE (budget_period_id, category_id)` (ver restricción arriba) — así `period_start`, `period_end` y `primary_currency` viven una sola vez en el período en vez de repetirse por cada categoría.

@@ -28,6 +28,12 @@ responses:
 
 Devuelve el estado actual del límite de **una categoría** dentro de un período de presupuesto: límite, gastado hasta el momento (convertido a la moneda primaria del período) y movimientos asociados. El dashboard arma la vista completa del período ([HU2](05-historias-de-usuario.md)) iterando los `BUDGET` de un mismo `budget_period_id` — agregar un endpoint de rollup a nivel de período es candidato para la Entrega 2, no se fuerza acá para no superar los 3 endpoints de esta entrega.
 
+Quién puede leerlo: si el período es individual, solo su dueño. Si es familiar, cualquier miembro
+vigente del grupo, que ve todos los movimientos del período sin importar quién los registró, y
+quien haya salido del grupo, solo si el período se superpone con su intervalo de membresía
+([reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad)).
+En cualquier otro caso, `404`, por el mismo criterio que `POST /transactions`.
+
 ```yaml
 responses:
   200:

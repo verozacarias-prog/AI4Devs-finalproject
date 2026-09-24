@@ -37,6 +37,11 @@ en [`prompts.md`](../prompts.md), no acá.
   contenido normativo vive en el catálogo de funcionalidades de
   [1.2](01-producto.md#12-características-y-funcionalidades-principales) y no se duplicó. Darles
   texto propio exige escribir contenido nuevo, no reorganizar el existente.
+- **Exportación del grupo familiar al salir el último miembro:** es must-have según
+  [reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad),
+  pero falta decidir el formato del archivo y por qué canal lo recibe el usuario: descarga desde
+  el dashboard, o documento por WhatsApp, que fuera de la ventana de 24 h exige una plantilla de
+  Meta.
 - **Subagentes: sin decidir.** Un subagente corre en su propio contexto, así que hay que volver a
   explicarle la tarea entera y devuelve un resumen en vez del trabajo. Eso se paga cuando hay algo
   para paralelizar o una búsqueda grande que conviene mantener fuera del contexto. Ninguna de las
