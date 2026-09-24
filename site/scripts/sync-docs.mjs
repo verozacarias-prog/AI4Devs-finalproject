@@ -16,6 +16,7 @@
 //
 // La salida vive en src/content/docs/ y está en .gitignore: se regenera siempre.
 
+import { statSync } from 'node:fs';
 import { readdir, readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -24,7 +25,8 @@ const SITE = dirname(fileURLToPath(new URL('.', import.meta.url)));
 const ROOT = join(SITE, '..');
 const SOURCE = join(ROOT, 'docs');
 const TARGET = join(SITE, 'src', 'content', 'docs');
-const BLOB = 'https://github.com/verozacarias-prog/AI4Devs-finalproject/blob/main';
+const GITHUB = 'https://github.com/verozacarias-prog/AI4Devs-finalproject';
+const BLOB = `${GITHUB}/blob/main`;
 // Tiene que coincidir con `base` en astro.config.mjs.
 const BASE = '/AI4Devs-finalproject';
 
@@ -48,27 +50,37 @@ function titleOf(body, fallback) {
   return match[1].replace(/[`*]/g, '').trim();
 }
 
+const isDirectory = (path) => {
+  try {
+    return statSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+};
+
 // Starlight sirve cada documento en una ruta propia, en minúsculas y sin .md.
 const slugOf = (relPath) =>
   relPath.replace(/\.md$/, '').split(sep).join('/').toLowerCase();
 
-// Reescribe todo enlace relativo que apunte a un .md. Si el destino sigue dentro
-// de docs/ es una página del portal; si se escapa, es un archivo del repositorio
-// que el portal no publica y se manda a GitHub.
+// Reescribe todo enlace relativo. Un .md que sigue dentro de docs/ es una página
+// del portal. Todo lo demás —un .md que se escapa de docs/, un script, una
+// carpeta— no lo publica el portal y se manda a GitHub: tree para carpetas,
+// blob para archivos.
 function rewriteLinks(body, fileDir) {
-  return body.replace(/\]\((\.[^)\s]*|[\w][^)\s:]*\.md[^)\s]*)\)/g, (whole, target) => {
+  return body.replace(/\]\(([^)\s:#/][^)\s:]*)\)/g, (whole, target) => {
     if (target === '.') return `](${BASE}/)`;
-    if (!target.includes('.md')) return whole;
 
     const [path, hash] = target.split('#');
-    const inside = relative(SOURCE, join(fileDir, path));
+    const absolute = join(fileDir, path);
+    const inside = relative(SOURCE, absolute);
     const fragment = hash ? '#' + hash : '';
 
-    if (inside.startsWith('..')) {
-      const fromRoot = relative(ROOT, join(fileDir, path)).split(sep).join('/');
-      return `](${BLOB}/${fromRoot}${fragment})`;
+    if (path.endsWith('.md') && !inside.startsWith('..')) {
+      return `](${BASE}/${slugOf(inside)}/${fragment})`;
     }
-    return `](${BASE}/${slugOf(inside)}/${fragment})`;
+    const fromRoot = relative(ROOT, absolute).split(sep).join('/');
+    const kind = path.endsWith('/') || isDirectory(absolute) ? 'tree' : 'blob';
+    return `](${GITHUB}/${kind}/main/${fromRoot}${fragment})`;
   });
 }
 
