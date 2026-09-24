@@ -43,13 +43,14 @@ flowchart TB
         direction LR
         WACLOUD["WhatsApp<br/>Business API"]
         LLM["Proveedor<br/>de LLM"]
+        FX["Fuentes de<br/>cotización"]
     end
 
     subgraph PLATITA["Platita"]
         SPA["<b>Aplicación web</b><br/><i>[Contenedor: SPA]</i><br/>Dashboard de presupuestos,<br/>saldos y configuración"]
         API["<b>API Backend</b><br/><i>[Contenedor: Python + FastAPI]</i><br/>Casos de uso, reglas de negocio<br/>y orquestación de integraciones"]
         MSGW["<b>Worker de mensajes</b><br/><i>[Contenedor: Python]</i><br/>Interpreta los mensajes recibidos<br/>y envía las respuestas"]
-        WORKER["<b>Procesos programados</b><br/><i>[Contenedor: Python]</i><br/>Gastos recurrentes, alertas de<br/>presupuesto y expiración de pendientes"]
+        WORKER["<b>Procesos programados</b><br/><i>[Contenedor: Python]</i><br/>Gastos recurrentes, alertas de<br/>presupuesto, expiración de pendientes<br/>y actualización de cotizaciones"]
         DB[("<b>Base de datos</b><br/><i>[Contenedor: PostgreSQL + pgvector]</i><br/>Datos del usuario y base de<br/>conocimiento vectorizada")]
     end
 
@@ -62,6 +63,7 @@ flowchart TB
     MSGW -->|"SQL: toma entrada,<br/>escribe salida"| DB
     MSGW -->|"API"| LLM
     WORKER -->|"SQL: alertas a la<br/>tabla de salida"| DB
+    WORKER -->|"cotizaciones"| FX
 
     style API fill:#1f6feb,stroke:#0d419d,color:#fff
     style PLATITA fill:#f6f8fa,stroke:#8b949e
@@ -208,7 +210,7 @@ flowchart TB
         STATIC["<b>Static Site</b><br/>dashboard web"]
         WEBSVC["<b>Web Service</b><br/><i>contenedor Python</i><br/>API FastAPI"]
         BGW["<b>Background Worker</b><br/><i>contenedor Python</i><br/>worker de mensajes"]
-        CRON["<b>Cron Jobs</b><br/><i>contenedor Python</i><br/>recurrentes · alertas · expiración"]
+        CRON["<b>Cron Jobs</b><br/><i>contenedor Python</i><br/>recurrentes · alertas · expiración<br/>· cotizaciones"]
         PG[("<b>PostgreSQL gestionado</b><br/><i>extensión pgvector</i><br/>backups automáticos")]
     end
 
@@ -228,7 +230,7 @@ flowchart TB
     BGW --> PG
     BGW --> LLMAPI
     CRON --> PG
-    WEBSVC --> FXAPI
+    CRON --> FXAPI
 
     style WEBSVC fill:#1f6feb,stroke:#0d419d,color:#fff
     style RENDER fill:#f6f8fa,stroke:#8b949e

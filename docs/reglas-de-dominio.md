@@ -125,10 +125,33 @@ Ver también: [PENDING_TRANSACTION y PENDING_BATCH en 3.2](03-modelo-de-datos.md
 
 ## 6. Multimoneda y cotización
 
-La regla vive en el catálogo de funcionalidades y en el modelo de datos, no se duplica acá:
-un presupuesto recibe movimientos en varias monedas y los convierte a su moneda primaria con
-una cotización de referencia configurada a mano en esta etapa; la `TRANSACTION` guarda tanto el
-monto original (`amount`, `currency`) como el convertido (`converted_amount`).
+Un presupuesto recibe movimientos en varias monedas y los convierte a su moneda primaria. La
+`TRANSACTION` guarda tanto el monto en la moneda de su cuenta (`amount`, `currency`) como el
+convertido a la moneda del presupuesto (`converted_amount`).
+
+**Dos conversiones distintas.** Hay dos momentos en que se convierte, y conviene no confundirlos:
+
+1. **De la moneda que nombra el usuario a la moneda de la cuenta.** Pasa cuando dice "gasté 50
+   dólares con la Galicia pesos". Define `amount`, que es lo que mueve el saldo (§ 2).
+2. **De la moneda de la cuenta a la moneda del presupuesto.** Pasa cuando un movimiento de una
+   cuenta en dólares se imputa a un presupuesto en pesos. Define `converted_amount`, que es lo
+   que pesa en el presupuesto y no toca el saldo.
+
+**La cotización se sugiere y el usuario confirma.** En las dos conversiones el asistente propone
+el valor con la última cotización guardada de la fuente de referencia del usuario
+(`exchange_rate_reference`), la muestra en el mensaje de confirmación y el usuario la acepta o la
+corrige. Una cotización nunca se aplica sin que el usuario vea el resultado.
+
+**De dónde sale la cotización.** Se busca sola, desde las fuentes configuradas, y se guarda por
+fuente y fecha; convertir nunca consulta al proveedor en el momento. En el MVP hay fuentes solo
+para Argentina, donde cada usuario elige cuál usa (por ejemplo, MEP u oficial). El mecanismo está
+en el [ADR 0011](adr/0011-cotizaciones-con-adaptador-generico-configurable.md).
+
+**Sin cotización, se pregunta.** Si el usuario no tiene fuente de referencia, porque su país
+todavía no tiene una configurada, o si la última cotización guardada es demasiado vieja, el
+asistente no propone un valor: pregunta cuánto se debitó en la moneda de la cuenta, o cuánto
+representa en la moneda del presupuesto. Lo que el usuario responde queda como la cotización
+usada.
 
 Ver: [1.2, soporte multimoneda](01-producto.md#12-características-y-funcionalidades-principales) · [TRANSACTION en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [HU4](05-historias-de-usuario.md).
 

@@ -32,11 +32,11 @@ en [`prompts.md`](../prompts.md), no acá.
 
 ## Decisiones abiertas
 
-- Los grupos 6 (multimoneda) y 9 (trazabilidad de origen) de
-  [`reglas-de-dominio.md`](reglas-de-dominio.md) son grupos de enlace, sin texto propio: su
-  contenido normativo vive en el catálogo de funcionalidades de
-  [1.2](01-producto.md#12-características-y-funcionalidades-principales) y no se duplicó. Darles
-  texto propio exige escribir contenido nuevo, no reorganizar el existente.
+- El grupo 9 (trazabilidad de origen) de [`reglas-de-dominio.md`](reglas-de-dominio.md) es un
+  grupo de enlace, sin texto propio: su contenido normativo vive en el catálogo de
+  funcionalidades de [1.2](01-producto.md#12-características-y-funcionalidades-principales) y no
+  se duplicó. Darle texto propio exige escribir contenido nuevo, no reorganizar el existente. El
+  grupo 6 (multimoneda) ya tiene texto propio.
 - **Exportación del grupo familiar al salir el último miembro:** es must-have según
   [reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad),
   pero falta decidir el formato del archivo y por qué canal lo recibe el usuario: descarga desde
