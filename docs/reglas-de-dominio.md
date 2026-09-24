@@ -367,8 +367,8 @@ uno. Lo que sí puede hacer es mencionarlo dentro de una respuesta a algo que el
 escribió, por ejemplo al confirmar un gasto: "Listo. Ojo, vas al 82% del rubro". El permiso se
 puede dar o retirar en cualquier momento.
 
-**El código de login no es un aviso.** Se envía porque el usuario lo pidió en ese momento desde
-el dashboard, así que no depende del permiso para avisos.
+**Los códigos no son avisos.** El de login y el de borrado de cuenta se envían porque el usuario
+los pidió en ese momento, así que no dependen del permiso para avisos.
 
 **Fuera de la ventana de conversación, plantilla.** WhatsApp permite responder con texto libre
 solo dentro de las 24 horas posteriores al último mensaje del usuario. Pasado ese plazo, todo
@@ -378,6 +378,7 @@ Las que hacen falta son:
 | Plantilla | Categoría en Meta | Cuándo se usa |
 |---|---|---|
 | Código de login | Autenticación | Al pedir entrar al dashboard |
+| Código de borrado de cuenta | Autenticación | Al pedir borrar la cuenta |
 | Alerta de presupuesto | Utilidad | Al pasar un umbral |
 | Pendientes sin confirmar | Utilidad | Antes de vencer, o cada 3 días si son de un recurrente |
 | Período sin confirmar | Utilidad | Cerca del inicio de un período que sigue en `draft` |
@@ -490,14 +491,19 @@ prueba elegidos.
 dashboard:
 
 1. Antes de confirmar se le ofrece descargar todos sus datos.
-2. Confirma con un código de un solo uso, igual que el login, para que nadie borre la cuenta de
-   otro con acceso a su teléfono.
+2. Confirma con un código de un solo uso, que llega por WhatsApp y solo sirve para borrar la
+   cuenta. Desde el dashboard, exige tener el teléfono además de la sesión. Por WhatsApp, el
+   código llega al mismo chat: no protege contra quien tiene el teléfono, pero hace que ninguna
+   frase mal interpretada dispare el borrado. Contra quien tiene el teléfono, la defensa es el
+   plazo de gracia.
 3. Si es dueño de un grupo familiar, primero transfiere el rol, como al salir (§ 10).
 4. La cuenta queda desactivada durante un plazo de gracia, configurable y de 7 días por
-   defecto, en el que puede cancelar el borrado. Durante ese plazo no recibe mensajes proactivos.
+   defecto, en el que puede cancelar el borrado. Al pedirlo se cierran todas sus sesiones del
+   dashboard; puede volver a entrar con un código para cancelar. Durante ese plazo no recibe
+   mensajes proactivos.
 5. Vencido el plazo, se borra lo personal: teléfono, nombre, perfil financiero, cuentas,
    presupuestos individuales, movimientos que no son de un presupuesto familiar, pendientes,
-   mensajes y códigos de login.
+   mensajes, códigos de login y sesiones.
 6. Lo compartido se anonimiza en vez de borrarse: los movimientos que imputó a presupuestos
    familiares quedan, porque el grupo los sigue necesitando (§ 10), pero registrados por un "ex
    miembro": se quita quién los registró. Lo mismo vale para la cuenta y la categoría que esos

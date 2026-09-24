@@ -47,7 +47,7 @@ flowchart TB
     end
 
     subgraph PLATITA["Platita"]
-        SPA["<b>Aplicación web</b><br/><i>[Contenedor: SPA]</i><br/>Dashboard de presupuestos,<br/>saldos y configuración"]
+        SPA["<b>Aplicación web</b><br/><i>[Contenedor: SPA, servida por la API]</i><br/>Dashboard de presupuestos,<br/>saldos y configuración"]
         API["<b>API Backend</b><br/><i>[Contenedor: Python + FastAPI]</i><br/>Casos de uso, reglas de negocio<br/>y orquestación de integraciones"]
         MSGW["<b>Worker de mensajes</b><br/><i>[Contenedor: Python]</i><br/>Interpreta los mensajes recibidos<br/>y envía las respuestas"]
         WORKER["<b>Procesos programados</b><br/><i>[Contenedor: Python]</i><br/>Movimientos recurrentes, alertas de<br/>presupuesto, expiración de pendientes,<br/>cotizaciones y cuotas de tarjeta"]
@@ -58,7 +58,7 @@ flowchart TB
     USER -->|"HTTPS"| SPA
     WACLOUD -->|"webhook<br/>(firma verificada)"| API
     MSGW -->|"mensajes salientes"| WACLOUD
-    SPA -->|"JSON/HTTPS"| API
+    SPA -->|"JSON/HTTPS,<br/>cookie de sesión"| API
     API -->|"SQL"| DB
     MSGW -->|"SQL: toma entrada,<br/>escribe salida"| DB
     MSGW -->|"API"| LLM
@@ -133,7 +133,7 @@ El contexto que llevó a elegirlo, sus beneficios, los sacrificios asumidos y la
 |---|---|---|
 | Backend API | Python + FastAPI | Adaptador de entrada: expone la API REST y traduce requests HTTP a casos de uso del dominio |
 | Dominio | Python puro (sin dependencias de framework) | Entidades, casos de uso y puertos — la lógica de negocio en sí |
-| Auth | JWT + código de un solo uso enviado por WhatsApp | Login del dashboard web sin contraseñas, reutilizando el teléfono ya verificado como identidad (ver [2.5](#25-seguridad)) |
+| Auth | Código de un solo uso enviado por WhatsApp + sesión de servidor en PostgreSQL, en una cookie | Login del dashboard web sin contraseñas, reutilizando el teléfono ya verificado como identidad, con sesiones que se pueden revocar (ver [2.5](#25-seguridad)) |
 | Integración WhatsApp | API oficial de WhatsApp Business (Meta Cloud API / Twilio) | Adaptador de entrada/salida: recibe y envía mensajes vía webhook |
 | Parser de emails *(could-have)* | Python (reglas + LLM para casos ambiguos) | Adaptador de entrada: detecta movimientos financieros en la casilla de correo del usuario (con consentimiento explícito). Diseñado, no implementado en el MVP — ver [1.2](01-producto.md#12-características-y-funcionalidades-principales) |
 | Motor RAG | LLM + embeddings sobre pgvector, detrás de un puerto propio | Responde consultas financieras y genera alertas proactivas a partir de la base de conocimiento curada por el producto |
@@ -198,7 +198,7 @@ llms.txt                    # descripción del proyecto para agentes de IA
 
 ### **2.4. Infraestructura y despliegue**
 
-`Propuesto, a confirmar en la Entrega 2 contra el despliegue real:` Render para backend + PostgreSQL, por simplicidad de despliegue para un proyecto individual y porque pgvector está soportado como extensión estándar de su Postgres gestionado, sin depender de elegir la plantilla correcta como sí pasa en otras plataformas. El frontend se sirve como sitio estático.
+`Propuesto, a confirmar en la Entrega 2 contra el despliegue real:` Render para backend + PostgreSQL, por simplicidad de despliegue para un proyecto individual y porque pgvector está soportado como extensión estándar de su Postgres gestionado, sin depender de elegir la plantilla correcta como sí pasa en otras plataformas. El build del frontend lo sirve el mismo servicio web que la API, bajo `/app`, para que la cookie de sesión funcione sin un dominio propio ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 
 ```mermaid
 flowchart TB
@@ -213,8 +213,7 @@ flowchart TB
 
     subgraph RENDER["Render"]
         direction LR
-        STATIC["<b>Static Site</b><br/>dashboard web"]
-        WEBSVC["<b>Web Service</b><br/><i>contenedor Python</i><br/>API FastAPI"]
+        WEBSVC["<b>Web Service</b><br/><i>contenedor Python</i><br/>API FastAPI y dashboard web en /app"]
         BGW["<b>Background Worker</b><br/><i>contenedor Python</i><br/>worker de mensajes"]
         CRON["<b>Cron Jobs</b><br/><i>contenedor Python</i><br/>recurrentes · alertas · expiración<br/>· cotizaciones · cuotas de tarjeta"]
         PG[("<b>PostgreSQL gestionado</b><br/><i>extensión pgvector</i><br/>backups automáticos")]
@@ -227,11 +226,10 @@ flowchart TB
     end
 
     PHONE <--> WACLOUD
-    BROWSER -->|"HTTPS"| STATIC
+    BROWSER -->|"HTTPS, mismo origen<br/>dashboard y API"| WEBSVC
     DEV -.->|"deploy"| RENDER
     WACLOUD -->|"webhook<br/>(HTTPS, firma verificada)"| WEBSVC
     BGW -->|"mensajes salientes"| WACLOUD
-    STATIC -->|"JSON/HTTPS"| WEBSVC
     WEBSVC --> PG
     BGW --> PG
     BGW --> LLMAPI
@@ -246,11 +244,11 @@ flowchart TB
 
 **Límite de gasto en el proveedor de LLM:** la cuenta del proveedor se configura con un tope mensual de 20 dólares, como corte de emergencia además de las cuotas por usuario de [reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente).
 
-**Proceso de despliegue previsto:** push a `main` dispara el build y deploy automático del servicio web y del sitio estático. Las migraciones de Alembic corren una sola vez por despliegue, en el paso previo al despliegue que ofrece la plataforma y antes de que arranque cualquier contenedor nuevo; ni el servicio web, ni el worker, ni los cron jobs migran al arrancar. Si migraran los tres, arrancarían a la vez y competirían por aplicar la misma migración. Como el código anterior sigue corriendo unos instantes contra el esquema nuevo, cada migración tiene que ser compatible con la versión anterior del código: primero se agrega lo nuevo, y lo viejo se quita en un despliegue posterior. Los secretos (credenciales de WhatsApp, LLM y base de datos) se configuran como variables de entorno en la plataforma, nunca versionados. Los mensajes de WhatsApp se procesan en un worker aparte del servicio web: el webhook solo verifica la firma, guarda el mensaje y responde, y el worker lo interpreta y contesta. Así un reintento del proveedor no duplica movimientos y una caída del LLM demora la respuesta sin perder el mensaje ([ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md)). Todo mensaje saliente, incluidas las alertas, pasa por la tabla de salida que envía ese worker. Los procesos programados corren como cron jobs separados del servicio web, de modo que un fallo en el motor de recurrentes o de alertas no afecte la disponibilidad del webhook — es la mitigación concreta del riesgo de acoplamiento señalado en [2.1](#21-diagrama-de-arquitectura).
+**Proceso de despliegue previsto:** push a `main` dispara el build y deploy automático del servicio web, que incluye el build del dashboard. Las migraciones de Alembic corren una sola vez por despliegue, en el paso previo al despliegue que ofrece la plataforma y antes de que arranque cualquier contenedor nuevo; ni el servicio web, ni el worker, ni los cron jobs migran al arrancar. Si migraran los tres, arrancarían a la vez y competirían por aplicar la misma migración. Como el código anterior sigue corriendo unos instantes contra el esquema nuevo, cada migración tiene que ser compatible con la versión anterior del código: primero se agrega lo nuevo, y lo viejo se quita en un despliegue posterior. Los secretos (credenciales de WhatsApp, LLM y base de datos) se configuran como variables de entorno en la plataforma, nunca versionados. Los mensajes de WhatsApp se procesan en un worker aparte del servicio web: el webhook solo verifica la firma, guarda el mensaje y responde, y el worker lo interpreta y contesta. Así un reintento del proveedor no duplica movimientos y una caída del LLM demora la respuesta sin perder el mensaje ([ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md)). Todo mensaje saliente, incluidas las alertas, pasa por la tabla de salida que envía ese worker. Los procesos programados corren como cron jobs separados del servicio web, de modo que un fallo en el motor de recurrentes o de alertas no afecte la disponibilidad del webhook — es la mitigación concreta del riesgo de acoplamiento señalado en [2.1](#21-diagrama-de-arquitectura).
 
 ### **2.5. Seguridad**
 
-- **Login sin contraseñas**: código de un solo uso por WhatsApp intercambiado por un JWT de corta duración, con rate limiting sobre el endpoint de login para evitar fuerza bruta sobre el código. El contrato y los límites concretos están en [la API](04-api.md). El fundamento de la decisión está en el [ADR 0003](adr/0003-login-por-codigo-unico.md).
+- **Login sin contraseñas**: código de un solo uso por WhatsApp intercambiado por una sesión guardada en la base, que viaja en una cookie que ningún script puede leer y que se puede revocar, con límites por número y por IP que no revelan si el número está registrado ([ADR 0017](adr/0017-limites-del-login-y-codigos-con-proposito.md)). El dashboard se sirve desde el mismo origen que la API, así que la API no habilita CORS. El contrato y los límites concretos están en [la API](04-api.md). El fundamento de la decisión está en el [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md), que reemplaza al [ADR 0003](adr/0003-login-por-codigo-unico.md).
 - **Consentimiento explícito y revocable** para el acceso a la casilla de email (configuración de usuario, no un permiso obligatorio del sistema).
 - **Verificación de firma del webhook de WhatsApp** en cada request entrante, para descartar mensajes falsificados.
 - **Nunca loggear en crudo** número de teléfono, montos ni texto de usuario sin enmascarar.

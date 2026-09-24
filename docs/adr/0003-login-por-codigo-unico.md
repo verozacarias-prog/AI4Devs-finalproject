@@ -1,6 +1,6 @@
 # 0003 — Login por código de un solo uso, sin contraseñas
 
-- Estado: Aceptada
+- Estado: Reemplazada por 0016
 - Fecha: 2026-09-20
 
 ## Contexto

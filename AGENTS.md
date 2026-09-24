@@ -89,7 +89,7 @@ completo antes de escribir código.
 - Nunca loggear teléfono, monto ni texto del usuario sin enmascarar.
 - Secretos solo por variables de entorno, nunca hardcodeados ni versionados.
 - Verificar la firma del webhook antes de procesar.
-- Todo acceso a datos se limita al usuario autenticado, que sale del JWT y nunca del request. Un
+- Todo acceso a datos se limita al usuario autenticado, que sale de la sesión y nunca del request. Un
   recurso de otro usuario responde `404`, y cada endpoint tiene un test que lo prueba.
 
 ## 8. Base de datos

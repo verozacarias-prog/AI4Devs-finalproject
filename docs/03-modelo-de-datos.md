@@ -20,6 +20,7 @@ erDiagram
     BUDGET ||--o{ SENT_ALERT : "was alerted"
     USER ||--o| FINANCIAL_PROFILE : "describes"
     USER ||--o{ LOGIN_CODE : "requests"
+    USER ||--o{ SESSION : "opens"
     USER ||--o{ LLM_USAGE : "consumes"
     ACCOUNT ||--o{ CARD_PURCHASE : "is charged (credit card)"
     ACCOUNT ||--o{ CARD_STATEMENT : "closes (credit card)"
@@ -279,11 +280,30 @@ erDiagram
     LOGIN_CODE {
         uuid id PK
         uuid user_id FK "NOT NULL"
-        string code_hash "NOT NULL — never the code itself"
+        string purpose "NOT NULL, CHECK IN ('login','account_deletion') — the only use it is valid for"
+        string code_hash "NOT NULL — HMAC-SHA256 with a server key, never the code itself"
         timestamptz expires_at "NOT NULL — created_at + 5 minutes"
         int attempts "NOT NULL, DEFAULT 0, CHECK (attempts BETWEEN 0 AND 5)"
         timestamptz used_at "NULLABLE — set on the one successful exchange"
         timestamptz created_at "DEFAULT now()"
+    }
+
+    SESSION {
+        uuid id PK
+        uuid user_id FK "NOT NULL"
+        string token_hash "NOT NULL, UNIQUE — hash of the random cookie token, never the token itself"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
+        timestamptz last_seen_at "NOT NULL, DEFAULT now() — idle expiry counts from here"
+        timestamptz expires_at "NOT NULL — created_at + 12 hours, absolute"
+        timestamptz revoked_at "NULLABLE — set on logout, logout-all or account deletion request"
+    }
+
+    AUTH_THROTTLE {
+        uuid id PK
+        string key_type "NOT NULL, CHECK IN ('phone','ip')"
+        string key_hash "NOT NULL — HMAC-SHA256 of the E.164 phone or of the IP, with a server key"
+        string event "NOT NULL, CHECK IN ('code_request','token_failure')"
+        timestamptz created_at "NOT NULL, DEFAULT now() — purged after 24 hours"
     }
 
     RECURRING_RULE {
@@ -379,7 +399,9 @@ erDiagram
 - Un `TRANSACTION` solo se imputa a un `BUDGET_PERIOD` con `status = 'confirmed'`, y un período con movimientos no vuelve a `draft`. Como un `CHECK` no puede mirar otra tabla, lo imponen dos triggers: uno en `TRANSACTION` al insertar o cambiar `budget_period_id`, y otro en `BUDGET_PERIOD` al cambiar `status`.
 - En `PENDING_TRANSACTION`, `expires_at` es nulo si y solo si `recurring_rule_id` o `card_purchase_id` está informado (`CHECK`): los pendientes de un recurrente o de una cuota de tarjeta no vencen, y todos los demás sí. `recurring_rule_id` y `occurrence_date` van los dos nulos o los dos informados (`CHECK`), con `UNIQUE (recurring_rule_id, occurrence_date)`: una regla recurrente genera como mucho un pendiente por fecha, igual que como mucho un movimiento.
 - En `SENT_ALERT`, `UNIQUE (budget_id, threshold)`: un presupuesto recibe como mucho una alerta por umbral. Como cada `BUDGET` pertenece a un solo período, eso equivale a una por período. La fila se inserta en la misma transacción que encola el mensaje, así una segunda corrida del proceso choca con la clave en vez de mandar otra alerta.
-- En `LOGIN_CODE`, un código se canjea una sola vez (`used_at`), vence a los 5 minutos y admite como mucho 5 intentos fallidos; al quinto queda inutilizable. Se guarda solo su hash.
+- En `LOGIN_CODE`, un código se canjea una sola vez (`used_at`), vence a los 5 minutos y admite como mucho 5 intentos fallidos; al quinto queda inutilizable. Se guarda solo su HMAC. Sirve solo para su `purpose`.
+- En `AUTH_THROTTLE`, un índice sobre `(key_type, key_hash, event, created_at)`: cada pedido de código y cada canje fallido cuenta las filas recientes de su número y de su IP. No tiene clave foránea a `USER`, porque cuenta también los números que no son de nadie.
+- En `SESSION`, `UNIQUE (token_hash)`, y `expires_at` posterior a `created_at` (`CHECK`). Una sesión vale mientras `revoked_at` sea nulo, no haya pasado `expires_at` y `last_seen_at` tenga menos de 30 minutos.
 - En `ACCOUNT`, `closing_day` y `due_day` son obligatorios si y solo si `type = 'credit_card'` (`CHECK`).
 - En `CARD_PURCHASE`, la cuenta es de tipo `credit_card` y de la misma moneda que la compra (clave foránea compuesta `(account_id, user_id, currency)` contra `ACCOUNT`, más un trigger que verifica el tipo), la categoría es de gasto, y exactamente uno de `budget_user_id` / `budget_family_group_id` es no nulo (`CHECK`), como en `RECURRING_RULE`.
 - En `TRANSACTION` y en `PENDING_TRANSACTION`, `card_purchase_id` e `installment_number` van los dos nulos o los dos informados (`CHECK`), con `UNIQUE (card_purchase_id, installment_number)`: una compra genera como mucho un movimiento, o un pendiente, por cuota. Un movimiento no puede venir a la vez de una regla recurrente y de una compra con tarjeta (`CHECK`).
@@ -425,7 +447,9 @@ erDiagram
 - **CARD_STATEMENT**: cada resumen de una tarjeta. Sus fechas se generan a partir de `closing_day` y `due_day` de la cuenta, y el usuario puede corregirlas mientras el resumen está abierto. Al cerrarse, el proceso programado genera las cuotas que entran en él.
 - **TRANSFER**: movimiento de plata entre dos cuentas del mismo usuario, incluido el pago del resumen de una tarjeta. No es un gasto ni un ingreso: no tiene categoría ni período y no entra en ningún presupuesto; solo cambia el saldo de las dos cuentas.
 - **LLM_USAGE**: consumo diario de cada usuario, por cuota. Se suma en la misma transacción que procesa el mensaje, y la cuota se consulta antes de llamar al LLM. Los tokens no deciden el límite, que es por cantidad de mensajes, pero permiten saber cuánto cuesta cada usuario y ajustar los límites con datos. La regla está en [reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente).
-- **LOGIN_CODE**: códigos de un solo uso para entrar al dashboard, enviados por WhatsApp ([ADR 0003](adr/0003-login-por-codigo-unico.md)). Se guarda el hash y no el código, para que una filtración de la tabla no permita entrar con los códigos vigentes. El límite de pedidos por número se calcula contando las filas recientes del usuario, sin una tabla aparte. El contrato está en [la API](04-api.md).
+- **LOGIN_CODE**: códigos de un solo uso para entrar al dashboard, enviados por WhatsApp ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Se guarda el HMAC y no el código, para que una filtración de la tabla no permita entrar con los códigos vigentes. `purpose` separa los códigos de login de los de borrado de cuenta. El contrato está en [la API](04-api.md).
+- **SESSION**: sesión del dashboard, creada al canjear un código de login. El token viaja en una cookie y la base guarda solo su hash, así que una filtración de la tabla no permite entrar. Existe como fila, y no como un token firmado que se valida solo, para que cerrar sesión, cerrar todas o pedir el borrado de la cuenta corten el acceso en el momento ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Un proceso programado borra las vencidas o revocadas.
+- **AUTH_THROTTLE**: registro de pedidos de código y canjes fallidos, del que salen los límites del login. Guarda un HMAC del teléfono o de la IP, nunca el valor, y no depende de que el número sea de un usuario: si dependiera, el límite delataría qué números usan Platita ([ADR 0017](adr/0017-limites-del-login-y-codigos-con-proposito.md)). Las filas se borran a las 24 horas.
 - **RECURRING_RULE**: regla que el usuario configura una vez (ej. alquiler, una suscripción, el sueldo), de gasto o de ingreso según `type`, y que el sistema ejecuta sola en cada ciclo según `frequency`, generando la `TRANSACTION` correspondiente sin intervención manual. La regla define desde el alta todo lo que un movimiento necesita, que es lo que le permite no volver a preguntar mes a mes (ver [reglas de dominio § 8](reglas-de-dominio.md#8-movimientos-recurrentes-la-excepción-a-la-confirmación)). Guarda el dueño y no un `budget_period_id` concreto porque la regla vive a lo largo de muchos períodos: en cada ejecución se resuelve el período de ese dueño que cubre la fecha. `next_execution` es lo que consulta el proceso periódico para saber qué reglas ejecutar hoy; `active` permite pausarla sin borrar el historial de lo ya generado.
 - **INBOUND_MESSAGE**: todo mensaje que llega por el webhook de WhatsApp, guardado antes de procesarlo. Es a la vez la cola de trabajo del worker y el registro de lo que entró por el canal. `status` recorre `pending` → `processing` → `processed`, o termina en `failed` tras agotar los reintentos, y en ese caso el usuario recibe un aviso. `sent_at` ordena los mensajes de un mismo remitente, que se procesan de a uno y en orden. `user_id` es nulo mientras el número no corresponde a un usuario registrado. Cómo se toma, se reintenta y se procesa está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
 - **OUTBOUND_MESSAGE**: todo mensaje que Platita manda por WhatsApp, ya sea una respuesta, una alerta o un recordatorio. Se escribe en la misma transacción que lo origina y el worker lo envía después, de modo que un cambio en la base y su aviso al usuario no pueden separarse. `content` distingue texto libre de plantilla, porque fuera de la ventana de conversación Meta solo acepta plantillas preaprobadas.

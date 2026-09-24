@@ -2,7 +2,7 @@
 
 > Los endpoints principales del flujo descrito en esta entrega. El contrato completo (OpenAPI autogenerado por FastAPI en `/docs`) se agrega en la Entrega 2.
 
-**Aislamiento entre usuarios, en todo endpoint autenticado.** El usuario sale siempre del `sub` del JWT, nunca del cuerpo, de la ruta ni de un parámetro. Toda lectura o escritura se limita a los recursos de ese usuario y de los grupos familiares a los que pertenece, según [reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad). Un recurso que existe pero es de otro usuario responde `404`, igual que uno que no existe, para no confirmar su existencia. Cada endpoint lo detalla para sus propios recursos, pero la regla vale aunque no lo diga.
+**Aislamiento entre usuarios, en todo endpoint autenticado.** El usuario sale siempre de la sesión autenticada, nunca del cuerpo, de la ruta ni de un parámetro. Toda lectura o escritura se limita a los recursos de ese usuario y de los grupos familiares a los que pertenece, según [reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad). Un recurso que existe pero es de otro usuario responde `404`, igual que uno que no existe, para no confirmar su existencia. Cada endpoint lo detalla para sus propios recursos, pero la regla vale aunque no lo diga.
 
 ### `POST /webhook/whatsapp`
 
@@ -80,7 +80,7 @@ Registra un movimiento manualmente desde el dashboard. `amount`, `type`, `catego
 
 Lo que el cliente **no** manda:
 
-- `user_id` no viaja en el cuerpo: sale del `sub` del JWT autenticado. Aceptarlo del cliente sería dejar que cualquiera escriba movimientos en la cuenta de otro.
+- `user_id` no viaja en el cuerpo: sale de la sesión autenticada. Aceptarlo del cliente sería dejar que cualquiera escriba movimientos en la cuenta de otro.
 - `source` lo fija el servidor en `"manual"`, ignorando cualquier valor recibido. Los movimientos `automatic` —el motor de recurrentes y, cuando se implemente, la carga por email— nacen del caso de uso `RegisterTransaction` por dentro, no de este endpoint. Lo que el usuario escribe por WhatsApp y confirma también es `manual`, igual que lo cargado acá, porque lo ingresó él (ver [HU3](05-historias-de-usuario.md)). Así, así que la trazabilidad de origen ([reglas de dominio § 9](reglas-de-dominio.md#9-trazabilidad-de-origen-source)) no depende de la buena fe del cliente.
 
 Validaciones de pertenencia, antes de insertar: `account_id` tiene que ser una cuenta del usuario autenticado; `budget_period_id`, un período de ese usuario o de un grupo familiar al que pertenezca; y `category_id`, una categoría propia del usuario o una del catálogo base del sistema (`user_id` nulo e `is_base = true`), que es exactamente lo que el catálogo mixto de [CATEGORY](03-modelo-de-datos.md#32-descripción-de-entidades-principales) permite. Si no, `404` —no `403`— para no confirmar que el recurso existe.
@@ -101,7 +101,7 @@ requestBody:
   content:
     application/json:
       example:
-        # user_id no se manda: se deriva del JWT
+        # user_id no se manda: se deriva de la sesión
         account_id: "a1..."
         budget_period_id: "bp1..."
         amount: 3500
@@ -134,13 +134,17 @@ responses:
     description: account_id, budget_period_id or category_id does not belong to the authenticated user (category_id may also be from the base catalog)
 ```
 
-### `POST /auth/code` y `POST /auth/token`
+### `POST /auth/code`, `POST /auth/token`, `POST /auth/logout` y `POST /auth/logout-all`
 
-El login del dashboard, sin contraseñas: el usuario pide un código, lo recibe por WhatsApp y lo canjea por un JWT de corta duración. El fundamento está en el [ADR 0003](adr/0003-login-por-codigo-unico.md) y las restricciones del código en [LOGIN_CODE](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
+El login del dashboard, sin contraseñas: el usuario pide un código, lo recibe por WhatsApp y lo canjea por una sesión. El fundamento está en el [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md), los límites en el [ADR 0017](adr/0017-limites-del-login-y-codigos-con-proposito.md), y las restricciones del código y de la sesión en [LOGIN_CODE, SESSION y AUTH_THROTTLE](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
 
-`POST /auth/code` pide un código para un número. Responde `202` **siempre igual**, exista o no un usuario con ese número, para no revelar quién usa Platita; solo si existe se genera y se envía el código. Admite como mucho 3 pedidos por número cada 15 minutos: pasado ese límite responde `429` y no envía nada, porque cada envío es un mensaje de plantilla que se paga y que el dueño del número recibe.
+**Cómo viaja la sesión.** En una cookie `__Host-sid` con `HttpOnly`, `Secure`, `SameSite=Strict` y `Path=/`, sin `Domain`. El dashboard se sirve desde el mismo origen que la API, bajo `/app`, y la API no habilita CORS. Un `POST`, `PUT`, `PATCH` o `DELETE` responde `403` si su `Origin` no es el de Platita o si su `Content-Type` no es `application/json`. `/webhook/whatsapp` está exceptuado, porque Meta lo llama sin cookie y firma cada pedido. Una request con una sesión inexistente, revocada o vencida responde `401`.
 
-`POST /auth/token` canjea el código. Si es válido, no venció, no se usó y no agotó sus 5 intentos, lo marca como usado y devuelve el JWT. En cualquier otro caso responde `401` con el mismo mensaje, sin decir cuál de las condiciones falló.
+`POST /auth/code` pide un código para un número. Responde `202` **siempre igual**, exista o no un usuario con ese número, para no revelar quién usa Platita; solo si existe se genera y se envía un código de propósito `login`. Admite como mucho 3 pedidos por número cada 15 minutos y 20 por IP por hora, contados exista o no el usuario: pasado cualquiera de los dos responde `429` y no envía nada, porque cada envío es un mensaje de plantilla que se paga y que el dueño del número recibe.
+
+`POST /auth/token` canjea un código de propósito `login`. Si es válido, no venció, no se usó y no agotó sus 5 intentos, lo marca como usado, crea una sesión y la devuelve en la cookie. En cualquier otro caso responde `401` con el mismo mensaje, sin decir cuál de las condiciones falló, y cuenta un fallo para el número y para la IP. Con 10 fallos por número o 50 por IP en el día, responde `429` sin mirar el código, exista o no el usuario. El intento se cuenta antes de comparar el código.
+
+`POST /auth/logout` revoca la sesión de la request. `POST /auth/logout-all` revoca todas las sesiones del usuario, incluida la actual. Las dos responden `204` y borran la cookie.
 
 ```yaml
 # POST /auth/code
@@ -153,7 +157,7 @@ responses:
   202:
     description: Accepted; a code is sent over WhatsApp only if the number belongs to a user
   429:
-    description: Too many code requests for this number; nothing is sent
+    description: Too many code requests for this number or this IP; nothing is sent
 
 # POST /auth/token
 requestBody:
@@ -163,15 +167,22 @@ requestBody:
         phone: "+5491100000000"
         code: "482913"
 responses:
-  200:
-    content:
-      application/json:
-        example:
-          access_token: "eyJhbGciOi..."
-          token_type: "bearer"
-          expires_in: 900
+  204:
+    description: Session created
+    headers:
+      Set-Cookie:
+        example: "__Host-sid=<random token>; HttpOnly; Secure; SameSite=Strict; Path=/"
   401:
     description: Invalid, expired, used or exhausted code — same response for all
+  429:
+    description: Too many failed exchanges today for this number or this IP; the code is not checked
+
+# POST /auth/logout · POST /auth/logout-all
+responses:
+  204:
+    description: Current session (logout) or every session of the user (logout-all) revoked; the cookie is cleared
+  401:
+    description: No valid session
 ```
 
 ### `GET /family-groups/{family_group_id}/export`
@@ -195,17 +206,22 @@ responses:
     description: The authenticated user was never a member of this family group
 ```
 
-### `GET /me/export`, `POST /me/deletion` y `DELETE /me/deletion`
+### `GET /me/export`, `POST /me/deletion/code`, `POST /me/deletion` y `DELETE /me/deletion`
 
 Los derechos de acceso y supresión de [reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos).
 
 - `GET /me/export` descarga todos los datos del usuario autenticado en Excel, generado en el
   momento, igual que la exportación de un grupo familiar.
-- `POST /me/deletion` pide el borrado de la cuenta. Exige un código de un solo uso obtenido con
-  `POST /auth/code`, y responde `409` si el usuario es dueño de un grupo familiar y todavía no
-  transfirió el rol. Si todo está en orden, desactiva la cuenta y devuelve cuándo se hará el
-  borrado.
-- `DELETE /me/deletion` cancela el borrado mientras dure el plazo de gracia.
+- `POST /me/deletion/code` envía por WhatsApp un código de propósito `account_deletion`, con
+  una plantilla que dice para qué es. Exige sesión, así que nadie puede hacerle llegar a otro un
+  código de borrado. Comparte el límite de pedidos de `POST /auth/code` y responde `202`.
+- `POST /me/deletion` pide el borrado de la cuenta. Exige un código obtenido con
+  `POST /me/deletion/code`: uno de login no sirve. Responde `409` si el usuario es dueño de un grupo familiar y todavía no
+  transfirió el rol. Si todo está en orden, desactiva la cuenta, revoca todas sus sesiones y
+  devuelve cuándo se hará el borrado.
+- `DELETE /me/deletion` cancela el borrado mientras dure el plazo de gracia. Como el pedido
+  cerró todas las sesiones, para cancelar hay que volver a entrar con un código: una cuenta
+  desactivada puede iniciar sesión mientras dure el plazo.
 
 ```yaml
 # POST /me/deletion
@@ -222,7 +238,7 @@ responses:
           account_status: "deactivated"
           deletion_at: "2026-10-01T12:00:00Z"
   401:
-    description: Invalid, expired, used or exhausted code
+    description: Invalid, expired, used or exhausted code, or a code with another purpose
   409:
     description: The user owns a family group and must transfer the role first
 ```

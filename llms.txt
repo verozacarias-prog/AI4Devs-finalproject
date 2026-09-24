@@ -57,6 +57,8 @@ nombres de archivo de código están en inglés.
 - [0013 — Datos mínimos al proveedor de LLM, y un proveedor que no entrene con ellos](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0013-datos-minimos-al-proveedor-de-llm/)
 - [0014 — Las correcciones de un movimiento se marcan con cuándo y quién, sin guardar versiones anteriores](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0014-marca-de-edicion-en-movimientos/)
 - [0015 — Borrar un movimiento es marcarlo como borrado, no eliminar la fila](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0015-borrado-logico-de-movimientos/)
+- [0016 — Sesión de servidor revocable en una cookie, con el dashboard servido desde la API](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0016-sesion-de-servidor-en-el-mismo-origen/)
+- [0017 — Límites del login que no dependen de que el número exista, y códigos atados a su propósito](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0017-limites-del-login-y-codigos-con-proposito/)
 
 ## Contrato para asistentes de IA
 
