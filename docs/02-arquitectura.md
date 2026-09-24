@@ -72,15 +72,20 @@ flowchart TB
 
 #### Nivel 3 — Componentes del backend
 
-El interior del contenedor API, donde se ve el patrón arquitectónico elegido.
+El interior del backend, donde se ve el patrón arquitectónico elegido. El diagrama reúne los dos
+contenedores que comparten ese código: la API (routers y webhook handler) y el worker de mensajes,
+que es otro proceso con otro punto de entrada ([ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md)).
 
 ```mermaid
 flowchart TB
-    subgraph INBOUND["Adaptadores de entrada"]
+    subgraph INBOUND["Adaptadores de entrada — contenedor API"]
         ROUTERS["Routers REST<br/><i>FastAPI</i>"]
         HOOK["Webhook handler<br/><i>WhatsApp: verifica y guarda</i>"]
-        MSGWK["Worker de mensajes<br/><i>procesa lo guardado</i>"]
         PARSE["Email parser<br/><i>could-have</i>"]
+    end
+
+    subgraph WORKERBOX["Adaptador de entrada — contenedor worker"]
+        MSGWK["Worker de mensajes<br/><i>procesa lo guardado</i>"]
     end
 
     subgraph DOMAIN["Dominio — núcleo hexagonal"]
@@ -113,6 +118,7 @@ flowchart TB
 
     style DOMAIN fill:#0d419d,stroke:#1f6feb,color:#fff
     style INBOUND fill:#f6f8fa,stroke:#8b949e
+    style WORKERBOX fill:#f6f8fa,stroke:#8b949e
     style OUTBOUND fill:#f6f8fa,stroke:#8b949e
     style PARSE stroke-dasharray: 5 5
 ```

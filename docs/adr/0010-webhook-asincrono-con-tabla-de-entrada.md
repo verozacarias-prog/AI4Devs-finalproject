@@ -41,10 +41,17 @@ El webhook solo recibe y confirma; el procesamiento ocurre después, en un proce
 2. **Verificación de la URL.** `GET /webhook/whatsapp` responde `hub.challenge` solo si
    `hub.verify_token` coincide con el configurado.
 3. **Procesamiento.** Un proceso worker, con el mismo código y otro punto de entrada, toma los
-   mensajes pendientes con `SELECT … FOR UPDATE SKIP LOCKED`, sin una cola aparte. Procesa
-   **un mensaje por usuario a la vez y en orden de llegada**, porque una respuesta como "Galicia,
-   el familiar" solo tiene sentido después del mensaje que la originó. La llamada al LLM ocurre
-   fuera de toda transacción de base de datos. Después, en **una sola transacción**, aplica los
+   mensajes pendientes de la tabla, sin una cola aparte. Procesa **un mensaje por remitente a la
+   vez y en orden de llegada**, porque una respuesta como "Galicia, el familiar" solo tiene
+   sentido después del mensaje que la originó. El remitente es `user_id` si existe y
+   `from_phone` si no. La toma es una **transacción corta de claim**: con
+   `SELECT … FOR UPDATE SKIP LOCKED` elige, de un remitente que no tenga ningún mensaje en
+   `processing` con `locked_until` vigente, su mensaje pendiente de menor `sent_at` cuyo
+   `next_attempt_at` ya pasó; lo marca `status = 'processing'`, incrementa `attempts`, fija
+   `locked_until` y hace commit. El `locked_until` es el lock por remitente: mientras esté
+   vigente, ningún otro worker toma mensajes de ese remitente; si el worker se cae, vence y el
+   mensaje vuelve a estar disponible. La llamada al LLM ocurre después del claim y fuera de toda
+   transacción de base de datos. Después, en **una sola transacción**, aplica los
    efectos (crear o completar el pendiente, promoverlo a movimiento), marca el mensaje como
    procesado y encola la respuesta. O pasa todo o no pasa nada: un mensaje nunca queda
    procesado sin sus efectos, ni con sus efectos aplicados dos veces.

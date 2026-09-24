@@ -83,7 +83,7 @@ Lo que el cliente **no** manda:
 
 Validaciones de pertenencia, antes de insertar: `account_id` tiene que ser una cuenta del usuario autenticado; `budget_period_id`, un período de ese usuario o de un grupo familiar al que pertenezca; y `category_id`, una categoría propia del usuario o una del catálogo base del sistema (`user_id` nulo e `is_base = true`), que es exactamente lo que el catálogo mixto de [CATEGORY](03-modelo-de-datos.md#32-descripción-de-entidades-principales) permite. Si no, `404` —no `403`— para no confirmar que el recurso existe.
 
-`transaction_date` y `currency` son opcionales y se resuelven por defecto (hoy y moneda primaria del usuario, respectivamente). El chequeo de duplicados contra la vía automática **no corre en esta entrega**: depende de la carga por email, que es could-have, y el [Ticket 1](06-tickets.md) lo deja fuera de alcance dejando identificado el punto de inserción dentro del caso de uso. Por eso `duplicate_of` viene siempre `null` en la respuesta por ahora. El criterio, para cuando llegue, está en [reglas de dominio § 7](reglas-de-dominio.md#7-chequeo-de-duplicados-entre-origen-manual-y-automático) (ver también [3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) y [HU1](05-historias-de-usuario.md)).
+`transaction_date` y `currency` son opcionales. La fecha es hoy por defecto; la moneda es la de la cuenta indicada en `account_id`, porque un movimiento va siempre en la moneda de su cuenta ([reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado)). Si llega una `currency` distinta de la de la cuenta, se rechaza con `422`: este endpoint no convierte, y la conversión con `original_amount`, `original_currency` y `exchange_rate` es solo del flujo conversacional. El chequeo de duplicados contra la vía automática **no corre en esta entrega**: depende de la carga por email, que es could-have, y el [Ticket 1](06-tickets.md) lo deja fuera de alcance dejando identificado el punto de inserción dentro del caso de uso. Por eso `duplicate_of` viene siempre `null` en la respuesta por ahora. El criterio, para cuando llegue, está en [reglas de dominio § 7](reglas-de-dominio.md#7-chequeo-de-duplicados-entre-origen-manual-y-automático) (ver también [3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) y [HU1](05-historias-de-usuario.md)).
 
 ```yaml
 requestBody:
@@ -96,7 +96,7 @@ requestBody:
         amount: 3500
         type: "expense"
         category_id: "cat-food"
-        currency: "ARS"              # opcional — default: user's primary_currency
+        currency: "ARS"              # opcional — default: the account's currency; any other is 422
         transaction_date: "2026-09-15" # opcional — default: today
 responses:
   201:
@@ -116,7 +116,7 @@ responses:
           detail: "missing required fields"
           missing_fields: ["account_id", "budget_period_id"]
   404:
-    description: account_id or budget_period_id does not belong to the authenticated user
+    description: account_id, budget_period_id or category_id does not belong to the authenticated user (category_id may also be from the base catalog)
 ```
 
 ### `POST /auth/code` y `POST /auth/token`

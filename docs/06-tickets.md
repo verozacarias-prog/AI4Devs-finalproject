@@ -4,7 +4,7 @@
 
 **Título:** Implementar webhook de recepción de mensajes de WhatsApp e interpretación por IA
 **HU relacionada:** [HU3](05-historias-de-usuario.md)
-**Descripción:** Endpoint `POST /webhook/whatsapp` (adaptador de entrada) que recibe el mensaje y lo pasa al caso de uso `RegisterTransaction`, el cual extrae los datos, exige los que dependen del usuario, y responde por el mismo canal.
+**Descripción:** Endpoint `POST /webhook/whatsapp` (adaptador de entrada) que verifica y guarda el mensaje, y un worker de mensajes (otro proceso) que lo toma después y lo pasa al caso de uso `RegisterTransaction`, el cual extrae los datos y exige los que dependen del usuario. La respuesta no vuelve en la respuesta HTTP del webhook: se encola en `OUTBOUND_MESSAGE` y el worker la envía.
 **Alcance técnico:**
 
 - Verificación de la firma del webhook antes de procesar, y verificación de la URL por `GET` con `hub.challenge`.
@@ -16,7 +16,12 @@
 - Job de expiración de `PENDING_TRANSACTION` vencidas, con un recordatorio previo.
 - Endpoint `GET /budgets/{budget_id}` (adaptador de entrada) sobre el caso de uso `GetBudgetStatus`, con el contrato de [la API](04-api.md): límite, gastado convertido a la moneda primaria del período y movimientos asociados. Va en este ticket porque es lo único que consume el Ticket 2 y ninguna otra parte del sistema lo provee: el webhook escribe movimientos, no los expone.
 - *Fuera del alcance de este ticket (could-have):* el chequeo de duplicados contra movimientos de origen automático, que depende de la carga por email. El punto de inserción queda identificado dentro del caso de uso para poder sumarlo después sin reescribirlo.
-**Criterios de aceptación:** cubren lo definido en [HU3](05-historias-de-usuario.md); además, un mensaje que el LLM no logra interpretar responde pidiendo una aclaración en vez de fallar en silencio.
+**Criterios de aceptación:** cubren lo definido en [HU3](05-historias-de-usuario.md); además, un mensaje que el LLM no logra interpretar responde pidiendo una aclaración en vez de fallar en silencio. Del procesamiento asíncrono ([ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md)):
+
+- **Idempotencia:** el mismo `provider_message_id` recibido dos veces deja una sola fila en `INBOUND_MESSAGE` y un solo efecto.
+- **Orden por remitente:** dos mensajes del mismo remitente se procesan de a uno y por `sent_at`, aunque haya varios workers; los de remitentes distintos pueden ir en paralelo.
+- **Reintentos:** un fallo del LLM deja el mensaje disponible con espera creciente; al agotar los intentos queda `failed`, el usuario recibe un aviso y el siguiente mensaje del remitente se procesa.
+- **Atomicidad:** los efectos del mensaje, su paso a `processed` y la respuesta en `OUTBOUND_MESSAGE` se escriben en una sola transacción; una falla antes del commit no deja ninguno de los tres.
 **Riesgos:** fricción excesiva si el asistente pregunta de más (mitigación: aplicar default a todo lo derivable —fecha, moneda, categoría— y preguntar solo lo que no lo tiene, todo junto en un mensaje con opciones elegibles); un default silencioso que el usuario no note (mitigación: el mensaje de confirmación lista siempre los valores asumidos y acepta corregirlos); interpretación errónea del LLM sobre montos o tipo de movimiento (mitigación: salida estructurada validada y confirmación explícita antes de registrar).
 
 ---

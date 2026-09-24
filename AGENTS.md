@@ -129,9 +129,10 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
 
 - Documentación: `python3 scripts/verify_docs.py`.
 - Arquitectura: `python3 scripts/verify_architecture.py`. Valida la regla de dependencia del
-  dominio, que los montos del dominio no usen `float` y el aislamiento del frontend. Tolerante
-  mientras `backend/` y `frontend/` no existan, pero falla si `backend/` existe y el dominio no
-  está en `backend/app/domain/`.
+  dominio, que ninguna anotación del dominio cuyo nombre sea monetario (`amount`, `balance`,
+  `limit`, `income`, `total`, `price`, `monto`, `saldo`) use `float`, y el aislamiento del
+  frontend. No detecta un monto con otro nombre. Tolerante mientras `backend/` y `frontend/` no
+  existan, pero falla si `backend/` existe y el dominio no está en `backend/app/domain/`.
 - Los dos tienen que pasar sin errores antes de commitear; el hook de pre-commit los corre solo,
   y el flujo `.github/workflows/docs-quality.yml` los repite en cada pull request junto con
   `markdownlint-cli2` y `lychee`.

@@ -66,11 +66,12 @@ sequenceDiagram
     DB-->>W: 3 cuentas · presupuesto individual y familiar
     Note over W: Falta la cuenta y falta confirmar<br/>el presupuesto: no se registra todavía
     W->>DB: guarda PENDING_TRANSACTION
-    W->>WA: "Anoté $3.500 en comida, hoy.<br/>¿De qué cuenta salió y a qué presupuesto va?"
+    W->>WA: "Entendí $3.500 en comida, hoy. ¿Es correcto?<br/>¿De qué cuenta salió y a qué presupuesto va?"
     WA->>U: pregunta con opciones
-    U->>WA: "Galicia, el familiar"
+    U->>WA: "Sí, Galicia, el familiar"
     WA->>API: webhook (respuesta, se guarda igual)
     DB-->>W: respuesta pendiente
+    Note over W: Monto confirmado, cuenta y<br/>presupuesto elegidos: recién ahora se promueve
     W->>DB: completa y promueve a TRANSACTION
     W->>WA: "Listo. $3.500 · comida · Galicia ·<br/>presupuesto familiar de septiembre.<br/>Llevás 71% del rubro."
     WA->>U: confirmación explícita

@@ -141,6 +141,9 @@ def mentions_float(annotation):
     for node in ast.walk(annotation):
         if isinstance(node, ast.Name) and node.id == 'float':
             return True
+        if isinstance(node, ast.Attribute) and node.attr == 'float' \
+                and isinstance(node.value, ast.Name) and node.value.id == 'builtins':
+            return True
         if isinstance(node, ast.Constant) and isinstance(node.value, str) \
                 and re.search(r'\bfloat\b', node.value):
             return True
