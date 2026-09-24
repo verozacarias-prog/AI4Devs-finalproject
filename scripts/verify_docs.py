@@ -172,7 +172,13 @@ def check_duplicates(files):
     for a, b in itertools.combinations(files, 2):
         for x in corpus[a]:
             for y in corpus[b]:
-                ratio = SequenceMatcher(None, x, y).ratio()
+                # real_quick_ratio() y quick_ratio() son cotas superiores baratas de
+                # ratio(): si no llegan al umbral más bajo, ratio() tampoco. Descartar
+                # antes no cambia lo que se detecta, solo evita el cálculo caro.
+                matcher = SequenceMatcher(None, x, y)
+                if matcher.real_quick_ratio() < SIM_ADR or matcher.quick_ratio() < SIM_ADR:
+                    continue
+                ratio = matcher.ratio()
                 if is_adr(a) or is_adr(b):
                     # §8.6: un ADR puede repetir para ser autosuficiente, pero un
                     # documento vivo no puede repetir lo que dice un ADR.
