@@ -10,6 +10,12 @@ site/src/content/docs/
 # Caché de lychee (verificación de enlaces externos)
 .lycheecache
 
+# Secretos: se configuran como variables de entorno, nunca versionados (AGENTS.md §7).
+# La plantilla sin valores sí se versiona.
+.env
+.env.*
+!.env.example
+
 # Python
 __pycache__/
 *.py[cod]

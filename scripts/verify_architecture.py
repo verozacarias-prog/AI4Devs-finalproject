@@ -19,7 +19,8 @@ import os
 import re
 import sys
 
-DOMAIN_DIR = os.path.join('backend', 'app', 'domain')
+BACKEND_DIR = 'backend'
+DOMAIN_DIR = os.path.join(BACKEND_DIR, 'app', 'domain')
 ADAPTERS_PKG = 'adapters'
 FRONTEND_DIR = 'frontend'
 
@@ -84,8 +85,15 @@ def root_module(name):
 def check_domain_imports():
     """Regla 1: el dominio no conoce la infraestructura ni los adaptadores."""
     if not os.path.isdir(DOMAIN_DIR):
-        skipped.append('%s todavía no existe: regla de dependencia del dominio no evaluada'
-                       % DOMAIN_DIR)
+        # Sin backend/ todavía no hay nada que revisar. Con backend/ pero sin su dominio en la
+        # ruta esperada, omitir sería dar por buena una regla que nunca se evaluó.
+        if os.path.isdir(BACKEND_DIR):
+            errors.append('%s/ existe pero %s no: la regla de dependencia del dominio no se puede '
+                          'evaluar. El dominio va en %s (AGENTS.md §4)'
+                          % (BACKEND_DIR, DOMAIN_DIR, DOMAIN_DIR))
+        else:
+            skipped.append('%s todavía no existe: regla de dependencia del dominio no evaluada'
+                           % DOMAIN_DIR)
         return 0
 
     checked = 0
@@ -128,8 +136,19 @@ def check_domain_imports():
     return checked
 
 
+def mentions_float(annotation):
+    """True si la anotación usa float en cualquier nivel: float, Optional[float], list[float]..."""
+    for node in ast.walk(annotation):
+        if isinstance(node, ast.Name) and node.id == 'float':
+            return True
+        if isinstance(node, ast.Constant) and isinstance(node.value, str) \
+                and re.search(r'\bfloat\b', node.value):
+            return True
+    return False
+
+
 def check_money_types():
-    """AGENTS.md §5: montos en Decimal, nunca float. Aviso, no error."""
+    """AGENTS.md §5: montos en Decimal, nunca float. Es error: un float en un monto redondea."""
     if not os.path.isdir(DOMAIN_DIR):
         return
     money = re.compile(r'(amount|balance|limit|income|total|price|monto|saldo)', re.I)
@@ -149,9 +168,9 @@ def check_money_types():
                 name = node.arg
             if not name or not money.search(name):
                 continue
-            if isinstance(annotation, ast.Name) and annotation.id == 'float':
-                warnings.append('%s:%d "%s" está tipado como float; los montos van en Decimal'
-                                % (path, node.lineno, name))
+            if mentions_float(annotation):
+                errors.append('%s:%d "%s" está tipado con float; los montos van en Decimal'
+                              % (path, node.lineno, name))
 
 
 def check_frontend_isolation():
