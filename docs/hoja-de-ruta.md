@@ -38,6 +38,19 @@ en [`prompts.md`](../prompts.md), no acá.
   funcionalidades de [1.2](01-producto.md#12-características-y-funcionalidades-principales) y no
   se duplicó. Darle texto propio exige escribir contenido nuevo, no reorganizar el existente. El
   grupo 6 (multimoneda) ya tiene texto propio.
+- **Cuenta compartida de un grupo familiar: a futuro.** Un grupo podría tener una cuenta propia
+  donde los miembros ponen plata para cubrir el presupuesto familiar. Hoy toda cuenta es de un
+  usuario, y la base lo impone: un movimiento y su cuenta tienen el mismo `user_id`, y una
+  transferencia solo une cuentas del mismo usuario ([3. Modelo de datos](03-modelo-de-datos.md#31-diagrama-del-modelo-de-datos)).
+  Sumarlo exige que una cuenta pueda ser de un usuario o de un grupo, que un aporte sea una
+  transferencia entre la cuenta de un miembro y la del grupo, y cambiar esas claves foráneas.
+  Con esas mismas restricciones, el cambio es explícito y no aparece por accidente.
+- **Corregir un movimiento citando su confirmación: a futuro.** Hoy, citar el "Listo. $3.500 ·
+  comida…" se procesa como un mensaje sin cita
+  ([reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)).
+  Que la cita apunte a ese movimiento haría las correcciones más directas, pero exige enlazar cada
+  mensaje de confirmación con el movimiento que confirma, y decidir qué pasa si el movimiento ya
+  se corrigió o se borró. Es una funcionalidad nueva, no una regla de borde.
 - **Metadatos de los mensajes: sin plazo de borrado.** Pasado el plazo de retención se borran el
   texto y el teléfono de cada mensaje ([reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos)),
   pero la fila con sus metadatos queda para siempre. Con pocos usuarios no pesa; se revisa cuando

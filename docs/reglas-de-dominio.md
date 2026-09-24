@@ -151,7 +151,9 @@ Cada pendiente pertenece a un lote (`PENDING_BATCH`), y un gasto suelto es un lo
   correcciones también pueden ir por número ("el 2 fueron 3800").
 - **Responder citando un mensaje manda.** Si el usuario responde citando la pregunta de un lote
   concreto, la respuesta va a ese lote aunque no sea el que está en conversación. Es lo que
-  permite contestar fuera de orden sin ambigüedad.
+  permite contestar fuera de orden sin ambigüedad. Si el mensaje citado no es la pregunta de un
+  lote abierto —una confirmación, una alerta, la pregunta de un lote ya cerrado—, la respuesta
+  se procesa como si no citara nada.
 - **Como mucho 10 pendientes por lote.** Más que eso no se lee bien en un mensaje de WhatsApp y
   multiplica las chances de una interpretación errónea. Si el usuario manda más, el asistente
   toma los primeros 10 y le avisa que siga con el resto.
@@ -214,6 +216,12 @@ Para que eso sea posible sin preguntar nada mes a mes, la regla define desde el 
 corre dos veces el mismo día o se reintenta después de un fallo, no se genera un segundo cargo.
 La base lo garantiza con una clave única, y el avance de `next_execution` ocurre en la misma
 transacción que inserta el movimiento.
+
+**Cuándo corre cada regla.** Una regla semanal corre el mismo día de la semana, y una anual en la
+misma fecha cada año. Una regla mensual corre el mismo día de cada mes; si ese día no existe en
+el mes, como el 31 en abril o el 30 en febrero, corre el último día del mes, y al mes siguiente
+vuelve a su día. El alquiler que vence el 31 se genera igual en febrero. Por el mismo criterio,
+una regla anual del 29 de febrero corre el 28 en los años que no son bisiestos.
 
 **Sin período confirmado, el recurrente queda pendiente.** Si en la fecha de ejecución el dueño
 no tiene un período confirmado que la cubra, porque no existe o porque sigue en `draft`, el

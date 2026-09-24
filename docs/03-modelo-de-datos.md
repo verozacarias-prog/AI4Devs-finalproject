@@ -29,6 +29,9 @@ erDiagram
     ACCOUNT ||--o{ TRANSFER : "sends"
     ACCOUNT ||--o{ TRANSFER : "receives"
     USER ||--o{ ACCOUNT : owns
+    CURRENCY ||--o{ ACCOUNT : "denominates"
+    CURRENCY ||--o{ BUDGET_PERIOD : "denominates"
+    CURRENCY ||--o{ EXCHANGE_RATE : "is quoted in"
     ACCOUNT ||--o{ TRANSACTION : affects
     USER ||--o{ PENDING_TRANSACTION : "must complete"
     USER ||--o{ PENDING_BATCH : "is asked about"
@@ -41,6 +44,11 @@ erDiagram
     USER |o--o{ OUTBOUND_MESSAGE : receives
     INBOUND_MESSAGE |o--o{ OUTBOUND_MESSAGE : "is answered by"
 
+    CURRENCY {
+        string code PK "CHAR(3), ISO 4217, e.g. ARS, USD"
+        string name "NOT NULL"
+    }
+
     USER {
         uuid id PK
         string name "NULLABLE until onboarding is completed"
@@ -49,30 +57,30 @@ erDiagram
         boolean email_connected "DEFAULT FALSE"
         string country "NULLABLE until onboarding is completed"
         string time_zone "NULLABLE until onboarding is completed, IANA name, e.g. America/Argentina/Buenos_Aires"
-        string primary_currency "NULLABLE until onboarding is completed, ISO 4217"
+        string primary_currency "NULLABLE until onboarding is completed, FK to CURRENCY"
         string inflation_source "NULLABLE, e.g. REM_BCRA"
         string exchange_rate_reference "NULLABLE, e.g. DOLAR_MEP — id of a configured source; null means no suggestion"
-        timestamp terms_accepted_at "NOT NULL — the row is created only once the terms are accepted"
+        timestamptz terms_accepted_at "NOT NULL — the row is created only once the terms are accepted"
         string terms_version "NOT NULL — version of the terms and privacy policy accepted"
         boolean notifications_opt_in "NOT NULL, DEFAULT FALSE — permission for proactive messages"
         string onboarding_status "NOT NULL, CHECK IN ('in_progress','completed'), DEFAULT 'in_progress'"
         string account_status "NOT NULL, CHECK IN ('active','deactivated','deleted'), DEFAULT 'active'"
-        timestamp deactivated_at "NULLABLE — start of the grace period before deletion"
-        timestamp created_at "DEFAULT now()"
+        timestamptz deactivated_at "NULLABLE — start of the grace period before deletion"
+        timestamptz created_at "DEFAULT now()"
     }
 
     FAMILY_GROUP {
         uuid id PK
         string name "NOT NULL"
-        timestamp created_at "DEFAULT now()"
+        timestamptz created_at "DEFAULT now()"
     }
 
     USER_GROUP {
         uuid user_id FK "PK (user_id, family_group_id)"
         uuid family_group_id FK "PK (user_id, family_group_id)"
         string role "NOT NULL, CHECK IN ('owner','member'), DEFAULT 'member'"
-        timestamp joined_at "NOT NULL, DEFAULT now()"
-        timestamp left_at "NULLABLE — set when the member leaves; the row is never deleted"
+        timestamptz joined_at "NOT NULL, DEFAULT now()"
+        timestamptz left_at "NULLABLE — set when the member leaves; the row is never deleted"
     }
 
     ACCOUNT {
@@ -81,11 +89,11 @@ erDiagram
         string name "NOT NULL, e.g. 'Galicia USD', 'Mercado Pago'"
         string institution "NULLABLE, e.g. 'Banco Galicia', 'Balanz'"
         string type "NOT NULL, CHECK IN ('bank_account','digital_wallet','broker','cash','credit_card')"
-        string currency "NOT NULL, ISO 4217"
-        decimal initial_balance "NOT NULL, DEFAULT 0"
+        string currency "NOT NULL, FK to CURRENCY"
+        decimal initial_balance "NUMERIC(20,2), NOT NULL, DEFAULT 0"
         int closing_day "NULLABLE, 1 to 31 — only for credit_card"
         int due_day "NULLABLE, 1 to 31 — only for credit_card"
-        timestamp created_at "DEFAULT now()"
+        timestamptz created_at "DEFAULT now()"
     }
 
     BUDGET_PERIOD {
@@ -95,18 +103,18 @@ erDiagram
         string period_type "NOT NULL, CHECK IN ('monthly','biweekly')"
         date period_start "NOT NULL"
         date period_end "NOT NULL, CHECK (period_end >= period_start)"
-        string primary_currency "NOT NULL, UNIQUE (id, primary_currency)"
-        decimal estimated_income "NOT NULL, DEFAULT 0"
+        string primary_currency "NOT NULL, FK to CURRENCY, UNIQUE (id, primary_currency)"
+        decimal estimated_income "NUMERIC(20,2), NOT NULL, DEFAULT 0"
         string status "NOT NULL, CHECK IN ('draft','confirmed'), DEFAULT 'draft'"
-        timestamp created_at "DEFAULT now()"
+        timestamptz created_at "DEFAULT now()"
     }
 
     BUDGET {
         uuid id PK
         uuid budget_period_id FK "NOT NULL"
         uuid category_id FK "NOT NULL, UNIQUE (budget_period_id, category_id)"
-        decimal limit_amount "NOT NULL, > 0"
-        timestamp created_at "DEFAULT now()"
+        decimal limit_amount "NUMERIC(20,2), NOT NULL, > 0"
+        timestamptz created_at "DEFAULT now()"
     }
 
     CATEGORY {
@@ -128,22 +136,22 @@ erDiagram
         int installment_number "NULLABLE, 1..installments — set together with card_purchase_id"
         uuid card_statement_id FK "NULLABLE — statement that billed this installment"
         uuid duplicate_of FK "NULLABLE, self-reference within the same user_id — set when this row matched an existing transaction from the other source"
-        decimal amount "NOT NULL, CHECK (amount > 0) — magnitude only, the sign lives in type"
-        string currency "NOT NULL, ISO 4217"
-        decimal converted_amount "NOT NULL, in the budget period's primary_currency"
-        string budget_currency "NOT NULL, ISO 4217 — the budget period's primary_currency; FK (budget_period_id, budget_currency)"
-        decimal budget_exchange_rate "NULLABLE, > 0 — rate used to convert amount into budget_currency; null when both currencies match"
-        decimal original_amount "NULLABLE, > 0 — amount as the user said it, when in another currency than the account"
-        string original_currency "NULLABLE, ISO 4217 — set together with original_amount and exchange_rate"
-        decimal exchange_rate "NULLABLE, > 0 — rate used to convert original_amount into the account currency"
+        decimal amount "NUMERIC(20,2), NOT NULL, CHECK (amount > 0) — magnitude only, the sign lives in type"
+        string currency "NOT NULL, FK to CURRENCY"
+        decimal converted_amount "NUMERIC(20,2), NOT NULL, in the budget period's primary_currency"
+        string budget_currency "NOT NULL, FK to CURRENCY — the budget period's primary_currency; FK (budget_period_id, budget_currency)"
+        decimal budget_exchange_rate "NUMERIC(24,10), NULLABLE, > 0 — rate used to convert amount into budget_currency; null when both currencies match"
+        decimal original_amount "NUMERIC(20,2), NULLABLE, > 0 — amount as the user said it, when in another currency than the account"
+        string original_currency "NULLABLE, FK to CURRENCY — set together with original_amount and exchange_rate"
+        decimal exchange_rate "NUMERIC(24,10), NULLABLE, > 0 — rate used to convert original_amount into the account currency"
         string type "NOT NULL, CHECK IN ('expense','income')"
         string source "NOT NULL, CHECK IN ('manual','automatic')"
         string description "NULLABLE"
         date transaction_date "NOT NULL"
-        timestamp created_at "DEFAULT now()"
-        timestamp updated_at "NULLABLE — last change; null while never modified; set by trigger"
+        timestamptz created_at "DEFAULT now()"
+        timestamptz updated_at "NULLABLE — last change; null while never modified; set by trigger"
         uuid updated_by FK "NULLABLE — user who made the last change; null if never modified or changed by a scheduled process"
-        timestamp deleted_at "NULLABLE — set when the user deletes it; the row stays and leaves every aggregate"
+        timestamptz deleted_at "NULLABLE — set when the user deletes it; the row stays and leaves every aggregate"
         uuid deleted_by FK "NULLABLE — user who deleted it; set by trigger"
     }
 
@@ -166,8 +174,8 @@ erDiagram
         uuid resulting_card_purchase_id FK "NULLABLE — set once promoted, when intent = 'card_purchase'"
         string status "NOT NULL, CHECK IN ('open','promoted','rejected','expired'), DEFAULT 'open'"
         uuid resolved_by FK "NULLABLE — user who promoted or rejected it; differs from user_id only when a family group owner resolved it"
-        timestamp expires_at "NULLABLE — discarded if never completed; null only for pendings of a recurring rule, which never expire"
-        timestamp created_at "DEFAULT now()"
+        timestamptz expires_at "NULLABLE — discarded if never completed; null only for pendings of a recurring rule, which never expire"
+        timestamptz created_at "DEFAULT now()"
     }
 
     PENDING_BATCH {
@@ -175,20 +183,20 @@ erDiagram
         uuid user_id FK "NOT NULL"
         string source "NOT NULL, CHECK IN ('manual','automatic'), UNIQUE (id, source)"
         boolean awaiting_reply "NOT NULL, DEFAULT FALSE — at most one TRUE per user"
-        uuid question_message_id FK "NULLABLE — last outbound message that asked about this batch"
+        uuid question_message_id FK "NULLABLE — last outbound message that asked about this batch; indexed"
         string status "NOT NULL, CHECK IN ('open','closed'), DEFAULT 'open'"
-        timestamp reminded_at "NULLABLE — set when the one reminder before expiry was sent"
-        timestamp created_at "DEFAULT now()"
+        timestamptz reminded_at "NULLABLE — set when the one reminder before expiry was sent"
+        timestamptz created_at "DEFAULT now()"
     }
 
     EXCHANGE_RATE {
         uuid id PK
         string source "NOT NULL, e.g. DOLAR_MEP — id of a configured source"
-        string base_currency "NOT NULL, ISO 4217"
-        string quote_currency "NOT NULL, ISO 4217"
-        decimal rate "NOT NULL, CHECK (rate > 0) — quote units per base unit"
-        timestamp rate_at "NOT NULL — when the provider published it, UNIQUE (source, base_currency, quote_currency, rate_at)"
-        timestamp fetched_at "NOT NULL, DEFAULT now()"
+        string base_currency "NOT NULL, FK to CURRENCY"
+        string quote_currency "NOT NULL, FK to CURRENCY"
+        decimal rate "NUMERIC(24,10), NOT NULL, CHECK (rate > 0) — quote units per base unit"
+        timestamptz rate_at "NOT NULL — when the provider published it, UNIQUE (source, base_currency, quote_currency, rate_at)"
+        timestamptz fetched_at "NOT NULL, DEFAULT now()"
     }
 
     FINANCIAL_PROFILE {
@@ -196,10 +204,10 @@ erDiagram
         string income_range "NULLABLE, CHECK IN a fixed set of ranges"
         int dependents "NULLABLE, CHECK (dependents >= 0)"
         boolean has_debts "NULLABLE"
-        decimal emergency_fund_months "NULLABLE, CHECK (emergency_fund_months >= 0)"
+        decimal emergency_fund_months "NUMERIC(4,1), NULLABLE, CHECK (emergency_fund_months >= 0)"
         string main_goal "NULLABLE, CHECK IN ('save','pay_debts','emergency_fund','invest')"
         string risk_tolerance "NULLABLE, CHECK IN ('low','medium','high')"
-        timestamp updated_at "NOT NULL, DEFAULT now()"
+        timestamptz updated_at "NOT NULL, DEFAULT now()"
     }
 
     SENT_ALERT {
@@ -207,26 +215,26 @@ erDiagram
         uuid budget_id FK "NOT NULL"
         int threshold "NOT NULL, CHECK (threshold BETWEEN 1 AND 100), percentage, UNIQUE (budget_id, threshold)"
         uuid outbound_message_id FK "NOT NULL — the alert that was queued"
-        timestamp sent_at "DEFAULT now()"
+        timestamptz sent_at "DEFAULT now()"
     }
 
     CARD_PURCHASE {
         uuid id PK
         uuid user_id FK "NOT NULL"
-        uuid account_id FK "NOT NULL — a credit_card account; FK (account_id, currency)"
-        decimal amount "NOT NULL, CHECK (amount > 0) — total of the purchase"
-        string currency "NOT NULL, ISO 4217 — the card account's currency"
+        uuid account_id FK "NOT NULL — a credit_card account of the same user; FK (account_id, user_id, currency)"
+        decimal amount "NUMERIC(20,2), NOT NULL, CHECK (amount > 0) — total of the purchase"
+        string currency "NOT NULL, FK to CURRENCY — the card account's currency"
         int installments "NOT NULL, DEFAULT 1, CHECK (installments >= 1)"
         uuid category_id FK "NOT NULL — an expense category"
-        uuid budget_user_id FK "NULLABLE — budget owner: individual"
+        uuid budget_user_id FK "NULLABLE — budget owner: individual; CHECK equal to user_id"
         uuid budget_family_group_id FK "NULLABLE — budget owner: family"
         date purchase_date "NOT NULL"
         string description "NULLABLE"
         string source "NOT NULL, CHECK IN ('manual','automatic')"
-        timestamp created_at "DEFAULT now()"
-        timestamp updated_at "NULLABLE — last change; null while never modified; set by trigger"
+        timestamptz created_at "DEFAULT now()"
+        timestamptz updated_at "NULLABLE — last change; null while never modified; set by trigger"
         uuid updated_by FK "NULLABLE — user who made the last change; null if never modified or changed by a scheduled process"
-        timestamp deleted_at "NULLABLE — set when the user deletes it; the row stays and leaves every aggregate"
+        timestamptz deleted_at "NULLABLE — set when the user deletes it; the row stays and leaves every aggregate"
         uuid deleted_by FK "NULLABLE — user who deleted it; set by trigger"
     }
 
@@ -241,20 +249,20 @@ erDiagram
     TRANSFER {
         uuid id PK
         uuid user_id FK "NOT NULL"
-        uuid from_account_id FK "NOT NULL — FK (from_account_id, from_currency)"
-        decimal from_amount "NOT NULL, CHECK (from_amount > 0)"
-        string from_currency "NOT NULL, ISO 4217"
-        uuid to_account_id FK "NOT NULL — FK (to_account_id, to_currency), CHECK different from from_account_id"
-        decimal to_amount "NOT NULL, CHECK (to_amount > 0)"
-        string to_currency "NOT NULL, ISO 4217"
-        decimal exchange_rate "NULLABLE, > 0 — only when the currencies differ"
+        uuid from_account_id FK "NOT NULL — FK (from_account_id, user_id, from_currency)"
+        decimal from_amount "NUMERIC(20,2), NOT NULL, CHECK (from_amount > 0)"
+        string from_currency "NOT NULL, FK to CURRENCY"
+        uuid to_account_id FK "NOT NULL — FK (to_account_id, user_id, to_currency), CHECK different from from_account_id"
+        decimal to_amount "NUMERIC(20,2), NOT NULL, CHECK (to_amount > 0)"
+        string to_currency "NOT NULL, FK to CURRENCY"
+        decimal exchange_rate "NUMERIC(24,10), NULLABLE, > 0 — only when the currencies differ"
         date transfer_date "NOT NULL"
         string description "NULLABLE"
         string source "NOT NULL, CHECK IN ('manual','automatic')"
-        timestamp created_at "DEFAULT now()"
-        timestamp updated_at "NULLABLE — last change; null while never modified; set by trigger"
+        timestamptz created_at "DEFAULT now()"
+        timestamptz updated_at "NULLABLE — last change; null while never modified; set by trigger"
         uuid updated_by FK "NULLABLE — user who made the last change; null if never modified or changed by a scheduled process"
-        timestamp deleted_at "NULLABLE — set when the user deletes it; the row stays and leaves every aggregate"
+        timestamptz deleted_at "NULLABLE — set when the user deletes it; the row stays and leaves every aggregate"
         uuid deleted_by FK "NULLABLE — user who deleted it; set by trigger"
     }
 
@@ -271,10 +279,10 @@ erDiagram
         uuid id PK
         uuid user_id FK "NOT NULL"
         string code_hash "NOT NULL — never the code itself"
-        timestamp expires_at "NOT NULL — created_at + 5 minutes"
+        timestamptz expires_at "NOT NULL — created_at + 5 minutes"
         int attempts "NOT NULL, DEFAULT 0, CHECK (attempts BETWEEN 0 AND 5)"
-        timestamp used_at "NULLABLE — set on the one successful exchange"
-        timestamp created_at "DEFAULT now()"
+        timestamptz used_at "NULLABLE — set on the one successful exchange"
+        timestamptz created_at "DEFAULT now()"
     }
 
     RECURRING_RULE {
@@ -283,15 +291,15 @@ erDiagram
         uuid category_id FK "NOT NULL"
         string type "NOT NULL, CHECK IN ('expense','income') — what each generated transaction is"
         uuid account_id FK "NOT NULL — defined once, at setup"
-        uuid budget_user_id FK "NULLABLE — budget owner: individual"
+        uuid budget_user_id FK "NULLABLE — budget owner: individual; CHECK equal to user_id"
         uuid budget_family_group_id FK "NULLABLE — budget owner: family"
-        decimal amount "NOT NULL"
-        string currency "NOT NULL, ISO 4217"
+        decimal amount "NUMERIC(20,2), NOT NULL"
+        string currency "NOT NULL, FK to CURRENCY"
         string frequency "NOT NULL, CHECK IN ('weekly','monthly','yearly')"
-        int execution_day "NOT NULL, day of month/week"
-        date next_execution "NOT NULL"
+        int execution_day "NULLABLE — 1 to 7 (Monday to Sunday) when weekly, 1 to 31 when monthly, null when yearly"
+        date next_execution "NOT NULL — next generation date; for yearly rules it is the only source of the date"
         boolean active "DEFAULT TRUE"
-        timestamp created_at "DEFAULT now()"
+        timestamptz created_at "DEFAULT now()"
     }
 
     INBOUND_MESSAGE {
@@ -301,14 +309,14 @@ erDiagram
         uuid user_id FK "NULLABLE — null while the sender is not a registered user"
         string from_phone "NULLABLE — null once purged"
         jsonb payload "NULLABLE — message as received, never logged unmasked; null once purged"
-        timestamp purged_at "NULLABLE — when the content was removed after the retention period"
-        timestamp sent_at "NOT NULL — provider timestamp, orders the messages of one sender"
+        timestamptz purged_at "NULLABLE — when the content was removed after the retention period"
+        timestamptz sent_at "NOT NULL — provider timestamp, orders the messages of one sender"
         string status "NOT NULL, CHECK IN ('pending','processing','processed','failed'), DEFAULT 'pending'"
         int attempts "NOT NULL, DEFAULT 0"
-        timestamp next_attempt_at "NOT NULL, DEFAULT now()"
-        timestamp locked_until "NULLABLE — lease while a worker processes it"
-        timestamp processed_at "NULLABLE"
-        timestamp created_at "DEFAULT now()"
+        timestamptz next_attempt_at "NOT NULL, DEFAULT now()"
+        timestamptz locked_until "NULLABLE — lease while a worker processes it"
+        timestamptz processed_at "NULLABLE"
+        timestamptz created_at "DEFAULT now()"
     }
 
     OUTBOUND_MESSAGE {
@@ -318,13 +326,13 @@ erDiagram
         string to_phone "NULLABLE — null once purged"
         uuid inbound_message_id FK "NULLABLE — the message this one answers; null for alerts and reminders"
         jsonb content "NULLABLE — free text or template name and parameters; null once purged"
-        timestamp purged_at "NULLABLE — when the content was removed after the retention period"
+        timestamptz purged_at "NULLABLE — when the content was removed after the retention period"
         string status "NOT NULL, CHECK IN ('pending','sent','failed'), DEFAULT 'pending'"
         int attempts "NOT NULL, DEFAULT 0"
-        timestamp next_attempt_at "NOT NULL, DEFAULT now()"
-        string provider_message_id "NULLABLE — set once the provider accepts it"
-        timestamp sent_at "NULLABLE"
-        timestamp created_at "DEFAULT now()"
+        timestamptz next_attempt_at "NOT NULL, DEFAULT now()"
+        string provider_message_id "NULLABLE — set once the provider accepts it; UNIQUE (provider, provider_message_id)"
+        timestamptz sent_at "NULLABLE"
+        timestamptz created_at "DEFAULT now()"
     }
 
     ADVICE_DOCUMENT {
@@ -336,9 +344,27 @@ erDiagram
         date publication_date "NULLABLE"
         date last_reviewed_at "NOT NULL, DEFAULT now()"
         string status "NOT NULL, CHECK IN ('current','needs_review','outdated'), DEFAULT 'current'"
-        timestamp created_at "DEFAULT now()"
+        timestamptz created_at "DEFAULT now()"
     }
 ```
+
+**Tipos:**
+
+- **Montos**: `NUMERIC(20,2)`, nunca un tipo de punto flotante. PostgreSQL redondea en silencio
+  al insertar un valor con más decimales, así que el dominio redondea explícitamente a 2
+  decimales antes de guardar, y un test lo verifica. Las monedas del alcance usan 2 decimales o
+  ninguno; sumar una con 3 exige una migración.
+- **Cotizaciones**: `NUMERIC(24,10)`, porque una cotización inversa, como dólares por peso, tiene
+  muchos decimales significativos.
+- **Instantes**: `timestamptz`, que guarda un momento exacto. Las fechas contables
+  (`transaction_date`, `period_start`, `closing_date` y similares) son `date`, calculadas en la
+  zona horaria del usuario.
+- **Monedas**: `CHAR(3)` con clave foránea a `CURRENCY` en toda columna de moneda, así la base
+  rechaza un código inexistente o mal escrito (`usd`, `US$`).
+- **Nombres de tabla**: en singular y en `snake_case`, igual que la entidad (`ACCOUNT` es
+  `account`), con una excepción: `USER` es la tabla `app_user`, porque `user` es palabra reservada
+  en PostgreSQL y obligaría a escribirla entre comillas en todo SQL escrito a mano. La entidad del
+  dominio sigue siendo `User`.
 
 **Restricciones de integridad relevantes:**
 
@@ -354,28 +380,32 @@ erDiagram
 - En `SENT_ALERT`, `UNIQUE (budget_id, threshold)`: un presupuesto recibe como mucho una alerta por umbral. Como cada `BUDGET` pertenece a un solo período, eso equivale a una por período. La fila se inserta en la misma transacción que encola el mensaje, así una segunda corrida del proceso choca con la clave en vez de mandar otra alerta.
 - En `LOGIN_CODE`, un código se canjea una sola vez (`used_at`), vence a los 5 minutos y admite como mucho 5 intentos fallidos; al quinto queda inutilizable. Se guarda solo su hash.
 - En `ACCOUNT`, `closing_day` y `due_day` son obligatorios si y solo si `type = 'credit_card'` (`CHECK`).
-- En `CARD_PURCHASE`, la cuenta es de tipo `credit_card` y de la misma moneda que la compra (clave foránea compuesta `(account_id, currency)` contra `ACCOUNT`, más un trigger que verifica el tipo), la categoría es de gasto, y exactamente uno de `budget_user_id` / `budget_family_group_id` es no nulo (`CHECK`), como en `RECURRING_RULE`.
+- En `CARD_PURCHASE`, la cuenta es de tipo `credit_card` y de la misma moneda que la compra (clave foránea compuesta `(account_id, user_id, currency)` contra `ACCOUNT`, más un trigger que verifica el tipo), la categoría es de gasto, y exactamente uno de `budget_user_id` / `budget_family_group_id` es no nulo (`CHECK`), como en `RECURRING_RULE`.
 - En `TRANSACTION` y en `PENDING_TRANSACTION`, `card_purchase_id` e `installment_number` van los dos nulos o los dos informados (`CHECK`), con `UNIQUE (card_purchase_id, installment_number)`: una compra genera como mucho un movimiento, o un pendiente, por cuota. Un movimiento no puede venir a la vez de una regla recurrente y de una compra con tarjeta (`CHECK`).
-- En `TRANSFER`, origen y destino son cuentas distintas del mismo usuario, cada monto en la moneda de su cuenta (claves foráneas compuestas contra `ACCOUNT (id, currency)`). Si las monedas coinciden, los montos son iguales y `exchange_rate` es nulo; si difieren, `exchange_rate` es obligatorio (`CHECK`).
+- En `TRANSFER`, origen y destino son cuentas distintas del mismo usuario, cada monto en la moneda de su cuenta: `(from_account_id, user_id, from_currency)` y `(to_account_id, user_id, to_currency)` son claves foráneas compuestas contra `ACCOUNT (id, user_id, currency)`, así las dos cuentas son del usuario de la transferencia. Si las monedas coinciden, los montos son iguales y `exchange_rate` es nulo; si difieren, `exchange_rate` es obligatorio (`CHECK`).
 - En `USER`, `whatsapp_phone` es nulo si y solo si `account_status = 'deleted'`, y `deactivated_at` es obligatorio si la cuenta está desactivada o borrada (`CHECK`). Una cuenta borrada conserva su fila sin datos personales, porque los movimientos familiares anonimizados siguen apuntando a ella. La regla está en [reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos).
 - En `INBOUND_MESSAGE` y `OUTBOUND_MESSAGE`, el contenido y el teléfono (`payload` y `from_phone` en la entrada, `content` y `to_phone` en la salida) son nulos si y solo si `purged_at` está informado (`CHECK`): la purga borra los dos a la vez, como pide [reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos). Solo se purgan mensajes ya procesados, así que el worker, que identifica al remitente por `from_phone` cuando no hay `user_id`, nunca encuentra un pendiente sin teléfono.
 - En `USER`, `onboarding_status = 'completed'` exige `name`, `country`, `time_zone` y `primary_currency` no nulos (`CHECK`). `time_zone` es un nombre de la base IANA, validado en el adaptador de entrada: la fecha de "hoy" de un movimiento, el día de las cuotas de uso y las fechas de los procesos programados se calculan en esa zona. La fila se crea recién cuando el usuario acepta los términos: antes de eso solo existe su mensaje en `INBOUND_MESSAGE`. La regla está en [reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos).
 - La categoría de un movimiento es del mismo tipo que el movimiento: `TRANSACTION (category_id, type)` es una clave foránea compuesta contra `CATEGORY (id, kind)`, apoyada en el `UNIQUE (id, kind)`. Los valores de `type` y de `kind` son los mismos (`expense`, `income`) para que la clave funcione. Lo mismo vale para `RECURRING_RULE (category_id, type)`: una regla de ingreso usa una categoría de ingreso.
 - En `CATEGORY`, un usuario no tiene dos categorías con el mismo nombre, sin distinguir mayúsculas: índice único sobre `(user_id, lower(name))`, más un índice único parcial sobre `lower(name)` donde `user_id` es nulo para el catálogo base, porque en un `UNIQUE` dos nulos no chocan.
 - En `RECURRING_RULE`, exactamente uno de `budget_user_id` / `budget_family_group_id` debe ser no nulo (`CHECK`), por el mismo criterio que en `BUDGET_PERIOD`.
+- En `RECURRING_RULE` y en `CARD_PURCHASE`, `budget_user_id` es nulo o igual a `user_id` (`CHECK`): un presupuesto individual solo puede ser el propio.
+- En `RECURRING_RULE`, `execution_day` depende de `frequency` (`CHECK`): de 1 a 7 si es `weekly`, de 1 a 31 si es `monthly`, y nulo si es `yearly`, porque un día solo no define una fecha anual. En una regla anual, la fecha la da `next_execution`, que el motor avanza un año por vez. Qué pasa con los días 29 a 31 en meses más cortos está en [reglas de dominio § 8](reglas-de-dominio.md#8-movimientos-recurrentes-la-excepción-a-la-confirmación).
 - En `BUDGET`, `UNIQUE (budget_period_id, category_id)`: un período tiene como mucho un límite por categoría, así el gastado de una categoría se contrasta contra un único tope y no contra dos filas que se contradicen.
 - `TRANSACTION.amount` lleva `CHECK (amount > 0)`: guarda la magnitud, nunca el signo. Si el movimiento resta o suma lo dice `type`, que es el único lugar donde vive esa distinción — un monto negativo con `type = 'expense'` sumaría al saldo en vez de restar.
-- La moneda de un movimiento es la de su cuenta, y la base lo impone: `TRANSACTION (account_id, currency)` es una clave foránea compuesta contra `ACCOUNT (id, currency)`, apoyada en un `UNIQUE (id, currency)` en `ACCOUNT`. Con `ON UPDATE RESTRICT`, esa misma clave impide cambiar la moneda de una cuenta que ya tiene movimientos. Lo mismo vale para `RECURRING_RULE (account_id, currency)`. La regla está en [reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado).
+- La cuenta de un movimiento es del mismo usuario y su moneda es la de la cuenta, y la base lo impone: `TRANSACTION (account_id, user_id, currency)` es una clave foránea compuesta contra `ACCOUNT (id, user_id, currency)`, apoyada en un `UNIQUE (id, user_id, currency)` en `ACCOUNT`. Así un error al resolver una cuenta por nombre no puede imputar un gasto a la cuenta de otro usuario. Con `ON UPDATE RESTRICT`, esa misma clave impide cambiar la moneda de una cuenta que ya tiene movimientos. Lo mismo vale para `RECURRING_RULE (account_id, user_id, currency)`. Que el período familiar sea de un grupo al que el usuario pertenece, y que la categoría sea suya o del catálogo base, no se puede expresar con una clave foránea: lo valida la aplicación dentro de la misma transacción. La regla está en [reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado).
 - En `TRANSACTION`, `original_amount`, `original_currency` y `exchange_rate` van los tres nulos o los tres informados (`CHECK`), y si están informados `original_amount > 0`, `original_currency` es distinta de `currency` y `exchange_rate > 0`. Guardan el gasto tal como lo dijo el usuario cuando fue en otra moneda que la de la cuenta: el saldo usa siempre `amount`, y estas columnas son la evidencia de la conversión que el usuario confirmó.
 - La conversión a la moneda del presupuesto también queda guardada. `TRANSACTION (budget_period_id, budget_currency)` es una clave foránea compuesta contra `BUDGET_PERIOD (id, primary_currency)`, apoyada en un `UNIQUE (id, primary_currency)`, así `budget_currency` es siempre la moneda del período. Si `budget_currency` es igual a `currency`, `budget_exchange_rate` es nulo y `converted_amount = amount`; si difieren, `budget_exchange_rate` es obligatorio y mayor que cero (`CHECK`). Es la cotización que el usuario vio y confirmó ([reglas de dominio § 6](reglas-de-dominio.md#6-multimoneda-y-cotización)), y la que el dashboard muestra junto al movimiento ([HU4](05-historias-de-usuario.md)).
 - En `TRANSACTION`, `UNIQUE (recurring_rule_id, transaction_date)`: una regla recurrente genera como mucho un movimiento por fecha de ejecución. Si el proceso programado corre dos veces o se reintenta, el segundo insert choca con la clave en vez de duplicar el cargo. Las filas con `recurring_rule_id` nulo no entran en la restricción.
 - En `TRANSACTION`, `TRANSFER` y `CARD_PURCHASE`, `updated_at` y `updated_by` los fija un trigger `BEFORE UPDATE`: la hora del cambio, y el usuario que la aplicación indicó con `SET LOCAL app.actor_id`, o nulo si el cambio lo hace un proceso programado. `updated_by` informado exige `updated_at` informado (`CHECK`). No se guarda el valor anterior; la decisión está en el [ADR 0014](adr/0014-marca-de-edicion-en-movimientos.md).
 - En las mismas tres tablas, borrar es fijar `deleted_at`, y el mismo trigger completa `deleted_by`. `deleted_by` informado exige `deleted_at` informado (`CHECK`). El rol de la aplicación no tiene permiso de `DELETE` sobre ellas: solo el proceso de borrado de cuenta elimina filas. El fundamento está en el [ADR 0015](adr/0015-borrado-logico-de-movimientos.md).
 - En `INBOUND_MESSAGE`, `UNIQUE (provider, provider_message_id)`: un mensaje del proveedor se guarda una sola vez, así un reintento del webhook no genera un segundo procesamiento. El fundamento está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
+- En `OUTBOUND_MESSAGE`, `UNIQUE (provider, provider_message_id)`, y un índice sobre `PENDING_BATCH (question_message_id)`. Una respuesta que cita un mensaje trae el identificador de WhatsApp del mensaje citado; con él se encuentra el mensaje enviado y, desde ese mensaje, el lote que preguntaba ([reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)). La columna es nula hasta que el mensaje se envía, y en un `UNIQUE` dos nulos no chocan.
 - `TRANSACTION.duplicate_of` referencia otra `TRANSACTION` **del mismo usuario** cuando ambas describen probablemente el mismo gasto real. Esa pertenencia se impone en la base: la autorreferencia es una clave foránea compuesta `(user_id, duplicate_of)` contra `(user_id, id)`, apoyada en un `UNIQUE (user_id, id)` en `TRANSACTION`; la columna sigue siendo nullable. Sin eso un movimiento podría enlazarse al de otro usuario. El criterio de detección, y cuándo se puebla la columna, están en [reglas de dominio § 7](reglas-de-dominio.md#7-chequeo-de-duplicados-entre-origen-manual-y-automático).
 
 ### **3.2. Descripción de entidades principales:**
 
+- **CURRENCY**: catálogo de monedas ISO 4217, cargado como dato de referencia en una migración y compartido por todos los usuarios. Existe para que la moneda no sea texto libre: toda columna de moneda la referencia.
 - **USER**: persona que usa el asistente. Guarda su configuración regional (país, zona horaria, moneda primaria, fuente de inflación, cotización de referencia) para que el sistema no esté atado al caso argentino. `whatsapp_phone` es único porque es la clave de entrada del canal conversacional.
 - **FAMILY_GROUP** / **USER_GROUP**: relación muchos-a-muchos entre usuarios y grupos familiares (una persona puede pertenecer a más de un grupo; un grupo tiene varios miembros), con un rol por membresía: el dueño (`owner`) administra los miembros del grupo. La membresía no se borra al salir: se cierra con `left_at`, porque de ese intervalo depende qué períodos del grupo sigue viendo quien salió (ver [reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad)).
 - **ACCOUNT**: cuenta bancaria, billetera virtual, broker de inversión o efectivo que el usuario da de alta (ej. "Galicia en dólares", "Mercado Pago", "Balanz"). El **saldo no se guarda como columna**, se calcula (ver [reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado)). Si el volumen de cuentas/movimientos creciera al punto de que ese cálculo en cada consulta sea un problema de performance, se puede materializar/cachear más adelante sin cambiar el modelo, es una optimización, no un rediseño.
