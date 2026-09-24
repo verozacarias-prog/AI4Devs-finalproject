@@ -32,6 +32,8 @@ requestBody:
                       from: "5491100000000"
                       timestamp: "1789482720"
                       type: "text"
+                      context:                # only when the user replies quoting a message
+                        id: "wamid.QUESTION..."  # the quoted outbound message; routes the reply to its batch
                       text:
                         body: "gasté 3500 pesos en el super con la Galicia"
 responses:

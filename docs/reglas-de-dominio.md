@@ -91,7 +91,37 @@ Del alcance técnico del Ticket 1:
 - Si falta algún campo que depende del usuario (`amount`, `type` ambiguo, `account_id`, o el `budget_period_id` sin confirmar): crear una `PENDING_TRANSACTION` con lo interpretado y la lista de faltantes, y responder preguntando solo por esos, ofreciendo las opciones disponibles del usuario. Manejar el mensaje de respuesta como continuación de ese pendiente, no como un movimiento nuevo.
 - La categoría entra en esa lista cuando ninguna existente encaja. Es el único caso en que `category_id` deja de resolverse solo: como una categoría nueva no se crea sin confirmación (§ 4), `category` se agrega a `missing_fields` y se pregunta ofreciendo elegir una del catálogo del usuario o confirmar la creación de la propuesta. La respuesta se procesa como continuación del pendiente, y el movimiento no se promueve a `TRANSACTION` hasta tener un `category_id` válido.
 
-Ver también: [PENDING_TRANSACTION en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [HU3](05-historias-de-usuario.md).
+**Varios pendientes a la vez: el lote es la unidad de conversación.** Un usuario puede tener
+cualquier cantidad de pendientes abiertos: varios gastos cargados juntos, o varios avisos
+detectados en sus emails. Lo que se limita no es cuántos existen, sino sobre qué se le pregunta.
+Cada pendiente pertenece a un lote (`PENDING_BATCH`), y un gasto suelto es un lote de uno.
+
+- **Un solo lote en conversación por usuario.** Es el lote sobre el que el asistente hizo la
+  última pregunta y espera respuesta. Los demás esperan su turno. Cuando todos los pendientes
+  del lote en conversación quedan promovidos, rechazados o vencidos, el asistente pregunta por
+  el siguiente.
+- **Los manuales pasan adelante.** Los pendientes que el usuario acaba de cargar van antes que
+  los detectados por email: el usuario tiene el contexto fresco, y los de email pueden esperar.
+  Un lote nunca mezcla pendientes manuales y automáticos.
+- **Se pregunta por lote, en un solo mensaje.** El asistente lista todos los pendientes del lote,
+  numerados, con lo que ya interpretó de cada uno y lo que le falta. Varios gastos en un mismo
+  mensaje van al mismo lote.
+- **Varios mensajes seguidos convergen en un lote.** Si llega un gasto manual nuevo mientras hay
+  un lote manual esperando respuesta, se suma a ese lote y el asistente reenvía la lista
+  actualizada, en vez de hacer una pregunta aparte por cada mensaje.
+- **La respuesta puede ser general o por número.** Por ejemplo, "todos al familiar", o "el 1 con
+  Mercado Pago, el resto al mío". Una respuesta general cuenta como confirmación explícita del
+  presupuesto de cada pendiente (§ 1) porque cada uno fue listado con su monto antes de la
+  respuesta; lo que sigue prohibido es imputar un pendiente que no se le mostró al usuario. Las
+  correcciones también pueden ir por número ("el 2 fueron 3800").
+- **Responder citando un mensaje manda.** Si el usuario responde citando la pregunta de un lote
+  concreto, la respuesta va a ese lote aunque no sea el que está en conversación. Es lo que
+  permite contestar fuera de orden sin ambigüedad.
+- **Como mucho 10 pendientes por lote.** Más que eso no se lee bien en un mensaje de WhatsApp y
+  multiplica las chances de una interpretación errónea. Si el usuario manda más, el asistente
+  toma los primeros 10 y le avisa que siga con el resto.
+
+Ver también: [PENDING_TRANSACTION y PENDING_BATCH en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [HU3](05-historias-de-usuario.md).
 
 ## 6. Multimoneda y cotización
 
