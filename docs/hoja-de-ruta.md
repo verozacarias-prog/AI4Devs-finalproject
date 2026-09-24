@@ -37,11 +37,6 @@ en [`prompts.md`](../prompts.md), no acá.
   funcionalidades de [1.2](01-producto.md#12-características-y-funcionalidades-principales) y no
   se duplicó. Darle texto propio exige escribir contenido nuevo, no reorganizar el existente. El
   grupo 6 (multimoneda) ya tiene texto propio.
-- **Exportación del grupo familiar al salir el último miembro:** es must-have según
-  [reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad),
-  pero falta decidir el formato del archivo y por qué canal lo recibe el usuario: descarga desde
-  el dashboard, o documento por WhatsApp, que fuera de la ventana de 24 h exige una plantilla de
-  Meta.
 - **Términos y política de privacidad: sin redactar.** El alta exige aceptarlos antes de guardar
   nada ([reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos)),
   así que bloquean abrir Platita a usuarios reales. Tienen que cubrir que los mensajes se

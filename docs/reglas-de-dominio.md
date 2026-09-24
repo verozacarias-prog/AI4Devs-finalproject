@@ -244,6 +244,15 @@ presupuestos individuales y otros grupos, ni se borra el grupo. El grupo queda s
 vigentes y, por lo tanto, nadie puede imputarle movimientos nuevos. Quien salió conserva la
 lectura de sus períodos, igual que en cualquier salida.
 
+**Cómo se entrega la exportación.** Es un archivo Excel con dos hojas. "Movimientos" lista cada
+movimiento del grupo con fecha, tipo, monto, moneda, cuenta, categoría, período, quién lo
+registró y origen. "Presupuestos" lista cada período con su ingreso estimado y, por categoría,
+el tope y lo gastado. Se descarga desde el dashboard, detrás del login: el archivo no viaja por
+WhatsApp, para que las finanzas de toda la familia no queden guardadas en el chat ni en sus
+respaldos. Por WhatsApp solo va un aviso de que está disponible. El archivo no se guarda: se
+genera en el momento de descargarlo, con los datos de los períodos que ese usuario puede leer,
+así que siempre está al día y no hay una copia de más que custodiar.
+
 **La membresía se cierra, no se borra.** Cuando un usuario sale de un grupo, su fila en
 `USER_GROUP` queda con `left_at` informado en vez de eliminarse. Así se sigue sabiendo en qué
 períodos fue miembro, que es lo que definen las dos reglas siguientes.

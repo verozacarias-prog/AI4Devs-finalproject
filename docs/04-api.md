@@ -158,3 +158,24 @@ responses:
   401:
     description: Invalid, expired, used or exhausted code — same response for all
 ```
+
+### `GET /family-groups/{family_group_id}/export`
+
+Descarga la exportación de un grupo familiar en Excel, con las hojas "Movimientos" y
+"Presupuestos" descritas en [reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad).
+El archivo se genera en el momento y no se guarda. Incluye solo los períodos que el usuario
+autenticado puede leer: todos si es miembro vigente, y los que se superponen con su membresía si
+salió. Si nunca fue miembro del grupo, `404`.
+
+Se genera con `openpyxl`: la librería estándar de Python no escribe archivos `.xlsx`, y un CSV,
+que sí escribe, se abre mal en el Excel en español y no admite dos hojas (AGENTS.md §9).
+
+```yaml
+responses:
+  200:
+    content:
+      application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+        example: "<binary .xlsx with sheets 'Movimientos' and 'Presupuestos'>"
+  404:
+    description: The authenticated user was never a member of this family group
+```
