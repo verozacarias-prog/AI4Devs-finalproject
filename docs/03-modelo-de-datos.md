@@ -11,24 +11,24 @@ solo para mostrar la relación: sus campos están en el diagrama de su propia á
 
 ```mermaid
 erDiagram
-    USER ||--o{ TRANSACTION : records
-    USER ||--o{ USER_GROUP : "belongs to"
+    APP_USER ||--o{ TRANSACTION : records
+    APP_USER ||--o{ USER_GROUP : "belongs to"
     FAMILY_GROUP ||--o{ USER_GROUP : includes
-    USER ||--o{ BUDGET_PERIOD : "owns (individual)"
+    APP_USER ||--o{ BUDGET_PERIOD : "owns (individual)"
     FAMILY_GROUP ||--o{ BUDGET_PERIOD : "owns (family)"
     BUDGET_PERIOD ||--o{ BUDGET : groups
     BUDGET_PERIOD ||--o{ TRANSACTION : "is charged to"
     CATEGORY ||--o{ TRANSACTION : classifies
     CATEGORY ||--o{ BUDGET : defines
-    USER ||--o{ CATEGORY : "creates (custom)"
-    USER ||--o{ RECURRING_RULE : configures
+    APP_USER ||--o{ CATEGORY : "creates (custom)"
+    APP_USER ||--o{ RECURRING_RULE : configures
     RECURRING_RULE ||--o{ TRANSACTION : "generates (automatic)"
     RECURRING_RULE ||--o{ PENDING_TRANSACTION : "generates, when no confirmed period or rate"
     BUDGET ||--o{ SENT_ALERT : "was alerted"
-    USER ||--o| FINANCIAL_PROFILE : "describes"
-    USER ||--o{ LOGIN_CODE : "requests"
-    USER ||--o{ SESSION : "opens"
-    USER ||--o{ LLM_USAGE : "consumes"
+    APP_USER ||--o| FINANCIAL_PROFILE : "describes"
+    APP_USER ||--o{ LOGIN_CODE : "requests"
+    APP_USER ||--o{ SESSION : "opens"
+    APP_USER ||--o{ LLM_USAGE : "consumes"
     ACCOUNT ||--o{ CARD_PURCHASE : "is charged (credit card)"
     ACCOUNT ||--o{ CARD_STATEMENT : "closes (credit card)"
     CARD_STATEMENT ||--o{ TRANSACTION : "bills, as installments"
@@ -36,20 +36,20 @@ erDiagram
     CARD_PURCHASE ||--o{ PENDING_TRANSACTION : "generates, when no confirmed period or rate"
     ACCOUNT ||--o{ TRANSFER : "sends"
     ACCOUNT ||--o{ TRANSFER : "receives"
-    USER ||--o{ ACCOUNT : owns
+    APP_USER ||--o{ ACCOUNT : owns
     CURRENCY ||--o{ ACCOUNT : "denominates"
     CURRENCY ||--o{ BUDGET_PERIOD : "denominates"
     CURRENCY ||--o{ EXCHANGE_RATE : "is quoted in"
     ACCOUNT ||--o{ TRANSACTION : affects
-    USER ||--o{ PENDING_TRANSACTION : "must complete"
-    USER ||--o{ PENDING_BATCH : "is asked about"
+    APP_USER ||--o{ PENDING_TRANSACTION : "must complete"
+    APP_USER ||--o{ PENDING_BATCH : "is asked about"
     PENDING_BATCH ||--|{ PENDING_TRANSACTION : groups
     OUTBOUND_MESSAGE |o--o{ PENDING_BATCH : "asks about"
     PENDING_TRANSACTION ||--o| TRANSACTION : "becomes, once complete"
     PENDING_TRANSACTION |o--o| TRANSFER : "becomes, once complete"
     PENDING_TRANSACTION |o--o| CARD_PURCHASE : "becomes, once complete"
-    USER |o--o{ INBOUND_MESSAGE : sends
-    USER |o--o{ OUTBOUND_MESSAGE : receives
+    APP_USER |o--o{ INBOUND_MESSAGE : sends
+    APP_USER |o--o{ OUTBOUND_MESSAGE : receives
     INBOUND_MESSAGE |o--o{ OUTBOUND_MESSAGE : "is answered by"
 ```
 
@@ -61,14 +61,14 @@ conocimiento del asesoramiento y la segunda cuenta intentos por teléfono o IP, 
 
 ```mermaid
 erDiagram
-    USER ||--o{ USER_GROUP : "belongs to"
+    APP_USER ||--o{ USER_GROUP : "belongs to"
     FAMILY_GROUP ||--o{ USER_GROUP : includes
-    USER ||--o| FINANCIAL_PROFILE : "describes"
-    USER ||--o{ LOGIN_CODE : "requests"
-    USER ||--o{ SESSION : "opens"
-    USER ||--o{ LLM_USAGE : "consumes"
+    APP_USER ||--o| FINANCIAL_PROFILE : "describes"
+    APP_USER ||--o{ LOGIN_CODE : "requests"
+    APP_USER ||--o{ SESSION : "opens"
+    APP_USER ||--o{ LLM_USAGE : "consumes"
 
-    USER {
+    APP_USER {
         uuid id PK
         string name "NULLABLE until onboarding is completed"
         string whatsapp_phone "UNIQUE, NULLABLE only once the account is deleted"
@@ -103,7 +103,7 @@ erDiagram
     }
 
     FINANCIAL_PROFILE {
-        uuid user_id PK "FK to USER — at most one profile per user"
+        uuid user_id PK "FK to APP_USER — at most one profile per user"
         string income_range "NULLABLE, CHECK IN a fixed set of ranges"
         int dependents "NULLABLE, CHECK (dependents >= 0)"
         boolean has_debts "NULLABLE"
@@ -171,14 +171,14 @@ monedas y cotizaciones con que se convierten.
 
 ```mermaid
 erDiagram
-    USER ||--o{ TRANSACTION : records
-    USER ||--o{ BUDGET_PERIOD : "owns (individual)"
+    APP_USER ||--o{ TRANSACTION : records
+    APP_USER ||--o{ BUDGET_PERIOD : "owns (individual)"
     FAMILY_GROUP ||--o{ BUDGET_PERIOD : "owns (family)"
     BUDGET_PERIOD ||--o{ BUDGET : groups
     BUDGET_PERIOD ||--o{ TRANSACTION : "is charged to"
     CATEGORY ||--o{ TRANSACTION : classifies
     CATEGORY ||--o{ BUDGET : defines
-    USER ||--o{ CATEGORY : "creates (custom)"
+    APP_USER ||--o{ CATEGORY : "creates (custom)"
     BUDGET ||--o{ SENT_ALERT : "was alerted"
     CURRENCY ||--o{ BUDGET_PERIOD : "denominates"
     CURRENCY ||--o{ EXCHANGE_RATE : "is quoted in"
@@ -274,7 +274,7 @@ transferencias y reglas recurrentes.
 
 ```mermaid
 erDiagram
-    USER ||--o{ RECURRING_RULE : configures
+    APP_USER ||--o{ RECURRING_RULE : configures
     RECURRING_RULE ||--o{ TRANSACTION : "generates (automatic)"
     ACCOUNT ||--o{ CARD_PURCHASE : "is charged (credit card)"
     ACCOUNT ||--o{ CARD_STATEMENT : "closes (credit card)"
@@ -282,7 +282,7 @@ erDiagram
     CARD_PURCHASE ||--o{ TRANSACTION : "generates, one per installment"
     ACCOUNT ||--o{ TRANSFER : "sends"
     ACCOUNT ||--o{ TRANSFER : "receives"
-    USER ||--o{ ACCOUNT : owns
+    APP_USER ||--o{ ACCOUNT : owns
     CURRENCY ||--o{ ACCOUNT : "denominates"
     ACCOUNT ||--o{ TRANSACTION : affects
 
@@ -374,15 +374,15 @@ de WhatsApp entrantes y salientes.
 erDiagram
     RECURRING_RULE ||--o{ PENDING_TRANSACTION : "generates, when no confirmed period or rate"
     CARD_PURCHASE ||--o{ PENDING_TRANSACTION : "generates, when no confirmed period or rate"
-    USER ||--o{ PENDING_TRANSACTION : "must complete"
-    USER ||--o{ PENDING_BATCH : "is asked about"
+    APP_USER ||--o{ PENDING_TRANSACTION : "must complete"
+    APP_USER ||--o{ PENDING_BATCH : "is asked about"
     PENDING_BATCH ||--|{ PENDING_TRANSACTION : groups
     OUTBOUND_MESSAGE |o--o{ PENDING_BATCH : "asks about"
     PENDING_TRANSACTION ||--o| TRANSACTION : "becomes, once complete"
     PENDING_TRANSACTION |o--o| TRANSFER : "becomes, once complete"
     PENDING_TRANSACTION |o--o| CARD_PURCHASE : "becomes, once complete"
-    USER |o--o{ INBOUND_MESSAGE : sends
-    USER |o--o{ OUTBOUND_MESSAGE : receives
+    APP_USER |o--o{ INBOUND_MESSAGE : sends
+    APP_USER |o--o{ OUTBOUND_MESSAGE : receives
     INBOUND_MESSAGE |o--o{ OUTBOUND_MESSAGE : "is answered by"
 
     PENDING_TRANSACTION {
@@ -466,8 +466,8 @@ erDiagram
   zona horaria del usuario.
 - **Monedas**: `CHAR(3)` con clave foránea a `CURRENCY` en toda columna de moneda, así la base
   rechaza un código inexistente o mal escrito (`usd`, `US$`).
-- **Nombres de tabla**: en singular y en `snake_case`, igual que la entidad (`ACCOUNT` es
-  `account`), con una excepción: `USER` es la tabla `app_user`, porque `user` es palabra reservada
+- **Nombres de tabla**: en singular y en `snake_case`, igual que en los diagramas (`ACCOUNT` es
+  `account`). La tabla de usuarios es `app_user` y no `user`, porque `user` es palabra reservada
   en PostgreSQL y obligaría a escribirla entre comillas en todo SQL escrito a mano. La entidad del
   dominio sigue siendo `User`.
 
@@ -478,14 +478,14 @@ por área, en el mismo orden que los diagramas de [3.1](#31-diagrama-del-modelo-
 
 #### Usuarios, acceso y asesoramiento
 
-##### USER
+##### APP_USER
 
 Persona que usa el asistente. Guarda su configuración regional (país, zona horaria, moneda primaria, fuente de inflación, cotización de referencia) para que el sistema no esté atado al caso argentino. `whatsapp_phone` es único porque es la clave de entrada del canal conversacional.
 
 **Restricciones:**
 
-- En `USER`, `whatsapp_phone` es nulo si y solo si `account_status = 'deleted'`, y `deactivated_at` es obligatorio si la cuenta está desactivada o borrada (`CHECK`). Una cuenta borrada conserva su fila sin datos personales, porque los movimientos familiares anonimizados siguen apuntando a ella. La regla está en [reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos).
-- En `USER`, `onboarding_status = 'completed'` exige `name`, `country`, `time_zone` y `primary_currency` no nulos (`CHECK`). `time_zone` es un nombre de la base IANA, validado en el adaptador de entrada: la fecha de "hoy" de un movimiento, el día de las cuotas de uso y las fechas de los procesos programados se calculan en esa zona. La fila se crea recién cuando el usuario acepta los términos: antes de eso solo existe su mensaje en `INBOUND_MESSAGE`. La regla está en [reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos).
+- En `APP_USER`, `whatsapp_phone` es nulo si y solo si `account_status = 'deleted'`, y `deactivated_at` es obligatorio si la cuenta está desactivada o borrada (`CHECK`). Una cuenta borrada conserva su fila sin datos personales, porque los movimientos familiares anonimizados siguen apuntando a ella. La regla está en [reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos).
+- En `APP_USER`, `onboarding_status = 'completed'` exige `name`, `country`, `time_zone` y `primary_currency` no nulos (`CHECK`). `time_zone` es un nombre de la base IANA, validado en el adaptador de entrada: la fecha de "hoy" de un movimiento, el día de las cuotas de uso y las fechas de los procesos programados se calculan en esa zona. La fila se crea recién cuando el usuario acepta los términos: antes de eso solo existe su mensaje en `INBOUND_MESSAGE`. La regla está en [reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos).
 
 ##### FAMILY_GROUP y USER_GROUP
 
@@ -521,7 +521,7 @@ Registro de pedidos de código y canjes fallidos, del que salen los límites del
 
 **Restricciones:**
 
-- En `AUTH_THROTTLE`, un índice sobre `(key_type, key_hash, event, created_at)`: cada pedido de código y cada canje fallido cuenta las filas recientes de su número y de su IP. No tiene clave foránea a `USER`, porque cuenta también los números que no son de nadie.
+- En `AUTH_THROTTLE`, un índice sobre `(key_type, key_hash, event, created_at)`: cada pedido de código y cada canje fallido cuenta las filas recientes de su número y de su IP. No tiene clave foránea a `APP_USER`, porque cuenta también los números que no son de nadie.
 
 ##### LLM_USAGE
 

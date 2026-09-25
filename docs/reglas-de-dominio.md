@@ -384,7 +384,7 @@ Las que hacen falta son:
 | Período sin confirmar | Utilidad | Cerca del inicio de un período que sigue en `draft` |
 | Recurrente o cuota por confirmar | Utilidad | Cuando un recurrente o una cuota de tarjeta no encuentra período confirmado, o necesita que el usuario confirme la cotización |
 
-Ver también: [HU6](05-historias-de-usuario.md) · [USER y FINANCIAL_PROFILE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [OUTBOUND_MESSAGE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
+Ver también: [HU6](05-historias-de-usuario.md) · [APP_USER y FINANCIAL_PROFILE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [OUTBOUND_MESSAGE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
 
 ## 12. Límites de uso del asistente
 
@@ -524,4 +524,4 @@ dashboard:
 email ni ids internos), solo lo necesario para la tarea. El detalle está en el
 [ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md).
 
-Ver también: [Términos y política de privacidad](terminos-y-privacidad.md) · [USER, INBOUND_MESSAGE y OUTBOUND_MESSAGE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
+Ver también: [Términos y política de privacidad](terminos-y-privacidad.md) · [APP_USER, INBOUND_MESSAGE y OUTBOUND_MESSAGE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
