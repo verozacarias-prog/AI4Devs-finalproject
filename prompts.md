@@ -44,6 +44,7 @@ dejó, en síntesis:
 | Modelo de amenazas | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Analizar la seguridad de la especificación en modo de solo lectura, resolver con la autora las decisiones de sesión y de login, y escribirlas en `docs/` y en dos ADR |
 | Diseño de infraestructura y operación | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Diseñar en modo de solo lectura el despliegue, las copias de respaldo y la observabilidad, y registrarlo en `docs/` como propuesta sin decidir |
 | Revisión del modelo de datos | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Hacer legible el modelo de datos, revisar con la autora los montos de `TRANSACTION` y cambiar la regla de inmutabilidad de los ADR |
+| Validación del diseño por casos de uso | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Recorrer casos cotidianos de usuarios argentinos sobre la especificación, fijar quién accede a la base y dibujar el recorrido completo |
 | Código, tests y despliegue | *(pendiente — Entrega 2)* | | |
 
 La auditoría de repos de referencia (ver §1, Prompt 2) recomendó configurar y versionar las rules antes de empezar a codear, porque **ninguno de los dos proyectos de ejemplo del curso lo había hecho**. Esa recomendación se siguió al cierre de la Entrega 1. La configuración resultante —contratos, skill, commands, verificadores y hook— está descrita en [`docs/flujo-de-trabajo-con-ia.md`](docs/flujo-de-trabajo-con-ia.md) y no se repite acá.
@@ -110,6 +111,52 @@ Este prompt abrió una conversación iterativa larga, un ida y vuelta de pregunt
 *Qué devolvió y qué se decidió:* el material del curso recomienda **diagramas C4 en Mermaid** (un proyecto de referencia documentó su arquitectura con los 13 puntos de Simon Brown más C4). Se reestructuró la sección 2.1 en los tres niveles de C4 —contexto, contenedores y componentes— y se agregaron dos diagramas que faltaban: el de infraestructura (§2.4, que la plantilla pide explícitamente) y un diagrama de secuencia del flujo conversacional (§1.3).
 
 *Verificación antes de dar la decisión por buena:* la IA propuso inicialmente la sintaxis nativa `C4Context`/`C4Container` de Mermaid. Al verificarlo, el renderizador Mermaid de GitHub **no soporta esa extensión**, así que los diagramas no se hubieran visto en el repositorio. Se reescribieron con `flowchart` y subgrafos, que es la práctica establecida para representar C4 en Markdown de GitHub. Los seis diagramas del readme se compilaron con `mermaid-cli` y se inspeccionaron renderizados antes de darlos por válidos — dos tenían etiquetas superpuestas que no se detectan leyendo el código fuente del diagrama.
+
+---
+
+**Prompt 3** — *Claude Code · quién accede a la base, y el recorrido completo con cada llamada y cada tabla*
+
+> "primero hagamos un analisis porque es claro que en la documentacion del proyecto no quedo claro que todo acceso a la base y sus datos se hace a travez del backend por medio de http. Si no es asi decime donde se especifica lo contrario, y si no queda claro, hagamos las modificaciones necesarias para que al momento de implementar con ia no queden dudas, que es lo que falta para eso?"
+>
+> *(ante la respuesta de que el worker usa SQL y no HTTP para no partir la transacción)* "" se perdería la transacción única del ADR 0010" capaz la pregunta es entonces si el ADR y la arquitectura esta bien planteada, esta bien planteada?"
+>
+> "hay algun diagrama de flujo? que pueda ver el flujo completo de platita?"
+>
+> "eso tambien me marca en que base escribiria, y como se harian las llamadas? si por http o que? todo eso me suma"
+
+*Qué devolvió y qué se decidió:* la regla estaba escrita para el frontend, que habla con el
+backend solo por la API REST, en cinco documentos y en `verify_architecture.py`. No estaba
+escrita para el resto del sistema. La IA marcó además que la premisa, tal como estaba
+formulada, contradecía el diseño: el worker y los procesos programados son parte del backend y
+llegan a la base por SQL, no por HTTP. Quedó así:
+
+- **Desde afuera se entra solo por HTTP.**
+- **Adentro hay tres puntos de entrada.** La API, el worker y los procesos programados pasan
+  todos por los casos de uso, y ninguno llama a otro por HTTP.
+- **El SQL vive solo en los repositorios.**
+
+La regla completa, con la lista cerrada de excepciones, está en el
+[ADR 0001](docs/adr/0001-arquitectura-hexagonal.md). También se hicieron otros tres cambios:
+
+- carpetas para el worker y el scheduler en `AGENTS.md`;
+- en el [ADR 0013](docs/adr/0013-datos-minimos-al-proveedor-de-llm.md), la prohibición de que el
+  LLM acceda a la base o genere SQL;
+- una regla nueva de `verify_architecture.py` que falla el commit si una librería de base de
+  datos aparece fuera de los repositorios, las migraciones o los tests.
+
+La regla nueva se probó contra un backend de mentira antes de darla por buena.
+
+La segunda pregunta de la autora encontró un defecto que la especificación daba por resuelto. El
+[ADR 0010](docs/adr/0010-webhook-asincrono-con-tabla-de-entrada.md) prometía que un mensaje
+nunca aplica sus efectos dos veces, pero no tenía un mecanismo para cumplirlo cuando el lock de
+un worker lento vence y otro worker toma el mismo mensaje. Se agregó un token de fencing, con un
+criterio de aceptación en el Ticket 1 que prueba dos workers sobre el mismo mensaje.
+
+Las dos últimas preguntas produjeron el [recorrido completo](docs/recorrido-completo.md): un
+flowchart general y ocho diagramas de secuencia. Cada flecha dice si la llamada es HTTPS o SQL y
+qué tabla toca. Los nueve diagramas se validaron con Mermaid 11 antes de darlos por buenos.
+Dibujar el recorrido de punta a punta encontró un hueco que la lectura por documento no había
+visto: no hay ningún canal especificado para armar y confirmar un período de presupuesto.
 
 ---
 
@@ -245,6 +292,8 @@ Lo que queda por decidir antes de abrir a usuarios reales pasó a la [hoja de ru
 
 *Se completa en la Entrega final. La estrategia prevista (tests unitarios sobre casos de uso con dobles de prueba en lugar de adaptadores reales, integración sobre adaptadores y endpoints, y un E2E del flujo principal) se definió como consecuencia directa de la arquitectura hexagonal documentada en §2.1.*
 
+*Los escenarios de prueba de los recorridos de usuario salieron de la validación por casos de uso (§5, Prompt 3): cada caso soportado tiene su resultado esperado calculado, y cada caso incorrecto tiene la propiedad que su prueba de regresión va a verificar cuando se decida cómo corregirlo.*
+
 ---
 
 ## 3. Modelo de Datos
@@ -347,6 +396,53 @@ La IA la había registrado primero en un ADR nuevo, porque la convención declar
 
 ---
 
+**Prompt 3** — *Claude Code · validación del diseño con casos de uso reales, antes de implementar*
+
+> "Actuá como Product Engineer senior con experiencia en finanzas personales para usuarios de Argentina, combinando dos miradas: la de una persona común que intenta ordenar su plata en el día a día, y la de un/a arquitecto/a que traza cómo el sistema diseñado procesaría cada acción. Sos exigente con la exactitud de los números: un diseño que produciría datos financieros incorrectos sin que el usuario lo note es el problema más grave que podés encontrar. [...] IMPORTANTE: Platita todavía no tiene código. Todo el diseño está en documentación. El objetivo de este ejercicio es validar ese diseño contra situaciones reales antes de implementar, para corregir huecos cuando cambiarlos solo cuesta editar un documento."
+>
+> *(al recibir el informe)* "muy bueno el documento use-case-walkthrought.md me parece que es muy valioso, quiero incluirlo en la documentacion para ir solucionando los puntos mas importes, y de aca sacar las casos a probar en el testing y pruebas de integracion"
+
+*(prompt completo: ~150 líneas con rol, contexto, modo de trabajo, objetivo en cuatro fases, restricciones, formato de salida y criterio de calidad)*
+
+*Antes de ejecutar:* el prompt venía del material del curso, así que primero se contrastó contra
+`docs/`. Chocaba en un punto: pedía escribir el informe en `docs/`, donde pasaría a ser
+especificación y fallaría el verificador por quedar huérfano del `README.md`. La autora eligió
+dejarlo afuera durante la corrida y completar desde `docs/` los datos que el prompt dejaba
+vacíos. Una investigación web aparte trajo los datos argentinos con fuente y fecha: cotizaciones,
+dólar tarjeta, monotributo, jubilación, alquileres, tasas e inflación.
+
+*Qué devolvió y qué se decidió:* seis perfiles de usuario y 42 casos, con este resultado:
+
+| Veredicto | Casos |
+|---|---|
+| INCORRECTO | 10 |
+| CONTRADICTORIO | 4 |
+| NO ESPECIFICADO | 9 |
+| NO SOPORTADO | 3 |
+| PARCIAL | 7 |
+| SOPORTADO | 9 |
+
+Los problemas más graves:
+
+- El alta no crea ningún presupuesto, así que ningún usuario puede registrar su primer gasto.
+- Las reglas recurrentes registran montos viejos sin preguntar, en un país con ajustes
+  mensuales.
+- Un consumo en dólares pagado con pesos deja cerca del 30% de su costo fuera del presupuesto.
+- Los ajustes automáticos mandan al presupuesto una baja de mercado o una compra olvidada.
+- Los reintegros inflan las categorías.
+
+Salieron doce decisiones pendientes, cada una con opciones y una recomendación. Ninguna se
+resolvió en esta sesión: son de la autora.
+
+Con el informe en la mano, la autora lo quiso en la documentación, como backlog y como base de
+las pruebas. Entró a `docs/` como [registro](docs/use-case-walkthrough.md), igual que la
+conversación de la reestructuración. `AGENTS.md` §10 y las convenciones dicen que no es
+especificación, para que una IA no implemente sus recomendaciones como reglas. Se le agregó una
+sección que convierte los casos en pruebas: los soportados, con el resultado esperado calculado,
+y los incorrectos, con la propiedad que su prueba de regresión tiene que verificar.
+
+---
+
 ## 6. Tickets de Trabajo
 
 **Prompt 1** — *Claude (claude.ai) · ajuste de configuración de presupuestos*
@@ -412,6 +508,9 @@ La IA la había registrado primero en un ADR nuevo, porque la convención declar
 | 35 | Mantener ocho columnas de monto en `TRANSACTION`, con el argumento de que la cotización del día cambiaría los presupuestos cerrados | El argumento no valía si la cotización se guarda. La autora propuso una sola cotización guardada y montos convertidos calculados, y quedaron tres columnas |
 | 36 | Copiar en la fila la moneda de la cuenta y la del período para validar la cotización con un `CHECK` | La autora no quiso sumar columnas solo para validar. Se eligió un trigger y se fijó que esas monedas no cambian |
 | 37 | Registrar el cambio en un ADR nuevo, por la regla de inmutabilidad | La regla obligaba a un ADR por cada corrección de una decisión en definición. La autora la cambió: un ADR es inmutable recién cuando su funcionalidad está en producción |
+| 38 | Un ADR 0010 que prometía "un mensaje nunca queda con sus efectos aplicados dos veces" sin un mecanismo que lo cumpliera si el lock de un worker lento vence | La autora preguntó si la arquitectura estaba bien planteada. La revisión encontró el hueco, y se agregó un token de fencing con su criterio de aceptación |
+| 39 | Dejar el informe de validación fuera de `docs/`, para que no pasara a ser especificación | La autora lo quería como backlog y como base de las pruebas. Entró como registro, con su estado declarado en `AGENTS.md` §10 |
+| 40 | Un recorrido que mostrara solo las etapas del usuario | La autora pidió ver también qué tabla se escribe y si cada llamada es HTTPS o SQL. Con ese nivel de detalle apareció un hueco nuevo: no hay canal para confirmar un período |
 
 El patrón que se repite: la IA tiende a **resolver la ambigüedad por su cuenta** eligiendo un valor por defecto razonable, y a **justificar decisiones técnicas por el esfuerzo** que ahorran en vez de por sus propiedades de diseño. Las dos cosas hay que detectarlas leyendo, porque el resultado siempre suena defendible.
 
@@ -420,6 +519,12 @@ En la fase de reestructuración aparece un patrón distinto, propio de trabajar 
 En la fase de diseño de datos aparece un tercer patrón: la IA **sobredimensiona la solución con un argumento que suena riguroso** —trazabilidad, auditoría, casos de borde—. La pregunta que lo desarma es para qué sirve en este producto: la mitad de lo que justificaba el historial completo se resolvía con los datos que ya había.
 
 En el modelo de amenazas el mismo patrón toma otra forma: la IA propone **el control estándar de la industria** sin pesar la etapa del producto, y **califica los riesgos sin decir cuándo importan**. Un dominio propio y un riesgo "Alto" son correctos en abstracto. Las preguntas que los ubican son qué protegen hoy, sin usuarios, y qué cuesta más hacer después.
+
+En la validación por casos de uso aparece el último: la especificación **afirma garantías cuyo
+mecanismo no está escrito**. La frase suena a decisión tomada, y por eso nadie la revisa. La
+pregunta que la desarma es cómo se cumple en el peor caso. Recorrer casos concretos, con montos
+reales y de punta a punta, encuentra en un día lo que leer documento por documento no encontró:
+cada documento es coherente por dentro, y los huecos están entre ellos.
 
 ---
 
@@ -430,6 +535,7 @@ En el modelo de amenazas el mismo patrón toma otra forma: la IA propone **el co
 - ~~Comprobar en un navegador real que los diagramas del portal se renderizan~~ — verificado sobre el sitio publicado al cierre de la Entrega 1.
 - Revisar el MCP de GitHub, que falla al conectar por un error de header de autorización. Quedó desactivado al cierre de la Entrega 1; hay que reautenticarlo antes de usarlo para los pull requests.
 - Registrar los prompts de código, tests y despliegue a medida que se escriben, no al cierre.
+- Resolver las decisiones D1 a D12 de la [validación por casos de uso](docs/use-case-walkthrough.md), empezando por D1, que bloquea el primer gasto de cada usuario, y volver a correr el mismo prompt para comparar contra esta corrida.
 - Verificar la sincronización entre la documentación (`docs/02-arquitectura.md` §2.3, `docs/03-modelo-de-datos.md`, `docs/04-api.md`) y el código real antes de cada entrega, aplicando la regla de precedencia de `AGENTS.md` §10: la especificación manda, lo que se corrige es el código.
 
 Lo que depende de que exista código —el cliente generado desde el OpenAPI, el verificador del contrato de API, los tokens del Design System, los comandos de tests y linters, y los hooks y subagentes— está en la [hoja de ruta](docs/hoja-de-ruta.md).
