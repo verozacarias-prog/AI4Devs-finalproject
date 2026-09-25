@@ -35,4 +35,4 @@ así que bloquean abrir Platita a usuarios reales.
 | Confirmaciones | El usuario confirma cada movimiento; las cotizaciones son sugerencias que él valida | [Reglas de dominio § 1 y § 6](reglas-de-dominio.md) |
 | Límites de uso | Cuotas diarias de mensajes y consultas, y qué pasa al superarlas | [Reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente) |
 | Disponibilidad | Depende de WhatsApp y del proveedor de LLM; puede haber demoras | [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md) |
-| Versiones | Que los términos pueden cambiar y cómo se avisa; el alta guarda la versión aceptada | [3. Modelo de datos, USER](03-modelo-de-datos.md#32-descripción-de-entidades-principales) |
+| Versiones | Que los términos pueden cambiar y cómo se avisa; el alta guarda la versión aceptada | [3. Modelo de datos, USER](03-modelo-de-datos.md#user) |

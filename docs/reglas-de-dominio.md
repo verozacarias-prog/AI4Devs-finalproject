@@ -73,7 +73,7 @@ Y del alcance técnico del Ticket 1, la contracara en el registro:
 
 - Resolución de cuenta por nombre si se menciona — **sin fallback ni cuenta por defecto**: si no se menciona, se pregunta.
 
-Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-principales) · [ACCOUNT en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [HU1](05-historias-de-usuario.md).
+Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-principales) · [ACCOUNT en 3.2](03-modelo-de-datos.md#account) · [HU1](05-historias-de-usuario.md).
 
 ## 3. Presupuestos: individual o familiar, períodos y confirmación previa al inicio
 
@@ -93,7 +93,7 @@ Del alcance técnico del Ticket 1:
 
 - Resolución de `budget_period_id`: a partir de `transaction_date` se arman los períodos candidatos del usuario (individual y de sus grupos familiares) y se propone el más probable — **nunca se asigna sin confirmación explícita del usuario**.
 
-Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-principales) · [restricción XOR en 3.1](03-modelo-de-datos.md#31-diagrama-del-modelo-de-datos) · [BUDGET_PERIOD en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [HU2](05-historias-de-usuario.md).
+Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-principales) · [restricción XOR en 3.2](03-modelo-de-datos.md#budget_period) · [BUDGET_PERIOD en 3.2](03-modelo-de-datos.md#budget_period) · [HU2](05-historias-de-usuario.md).
 
 ## 4. Categorías: catálogo base, categorías propias y creación con confirmación
 
@@ -106,7 +106,7 @@ Del alcance técnico del Ticket 1:
 
 - Resolución de categoría contra el catálogo existente del usuario; si ninguna encaja, proponer crear una nueva, sin crearla sin confirmación.
 
-Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-principales) · [CATEGORY en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [HU3](05-historias-de-usuario.md).
+Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-principales) · [CATEGORY en 3.2](03-modelo-de-datos.md#category) · [HU3](05-historias-de-usuario.md).
 
 ## 5. PENDING_TRANSACTION: creación, continuación de la conversación, promoción y expiración
 
@@ -198,7 +198,7 @@ asistente no propone un valor: pregunta cuánto se debitó en la moneda de la cu
 representa en la moneda del presupuesto. Lo que el usuario responde queda como la cotización
 usada.
 
-Ver: [1.2, soporte multimoneda](01-producto.md#12-características-y-funcionalidades-principales) · [TRANSACTION en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [HU4](05-historias-de-usuario.md).
+Ver: [1.2, soporte multimoneda](01-producto.md#12-características-y-funcionalidades-principales) · [TRANSACTION en 3.2](03-modelo-de-datos.md#transaction) · [HU4](05-historias-de-usuario.md).
 
 ## 7. Chequeo de duplicados entre origen manual y automático
 
@@ -244,7 +244,7 @@ por su cuenta, porque ninguna se aplica sin que el usuario vea el resultado (§ 
 sugerido a la vista, y sigue el mismo camino que el pendiente sin período: no vence y se recuerda
 cada 3 días.
 
-Ver también: [1.2, movimientos recurrentes](01-producto.md#12-características-y-funcionalidades-principales) · [RECURRING_RULE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [restricción XOR en 3.1](03-modelo-de-datos.md#31-diagrama-del-modelo-de-datos).
+Ver también: [1.2, movimientos recurrentes](01-producto.md#12-características-y-funcionalidades-principales) · [RECURRING_RULE en 3.2](03-modelo-de-datos.md#recurring_rule) · [restricción XOR en 3.2](03-modelo-de-datos.md#recurring_rule).
 
 ## 9. Trazabilidad de origen (`source`)
 
@@ -252,7 +252,7 @@ El valor de `source` no es opcional ni inferible después: se fija al crear la f
 tanto la auditoría como el chequeo de duplicados del grupo 7. Qué registra y para qué, en los
 enlaces de abajo.
 
-Ver: [1.2, trazabilidad de origen](01-producto.md#12-características-y-funcionalidades-principales) · [TRANSACTION en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [HU4](05-historias-de-usuario.md).
+Ver: [1.2, trazabilidad de origen](01-producto.md#12-características-y-funcionalidades-principales) · [TRANSACTION en 3.2](03-modelo-de-datos.md#transaction) · [HU4](05-historias-de-usuario.md).
 
 ## 10. Grupos familiares: administración, salida y visibilidad
 
@@ -319,7 +319,7 @@ miembro, es decir, los que se superponen con su intervalo de membresía (`joined
 familiar solo si, en ese momento, el usuario sigue siendo miembro del grupo. La validación ocurre
 dentro de la misma transacción de base de datos que la promoción.
 
-Ver también: [FAMILY_GROUP / USER_GROUP en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [§ 5, pendientes](#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración) · [§ 8, recurrentes](#8-movimientos-recurrentes-la-excepción-a-la-confirmación) · [decisiones abiertas](hoja-de-ruta.md#decisiones-abiertas).
+Ver también: [FAMILY_GROUP / USER_GROUP en 3.2](03-modelo-de-datos.md#family_group-y-user_group) · [§ 5, pendientes](#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración) · [§ 8, recurrentes](#8-movimientos-recurrentes-la-excepción-a-la-confirmación) · [decisiones abiertas](hoja-de-ruta.md#decisiones-abiertas).
 
 ## 11. Alta de usuario, consentimiento y mensajes proactivos
 
@@ -420,7 +420,7 @@ una caída del LLM: reintenta y, si se agotan los intentos, el mensaje queda en 
 usuario recibe el aviso de que no se pudo procesar. Además avisa a quien opera Platita, que
 decide si subir el tope. Hasta entonces, el asistente no puede interpretar mensajes de nadie.
 
-Ver también: [LLM_USAGE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md), por cómo se reintentan los mensajes.
+Ver también: [LLM_USAGE en 3.2](03-modelo-de-datos.md#llm_usage) · [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md), por cómo se reintentan los mensajes.
 
 ## 13. Tarjetas de crédito y transferencias
 
