@@ -43,6 +43,7 @@ dejó, en síntesis:
 | Diseño de la capa de datos | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Revisar el modelo de datos en modo de solo lectura, resolver las divergencias con la autora y escribir las decisiones en `docs/` y en dos ADR |
 | Modelo de amenazas | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Analizar la seguridad de la especificación en modo de solo lectura, resolver con la autora las decisiones de sesión y de login, y escribirlas en `docs/` y en dos ADR |
 | Diseño de infraestructura y operación | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Diseñar en modo de solo lectura el despliegue, las copias de respaldo y la observabilidad, y registrarlo en `docs/` como propuesta sin decidir |
+| Revisión del modelo de datos | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Hacer legible el modelo de datos, revisar con la autora los montos de `TRANSACTION` y cambiar la regla de inmutabilidad de los ADR |
 | Código, tests y despliegue | *(pendiente — Entrega 2)* | | |
 
 La auditoría de repos de referencia (ver §1, Prompt 2) recomendó configurar y versionar las rules antes de empezar a codear, porque **ninguno de los dos proyectos de ejemplo del curso lo había hecho**. Esa recomendación se siguió al cierre de la Entrega 1. La configuración resultante —contratos, skill, commands, verificadores y hook— está descrita en [`docs/flujo-de-trabajo-con-ia.md`](docs/flujo-de-trabajo-con-ia.md) y no se repite acá.
@@ -300,6 +301,26 @@ La corrección citada arriba muestra el ajuste más importante de la sesión. La
 
 ---
 
+**Prompt 5** — *Claude Code · revisión del modelo de datos con la autora: legibilidad, montos de `TRANSACTION` y ADR*
+
+> "el documento 03-modelo-de-datos.md el diagrama se ve muy chico, de ultima separar en dos diagramas para que por lo menos pueda ver los nombres de los campos"
+>
+> *(sobre los montos de `TRANSACTION`)* "me parece que en transaction no hace falta tantos valores de monto, ya perteneces a una cuenta la transaccion, ahi sabes a que valor tenes que convertir, currency seria la moneda de la transaccion, si la moneda de la cuenta de la transaccion y la moneda de la transaccion son diferenes, ahi tiene que estar exchange, y listo ahi se hacen los calculos"
+>
+> "no, el exchange que usas siempre es el mismo, la cotizacion guardada en la transaccion,"
+>
+> *(ante la propuesta de copiar en la fila las monedas de la cuenta y del período para validar sin trigger)* "no soy partidaria de complicar una tabla solo por validaciones, un trigger before insert/update seria mas limpio y prolijo, la moneda de una cuenta o un presupuesto ya confirmado no se pueden cambiar, tendrian que crar otra cuenta o otro presupuesto"
+>
+> *(al ver que el cambio se registraba en un ADR nuevo)* "vamos a cambiar la regla con los adr, los adr se vuelven inmutables una vez que la funcinalidad este desarrollada y productiva, eso se indica con una marca en el adr, mientras eso no pase un adr puede estar todavia en definicion, sino pueden haber muchos cambios y no tien sentido hacer un documento tras correccion tras correccion"
+
+*Qué devolvió y qué se decidió:* el diagrama único se separó en una vista general sin campos y cuatro diagramas por área, y la descripción de 3.2 pasó a una subsección por tabla con sus restricciones. La autora detectó que el modelo seguía llamando `USER` a la tabla `app_user`, y se corrigió.
+
+La revisión de `TRANSACTION` la llevó la autora. La IA defendió primero las ocho columnas de monto con un argumento que solo valía si la cotización no se guardaba: que recalcular con la cotización del día cambiaría presupuestos ya cerrados. La autora propuso guardar una sola cotización y calcular los dos montos convertidos, a la cuenta y al presupuesto. Quedaron tres columnas, con un límite de dos monedas por movimiento. Para validar la cotización, la IA recomendó copiar en la fila la moneda de la cuenta y la del período, que permite hacerlo con un `CHECK`. La autora eligió un trigger y fijó que esas monedas no cambian. La decisión quedó en el [ADR 0011](docs/adr/0011-cotizaciones-con-adaptador-generico-configurable.md).
+
+La IA la había registrado primero en un ADR nuevo, porque la convención declaraba inmutables a todos los ADR. La autora cambió la regla: un ADR se corrige en su archivo hasta que su funcionalidad está en producción, lo que se indica con la marca `En producción desde`, y desde ahí es inmutable. El ADR nuevo se fusionó en el 0011 y se eliminó.
+
+---
+
 ## 4. Especificación de la API
 
 *Los tres endpoints principales (`POST /webhook/whatsapp`, `GET /budgets/{budget_id}`, `POST /transactions`) se derivaron de las decisiones de modelo de datos de §3, no de un prompt independiente. El diagnóstico arquitectónico de §2.2 (Prompt 3) sumó siete operaciones más, hasta llegar a diez: la verificación del webhook que exige Meta (`GET /webhook/whatsapp`), el login (`POST /auth/code`, `POST /auth/token`), la exportación de un grupo familiar y los derechos de acceso y supresión (`GET /me/export`, `POST` y `DELETE /me/deletion`). La plantilla pide tres; se documentan todas porque forman parte del alcance comprometido y un contrato incompleto sería justamente la divergencia entre documentación y código que se quiere evitar. El contrato OpenAPI completo se genera desde el código en la Entrega 2 — patrón tomado de la auditoría de repos de referencia (§1, Prompt 2), que identificó los ERD y árboles de carpetas generados **a partir del código real** como marcador de una entrega sólida.*
@@ -387,6 +408,10 @@ La corrección citada arriba muestra el ajuste más importante de la sesión. La
 | 31 | Un dominio propio como condición para que la cookie de sesión funcione | La autora cuestionó el costo en un MVP sin usuarios. La IA buscó una alternativa sin costo: la API sirve también el dashboard, en el mismo origen (ADR 0016). El dominio quedó para antes de abrir a usuarios reales, como defensa contra el phishing |
 | 32 | Un plan de remediación con varios riesgos "Altos", sin decir cuándo había que resolver cada uno | La autora preguntó si algo era crítico. Nada lo era: sin usuarios, no había nada expuesto. Se reordenó por cuándo conviene resolver cada cosa. Lo que cambiaba el esquema antes de programar el login se resolvió en el ADR 0017; el resto pasó a la hoja de ruta |
 | 33 | Un diseño de operación completo, con una recomendación de proveedor y próximos pasos que empezaban por confirmarlo | La autora no iba a decidir todavía. El diseño entró a `docs/` como propuesta, con la marca que ya usa §2.4, y lo pendiente pasó a la hoja de ruta, en vez de forzar la decisión para poder documentarlo |
+| 34 | Separar los diagramas del modelo sin revisar los nombres: la tabla `app_user` seguía como `USER` | La autora lo detectó. Se renombró en los diagramas, en la descripción por tabla y en los enlaces que la citaban |
+| 35 | Mantener ocho columnas de monto en `TRANSACTION`, con el argumento de que la cotización del día cambiaría los presupuestos cerrados | El argumento no valía si la cotización se guarda. La autora propuso una sola cotización guardada y montos convertidos calculados, y quedaron tres columnas |
+| 36 | Copiar en la fila la moneda de la cuenta y la del período para validar la cotización con un `CHECK` | La autora no quiso sumar columnas solo para validar. Se eligió un trigger y se fijó que esas monedas no cambian |
+| 37 | Registrar el cambio en un ADR nuevo, por la regla de inmutabilidad | La regla obligaba a un ADR por cada corrección de una decisión en definición. La autora la cambió: un ADR es inmutable recién cuando su funcionalidad está en producción |
 
 El patrón que se repite: la IA tiende a **resolver la ambigüedad por su cuenta** eligiendo un valor por defecto razonable, y a **justificar decisiones técnicas por el esfuerzo** que ahorran en vez de por sus propiedades de diseño. Las dos cosas hay que detectarlas leyendo, porque el resultado siempre suena defendible.
 
