@@ -151,7 +151,7 @@ El contexto que llevó a elegirlo, sus beneficios, los sacrificios asumidos y la
 /backend
   /app
     /domain
-      /entities         # User, Account, Budget, Transaction, Category, RecurringRule, CardPurchase, CardStatement, Transfer, AdviceDocument
+      /entities         # User, Account, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument
       /use_cases         # RegisterTransaction, GetBudgetStatus, CalculateAccountBalance, GenerateProactiveAlert...
       /ports             # interfaces the domain depends on but does not implement
         - transaction_repository_port.py

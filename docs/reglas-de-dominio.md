@@ -35,10 +35,10 @@ Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-princip
 El **saldo no se guarda como columna**: se calcula como `initial_balance` más la suma de ingresos menos egresos de sus `TRANSACTION` —excluidas las marcadas como duplicado, ver § 7, y las borradas—, más las transferencias que recibe y menos las que envía (§ 13), así nunca queda desincronizado de los movimientos reales.
 
 **Borrar un movimiento.** El usuario puede borrar un gasto, un ingreso, una transferencia o una
-compra con tarjeta que ya confirmó. El movimiento queda marcado como borrado, con quién y cuándo,
-y deja de contar en el saldo, en el gastado de los presupuestos y en las alertas. Borrar una
-compra con tarjeta corta las cuotas que faltaban generar; las ya generadas se borran una por una
-(§ 13). El fundamento está en el
+regla recurrente que ya confirmó, incluida una compra con tarjeta. El movimiento queda marcado
+como borrado, con quién y cuándo, y deja de contar en el saldo, en el gastado de los
+presupuestos y en las alertas. Borrar una regla corta las ocurrencias que faltaban generar,
+como las cuotas pendientes de una compra; las ya generadas se borran una por una (§ 8 y § 13). El fundamento está en el
 [ADR 0015](adr/0015-borrado-logico-de-movimientos.md).
 
 **Una cuenta, una moneda.** Cada cuenta tiene una sola moneda, igual que en el banco, donde una
@@ -117,9 +117,10 @@ Cuando el usuario responde, se completa y se promueve a `TRANSACTION` (quedando 
 **Un pendiente también puede ser una transferencia o una compra con tarjeta.** Las dos se
 confirman conversando igual que un gasto (§ 13): a una transferencia le puede faltar la cuenta
 de origen o de destino, o la confirmación de la cotización si las monedas difieren; a una compra
-con tarjeta, la tarjeta, la cantidad de cuotas o a qué presupuesto va. Mientras tanto quedan como
-pendiente, con `intent` indicando en qué se van a convertir, y al completarse se promueven a
-`TRANSFER` o a `CARD_PURCHASE` en vez de a `TRANSACTION`. Lotes, recordatorios y vencimiento son
+con tarjeta, la tarjeta, la cantidad de cuotas, el monto de la cuota o a qué presupuesto va.
+Mientras tanto quedan como pendiente, con `intent` indicando en qué se van a convertir, y al
+completarse se promueven a `TRANSFER` o a `RECURRING_RULE` en vez de a `TRANSACTION`: una
+compra con tarjeta es una regla recurrente (§ 13). Lotes, recordatorios y vencimiento son
 los mismos para los tres.
 
 **Los pendientes de un recurrente no vencen.** Un pendiente generado por una regla recurrente
@@ -228,7 +229,7 @@ Ver también: [1.2, detección de duplicados](01-producto.md#12-características
 
 Para que eso sea posible sin preguntar nada mes a mes, la regla define desde el alta **todo lo que un movimiento necesita**: si es gasto o ingreso (`type`), categoría, cuenta (`account_id`) y dueño del presupuesto (`budget_user_id` o `budget_family_group_id`). Una regla puede generar gastos, como el alquiler, o ingresos, como el sueldo; todo lo de esta sección vale igual para los dos.
 
-**Una regla genera como mucho un movimiento por fecha de ejecución.** Si el proceso programado
+**Una regla genera como mucho un movimiento por ocurrencia.** Si el proceso programado
 corre dos veces el mismo día o se reintenta después de un fallo, no se genera un segundo cargo.
 La base lo garantiza con una clave única, y el avance de `next_execution` ocurre en la misma
 transacción que inserta el movimiento.
@@ -238,6 +239,19 @@ misma fecha cada año. Una regla mensual corre el mismo día de cada mes; si ese
 el mes, como el 31 en abril o el 30 en febrero, corre el último día del mes, y al mes siguiente
 vuelve a su día. El alquiler que vence el 31 se genera igual en febrero. Por el mismo criterio,
 una regla anual del 29 de febrero corre el 28 en los años que no son bisiestos.
+
+**Una regla puede tener fin.** Si define una cantidad de ocurrencias, como las 6 cuotas de una
+compra, deja de generar al llegar a esa cantidad. Sin cantidad, sigue hasta que el usuario la
+pausa o la borra.
+
+**Pausar no es borrar.** Una regla pausada deja de generar y se puede reanudar. Una regla
+borrada queda marcada con quién y cuándo, y no genera más; lo que ya generó sigue siendo
+movimientos comunes, que se borran uno por uno.
+
+**En una tarjeta, la regla genera al cierre del resumen.** Si la cuenta de la regla es una
+tarjeta de crédito, cada ocurrencia se agenda igual que en cualquier regla, pero no se genera
+en su fecha: entra en el resumen que la incluye y se genera al cerrarse ese resumen, con fecha
+igual al vencimiento (§ 13).
 
 **Sin período confirmado, el recurrente queda pendiente.** Si en la fecha de ejecución el dueño
 no tiene un período confirmado que la cubra, porque no existe o porque sigue en `draft`, el
@@ -451,20 +465,21 @@ presupuesto se piensa como flujo de caja: una compra del 20 de septiembre que ve
 octubre afecta octubre. Una compra hecha después del cierre entra en el resumen siguiente y
 afecta el mes de ese vencimiento.
 
-**La compra se registra una vez y genera sus cuotas.** Al comprar se registra una compra con
-tarjeta: monto, moneda, categoría, fecha, tarjeta y cantidad de cuotas, una si es en un pago. El
-usuario confirma en ese momento, una sola vez, si va a su presupuesto o al familiar. Al cerrar
-cada resumen, el sistema genera por cada cuota que entra en él un gasto sobre la cuenta de la
-tarjeta, con fecha igual al vencimiento, imputado al período confirmado de ese dueño que cubre
-esa fecha. Las cuotas se calculan dividiendo el monto en partes iguales, y la última absorbe la
-diferencia de redondeo.
+**Una compra con tarjeta es una regla recurrente.** Se registra como una regla mensual (§ 8)
+sobre la cuenta de la tarjeta, con el monto de cada cuota y tantas ocurrencias como cuotas; una
+compra en un pago tiene una sola. Si el usuario dice el total, el asistente divide, propone el
+monto de la cuota y el usuario lo confirma o lo corrige con el de su resumen. Al comprar, y una
+sola vez, el usuario confirma si va a su presupuesto o al familiar. Una suscripción pagada con la
+tarjeta es una regla igual, pero sin límite de ocurrencias. El fundamento está en el
+[ADR 0012](adr/0012-tarjetas-de-credito-y-transferencias.md).
 
-**Sin período confirmado, la cuota queda pendiente.** Si el período del vencimiento no está
-confirmado, la cuota queda como `PENDING_TRANSACTION` y, como las de una regla recurrente (§ 5 y
-§ 8), no vence y se recuerda cada 3 días. Lo mismo pasa si la moneda de la tarjeta no es la del
-período: la cuota espera a que el usuario confirme la cotización del presupuesto (§ 6). Una
-compra genera como mucho un movimiento, o un pendiente, por cuota, y una compra borrada no genera
-más (§ 2).
+**Cada ocurrencia se genera al cerrar el resumen.** Al cerrar cada resumen, el sistema genera,
+por cada ocurrencia de las reglas de esa tarjeta que entra en él, un gasto sobre la cuenta de la
+tarjeta con fecha igual al vencimiento, imputado al período confirmado de ese dueño que cubre
+esa fecha. Si ese período no está confirmado, o si la moneda de la tarjeta no es la del período,
+la ocurrencia queda pendiente igual que la de cualquier regla recurrente (§ 8): no vence y se
+recuerda cada 3 días. Una regla genera como mucho un movimiento, o un pendiente, por ocurrencia,
+y una regla borrada no genera más (§ 2).
 
 **Resúmenes.** Las fechas de cierre y vencimiento de cada resumen se generan a partir de los días
 fijos de la tarjeta, y el usuario puede corregirlas para un resumen puntual, porque los bancos a
@@ -475,11 +490,11 @@ saldo en dólares con pesos, la transferencia tiene un monto en cada moneda, y l
 impositiva que cobre el banco se registra aparte como un gasto que el usuario confirma.
 
 **Saldo y comprometido.** El saldo de la cuenta de la tarjeta es lo facturado y no pagado, igual
-que en el resumen del banco: las cuotas generadas menos las transferencias recibidas. Lo
-comprometido a futuro, las cuotas todavía no generadas, se muestra aparte y por período en el
-dashboard, para que un mes cargado de cuotas no sea una sorpresa.
+que en el resumen del banco: los gastos generados menos las transferencias recibidas. Lo
+comprometido a futuro, las ocurrencias de sus reglas todavía no generadas, se muestra aparte y
+por período en el dashboard, para que un mes cargado de cuotas no sea una sorpresa.
 
-Ver también: [ADR 0012](adr/0012-tarjetas-de-credito-y-transferencias.md) · [ACCOUNT, CARD_PURCHASE, CARD_STATEMENT y TRANSFER en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
+Ver también: [ADR 0012](adr/0012-tarjetas-de-credito-y-transferencias.md) · [ACCOUNT, RECURRING_RULE, CARD_STATEMENT y TRANSFER en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
 
 ## 14. Privacidad: retención, borrado de cuenta y derechos
 

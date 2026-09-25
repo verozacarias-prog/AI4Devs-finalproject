@@ -33,7 +33,8 @@ ve y no pesa en ningún saldo ni presupuesto.
 ## Decisión
 
 1. **Dos columnas en las tablas de movimientos confirmados.** `TRANSACTION`, `TRANSFER` y
-   `CARD_PURCHASE` suman `updated_at` (cuándo se modificó por última vez) y `updated_by` (quién).
+   `RECURRING_RULE`, que genera movimientos e incluye las compras con tarjeta, suman `updated_at`
+   (cuándo se modificó por última vez) y `updated_by` (quién).
    Las dos son nulas mientras el movimiento no se modificó, así que un movimiento está corregido
    si y solo si `updated_at` está informado.
 2. **Las llena la base.** Un trigger `BEFORE UPDATE` en cada una de las tres tablas fija

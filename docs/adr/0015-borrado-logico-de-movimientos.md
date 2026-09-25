@@ -16,12 +16,12 @@ una corrección. Si eliminara la fila, el gastado del presupuesto familiar bajar
 ningún rastro, que es justamente lo que esa decisión quiso evitar.
 
 Además, varias restricciones de la base apuntan a un movimiento o dependen de que exista. Una
-regla recurrente genera como mucho un movimiento por fecha, con una clave única: si el
+regla recurrente genera como mucho un movimiento por ocurrencia, con una clave única: si el
 movimiento de octubre se eliminara, el motor podría volver a generarlo en una segunda corrida.
 
 ## Decisión
 
-1. **Borrar es marcar.** `TRANSACTION`, `TRANSFER` y `CARD_PURCHASE` suman `deleted_at` y
+1. **Borrar es marcar.** `TRANSACTION`, `TRANSFER` y `RECURRING_RULE` suman `deleted_at` y
    `deleted_by`. Borrar un movimiento es fijar `deleted_at`; la fila sigue en la tabla. El
    trigger que ya marca las correcciones completa `deleted_by` con el usuario que la aplicación
    indicó en la transacción.
@@ -32,9 +32,10 @@ movimiento de octubre se eliminara, el motor podría volver a generarlo en una s
    `DELETE` sobre esas tres tablas. Solo el proceso de borrado de cuenta, que ejecuta el derecho
    de supresión con un rol propio, elimina filas de verdad: ahí la supresión prevalece sobre la
    trazabilidad.
-4. **Borrar una compra con tarjeta corta las cuotas futuras.** Una compra borrada no genera más
-   cuotas. Las que ya se generaron son movimientos comunes y se borran una por una, porque
-   pueden estar en un resumen ya cerrado que el banco efectivamente cobró.
+4. **Borrar una regla recurrente corta las ocurrencias futuras.** Una regla borrada, como una
+   compra con tarjeta anulada, no genera más ocurrencias. Las que ya se generaron son movimientos
+   comunes y se borran una por una, porque pueden estar en un resumen ya cerrado que el banco
+   efectivamente cobró.
 5. **Qué muestra la interfaz no se decide acá.** Si los movimientos borrados aparecen en los
    listados marcados, o si se pueden restaurar, se define al especificar cada pantalla.
 
@@ -45,7 +46,8 @@ movimiento de octubre se eliminara, el motor podría volver a generarlo en una s
 - Los miembros de un grupo familiar pueden saber que un movimiento se borró, cuándo y quién lo
   hizo.
 - Las restricciones que dependen de un movimiento siguen funcionando: una regla recurrente no
-  vuelve a generar un movimiento que el usuario borró, porque su fila sigue ocupando esa fecha.
+  vuelve a generar un movimiento que el usuario borró, porque su fila sigue ocupando esa
+  ocurrencia.
 - Un borrado por error se puede deshacer, porque el dato no se perdió.
 - Es coherente con la marca de las correcciones: el mismo trigger y el mismo origen de quién
   hizo el cambio.

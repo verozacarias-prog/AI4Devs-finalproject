@@ -1,4 +1,4 @@
-# 0012 — Tarjetas de crédito como cuentas, con compras que generan cuotas, y transferencias entre cuentas propias
+# 0012 — Tarjetas de crédito como cuentas, con las compras en cuotas como reglas recurrentes, y transferencias entre cuentas propias
 
 - Estado: Aceptada
 - Fecha: 2026-09-24
@@ -39,17 +39,22 @@ presupuesto, y sin registrar dejaban mal los saldos.
 1. **La tarjeta es una cuenta.** Nuevo tipo de cuenta `credit_card`, con día de cierre y día de
    vencimiento. Como cada cuenta tiene una sola moneda, los saldos en pesos y en dólares de un
    mismo plástico son dos cuentas.
-2. **La compra con tarjeta no es un movimiento, es una regla que genera movimientos.** Se
-   registra como `CARD_PURCHASE`: monto, moneda, categoría, fecha, cuenta de la tarjeta y
-   cantidad de cuotas, una si es en un pago. El usuario confirma al comprar, **una sola vez**, a
-   qué dueño de presupuesto va, individual o familiar, igual que al dar de alta una regla
-   recurrente.
+2. **La compra con tarjeta no es un movimiento, es una regla recurrente.** Una compra en cuotas
+   es un gasto que se repite cada mes por un monto fijo, así que se registra como un
+   `RECURRING_RULE` sobre la cuenta de la tarjeta: monto de la cuota, moneda, categoría, fecha de
+   la compra y cantidad de cuotas como cantidad de ocurrencias, una si es en un pago. La regla
+   guarda el monto de la cuota, que es el que figura en el resumen, y no el total. El usuario
+   confirma al comprar, **una sola vez**, a qué dueño de presupuesto va, individual o familiar,
+   como en cualquier regla recurrente. Un consumo recurrente con la tarjeta, como una
+   suscripción, es la misma regla sin cantidad de ocurrencias.
 3. **Los resúmenes se registran.** Cada tarjeta tiene sus `CARD_STATEMENT`, con fecha de cierre y
    de vencimiento, que se generan a partir de los días fijos de la cuenta y que el usuario puede
    corregir para un resumen puntual, porque los bancos a veces los corren.
-4. **Al cerrar un resumen, se generan las cuotas.** Por cada compra con una cuota que entra en ese
-   resumen, el sistema genera un `TRANSACTION` de gasto sobre la cuenta de la tarjeta, con fecha
-   igual al vencimiento, imputado al período del dueño confirmado que cubre esa fecha. Ese
+4. **Al cerrar un resumen, se generan las ocurrencias.** Las ocurrencias de una regla sobre una
+   tarjeta se agendan como en cualquier regla, pero no se generan en su fecha. Por cada
+   ocurrencia que entra en un resumen, el sistema genera al cerrarlo un `TRANSACTION` de gasto
+   sobre la cuenta de la tarjeta, con fecha igual al vencimiento, imputado al período del dueño
+   confirmado que cubre esa fecha. Ese
    movimiento es un gasto común y cumple todas las reglas existentes, incluido el período
    confirmado. Si el período no está confirmado, la cuota queda como pendiente y se recuerda cada
    3 días sin vencer, con la misma regla que las recurrentes.
@@ -60,8 +65,8 @@ presupuesto, y sin registrar dejaban mal los saldos.
    impositivo de pagar dólares con pesos es un gasto separado, confirmado por el usuario.
 6. **El saldo de una tarjeta es lo facturado y no pagado**, igual que en el resumen del banco: las
    cuotas generadas menos las transferencias recibidas. Lo comprometido a futuro, las cuotas
-   todavía no generadas, se calcula desde las compras con tarjeta y se muestra aparte, por
-   período, en el dashboard.
+   todavía no generadas, se calcula desde las ocurrencias pendientes de las reglas de la tarjeta
+   y se muestra aparte, por período, en el dashboard.
 
 ## Consecuencias
 
@@ -70,22 +75,27 @@ presupuesto, y sin registrar dejaban mal los saldos.
 - El presupuesto refleja el flujo de caja real, que es como la autora lo piensa: cada cuota pesa
   en el mes en que se paga.
 - Se mantiene intacta la regla de que todo movimiento tiene período confirmado. Lo que todavía no
-  tiene período no es un movimiento, es una compra con tarjeta.
-- Reutiliza mecanismos que ya existían: la moneda por cuenta, el dueño de presupuesto confirmado
-  una vez, la unicidad por regla y fecha, y los pendientes que no vencen.
+  tiene período no es un movimiento, es una regla recurrente.
+- Reutiliza mecanismos que ya existían: la moneda por cuenta y la regla recurrente, con su dueño
+  de presupuesto confirmado una vez, su unicidad por ocurrencia y sus pendientes que no vencen.
+  Las compras en cuotas y los consumos recurrentes con la tarjeta siguen una sola lógica.
 - El saldo de la tarjeta coincide con el del resumen del banco, lo que permite contrastarlos.
 - Las transferencias resuelven casos que no dependen de la tarjeta: el efectivo, las billeteras y
   la compra de dólares.
 
 ### Negativas y costos asumidos
 
-- Cuatro conceptos nuevos: un tipo de cuenta, compras con tarjeta, resúmenes y transferencias.
-  Es la parte más compleja del modelo.
+- Tres conceptos nuevos: un tipo de cuenta, resúmenes y transferencias, más un final opcional
+  para las reglas recurrentes. Es la parte más compleja del modelo.
 - Un gasto con tarjeta no se ve en el presupuesto del mes en que se hizo. Si el usuario gasta
   mucho con tarjeta en un mes, ese mes se ve bien y el siguiente viene cargado. Mitigación: el
   dashboard muestra lo comprometido para los próximos períodos.
-- Un proceso programado más, el que genera las cuotas al cierre de cada resumen, con su propia
-  necesidad de ser idempotente.
+- Un proceso programado más, el que genera las ocurrencias al cierre de cada resumen, con su
+  propia necesidad de ser idempotente.
+- Las ocurrencias siguen el calendario, no los resúmenes. Si el banco corre un cierre varios
+  días, dos cuotas pueden caer en el mismo resumen, cuando el banco factura una por resumen.
+- La regla guarda un monto de cuota fijo. Si el banco ajusta la última cuota por redondeo, el
+  usuario corrige ese movimiento.
 - Las fechas de cierre y vencimiento son fijas por defecto y el usuario tiene que corregirlas
   cuando el banco las corre. Si no lo hace, una cuota puede caer en el período equivocado.
 
@@ -100,6 +110,10 @@ presupuesto, y sin registrar dejaban mal los saldos.
   contrastar lo pagado con lo gastado.
 - **Registrar solo el pago del resumen.** Pierde la categoría de cada compra, así que el
   presupuesto no sabría en qué se gastó.
+- **La compra con tarjeta como entidad propia**, `CARD_PURCHASE`, con el total y la cantidad de
+  cuotas, que repartía en partes iguales. Era la decisión anterior. Duplicaba lo que ya hace una
+  regla recurrente, sumaba una tabla y cuatro columnas de enlace en los movimientos y en los
+  pendientes, y no resolvía los consumos recurrentes con la tarjeta, que quedaban sin regla.
 
 ---
 
