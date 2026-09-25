@@ -1,0 +1,74 @@
+# Platita
+
+> Asistente financiero personal y familiar que funciona por WhatsApp: el usuario registra gastos,
+> ingresos y presupuestos conversando en lenguaje natural y los consulta en un dashboard web. Una
+> capa de IA interpreta, categoriza e imputa cada movimiento a una cuenta y a un presupuesto.
+
+Platita no es un agregador bancario: no se conecta a home banking, no pide credenciales y no
+scrapea bancos. Todo dato entra por la conversación, por una regla recurrente o por los emails de
+aviso que el usuario habilita.
+
+La documentación está en español. El código, las entidades, las columnas, los endpoints y los
+nombres de archivo de código están en inglés.
+
+## Stack técnico
+
+- Backend: Python + FastAPI, arquitectura hexagonal (puertos y adaptadores)
+- Persistencia: PostgreSQL con pgvector como único almacén, migraciones con Alembic
+- IA: cliente de LLM para interpretación de lenguaje natural, y RAG sobre pgvector
+- Canal principal: webhook de WhatsApp
+- Frontend: aplicación web de dashboards, desacoplada del backend y comunicada solo por API REST
+
+## Especificación
+
+- [1. Descripción general del producto](https://verozacarias-prog.github.io/AI4Devs-finalproject/01-producto/)
+- [2. Arquitectura del sistema](https://verozacarias-prog.github.io/AI4Devs-finalproject/02-arquitectura/)
+- [3. Modelo de datos](https://verozacarias-prog.github.io/AI4Devs-finalproject/03-modelo-de-datos/)
+- [4. Especificación de la API](https://verozacarias-prog.github.io/AI4Devs-finalproject/04-api/)
+- [5. Historias de usuario](https://verozacarias-prog.github.io/AI4Devs-finalproject/05-historias-de-usuario/)
+- [6. Tickets de trabajo](https://verozacarias-prog.github.io/AI4Devs-finalproject/06-tickets/)
+- [7. Pull requests](https://verozacarias-prog.github.io/AI4Devs-finalproject/07-pull-requests/)
+- [8. Convenciones de documentación](https://verozacarias-prog.github.io/AI4Devs-finalproject/08-convenciones-de-documentacion/)
+- [Convenciones de desarrollo](https://verozacarias-prog.github.io/AI4Devs-finalproject/convenciones-de-desarrollo/)
+- [Documentación viva](https://verozacarias-prog.github.io/AI4Devs-finalproject/documentacion-viva/)
+- [Pull request — FEAT-XXX · <título>](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/template/pr/)
+- [Plan de pruebas — FEAT-XXX · <título>](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/template/qa_plan/)
+- [Especificación — FEAT-XXX · <título>](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/template/spec/)
+- [Contrato de UI — FEAT-XXX · <pantalla>](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/template/ui_contract/)
+- [Flujo de trabajo con IA](https://verozacarias-prog.github.io/AI4Devs-finalproject/flujo-de-trabajo-con-ia/)
+- [Hoja de ruta](https://verozacarias-prog.github.io/AI4Devs-finalproject/hoja-de-ruta/)
+- [Operación (propuesta sin decidir)](https://verozacarias-prog.github.io/AI4Devs-finalproject/operacion/)
+- [Recorrido completo](https://verozacarias-prog.github.io/AI4Devs-finalproject/recorrido-completo/)
+- [Reglas de dominio](https://verozacarias-prog.github.io/AI4Devs-finalproject/reglas-de-dominio/)
+- [Términos y política de privacidad: qué tienen que cubrir](https://verozacarias-prog.github.io/AI4Devs-finalproject/terminos-y-privacidad/)
+- [Platita — Validación de diseño por casos de uso](https://verozacarias-prog.github.io/AI4Devs-finalproject/use-case-walkthrough/)
+
+## Decisiones de arquitectura
+
+- [0001 — Arquitectura hexagonal (ports & adapters)](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0001-arquitectura-hexagonal/)
+- [0002 — WhatsApp como canal principal de registro](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0002-whatsapp-como-canal-principal/)
+- [0003 — Login por código de un solo uso, sin contraseñas](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0003-login-por-codigo-unico/)
+- [0004 — PostgreSQL con pgvector como único almacén](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0004-postgres-con-pgvector-como-unico-almacen/)
+- [0005 — Python + FastAPI en vez de Go](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0005-python-fastapi-en-vez-de-go/)
+- [0006 — Se mantiene el formato Nygard y la numeración correlativa en los ADR](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0006-formato-nygard-para-los-adr/)
+- [0007 — AGENTS.md como fuente única y CLAUDE.md como enlace simbólico](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0007-agents-md-como-fuente-unica/)
+- [0008 — Astro Starlight como portal de documentación](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0008-astro-starlight-como-portal/)
+- [0009 — Validación de documentación en integración continua](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0009-validacion-de-documentacion-en-ci/)
+- [0010 — Webhook de WhatsApp asíncrono, con tabla de entrada y de salida en PostgreSQL](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0010-webhook-asincrono-con-tabla-de-entrada/)
+- [0011 — Cotizaciones con un adaptador genérico, configurable por fuente, y una sola por movimiento](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0011-cotizaciones-con-adaptador-generico-configurable/)
+- [0012 — Tarjetas de crédito como cuentas, con las compras en cuotas como reglas recurrentes, y transferencias entre cuentas propias](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0012-tarjetas-de-credito-y-transferencias/)
+- [0013 — Datos mínimos al proveedor de LLM, y un proveedor que no entrene con ellos](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0013-datos-minimos-al-proveedor-de-llm/)
+- [0014 — Las correcciones de un movimiento se marcan con cuándo y quién, sin guardar versiones anteriores](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0014-marca-de-edicion-en-movimientos/)
+- [0015 — Borrar un movimiento es marcarlo como borrado, no eliminar la fila](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0015-borrado-logico-de-movimientos/)
+- [0016 — Sesión de servidor revocable en una cookie, con el dashboard servido desde la API](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0016-sesion-de-servidor-en-el-mismo-origen/)
+- [0017 — Límites del login que no dependen de que el número exista, y códigos atados a su propósito](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0017-limites-del-login-y-codigos-con-proposito/)
+
+## Contrato para asistentes de IA
+
+- [AGENTS.md](https://github.com/verozacarias-prog/AI4Devs-finalproject/blob/main/AGENTS.md): regla de dependencia hexagonal, invariantes de dominio,
+  convenciones de código, seguridad y qué leer antes de qué. `CLAUDE.md` es un enlace simbólico
+  a ese mismo archivo.
+
+## Optional
+
+- [Documentación completa serializada](https://verozacarias-prog.github.io/AI4Devs-finalproject/llms-full.txt)

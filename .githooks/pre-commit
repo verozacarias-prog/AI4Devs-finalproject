@@ -1,0 +1,56 @@
+#!/bin/sh
+# Verifica documentación y arquitectura antes de cada commit.
+# Se activa con:  git config core.hooksPath .githooks
+# Para saltearlo puntualmente:  git commit --no-verify
+
+root=$(git rev-parse --show-toplevel)
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+status=0
+
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "pre-commit: python3 no está disponible, se omiten las verificaciones."
+    exit 0
+fi
+
+# Los verificadores tienen que ver lo que se va a commitear, no el árbol de
+# trabajo: si no, un cambio sin agregar al índice puede hacer pasar —o fallar—
+# un commit que no lo contiene. Se materializa el índice en un directorio
+# temporal y se corre ahí.
+snapshot=""
+
+cleanup() {
+    if [ -n "$snapshot" ]; then
+        rm -rf "$snapshot"
+    fi
+}
+trap cleanup EXIT
+
+run() {
+    if [ -z "$snapshot" ]; then
+        snapshot=$(mktemp -d) || exit 1
+        git -C "$root" checkout-index -a -f --prefix="$snapshot/" || {
+            echo "pre-commit: no se pudo materializar el índice; se omiten las verificaciones."
+            exit 0
+        }
+    fi
+    ( cd "$snapshot" && python3 "$1" ) || status=1
+}
+
+# Documentación: cuando cambia un .md o el propio verificador.
+if echo "$staged" | grep -qE '\.md$|^scripts/verify_docs\.py$'; then
+    run scripts/verify_docs.py
+fi
+
+# Arquitectura: cuando cambia código de backend/frontend o el propio verificador.
+if echo "$staged" | grep -qE '^(backend|frontend)/|^scripts/verify_architecture\.py$'; then
+    echo ""
+    run scripts/verify_architecture.py
+fi
+
+if [ "$status" -ne 0 ]; then
+    echo ""
+    echo "Commit cancelado: la verificación falló."
+    echo "Corregí los errores, o usá 'git commit --no-verify' si sabés lo que hacés."
+fi
+
+exit "$status"

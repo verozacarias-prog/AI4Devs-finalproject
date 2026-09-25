@@ -1,0 +1,78 @@
+# Calidad de la documentación. Lleva a CI lo que el hook de .githooks/pre-commit
+# corre en local, para que no dependa de que cada clon configure core.hooksPath
+# ni de que nadie use --no-verify.
+name: Documentación — calidad
+
+on:
+  # El repositorio es un fork del repo del curso y la entrega va como pull
+  # request al upstream. En un pull request contra otro repositorio, GitHub
+  # ejecuta los workflows del repositorio base, no los de este, así que el
+  # disparador que de verdad sirve acá es el push a la rama de trabajo.
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+  schedule:
+    # Los enlaces externos se rompen sin que nadie toque la documentación.
+    - cron: '0 9 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  verificadores:
+    name: Verificadores del proyecto
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Convenciones de documentación
+        run: python3 scripts/verify_docs.py
+      - name: Regla de dependencia hexagonal
+        run: python3 scripts/verify_architecture.py
+
+  markdown:
+    name: Formato Markdown
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: markdownlint
+        # La configuración, incluidas las exclusiones, está en .markdownlint-cli2.yaml.
+        uses: DavidAnson/markdownlint-cli2-action@v20
+
+  portal:
+    name: El portal compila y llms.txt está al día
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci
+        working-directory: site
+      - run: npm run build
+        working-directory: site
+      - name: llms.txt se regenera sin diferencias
+        # Está versionado porque un agente que clona el repositorio no ve el
+        # sitio. Si docs/ cambió y no se regeneró, acá se nota.
+        run: git diff --exit-code -- llms.txt
+
+  enlaces:
+    name: Enlaces externos
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: lychee
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --config .lychee.toml --no-progress './**/*.md'
+          fail: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
