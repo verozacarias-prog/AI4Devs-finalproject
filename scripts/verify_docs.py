@@ -16,6 +16,7 @@ import os
 import re
 import sys
 import unicodedata
+from concurrent.futures import ProcessPoolExecutor
 from difflib import SequenceMatcher
 
 README = 'README.md'
@@ -169,28 +170,55 @@ def check_duplicates(files):
             seen.setdefault(key, f)
 
     corpus = {f: sentences(f) for f in files}
-    for a, b in itertools.combinations(files, 2):
-        for x in corpus[a]:
-            for y in corpus[b]:
-                # real_quick_ratio() y quick_ratio() son cotas superiores baratas de
-                # ratio(): si no llegan al umbral más bajo, ratio() tampoco. Descartar
-                # antes no cambia lo que se detecta, solo evita el cálculo caro.
-                matcher = SequenceMatcher(None, x, y)
-                if matcher.real_quick_ratio() < SIM_ADR or matcher.quick_ratio() < SIM_ADR:
-                    continue
-                ratio = matcher.ratio()
-                if is_adr(a) or is_adr(b):
-                    # §8.6: un ADR puede repetir para ser autosuficiente, pero un
-                    # documento vivo no puede repetir lo que dice un ADR.
-                    if ratio >= SIM_ADR:
-                        warn('doc y ADR comparten texto (%.2f): %s y %s\n'
-                             '        esperable si el ADR repite para ser autosuficiente (§8.6);\n'
-                             '        revisar que no sea el documento repitiendo el porqué del ADR\n'
-                             '        -> %.85s...' % (ratio, a, b, x))
-                elif ratio >= SIM_ERROR:
-                    fail('texto duplicado (%.2f) entre %s y %s -> %.70s...' % (ratio, a, b, x))
-                elif ratio >= SIM_WARN:
-                    warn('texto parecido (%.2f) entre %s y %s -> %.70s...' % (ratio, a, b, x))
+    jobs = [(corpus[a], corpus[b]) for a, b in itertools.combinations(files, 2)]
+    # Cada par de archivos es independiente: se reparten entre los núcleos. El
+    # costo crece con el cuadrado de la cantidad de frases.
+    with ProcessPoolExecutor() as pool:
+        results = list(pool.map(_similar_sentences, jobs, chunksize=8))
+    for (a, b), found in zip(itertools.combinations(files, 2), results):
+        for x, ratio in found:
+            if is_adr(a) or is_adr(b):
+                # §8.6: un ADR puede repetir para ser autosuficiente, pero un
+                # documento vivo no puede repetir lo que dice un ADR.
+                warn('doc y ADR comparten texto (%.2f): %s y %s\n'
+                     '        esperable si el ADR repite para ser autosuficiente (§8.6);\n'
+                     '        revisar que no sea el documento repitiendo el porqué del ADR\n'
+                     '        -> %.85s...' % (ratio, a, b, x))
+            elif ratio >= SIM_ERROR:
+                fail('texto duplicado (%.2f) entre %s y %s -> %.70s...' % (ratio, a, b, x))
+            elif ratio >= SIM_WARN:
+                warn('texto parecido (%.2f) entre %s y %s -> %.70s...' % (ratio, a, b, x))
+
+
+def _similar_sentences(job):
+    """Frases de un par de archivos con ratio() >= SIM_ADR, el umbral más bajo.
+
+    Devuelve (frase, ratio) en el mismo orden en que las recorría el bucle anidado,
+    para que los avisos salgan igual. Los descartes previos son cotas superiores de
+    ratio(): si no llegan al umbral, ratio() tampoco, así que no cambian lo que se
+    detecta, solo evitan el cálculo caro.
+    """
+    xs, ys = job
+    matchers = []
+    for y in ys:
+        # set_seq2 indexa la frase una vez; reusarla evita reindexarla por cada x.
+        matcher = SequenceMatcher(None)
+        matcher.set_seq2(y)
+        matchers.append((len(y), matcher))
+    found = []
+    for x in xs:
+        lx = len(x)
+        for ly, matcher in matchers:
+            # La misma cota que real_quick_ratio(), sin tocar el matcher.
+            if 2.0 * min(lx, ly) / (lx + ly) < SIM_ADR:
+                continue
+            matcher.set_seq1(x)
+            if matcher.quick_ratio() < SIM_ADR:
+                continue
+            ratio = matcher.ratio()
+            if ratio >= SIM_ADR:
+                found.append((x, ratio))
+    return found
 
 
 # --- 4. bloques de código y Mermaid completos -----------------------------------
