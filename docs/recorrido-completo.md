@@ -150,16 +150,20 @@ sequenceDiagram
     end
     S->>DB: SQL, cerca del inicio y todavía en draft:<br/>INSERT OUTBOUND_MESSAGE, plantilla Período sin confirmar
     W->>M: HTTPS envía la plantilla, al dueño si es familiar
-    M->>U: ingreso estimado, topes y enlace al dashboard
-    alt Confirma tal cual por WhatsApp
-        U->>M: "confirmo"
+    M->>U: ingreso estimado, topes, montos de las reglas<br/>variables del período y enlace al dashboard
+    alt Confirma por WhatsApp
+        U->>M: "el alquiler es 850.356, la luz no sé, lo demás confirmado"
         Note over W,DB: Entra por el webhook como cualquier mensaje (§ 5)
-        W->>DB: SQL UPDATE BUDGET_PERIOD status = confirmed
+        rect rgb(240, 246, 252)
+            Note over W,DB: Una sola transacción SQL
+            W->>DB: UPDATE BUDGET_PERIOD status = confirmed
+            W->>DB: UPDATE RECURRING_RULE amount y amount_confirmed_until<br/>de las reglas variables confirmadas
+        end
     else Cambia topes o fechas en el dashboard
         N->>API: HTTPS PUT /budget-periods/id con la cookie
         API->>DB: SQL valida dueño y solapes, reemplaza BUDGET_PERIOD y BUDGET
-        N->>API: HTTPS POST /budget-periods/id/confirm
-        API->>DB: SQL UPDATE BUDGET_PERIOD status = confirmed
+        N->>API: HTTPS POST /budget-periods/id/confirm<br/>con los montos de las reglas variables
+        API->>DB: SQL UPDATE BUDGET_PERIOD y RECURRING_RULE
     end
     Note over U,DB: Si empieza sin confirmar, la pregunta del primer<br/>pendiente ofrece confirmar el borrador en el mismo mensaje
 ```
@@ -232,13 +236,13 @@ sequenceDiagram
     actor U as Usuario
 
     S->>DB: SQL lee RECURRING_RULE activas, sin borrar,<br/>con next_execution hasta hoy y cuenta que no es tarjeta
-    alt Hay período confirmado del dueño y la moneda coincide
+    alt Período confirmado, moneda que coincide y monto fijo<br/>o variable confirmado hasta esa fecha
         rect rgb(240, 246, 252)
             Note over S,DB: Una sola transacción SQL
             S->>DB: INSERT TRANSACTION source automatic,<br/>único por regla y ocurrencia
             S->>DB: UPDATE RECURRING_RULE next_execution<br/>y generated_occurrences
         end
-    else Sin período confirmado, o hay que convertir moneda
+    else Sin período confirmado, moneda a convertir,<br/>o monto variable sin confirmar
         rect rgb(240, 246, 252)
             Note over S,DB: Una sola transacción SQL
             S->>DB: INSERT PENDING_TRANSACTION sin vencimiento
@@ -246,7 +250,7 @@ sequenceDiagram
             S->>DB: INSERT OUTBOUND_MESSAGE, plantilla<br/>Recurrente o cuota por confirmar
         end
         W->>M: HTTPS envía la plantilla
-        M->>U: "Se generó el alquiler, ¿lo confirmás?"
+        M->>U: "Hoy vence la luz. El mes pasado fueron $38.700.<br/>¿Es el mismo monto o cambió?"
     end
 ```
 
@@ -267,13 +271,15 @@ sequenceDiagram
     rect rgb(240, 246, 252)
         Note over S,DB: Una sola transacción SQL
         S->>DB: UPDATE CARD_STATEMENT closed
-        S->>DB: INSERT TRANSACTION por cada ocurrencia del resumen,<br/>con fecha de vencimiento, o PENDING_TRANSACTION
+        S->>DB: INSERT TRANSACTION por cada ocurrencia del resumen,<br/>con fecha de vencimiento, o PENDING_TRANSACTION<br/>si es variable sin confirmar, sin avisar
         S->>DB: UPDATE RECURRING_RULE de cada compra
-        S->>DB: INSERT OUTBOUND_MESSAGE, plantilla Conciliación del resumen
     end
+    Note over S,DB: Unos días después del cierre, 3 por defecto
+    S->>DB: SQL INSERT OUTBOUND_MESSAGE, plantilla Conciliación del resumen
     W->>M: HTTPS envía la plantilla
-    M->>U: "¿Cuál es el total a pagar de tu resumen?"
-    U->>M: "184.300"
+    M->>U: "Spotify: ¿$4.058 o cambió?<br/>¿Cuál es el total a pagar de tu resumen?"
+    U->>M: "Spotify 4.890, el total es 184.300"
+    W->>DB: SQL promueve la ocurrencia de Spotify a TRANSACTION
     Note over W,DB: Entra por el webhook como cualquier mensaje (§ 5)
     W->>DB: SQL compara con la deuda del próximo vencimiento
     W->>DB: SQL INSERT PENDING_TRANSACTION con el ajuste

@@ -87,7 +87,12 @@ está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual
 - `PUT /budget-periods/{period_id}` reemplaza el contenido de un borrador: fechas, moneda,
   ingreso estimado y topes. Un período confirmado responde `409`.
 - `POST /budget-periods/{period_id}/confirm` lo pasa a `confirmed`. Confirmar uno ya confirmado
-  responde `200` sin cambios.
+  responde `200` sin cambios. El cuerpo lleva, opcionalmente, los montos de las reglas
+  recurrentes de monto variable que vencen en el período. Las que no van en la lista quedan sin
+  confirmar y se preguntan al vencer
+  ([reglas de dominio § 8](reglas-de-dominio.md#8-movimientos-recurrentes-la-excepción-a-la-confirmación)).
+  `GET /budget-periods` devuelve esas reglas con el último monto confirmado, para que la pantalla
+  las muestre.
 
 Validaciones, en este orden:
 
@@ -132,6 +137,22 @@ responses:
     description: Overlaps another period of the same owner, or the period is already confirmed (PUT)
   422:
     description: Invalid dates, non-positive limit or repeated category
+
+# POST /budget-periods/{period_id}/confirm
+requestBody:
+  content:
+    application/json:
+      example:
+        recurring_amounts:             # optional; variable rules due in the period
+          - recurring_rule_id: "rr-rent"
+            amount: 850356
+responses:
+  200:
+    description: Confirmed, or already confirmed; listed variable amounts are confirmed until period_end
+  404:
+    description: A listed rule is not a variable rule of this user due in the period
+  409:
+    description: Overlaps a confirmed period of the same owner
 ```
 
 ### `POST /transactions`

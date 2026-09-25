@@ -35,6 +35,7 @@
 - El período puede empezar el día que yo elija, por ejemplo el día que cobro.
 - Al confirmarlo queda activo y los movimientos pueden imputarse a él.
 - Si el período no está confirmado y su fecha de inicio se acerca, recibo un recordatorio por WhatsApp con su resumen, y puedo confirmarlo respondiendo.
+- El recordatorio lista también los gastos e ingresos recurrentes que cambian de monto, como el alquiler o la luz, con el último monto. Al confirmar, confirmo esos montos o los corrijo, y puedo dejar sin confirmar los que todavía no sé: esos me los pregunta cuando vencen.
 - Si es familiar, solo el dueño del grupo lo arma y lo confirma.
 
 *Prioridad:* Alta

@@ -131,8 +131,11 @@ inflación (could-have) reemplazará a la copia cuando exista, sin cambiar el re
 **Dónde se arma y dónde se confirma.**
 
 - **Confirmar tal cual, por WhatsApp.** El recordatorio de período sin confirmar lista el ingreso
-  estimado y los topes del borrador. Si el usuario responde que lo confirma, pasa a `confirmed`
-  sin cambios. La respuesta usa la cuota de registro.
+  estimado y los topes del borrador, y las reglas recurrentes de monto variable que vencen en el
+  período, numeradas y con su último monto (§ 8). Si el usuario responde que lo confirma, pasa a
+  `confirmed` sin cambios. Puede corregir montos de esas reglas en la misma respuesta ("el 1 es
+  850.356"), o dejar alguno sin confirmar. Los topes no se cambian por WhatsApp. La respuesta usa
+  la cuota de registro.
 - **Armar o cambiar, en el dashboard.** Crear un período, cambiar sus fechas, el ingreso estimado
   o los topes, y confirmarlo, se hace en el dashboard. Por WhatsApp no se editan topes: el
   recordatorio incluye el enlace para hacerlo.
@@ -313,6 +316,28 @@ una regla anual del 29 de febrero corre el 28 en los años que no son bisiestos.
 compra, deja de generar al llegar a esa cantidad. Sin cantidad, sigue hasta que el usuario la
 pausa o la borra.
 
+**El monto de una regla es fijo o variable.** Al dar de alta una regla sin fin, el asistente
+pregunta si el monto es siempre el mismo, y la regla queda marcada como fija o variable. El
+usuario puede cambiar la marca después. Una regla con fin, como las cuotas de una compra con
+tarjeta o de un préstamo, es siempre fija. Una regla fija genera su movimiento completo en cada
+ciclo, sin preguntar. Una regla variable, como el alquiler que se ajusta por un índice, la luz o
+la jubilación, solo genera su movimiento sin preguntar si el monto de ese ciclo ya está
+confirmado. Un monto se confirma en uno de dos momentos:
+
+1. **Al armar el presupuesto.** El borrador de cada período lista las reglas variables que
+   vencen en él, con el último monto confirmado (§ 3). Confirmar el período confirma esos montos
+   tal como se listaron, o con los que el usuario corrija en la respuesta. El usuario puede
+   dejar alguno sin confirmar si todavía no lo sabe: "la luz todavía no sé". La regla guarda el
+   monto confirmado y hasta qué fecha vale, que es el fin de ese período.
+2. **Al vencer.** Una ocurrencia de una regla variable cuyo monto no quedó confirmado para su
+   fecha no se genera como movimiento: queda pendiente, con todo completo salvo el monto y con
+   el último monto confirmado como sugerencia. El asistente pregunta si es el mismo o cambió.
+   Sigue el mismo camino que el pendiente sin período: no vence y se recuerda cada 3 días.
+
+La sugerencia es siempre el último monto que el usuario confirmó, no el del alta de la regla.
+Cuando exista la carga por email (could-have), la factura detectada completa el monto de ese
+pendiente, y el asistente pide confirmarlo igual que cualquier monto.
+
 **Pausar no es borrar.** Una regla pausada deja de generar y se puede reanudar. Una regla
 borrada queda marcada con quién y cuándo, y no genera más; lo que ya generó sigue siendo
 movimientos comunes, que se borran uno por uno.
@@ -350,6 +375,11 @@ por su cuenta, porque ninguna se aplica sin que el usuario vea el resultado (§ 
 `PENDING_TRANSACTION` con todo completo salvo la cotización del presupuesto, con el valor
 sugerido a la vista, y sigue el mismo camino que el pendiente sin período: no vence y se recuerda
 cada 3 días.
+
+**Si el monto es variable y no está confirmado, el recurrente también queda pendiente.** Es el
+tercer caso en que el motor no genera el movimiento completo. La regla está arriba, en "El monto
+de una regla es fijo o variable". Un mismo pendiente puede esperar más de un dato, por ejemplo el
+monto y la confirmación del período, y se pregunta todo junto.
 
 Ver también: [1.2, movimientos recurrentes](01-producto.md#12-características-y-funcionalidades-principales) · [RECURRING_RULE en 3.2](03-modelo-de-datos.md#recurring_rule) · [restricción XOR en 3.2](03-modelo-de-datos.md#recurring_rule).
 
@@ -492,8 +522,8 @@ Las que hacen falta son:
 | Alerta de presupuesto | Utilidad | Al pasar un umbral |
 | Pendientes sin confirmar | Utilidad | Antes de vencer, o cada 3 días si son de un recurrente |
 | Período sin confirmar | Utilidad | Cerca del inicio de un período que sigue en `draft`: lista su ingreso y sus topes, y se confirma respondiendo. En un período familiar, solo al dueño |
-| Recurrente o cuota por confirmar | Utilidad | Cuando un recurrente o una cuota de tarjeta no encuentra período confirmado, o necesita que el usuario confirme la cotización |
-| Conciliación del resumen | Utilidad | Al cerrar un resumen de tarjeta: pide el total del banco y recomienda revisar los consumos |
+| Recurrente o cuota por confirmar | Utilidad | Cuando un recurrente o una cuota de tarjeta no encuentra período confirmado, necesita que el usuario confirme la cotización, o es de monto variable y su monto no está confirmado. Las ocurrencias variables de una tarjeta no usan esta plantilla: se preguntan en la conciliación |
+| Conciliación del resumen | Utilidad | Unos días después del cierre de un resumen de tarjeta: pide los montos de las suscripciones variables sin confirmar y el total del banco, y recomienda revisar los consumos |
 | Saldos del mes | Utilidad | Al terminar cada mes de presupuesto: muestra el saldo de cada cuenta y pregunta si coincide con el real |
 
 Ver también: [HU6](05-historias-de-usuario.md) · [APP_USER y FINANCIAL_PROFILE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [OUTBOUND_MESSAGE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
@@ -566,7 +596,10 @@ por cada ocurrencia de las reglas de esa tarjeta que entra en él, un gasto sobr
 tarjeta con fecha igual al vencimiento, imputado al período confirmado de ese dueño que cubre
 esa fecha. Si ese período no está confirmado, o si la moneda de la tarjeta no es la del período,
 la ocurrencia queda pendiente igual que la de cualquier regla recurrente (§ 8): no vence y se
-recuerda cada 3 días. Una regla genera como mucho un movimiento, o un pendiente, por ocurrencia,
+recuerda cada 3 días. Si la regla es de monto variable, como una suscripción que sube de precio,
+y su monto no quedó confirmado al armar el presupuesto, la ocurrencia también queda pendiente,
+pero el cierre no avisa: se pregunta en la conciliación, donde el usuario tiene el resumen con el
+precio real. Una regla genera como mucho un movimiento, o un pendiente, por ocurrencia,
 y una regla borrada no genera más (§ 2).
 
 **Resúmenes.** Las fechas de cierre y vencimiento de cada resumen se generan a partir de los días
@@ -578,16 +611,23 @@ saldo en dólares con pesos, la transferencia tiene un monto en cada moneda.
 
 **Cada resumen se concilia contra el total del banco.** Un resumen trae cargos que no salen de
 ninguna compra: intereses por no haber pagado el total, impuestos que cambian mes a mes,
-percepciones y devoluciones. Platita no los calcula. Al cerrar un resumen, el asistente pregunta
-el total a pagar que figura en el resumen del banco y lo compara con lo que Platita tiene
-pendiente de pago en esa tarjeta: la deuda del próximo vencimiento más el saldo vencido que se
+percepciones y devoluciones. Platita no los calcula. El banco publica el resumen unos días
+después del cierre, así que el asistente no pregunta el día del cierre: pregunta unos días
+después, cuando el usuario ya puede tenerlo. La demora es configuración, con 3 días por
+defecto. En ese mensaje pide primero los montos de las ocurrencias variables del resumen que
+quedaron sin confirmar, numeradas y con su último monto, y después el total a pagar que figura
+en el resumen del banco. Una respuesta general, como "todo igual, el total es 184.300", confirma
+los montos sugeridos, igual que en un lote (§ 5). Recién con esos montos confirmados, compara el
+total con lo que Platita tiene pendiente de pago en esa tarjeta: la deuda del próximo vencimiento más el saldo vencido que se
 arrastra. La diferencia se registra como un solo movimiento de ajuste sobre la tarjeta, imputado
 al período del vencimiento y confirmado por el usuario. Si el banco cobra de más, es un gasto en
 la categoría base "Intereses, impuestos y cargos"; si cobra de menos, porque una devolución
 superó a los cargos, es un ingreso en la categoría base "Devoluciones y reintegros". Desde ahí,
 Platita coincide con el banco. Una tarjeta con saldo en pesos y en dólares son dos cuentas, y
 cada una se concilia contra su propio total. El ajuste sigue el camino de cualquier pendiente
-(§ 5): si el usuario no responde, vence, y ese resumen queda sin conciliar.
+(§ 5): si el usuario no responde, vence, y ese resumen queda sin conciliar. Las ocurrencias
+variables no vencen, porque son pendientes de una regla: se recuerdan cada 3 días hasta que el
+usuario da su monto.
 
 **Revisar los consumos del resumen.** En el mismo mensaje de la conciliación, el asistente
 recomienda revisar que no haya ningún consumo que el usuario no reconozca, y más si la

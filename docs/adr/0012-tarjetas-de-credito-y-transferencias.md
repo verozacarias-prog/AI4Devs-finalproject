@@ -69,8 +69,9 @@ presupuesto, y sin registrar dejaban mal los saldos.
    Lo comprometido a futuro, las cuotas todavía no generadas, se calcula desde las ocurrencias
    pendientes de las reglas de la tarjeta y se muestra aparte, por período, en el dashboard.
 7. **Cada resumen se concilia contra el total del banco.** Intereses, impuestos, percepciones y
-   devoluciones cambian mes a mes y Platita no los calcula. Al cerrar un resumen, el asistente
-   pide el total a pagar del resumen del banco, y la diferencia con lo que Platita tiene
+   devoluciones cambian mes a mes y Platita no los calcula. Unos días después del cierre, cuando
+   el banco ya publicó el resumen, el asistente pide los montos de las suscripciones de monto
+   variable que no se confirmaron antes y el total a pagar. La diferencia con lo que Platita tiene
    pendiente se registra como un único movimiento de ajuste, confirmado por el usuario: un gasto
    en "Intereses, impuestos y cargos" o un ingreso en "Devoluciones y reintegros". En el mismo
    mensaje, el asistente recomienda revisar que no haya consumos no reconocidos, que se registran

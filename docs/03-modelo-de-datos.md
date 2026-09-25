@@ -23,7 +23,7 @@ erDiagram
     APP_USER ||--o{ CATEGORY : "creates (custom)"
     APP_USER ||--o{ RECURRING_RULE : configures
     RECURRING_RULE ||--o{ TRANSACTION : "generates (automatic)"
-    RECURRING_RULE ||--o{ PENDING_TRANSACTION : "generates, when no confirmed period or rate"
+    RECURRING_RULE ||--o{ PENDING_TRANSACTION : "generates, when no confirmed period, rate or amount"
     BUDGET ||--o{ SENT_ALERT : "was alerted"
     APP_USER ||--o| FINANCIAL_PROFILE : "describes"
     APP_USER ||--o{ LOGIN_CODE : "requests"
@@ -323,7 +323,9 @@ erDiagram
         uuid account_id FK "NOT NULL — defined once, at setup"
         uuid budget_user_id FK "NULLABLE — budget owner: individual; CHECK equal to user_id"
         uuid budget_family_group_id FK "NULLABLE — budget owner: family"
-        decimal amount "NUMERIC(20,2), NOT NULL, CHECK (amount > 0) — copied to each generated transaction; for a card purchase, the installment"
+        decimal amount "NUMERIC(20,2), NOT NULL, CHECK (amount > 0) — copied to each generated transaction; for a card purchase, the installment; for a variable rule, the last confirmed amount"
+        boolean amount_varies "NOT NULL, DEFAULT FALSE — true: each cycle's amount needs confirmation; only when occurrences is null"
+        date amount_confirmed_until "NULLABLE — last date covered by the confirmed amount of a variable rule; only when amount_varies"
         string currency "NOT NULL, FK to CURRENCY"
         string description "NULLABLE, e.g. 'Netflix', 'Heladera en 6 cuotas'"
         string frequency "NOT NULL, CHECK IN ('weekly','monthly','yearly')"
@@ -347,7 +349,7 @@ de WhatsApp entrantes y salientes.
 
 ```mermaid
 erDiagram
-    RECURRING_RULE ||--o{ PENDING_TRANSACTION : "generates, when no confirmed period or rate"
+    RECURRING_RULE ||--o{ PENDING_TRANSACTION : "generates, when no confirmed period, rate or amount"
     APP_USER ||--o{ PENDING_TRANSACTION : "must complete"
     APP_USER ||--o{ PENDING_BATCH : "is asked about"
     PENDING_BATCH ||--|{ PENDING_TRANSACTION : groups
@@ -368,7 +370,7 @@ erDiagram
         string source "NOT NULL, CHECK IN ('manual','automatic')"
         uuid batch_id FK "NOT NULL, FK (batch_id, source) to PENDING_BATCH (id, source)"
         int position "NOT NULL, 1 to 10 — number shown to the user inside the batch"
-        uuid recurring_rule_id FK "NULLABLE — set when a recurring rule, or a card installment, found no confirmed period or needs a budget rate confirmed"
+        uuid recurring_rule_id FK "NULLABLE — set when a recurring rule, or a card installment, found no confirmed period, needs a budget rate confirmed, or has a variable amount not yet confirmed"
         date occurrence_date "NULLABLE — the rule's scheduled date for this occurrence; set together with recurring_rule_id"
         string raw_input "NULLABLE — original message or email body, for audit; purged after the retention period"
         uuid resulting_transaction_id FK "NULLABLE — set once promoted, when intent = 'transaction'"
@@ -606,13 +608,14 @@ Ver también, en otra tabla: [la marca de edición y el borrado lógico, en TRAN
 
 ##### RECURRING_RULE
 
-Regla que el usuario configura una vez (ej. alquiler, una suscripción, el sueldo, una compra con tarjeta en cuotas), de gasto o de ingreso según `type`, y que el sistema ejecuta sola en cada ciclo según `frequency`, generando la `TRANSACTION` correspondiente sin intervención manual. La regla define desde el alta todo lo que un movimiento necesita, que es lo que le permite no volver a preguntar mes a mes (ver [reglas de dominio § 8](reglas-de-dominio.md#8-movimientos-recurrentes-la-excepción-a-la-confirmación)). Guarda el dueño y no un `budget_period_id` concreto porque la regla vive a lo largo de muchos períodos: en cada ejecución se resuelve el período de ese dueño que cubre la fecha. `next_execution` es lo que consulta el proceso periódico para saber qué reglas ejecutar hoy; `active` permite pausarla sin borrar el historial de lo ya generado. `occurrences` le pone un final: una compra en 6 cuotas es una regla mensual sobre la tarjeta, con el monto de la cuota y `occurrences = 6`, y una compra en un pago tiene `occurrences = 1`. Si la cuenta es una tarjeta, cada ocurrencia se genera al cerrar el resumen que la incluye, con la fecha de vencimiento ([reglas de dominio § 13](reglas-de-dominio.md#13-tarjetas-de-crédito-y-transferencias)). Lo comprometido a futuro son las ocurrencias que le quedan a una regla con fin, como las cuotas de una tarjeta o de un préstamo. El fundamento está en el [ADR 0012](adr/0012-tarjetas-de-credito-y-transferencias.md).
+Regla que el usuario configura una vez (ej. alquiler, una suscripción, el sueldo, una compra con tarjeta en cuotas), de gasto o de ingreso según `type`, y que el sistema ejecuta sola en cada ciclo según `frequency`, generando la `TRANSACTION` correspondiente sin intervención manual. La regla define desde el alta todo lo que un movimiento necesita, que es lo que le permite no volver a preguntar mes a mes (ver [reglas de dominio § 8](reglas-de-dominio.md#8-movimientos-recurrentes-la-excepción-a-la-confirmación)). Guarda el dueño y no un `budget_period_id` concreto porque la regla vive a lo largo de muchos períodos: en cada ejecución se resuelve el período de ese dueño que cubre la fecha. `next_execution` es lo que consulta el proceso periódico para saber qué reglas ejecutar hoy; `active` permite pausarla sin borrar el historial de lo ya generado. `occurrences` le pone un final: una compra en 6 cuotas es una regla mensual sobre la tarjeta, con el monto de la cuota y `occurrences = 6`, y una compra en un pago tiene `occurrences = 1`. `amount_varies` marca una regla cuyo monto cambia de un ciclo a otro, como el alquiler indexado o la luz: `amount` guarda entonces el último monto confirmado y `amount_confirmed_until`, hasta qué fecha vale. Una ocurrencia posterior a esa fecha queda pendiente de su monto en vez de generarse ([reglas de dominio § 8](reglas-de-dominio.md#8-movimientos-recurrentes-la-excepción-a-la-confirmación)). Si la cuenta es una tarjeta, cada ocurrencia se genera al cerrar el resumen que la incluye, con la fecha de vencimiento ([reglas de dominio § 13](reglas-de-dominio.md#13-tarjetas-de-crédito-y-transferencias)). Lo comprometido a futuro son las ocurrencias que le quedan a una regla con fin, como las cuotas de una tarjeta o de un préstamo. El fundamento está en el [ADR 0012](adr/0012-tarjetas-de-credito-y-transferencias.md).
 
 **Restricciones:**
 
 - En `RECURRING_RULE`, exactamente uno de `budget_user_id` / `budget_family_group_id` debe ser no nulo (`CHECK`), por el mismo criterio que en `BUDGET_PERIOD`. `amount > 0` (`CHECK`), igual que en `TRANSACTION`: el monto de la regla se copia a cada movimiento que genera, así que una regla con monto cero o negativo no podría generar ninguno.
 - En `RECURRING_RULE`, `budget_user_id` es nulo o igual a `user_id` (`CHECK`): un presupuesto individual solo puede ser el propio.
 - En `RECURRING_RULE`, `generated_occurrences` va de 0 a `occurrences` cuando `occurrences` está informado (`CHECK`). El motor lo avanza en la misma transacción que genera la ocurrencia y avanza `next_execution`; al llegar a `occurrences`, la regla deja de generar. Una regla borrada o pausada tampoco genera.
+- En `RECURRING_RULE`, una regla con fin es de monto fijo: `amount_varies` solo puede ser verdadero si `occurrences` es nulo (`CHECK`). `amount_confirmed_until` solo puede estar informado si `amount_varies` es verdadero (`CHECK`).
 - En `RECURRING_RULE`, `execution_day` depende de `frequency` (`CHECK`): de 1 a 7 si es `weekly`, de 1 a 31 si es `monthly`, y nulo si es `yearly`, porque un día solo no define una fecha anual. En una regla anual, la fecha la da `next_execution`, que el motor avanza un año por vez. Qué pasa con los días 29 a 31 en meses más cortos está en [reglas de dominio § 8](reglas-de-dominio.md#8-movimientos-recurrentes-la-excepción-a-la-confirmación).
 
 Ver también, en otra tabla: [la categoría del mismo tipo, la cuenta del mismo usuario, la unicidad por ocurrencia, la marca de edición y el borrado lógico, en TRANSACTION](#transaction).
