@@ -46,6 +46,20 @@ fecha anterior a ese día, y la base lo rechaza. Si el usuario carga un gasto an
 asistente le explica que la cuenta registra desde su alta y que ese gasto ya está reflejado en
 el saldo inicial.
 
+**Una vez por mes, el saldo se contrasta con el real.** Por más cuidado que ponga el usuario, el
+saldo de Platita se separa del real: gastos que no cargó, comisiones, rendimientos, efectivo
+usado sin registrar. Al terminar cada mes de presupuesto (el fin de su período individual
+mensual, o el fin de mes si sus períodos son quincenales o solo familiares), el asistente manda
+un solo mensaje con el saldo de cada cuenta, salvo las tarjetas, que se concilian contra su
+resumen (§ 13), y pregunta si coincide. Si no coincide, el usuario dice cuánto tiene y el
+asistente primero ayuda a encontrar lo que falta cargar, que se registra como cualquier
+movimiento. Lo que quede sin explicar se registra como un ajuste confirmado por el usuario,
+imputado al período que terminó, con su último día como fecha: un gasto en la categoría base
+"Faltantes sin identificar" si falta plata, o un ingreso en "Sobrantes sin identificar" si
+sobra, o en "Devoluciones y reintegros" si el usuario reconoce un rendimiento o un reintegro. El ajuste pesa en el
+presupuesto, porque un gasto olvidado es plata que salió. Responder no es obligatorio: sin
+respuesta, ese mes queda sin contrastar y se vuelve a preguntar al siguiente.
+
 **Borrar un movimiento.** El usuario puede borrar un gasto, un ingreso, una transferencia o una
 regla recurrente que ya confirmó, incluida una compra con tarjeta. El movimiento queda marcado
 como borrado, con quién y cuándo, y deja de contar en el saldo, en el gastado de los
@@ -436,6 +450,7 @@ Las que hacen falta son:
 | Período sin confirmar | Utilidad | Cerca del inicio de un período que sigue en `draft` |
 | Recurrente o cuota por confirmar | Utilidad | Cuando un recurrente o una cuota de tarjeta no encuentra período confirmado, o necesita que el usuario confirme la cotización |
 | Conciliación del resumen | Utilidad | Al cerrar un resumen de tarjeta: pide el total del banco y recomienda revisar los consumos |
+| Saldos del mes | Utilidad | Al terminar cada mes de presupuesto: muestra el saldo de cada cuenta y pregunta si coincide con el real |
 
 Ver también: [HU6](05-historias-de-usuario.md) · [APP_USER y FINANCIAL_PROFILE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [OUTBOUND_MESSAGE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
 
