@@ -195,7 +195,7 @@ erDiagram
         string period_type "NOT NULL, CHECK IN ('monthly','biweekly')"
         date period_start "NOT NULL"
         date period_end "NOT NULL, CHECK (period_end >= period_start)"
-        string primary_currency "NOT NULL, FK to CURRENCY, UNIQUE (id, primary_currency)"
+        string primary_currency "NOT NULL, FK to CURRENCY — fixed once confirmed"
         decimal estimated_income "NUMERIC(20,2), NOT NULL, DEFAULT 0"
         string status "NOT NULL, CHECK IN ('draft','confirmed'), DEFAULT 'draft'"
         timestamptz created_at "DEFAULT now()"
@@ -229,13 +229,8 @@ erDiagram
         uuid card_statement_id FK "NULLABLE — statement that billed this installment"
         uuid duplicate_of FK "NULLABLE, self-reference within the same user_id — set when this row matched an existing transaction from the other source"
         decimal amount "NUMERIC(20,2), NOT NULL, CHECK (amount > 0) — magnitude only, the sign lives in type"
-        string currency "NOT NULL, FK to CURRENCY"
-        decimal converted_amount "NUMERIC(20,2), NOT NULL, in the budget period's primary_currency"
-        string budget_currency "NOT NULL, FK to CURRENCY — the budget period's primary_currency; FK (budget_period_id, budget_currency)"
-        decimal budget_exchange_rate "NUMERIC(24,10), NULLABLE, > 0 — rate used to convert amount into budget_currency; null when both currencies match"
-        decimal original_amount "NUMERIC(20,2), NULLABLE, > 0 — amount as the user said it, when in another currency than the account"
-        string original_currency "NULLABLE, FK to CURRENCY — set together with original_amount and exchange_rate"
-        decimal exchange_rate "NUMERIC(24,10), NULLABLE, > 0 — rate used to convert original_amount into the account currency"
+        string currency "NOT NULL, FK to CURRENCY — the currency the movement was made in; may differ from the account's"
+        decimal exchange_rate "NUMERIC(24,10), NULLABLE, > 0 — units of the other currency per unit of currency; null only when currency, the account's and the budget period's all match"
         string type "NOT NULL, CHECK IN ('expense','income')"
         string source "NOT NULL, CHECK IN ('manual','automatic')"
         string description "NULLABLE"
@@ -292,7 +287,7 @@ erDiagram
         string name "NOT NULL, e.g. 'Galicia USD', 'Mercado Pago'; UNIQUE (user_id, lower(name))"
         string institution "NULLABLE, e.g. 'Banco Galicia', 'Balanz'"
         string type "NOT NULL, CHECK IN ('bank_account','digital_wallet','broker','cash','credit_card')"
-        string currency "NOT NULL, FK to CURRENCY"
+        string currency "NOT NULL, FK to CURRENCY — never changes"
         decimal initial_balance "NUMERIC(20,2), NOT NULL, DEFAULT 0"
         int closing_day "NULLABLE, 1 to 31 — only for credit_card"
         int due_day "NULLABLE, 1 to 31 — only for credit_card"
@@ -559,8 +554,9 @@ El "presupuesto del mes" (o de la quincena) como concepto completo — puede per
 
 - En `BUDGET_PERIOD`, exactamente uno de `user_id` / `family_group_id` debe ser no nulo (`CHECK` a nivel de base de datos) — un período de presupuesto es individual o familiar, nunca ambos ni ninguno.
 - En `BUDGET_PERIOD`, los períodos de un mismo dueño no se solapan: dos restricciones de exclusión (`EXCLUDE USING gist`), una sobre `user_id` y otra sobre `family_group_id`, cada una con el rango `[period_start, period_end]` y el operador de superposición. Requieren la extensión `btree_gist`. La regla está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio).
+- En `BUDGET_PERIOD`, `primary_currency` no cambia una vez confirmado el período: un trigger `BEFORE UPDATE` rechaza el cambio si `status` ya era `confirmed`. Un presupuesto en otra moneda es otro período. Mientras está en `draft` se puede cambiar, porque todavía no tiene movimientos.
 
-Ver también, en otra tabla: [la imputación solo a un período confirmado y la moneda del período, en TRANSACTION](#transaction).
+Ver también, en otra tabla: [la imputación solo a un período confirmado y la cotización del movimiento, en TRANSACTION](#transaction).
 
 ##### BUDGET
 
@@ -580,7 +576,7 @@ Registro de las alertas de presupuesto ya enviadas. Existe para que el proceso p
 
 ##### TRANSACTION
 
-Gasto o ingreso ya completo y válido — si está en esta tabla, tiene cuenta, categoría y período de presupuesto asignados, sin excepción (ver sus restricciones). Guarda tanto el monto original (`amount`, `currency`) como el convertido a la moneda primaria del período (`converted_amount`, con la cotización usada en `budget_exchange_rate`), y el `source` (manual o automático) para auditoría y para medir cuánto resuelve cada vía. `recurring_rule_id` distingue, dentro de los automáticos, cuáles vinieron del motor de recurrencia. `duplicate_of` es el mecanismo previsto de detección de duplicados entre carga manual y automática (criterio en [reglas de dominio § 7](reglas-de-dominio.md#7-chequeo-de-duplicados-entre-origen-manual-y-automático)). La columna existe desde el esquema inicial; la lógica llega junto con la carga por email (could-have).
+Gasto o ingreso ya completo y válido — si está en esta tabla, tiene cuenta, categoría y período de presupuesto asignados, sin excepción (ver sus restricciones). Guarda el monto en la moneda en que se hizo el movimiento (`amount`, `currency`) y, si hace falta convertir, una sola cotización (`exchange_rate`), de la que salen tanto lo que se mueve en la cuenta como lo que pesa en el presupuesto; también guarda el `source` (manual o automático) para auditoría y para medir cuánto resuelve cada vía. `recurring_rule_id` distingue, dentro de los automáticos, cuáles vinieron del motor de recurrencia. `duplicate_of` es el mecanismo previsto de detección de duplicados entre carga manual y automática (criterio en [reglas de dominio § 7](reglas-de-dominio.md#7-chequeo-de-duplicados-entre-origen-manual-y-automático)). La columna existe desde el esquema inicial; la lógica llega junto con la carga por email (could-have).
 
 **Restricciones:**
 
@@ -590,9 +586,9 @@ Gasto o ingreso ya completo y válido — si está en esta tabla, tiene cuenta, 
 - La categoría de un movimiento es del mismo tipo que el movimiento: `TRANSACTION (category_id, type)` es una clave foránea compuesta contra `CATEGORY (id, kind)`, apoyada en el `UNIQUE (id, kind)`. Los valores de `type` y de `kind` son los mismos (`expense`, `income`) para que la clave funcione. Lo mismo vale para `RECURRING_RULE (category_id, type)`: una regla de ingreso usa una categoría de ingreso.
 - En `TRANSACTION`, `UNIQUE (user_id, client_request_id)`: un pedido repetido del dashboard, con la misma `Idempotency-Key`, no crea un segundo movimiento ([la API](04-api.md)). Las filas con `client_request_id` nulo, las que no vienen del dashboard, no entran en la restricción.
 - `TRANSACTION.amount` lleva `CHECK (amount > 0)`: guarda la magnitud, nunca el signo. Si el movimiento resta o suma lo dice `type`, que es el único lugar donde vive esa distinción — un monto negativo con `type = 'expense'` sumaría al saldo en vez de restar.
-- La cuenta de un movimiento es del mismo usuario y su moneda es la de la cuenta, y la base lo impone: `TRANSACTION (account_id, user_id, currency)` es una clave foránea compuesta contra `ACCOUNT (id, user_id, currency)`, apoyada en un `UNIQUE (id, user_id, currency)` en `ACCOUNT`. Así un error al resolver una cuenta por nombre no puede imputar un gasto a la cuenta de otro usuario. Con `ON UPDATE RESTRICT`, esa misma clave impide cambiar la moneda de una cuenta que ya tiene movimientos. Lo mismo vale para `RECURRING_RULE (account_id, user_id, currency)`. Que el período familiar sea de un grupo al que el usuario pertenece, y que la categoría sea suya o del catálogo base, no se puede expresar con una clave foránea: lo valida la aplicación dentro de la misma transacción. La regla está en [reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado).
-- En `TRANSACTION`, `original_amount`, `original_currency` y `exchange_rate` van los tres nulos o los tres informados (`CHECK`), y si están informados `original_amount > 0`, `original_currency` es distinta de `currency` y `exchange_rate > 0`. Guardan el gasto tal como lo dijo el usuario cuando fue en otra moneda que la de la cuenta: el saldo usa siempre `amount`, y estas columnas son la evidencia de la conversión que el usuario confirmó.
-- La conversión a la moneda del presupuesto también queda guardada. `TRANSACTION (budget_period_id, budget_currency)` es una clave foránea compuesta contra `BUDGET_PERIOD (id, primary_currency)`, apoyada en un `UNIQUE (id, primary_currency)`, así `budget_currency` es siempre la moneda del período. Si `budget_currency` es igual a `currency`, `budget_exchange_rate` es nulo y `converted_amount = amount`; si difieren, `budget_exchange_rate` es obligatorio y mayor que cero (`CHECK`). Es la cotización que el usuario vio y confirmó ([reglas de dominio § 6](reglas-de-dominio.md#6-multimoneda-y-cotización)), y la que el dashboard muestra junto al movimiento ([HU4](05-historias-de-usuario.md)).
+- La cuenta de un movimiento es del mismo usuario, y la base lo impone: `TRANSACTION (account_id, user_id)` es una clave foránea compuesta contra `ACCOUNT (id, user_id)`, apoyada en un `UNIQUE (id, user_id)` en `ACCOUNT`. Así un error al resolver una cuenta por nombre no puede imputar un gasto a la cuenta de otro usuario. En `RECURRING_RULE` la clave es `(account_id, user_id, currency)` contra `ACCOUNT (id, user_id, currency)`, porque una regla va siempre en la moneda de su cuenta. Que el período familiar sea de un grupo al que el usuario pertenece, y que la categoría sea suya o del catálogo base, no se puede expresar con una clave foránea: lo valida la aplicación dentro de la misma transacción. La regla está en [reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado).
+- **Una sola cotización por movimiento.** Intervienen tres monedas: la del movimiento (`currency`), la de su cuenta y la de su período. Un trigger `BEFORE INSERT OR UPDATE` en `TRANSACTION` lee la moneda de la cuenta y la del período, porque un `CHECK` no puede mirar otra tabla, y rechaza la fila si entre las tres hay más de dos monedas distintas, si falta `exchange_rate` cuando alguna difiere, o si viene informada cuando las tres coinciden. `exchange_rate > 0` (`CHECK`). El fundamento está en el [ADR 0011](adr/0011-cotizaciones-con-adaptador-generico-configurable.md).
+- Los montos convertidos no se guardan: se calculan con la cotización guardada y se redondean a 2 decimales fila por fila, antes de sumar. Lo que se mueve en la cuenta es `amount` si `currency` es la de la cuenta, y `ROUND(amount × exchange_rate, 2)` si no; lo que pesa en el presupuesto se calcula igual contra la moneda del período. Como la cotización queda en la fila, el cálculo da siempre lo mismo. Es la cotización que el usuario vio y confirmó ([reglas de dominio § 6](reglas-de-dominio.md#6-multimoneda-y-cotización)), y la que el dashboard muestra junto al movimiento ([HU4](05-historias-de-usuario.md)).
 - En `TRANSACTION`, `UNIQUE (recurring_rule_id, transaction_date)`: una regla recurrente genera como mucho un movimiento por fecha de ejecución. Si el proceso programado corre dos veces o se reintenta, el segundo insert choca con la clave en vez de duplicar el cargo. Las filas con `recurring_rule_id` nulo no entran en la restricción.
 - En `TRANSACTION`, `TRANSFER` y `CARD_PURCHASE`, `updated_at` y `updated_by` los fija un trigger `BEFORE UPDATE`: la hora del cambio, y el usuario que la aplicación indicó con `SET LOCAL app.actor_id`, o nulo si el cambio lo hace un proceso programado. `updated_by` informado exige `updated_at` informado (`CHECK`). No se guarda el valor anterior; la decisión está en el [ADR 0014](adr/0014-marca-de-edicion-en-movimientos.md).
 - En `TRANSACTION`, `TRANSFER` y `CARD_PURCHASE`, borrar es fijar `deleted_at`, y el mismo trigger completa `deleted_by`. `deleted_by` informado exige `deleted_at` informado (`CHECK`). El rol de la aplicación no tiene permiso de `DELETE` sobre ellas: solo el proceso de borrado de cuenta elimina filas. El fundamento está en el [ADR 0015](adr/0015-borrado-logico-de-movimientos.md).
@@ -607,9 +603,10 @@ Cuenta bancaria, billetera virtual, broker de inversión o efectivo que el usuar
 **Restricciones:**
 
 - En `ACCOUNT`, `closing_day` y `due_day` son obligatorios si y solo si `type = 'credit_card'` (`CHECK`).
+- En `ACCOUNT`, `currency` no cambia nunca: un trigger `BEFORE UPDATE` rechaza el cambio. Una cuenta en otra moneda es otra cuenta ([reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado)).
 - En `ACCOUNT`, un usuario no tiene dos cuentas con el mismo nombre, sin distinguir mayúsculas: índice único sobre `(user_id, lower(name))`. El asistente resuelve la cuenta por el nombre que el usuario menciona, y dos cuentas "Galicia" harían imposible saber a cuál se refiere ([reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado)).
 
-Ver también, en otra tabla: [la clave compuesta contra `ACCOUNT (id, user_id, currency)`, en TRANSACTION](#transaction).
+Ver también, en otra tabla: [la clave compuesta contra `ACCOUNT (id, user_id)` y la cotización del movimiento, en TRANSACTION](#transaction).
 
 ##### CARD_PURCHASE
 

@@ -43,10 +43,10 @@ compra con tarjeta corta las cuotas que faltaban generar; las ya generadas se bo
 
 **Una cuenta, una moneda.** Cada cuenta tiene una sola moneda, igual que en el banco, donde una
 cuenta en pesos y otra en dólares de la misma entidad son dos cuentas distintas. Un movimiento
-se registra siempre en la moneda de la cuenta de la que sale o a la que entra la plata:
-`TRANSACTION.currency` es igual a `ACCOUNT.currency`, sin excepción. Por eso el saldo nunca
-suma montos de monedas distintas. La moneda de una cuenta no se puede cambiar mientras tenga
-movimientos.
+puede estar en otra moneda que su cuenta, como "gasté 50 dólares con la Galicia pesos", pero el
+saldo suma cada movimiento ya convertido a la moneda de la cuenta (§ 6), así que nunca suma
+montos de monedas distintas. La moneda de una cuenta no se puede cambiar: una cuenta en otra
+moneda es otra cuenta.
 
 **Cada cuenta tiene un nombre distinto.** Un usuario no puede tener dos cuentas con el mismo
 nombre, sin distinguir mayúsculas, porque el asistente las reconoce por el nombre que el usuario
@@ -59,11 +59,11 @@ moneda del mensaje no coincide con la de la cuenta, el asistente convierte el mo
 de la cuenta con la cotización de referencia del usuario (§ 6) y le pide que confirme el valor
 convertido antes de registrar. Por ejemplo, con "gasté 50 dólares con la Galicia pesos" y una
 cotización de 1.000, responde "Serían $50.000 de Galicia pesos, ¿está bien?". El monto
-convertido es un `amount` más y, como todo monto, exige confirmación (§ 1): mientras tanto el
-movimiento queda como `PENDING_TRANSACTION`. Si el banco debitó otra cifra, el usuario la
-corrige en la respuesta y vale la suya. El movimiento guarda el monto original, su moneda y la
-cotización usada (`original_amount`, `original_currency`, `exchange_rate`), para que se sepa
-después que fue un gasto en otra moneda y con qué valor se convirtió. Si el usuario no tiene cotización de referencia
+convertido, como todo monto, exige confirmación (§ 1): mientras tanto el movimiento queda como
+`PENDING_TRANSACTION`. Si el banco debitó otra cifra, el usuario la corrige en la respuesta y
+vale la suya: la cotización pasa a ser la que resulta de su cifra. El movimiento guarda el gasto
+como se hizo, 50 dólares, y la cotización (`amount`, `currency`, `exchange_rate`); el débito en
+la cuenta se calcula con esos dos valores. Si el usuario no tiene cotización de referencia
 configurada, el asistente no inventa una: le pregunta cuánto se debitó en la moneda de la cuenta.
 
 La conversión a la moneda primaria del presupuesto (§ 6) es otra cosa: no toca el saldo de la
@@ -169,18 +169,28 @@ Ver también: [PENDING_TRANSACTION y PENDING_BATCH en 3.2](03-modelo-de-datos.md
 ## 6. Multimoneda y cotización
 
 Un presupuesto recibe movimientos en varias monedas y los convierte a su moneda primaria. La
-`TRANSACTION` guarda tanto el monto en la moneda de su cuenta (`amount`, `currency`) como el
-convertido a la moneda del presupuesto (`converted_amount`), junto con la cotización usada en
-ese paso (`budget_exchange_rate`), para que el dashboard pueda mostrarla y la conversión se
-pueda reproducir después.
+`TRANSACTION` guarda el monto en la moneda en que se hizo (`amount`, `currency`) y, si hace
+falta convertir, la cotización usada (`exchange_rate`), para que el dashboard pueda mostrarla y
+la conversión dé siempre el mismo resultado.
 
-**Dos conversiones distintas.** Hay dos momentos en que se convierte, y conviene no confundirlos:
+**Dos conversiones, una sola cotización.** Un movimiento se convierte para dos cosas distintas:
 
-1. **De la moneda que nombra el usuario a la moneda de la cuenta.** Pasa cuando dice "gasté 50
-   dólares con la Galicia pesos". Define `amount`, que es lo que mueve el saldo (§ 2).
-2. **De la moneda de la cuenta a la moneda del presupuesto.** Pasa cuando un movimiento de una
-   cuenta en dólares se imputa a un presupuesto en pesos. Define `converted_amount`, que es lo
-   que pesa en el presupuesto y no toca el saldo.
+1. **A la moneda de la cuenta**, para el saldo (§ 2). Pasa cuando el usuario dice "gasté 50
+   dólares con la Galicia pesos".
+2. **A la moneda del presupuesto**, para lo que pesa en el presupuesto, sin tocar el saldo. Pasa
+   cuando un movimiento de una cuenta en dólares se imputa a un presupuesto en pesos.
+
+Las dos usan la misma cotización, guardada en el movimiento. Alcanza con una porque un
+movimiento involucra como mucho dos monedas entre la suya, la de su cuenta y la de su período.
+Los montos convertidos no se guardan: se calculan con esa cotización y se redondean a 2
+decimales movimiento por movimiento, antes de sumar. El fundamento está en el
+[ADR 0011](adr/0011-cotizaciones-con-adaptador-generico-configurable.md).
+
+**Si hay tres monedas, se pide el monto en la de la cuenta.** Un gasto de 30 euros con una
+cuenta en dólares, imputado a un presupuesto en pesos, necesitaría dos cotizaciones. En ese caso
+el asistente pregunta cuánto se debitó en la moneda de la cuenta, y el movimiento se registra
+en esa moneda, con la cotización al presupuesto. El usuario tiene que dar ese dato de todos
+modos, porque sin él no se sabe cuánto bajó la cuenta.
 
 **La cotización se sugiere y el usuario confirma.** En las dos conversiones el asistente propone
 el valor con la última cotización guardada de la fuente de referencia del usuario
@@ -195,8 +205,8 @@ en el [ADR 0011](adr/0011-cotizaciones-con-adaptador-generico-configurable.md).
 **Sin cotización, se pregunta.** Si el usuario no tiene fuente de referencia, porque su país
 todavía no tiene una configurada, o si la última cotización guardada es demasiado vieja, el
 asistente no propone un valor: pregunta cuánto se debitó en la moneda de la cuenta, o cuánto
-representa en la moneda del presupuesto. Lo que el usuario responde queda como la cotización
-usada.
+representa en la moneda del presupuesto. De lo que el usuario responde sale la cotización
+usada, y un test verifica que recalcular con ella devuelve la cifra que dio.
 
 Ver: [1.2, soporte multimoneda](01-producto.md#12-características-y-funcionalidades-principales) · [TRANSACTION en 3.2](03-modelo-de-datos.md#transaction) · [HU4](05-historias-de-usuario.md).
 
