@@ -61,14 +61,20 @@ presupuesto, y sin registrar dejaban mal los saldos.
 5. **Transferencias entre cuentas propias.** Nueva entidad `TRANSFER`, con cuenta de origen y de
    destino y un monto en la moneda de cada una. No es un gasto ni un ingreso: no entra en ningún
    presupuesto, solo mueve saldos. Pagar el resumen es una transferencia de una cuenta bancaria a
-   la tarjeta. Una transferencia entre monedas distintas guarda los dos montos, y el recargo
-   impositivo de pagar dólares con pesos es un gasto separado, confirmado por el usuario.
+   la tarjeta. Una transferencia entre monedas distintas guarda los dos montos.
 6. **El saldo de una tarjeta es lo vencido y no pagado**, como en cualquier cuenta, donde el saldo
    cuenta solo lo que ya ocurrió: las cuotas ya vencidas menos los pagos recibidos. Lo facturado
    en un resumen que todavía no venció es deuda, no saldo, y se muestra aparte como lo que hay
    que pagar en el próximo vencimiento. Un pago cancela primero lo vencido y después esa deuda.
    Lo comprometido a futuro, las cuotas todavía no generadas, se calcula desde las ocurrencias
    pendientes de las reglas de la tarjeta y se muestra aparte, por período, en el dashboard.
+7. **Cada resumen se concilia contra el total del banco.** Intereses, impuestos, percepciones y
+   devoluciones cambian mes a mes y Platita no los calcula. Al cerrar un resumen, el asistente
+   pide el total a pagar del resumen del banco, y la diferencia con lo que Platita tiene
+   pendiente se registra como un único movimiento de ajuste, confirmado por el usuario: un gasto
+   en "Intereses, impuestos y cargos" o un ingreso en "Devoluciones y reintegros". En el mismo
+   mensaje, el asistente recomienda revisar que no haya consumos no reconocidos, que se registran
+   aparte y no dentro del ajuste.
 
 ## Consecuencias
 
@@ -101,6 +107,9 @@ presupuesto, y sin registrar dejaban mal los saldos.
   usuario corrige ese movimiento.
 - Las fechas de cierre y vencimiento son fijas por defecto y el usuario tiene que corregirlas
   cuando el banco las corre. Si no lo hace, una cuota puede caer en el período equivocado.
+- El ajuste de la conciliación es un solo número: no distingue cuánto fue interés y cuánto
+  impuesto. Si el usuario no responde, ese resumen queda sin conciliar y Platita no coincide con
+  el banco hasta el resumen siguiente.
 
 ## Alternativas descartadas
 
@@ -113,6 +122,10 @@ presupuesto, y sin registrar dejaban mal los saldos.
   contrastar lo pagado con lo gastado.
 - **Registrar solo el pago del resumen.** Pierde la categoría de cada compra, así que el
   presupuesto no sabría en qué se gastó.
+- **Modelar cada cargo del resumen**, con sus alícuotas: intereses, impuestos, sellos, IVA,
+  percepciones y devoluciones. Cambian mes a mes y por decisión del fisco, así que el modelo
+  quedaría siempre desactualizado. La conciliación contra el total los captura a todos sin
+  conocer ninguno.
 - **La compra con tarjeta como entidad propia**, `CARD_PURCHASE`, con el total y la cantidad de
   cuotas, que repartía en partes iguales. Era la decisión anterior. Duplicaba lo que ya hace una
   regla recurrente, sumaba una tabla y cuatro columnas de enlace en los movimientos y en los

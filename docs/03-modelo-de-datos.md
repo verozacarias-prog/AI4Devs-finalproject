@@ -292,7 +292,7 @@ erDiagram
         uuid account_id FK "NOT NULL — a credit_card account"
         date closing_date "NOT NULL, UNIQUE (account_id, closing_date)"
         date due_date "NOT NULL, CHECK (due_date > closing_date), UNIQUE (account_id, due_date)"
-        string status "NOT NULL, CHECK IN ('open','closed'), DEFAULT 'open'"
+        string status "NOT NULL, CHECK IN ('open','closed','reconciled'), DEFAULT 'open' — reconciled once adjusted against the bank's total"
     }
 
     TRANSFER {
@@ -587,7 +587,7 @@ Ver también, en otra tabla: [la clave compuesta contra `ACCOUNT (id, user_id)` 
 
 ##### CARD_STATEMENT
 
-Cada resumen de una tarjeta. Sus fechas se generan a partir de `closing_day` y `due_day` de la cuenta, y el usuario puede corregirlas mientras el resumen está abierto. Al cerrarse, el proceso programado genera las ocurrencias de las reglas recurrentes de esa tarjeta que entran en él, incluidas las cuotas de las compras.
+Cada resumen de una tarjeta. Sus fechas se generan a partir de `closing_day` y `due_day` de la cuenta, y el usuario puede corregirlas mientras el resumen está abierto. Al cerrarse, el proceso programado genera las ocurrencias de las reglas recurrentes de esa tarjeta que entran en él, incluidas las cuotas de las compras. Después se concilia contra el total del resumen del banco: la diferencia, que son intereses, impuestos, cargos o devoluciones, se registra como un movimiento de ajuste, y el resumen pasa a `reconciled` para no volver a preguntar ([reglas de dominio § 13](reglas-de-dominio.md#13-tarjetas-de-crédito-y-transferencias)).
 
 **Restricciones:**
 

@@ -419,6 +419,7 @@ Las que hacen falta son:
 | Pendientes sin confirmar | Utilidad | Antes de vencer, o cada 3 días si son de un recurrente |
 | Período sin confirmar | Utilidad | Cerca del inicio de un período que sigue en `draft` |
 | Recurrente o cuota por confirmar | Utilidad | Cuando un recurrente o una cuota de tarjeta no encuentra período confirmado, o necesita que el usuario confirme la cotización |
+| Conciliación del resumen | Utilidad | Al cerrar un resumen de tarjeta: pide el total del banco y recomienda revisar los consumos |
 
 Ver también: [HU6](05-historias-de-usuario.md) · [APP_USER y FINANCIAL_PROFILE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [OUTBOUND_MESSAGE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
 
@@ -498,8 +499,26 @@ fijos de la tarjeta, y el usuario puede corregirlas para un resumen puntual, por
 veces las corren. Un resumen ya cerrado no se corrige.
 
 **Pagar el resumen es una transferencia** de una cuenta del usuario a la tarjeta. Si paga el
-saldo en dólares con pesos, la transferencia tiene un monto en cada moneda, y la percepción
-impositiva que cobre el banco se registra aparte como un gasto que el usuario confirma.
+saldo en dólares con pesos, la transferencia tiene un monto en cada moneda.
+
+**Cada resumen se concilia contra el total del banco.** Un resumen trae cargos que no salen de
+ninguna compra: intereses por no haber pagado el total, impuestos que cambian mes a mes,
+percepciones y devoluciones. Platita no los calcula. Al cerrar un resumen, el asistente pregunta
+el total a pagar que figura en el resumen del banco y lo compara con lo que Platita tiene
+pendiente de pago en esa tarjeta: la deuda del próximo vencimiento más el saldo vencido que se
+arrastra. La diferencia se registra como un solo movimiento de ajuste sobre la tarjeta, imputado
+al período del vencimiento y confirmado por el usuario. Si el banco cobra de más, es un gasto en
+la categoría base "Intereses, impuestos y cargos"; si cobra de menos, porque una devolución
+superó a los cargos, es un ingreso en la categoría base "Devoluciones y reintegros". Desde ahí,
+Platita coincide con el banco. Una tarjeta con saldo en pesos y en dólares son dos cuentas, y
+cada una se concilia contra su propio total. El ajuste sigue el camino de cualquier pendiente
+(§ 5): si el usuario no responde, vence, y ese resumen queda sin conciliar.
+
+**Revisar los consumos del resumen.** En el mismo mensaje de la conciliación, el asistente
+recomienda revisar que no haya ningún consumo que el usuario no reconozca, y más si la
+diferencia es mayor de lo esperable. Un consumo no reconocido no va al ajuste: se registra
+aparte, como cualquier gasto, para que quede visible mientras el usuario lo desconoce ante el
+banco. Si el banco lo revierte, la devolución aparece en la conciliación de un resumen siguiente.
 
 **Saldo, deuda y comprometido.** Como en cualquier cuenta (§ 2), el saldo de la tarjeta cuenta
 solo lo que ya ocurrió: los gastos ya vencidos menos los pagos recibidos. Lo facturado en un
