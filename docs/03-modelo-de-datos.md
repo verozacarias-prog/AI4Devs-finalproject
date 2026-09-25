@@ -281,7 +281,7 @@ erDiagram
         string institution "NULLABLE, e.g. 'Banco Galicia', 'Balanz'"
         string type "NOT NULL, CHECK IN ('bank_account','digital_wallet','broker','cash','credit_card')"
         string currency "NOT NULL, FK to CURRENCY — never changes"
-        decimal initial_balance "NUMERIC(20,2), NOT NULL, DEFAULT 0"
+        decimal initial_balance "NUMERIC(20,2), NOT NULL, DEFAULT 0 — the balance on the day of created_at"
         int closing_day "NULLABLE, 1 to 31 — only for credit_card"
         int due_day "NULLABLE, 1 to 31 — only for credit_card"
         timestamptz created_at "DEFAULT now()"
@@ -574,11 +574,12 @@ Gasto o ingreso ya completo y válido — si está en esta tabla, tiene cuenta, 
 
 ##### ACCOUNT
 
-Cuenta bancaria, billetera virtual, broker de inversión o efectivo que el usuario da de alta (ej. "Galicia en dólares", "Mercado Pago", "Balanz"). El **saldo no se guarda como columna**, se calcula (ver [reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado)). Si el volumen de cuentas/movimientos creciera al punto de que ese cálculo en cada consulta sea un problema de performance, se puede materializar/cachear más adelante sin cambiar el modelo, es una optimización, no un rediseño.
+Cuenta bancaria, billetera virtual, broker de inversión o efectivo que el usuario da de alta (ej. "Galicia en dólares", "Mercado Pago", "Balanz"). El **saldo no se guarda como columna**, se calcula con los movimientos con fecha hasta hoy: lo que tiene fecha futura es deuda o ingreso previsto, no saldo (ver [reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado)). Si el volumen de cuentas/movimientos creciera al punto de que ese cálculo en cada consulta sea un problema de performance, se puede materializar/cachear más adelante sin cambiar el modelo, es una optimización, no un rediseño.
 
 **Restricciones:**
 
 - En `ACCOUNT`, `closing_day` y `due_day` son obligatorios si y solo si `type = 'credit_card'` (`CHECK`).
+- Una cuenta no registra nada anterior a su alta: en `TRANSACTION` y en `TRANSFER`, la fecha no puede ser anterior al día de `created_at` de la cuenta, en la zona horaria del usuario. Un trigger `BEFORE INSERT OR UPDATE` en cada tabla lo rechaza; en `TRANSFER`, contra las dos cuentas. `initial_balance` es el saldo de ese día ([reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado)).
 - En `ACCOUNT`, `currency` no cambia nunca: un trigger `BEFORE UPDATE` rechaza el cambio. Una cuenta en otra moneda es otra cuenta ([reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado)).
 - En `ACCOUNT`, un usuario no tiene dos cuentas con el mismo nombre, sin distinguir mayúsculas: índice único sobre `(user_id, lower(name))`. El asistente resuelve la cuenta por el nombre que el usuario menciona, y dos cuentas "Galicia" harían imposible saber a cuál se refiere ([reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado)).
 

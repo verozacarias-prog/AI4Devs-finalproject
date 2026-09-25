@@ -63,10 +63,12 @@ presupuesto, y sin registrar dejaban mal los saldos.
    presupuesto, solo mueve saldos. Pagar el resumen es una transferencia de una cuenta bancaria a
    la tarjeta. Una transferencia entre monedas distintas guarda los dos montos, y el recargo
    impositivo de pagar dólares con pesos es un gasto separado, confirmado por el usuario.
-6. **El saldo de una tarjeta es lo facturado y no pagado**, igual que en el resumen del banco: las
-   cuotas generadas menos las transferencias recibidas. Lo comprometido a futuro, las cuotas
-   todavía no generadas, se calcula desde las ocurrencias pendientes de las reglas de la tarjeta
-   y se muestra aparte, por período, en el dashboard.
+6. **El saldo de una tarjeta es lo vencido y no pagado**, como en cualquier cuenta, donde el saldo
+   cuenta solo lo que ya ocurrió: las cuotas ya vencidas menos los pagos recibidos. Lo facturado
+   en un resumen que todavía no venció es deuda, no saldo, y se muestra aparte como lo que hay
+   que pagar en el próximo vencimiento. Un pago cancela primero lo vencido y después esa deuda.
+   Lo comprometido a futuro, las cuotas todavía no generadas, se calcula desde las ocurrencias
+   pendientes de las reglas de la tarjeta y se muestra aparte, por período, en el dashboard.
 
 ## Consecuencias
 
@@ -79,7 +81,8 @@ presupuesto, y sin registrar dejaban mal los saldos.
 - Reutiliza mecanismos que ya existían: la moneda por cuenta y la regla recurrente, con su dueño
   de presupuesto confirmado una vez, su unicidad por ocurrencia y sus pendientes que no vencen.
   Las compras en cuotas y los consumos recurrentes con la tarjeta siguen una sola lógica.
-- El saldo de la tarjeta coincide con el del resumen del banco, lo que permite contrastarlos.
+- La deuda del próximo vencimiento coincide con el total del resumen del banco, lo que permite
+  contrastarlos.
 - Las transferencias resuelven casos que no dependen de la tarjeta: el efectivo, las billeteras y
   la compra de dólares.
 

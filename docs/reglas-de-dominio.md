@@ -34,6 +34,18 @@ Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-princip
 
 El **saldo no se guarda como columna**: se calcula como `initial_balance` más la suma de ingresos menos egresos de sus `TRANSACTION` —excluidas las marcadas como duplicado, ver § 7, y las borradas—, más las transferencias que recibe y menos las que envía (§ 13), así nunca queda desincronizado de los movimientos reales.
 
+**El saldo es lo que ya ocurrió.** Solo cuentan los movimientos y las transferencias con fecha
+hasta hoy, en la zona horaria del usuario. Lo registrado con fecha futura, como una cuota de
+tarjeta que vence la semana próxima, no es saldo: es una deuda o un ingreso previsto, que se
+muestra aparte y entra en el saldo el día de su fecha. El saldo a cualquier día pasado se
+calcula igual, contando hasta ese día.
+
+**Nada antes del alta de la cuenta.** El saldo inicial es el saldo de la cuenta el día en que se
+dio de alta, en la zona horaria del usuario. Un movimiento o una transferencia no puede tener
+fecha anterior a ese día, y la base lo rechaza. Si el usuario carga un gasto anterior, el
+asistente le explica que la cuenta registra desde su alta y que ese gasto ya está reflejado en
+el saldo inicial.
+
 **Borrar un movimiento.** El usuario puede borrar un gasto, un ingreso, una transferencia o una
 regla recurrente que ya confirmó, incluida una compra con tarjeta. El movimiento queda marcado
 como borrado, con quién y cuándo, y deja de contar en el saldo, en el gastado de los
@@ -361,7 +373,7 @@ versión de los términos.
    (por ejemplo, Brasil o México) se le pide que elija.
 3. Permiso para recibir avisos (ver abajo).
 4. Al menos una cuenta, con la opción de dar de alta varias en el mismo mensaje. Por cada una se
-   confirma tipo, moneda y saldo inicial.
+   confirma tipo, moneda y saldo inicial, que es el saldo de ese día.
 
 Hasta completarla, el usuario no puede registrar movimientos.
 
@@ -489,8 +501,11 @@ veces las corren. Un resumen ya cerrado no se corrige.
 saldo en dólares con pesos, la transferencia tiene un monto en cada moneda, y la percepción
 impositiva que cobre el banco se registra aparte como un gasto que el usuario confirma.
 
-**Saldo y comprometido.** El saldo de la cuenta de la tarjeta es lo facturado y no pagado, igual
-que en el resumen del banco: los gastos generados menos las transferencias recibidas. Lo
+**Saldo, deuda y comprometido.** Como en cualquier cuenta (§ 2), el saldo de la tarjeta cuenta
+solo lo que ya ocurrió: los gastos ya vencidos menos los pagos recibidos. Lo facturado en un
+resumen que todavía no venció no es saldo, es deuda: se muestra aparte como lo que hay que pagar
+en el próximo vencimiento, que es el total del resumen del banco. Un pago cancela primero lo
+vencido y después esa deuda, así que pagar antes del vencimiento la reduce en el momento. Lo
 comprometido a futuro, las ocurrencias de sus reglas todavía no generadas, se muestra aparte y
 por período en el dashboard, para que un mes cargado de cuotas no sea una sorpresa.
 
