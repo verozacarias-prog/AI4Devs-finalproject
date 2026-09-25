@@ -72,6 +72,68 @@ responses:
           used_percentage: 71.5
 ```
 
+### `GET /budget-periods`, `POST /budget-periods`, `PUT /budget-periods/{period_id}` y `POST /budget-periods/{period_id}/confirm`
+
+Armar y confirmar períodos desde el dashboard. Es configuración, no carga de movimientos. Por
+WhatsApp solo se confirma un borrador tal cual, respondiendo al recordatorio. La regla completa
+está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio).
+
+- `GET /budget-periods` lista los períodos que el usuario puede leer: los suyos, los de sus
+  grupos y, de un grupo del que salió, los que se superponen con su membresía
+  ([reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad)). Cada uno
+  trae sus topes y si el usuario puede editarlo.
+- `POST /budget-periods` crea un borrador. Sin `family_group_id` es individual. En un período
+  mensual, `period_end` es opcional y se calcula desde `period_start`.
+- `PUT /budget-periods/{period_id}` reemplaza el contenido de un borrador: fechas, moneda,
+  ingreso estimado y topes. Un período confirmado responde `409`.
+- `POST /budget-periods/{period_id}/confirm` lo pasa a `confirmed`. Confirmar uno ya confirmado
+  responde `200` sin cambios.
+
+Validaciones, en este orden:
+
+1. Un período de otro usuario, o de un grupo al que no pertenece, responde `404`.
+2. Crear, cambiar o confirmar un período familiar exige ser el dueño vigente del grupo. Un
+   miembro que no lo es recibe `403`, porque el período existe para él: lo puede leer.
+3. Un período que se superpone con otro del mismo dueño responde `409`, antes de que la
+   restricción de exclusión de la base lo rechace igual.
+4. Fechas invertidas, un tope menor o igual a cero, o una categoría repetida responden `422`.
+
+```yaml
+# POST /budget-periods
+requestBody:
+  content:
+    application/json:
+      example:
+        family_group_id: null          # null: individual; a group id: family, owner only
+        period_type: "monthly"
+        period_start: "2026-10-10"
+        period_end: null               # monthly: derived, 2026-11-09
+        primary_currency: "ARS"
+        estimated_income: 1450000
+        budgets:
+          - category_id: "cat-food"
+            limit_amount: 300000
+          - category_id: "cat-transport"
+            limit_amount: 80000
+responses:
+  201:
+    content:
+      application/json:
+        example:
+          id: "bp2..."
+          status: "draft"
+          period_start: "2026-10-10"
+          period_end: "2026-11-09"
+  403:
+    description: The user is a member but not the owner of the family group
+  404:
+    description: The family group or a category does not belong to the authenticated user
+  409:
+    description: Overlaps another period of the same owner, or the period is already confirmed (PUT)
+  422:
+    description: Invalid dates, non-positive limit or repeated category
+```
+
 ### `POST /transactions`
 
 Registra un movimiento manualmente desde el dashboard. `amount`, `type`, `category_id`, `account_id` y `budget_period_id` son obligatorios: si falta alguno se rechaza con `422`. Los dos últimos no se derivan acá porque dependen de una decisión del usuario, que se resuelve antes de llegar a este endpoint.

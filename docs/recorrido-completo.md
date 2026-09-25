@@ -76,8 +76,8 @@ flowchart TB
 
 | Etapa | Por dónde entra | Quién la procesa | Qué escribe | Detalle |
 |---|---|---|---|---|
-| 1. Alta | WhatsApp | Worker | `APP_USER`, `ACCOUNT`, `FINANCIAL_PROFILE` | [§ 3](#3-alta) |
-| 2. Presupuesto del período | Sin especificar | Sin especificar | `BUDGET_PERIOD`, `BUDGET` | [§ 4](#4-presupuesto-del-período) |
+| 1. Alta | WhatsApp | Worker | `APP_USER`, `ACCOUNT`, el primer `BUDGET_PERIOD`, `FINANCIAL_PROFILE` | [§ 3](#3-alta) |
+| 2. Presupuesto del período | Una hora del día, WhatsApp o dashboard | Procesos programados, worker o API | `BUDGET_PERIOD`, `BUDGET` | [§ 4](#4-presupuesto-del-período) |
 | 3. Registro diario | WhatsApp o dashboard | Worker o API | `PENDING_*`, luego `TRANSACTION`, `TRANSFER` o `RECURRING_RULE` | [§ 5](#5-registro-de-un-movimiento-por-whatsapp) |
 | 4. Lo que corre solo | Una hora del día | Procesos programados | `TRANSACTION` o `PENDING_TRANSACTION`, `CARD_STATEMENT`, `EXCHANGE_RATE` | [§ 6](#6-recurrentes-y-cuotas-de-tarjeta) y [§ 7](#7-cierre-y-conciliación-de-un-resumen) |
 | 5. Avisos y contrastes | Una hora del día | Procesos programados, y el worker para las respuestas | `SENT_ALERT`, `OUTBOUND_MESSAGE`, ajustes en `TRANSACTION` | [§ 8](#8-alertas-y-contraste-mensual-de-saldos) |
@@ -113,10 +113,13 @@ sequenceDiagram
     Note over W,DB: Nombre, país, moneda, zona horaria,<br/>permiso de avisos: UPDATE APP_USER
     W->>L: HTTPS interpreta las cuentas dadas en texto
     W->>DB: SQL INSERT ACCOUNT, una fila por cuenta
-    W->>DB: SQL UPDATE APP_USER onboarding_status = completed
-    W->>DB: SQL INSERT PENDING_BATCH y PENDING_TRANSACTION<br/>con el primer gasto
-    Note over W,DB: Sin especificar: el alta no crea ningún BUDGET_PERIOD,<br/>y el pendiente no tiene período que proponer
-    W->>M: HTTPS pregunta por el pendiente
+    rect rgb(240, 246, 252)
+        Note over W,DB: Una sola transacción SQL
+        W->>DB: UPDATE APP_USER onboarding_status = completed
+        W->>DB: INSERT BUDGET_PERIOD confirmed, desde hoy<br/>hasta fin de mes, sin topes
+        W->>DB: INSERT PENDING_BATCH y PENDING_TRANSACTION<br/>con el primer gasto, que propone ese período
+    end
+    W->>M: HTTPS avisa del primer período y pregunta por el pendiente
     opt Perfil financiero, se puede saltear
         U->>M: respuestas
         W->>DB: SQL INSERT FINANCIAL_PROFILE
@@ -125,27 +128,40 @@ sequenceDiagram
 
 ## 4. Presupuesto del período
 
-El período tiene que estar confirmado antes de que empiece, y solo un período confirmado recibe
-movimientos ([reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)).
+Los períodos siguientes al primero. El borrador se genera solo y se confirma por WhatsApp tal
+cual, o se arma y se confirma en el dashboard. En un período familiar, todo eso lo hace solo el
+dueño del grupo ([reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)).
 
 ```mermaid
 sequenceDiagram
     actor U as Usuario
-    participant C as Canal sin especificar
+    participant N as Navegador
+    participant API as Servicio web
     participant S as Procesos programados
     participant DB as PostgreSQL
     participant W as Worker
     participant M as Meta Cloud API
 
-    Note over U,C: Sin especificar: por qué canal se crea y se confirma un período.<br/>La HU2 lo describe, pero 04-api no tiene endpoint y no hay flujo por WhatsApp
-    U->>C: arma el período con ingreso estimado y topes
-    C->>DB: SQL INSERT BUDGET_PERIOD en draft y un BUDGET por tope
-    S->>DB: SQL busca períodos en draft cerca de su period_start
-    S->>DB: SQL INSERT OUTBOUND_MESSAGE, plantilla Período sin confirmar
-    W->>M: HTTPS envía la plantilla
-    M->>U: recordatorio
-    U->>C: confirma el período
-    C->>DB: SQL UPDATE BUDGET_PERIOD status = confirmed
+    S->>DB: SQL busca dueños sin período siguiente dentro de la anticipación
+    rect rgb(240, 246, 252)
+        Note over S,DB: Una sola transacción SQL
+        S->>DB: INSERT BUDGET_PERIOD draft, desde el día<br/>después del último period_end
+        S->>DB: INSERT BUDGET, una copia de cada tope del período anterior
+    end
+    S->>DB: SQL, cerca del inicio y todavía en draft:<br/>INSERT OUTBOUND_MESSAGE, plantilla Período sin confirmar
+    W->>M: HTTPS envía la plantilla, al dueño si es familiar
+    M->>U: ingreso estimado, topes y enlace al dashboard
+    alt Confirma tal cual por WhatsApp
+        U->>M: "confirmo"
+        Note over W,DB: Entra por el webhook como cualquier mensaje (§ 5)
+        W->>DB: SQL UPDATE BUDGET_PERIOD status = confirmed
+    else Cambia topes o fechas en el dashboard
+        N->>API: HTTPS PUT /budget-periods/id con la cookie
+        API->>DB: SQL valida dueño y solapes, reemplaza BUDGET_PERIOD y BUDGET
+        N->>API: HTTPS POST /budget-periods/id/confirm
+        API->>DB: SQL UPDATE BUDGET_PERIOD status = confirmed
+    end
+    Note over U,DB: Si empieza sin confirmar, la pregunta del primer<br/>pendiente ofrece confirmar el borrador en el mismo mensaje
 ```
 
 ## 5. Registro de un movimiento por WhatsApp
@@ -378,12 +394,8 @@ sequenceDiagram
 
 ## 11. Lo que el recorrido deja a la vista
 
-Los diagramas marcan cuatro puntos que la especificación todavía no resuelve:
+Los diagramas marcan dos puntos que la especificación todavía no resuelve:
 
-- **El alta no crea un período** (§ 3). El primer gasto queda pendiente sin un período que
-  proponer.
-- **No hay canal para armar y confirmar un período** (§ 4). La HU2 lo pide, pero no hay endpoint
-  en [la API](04-api.md) ni un flujo por WhatsApp.
 - **Las alertas usan el LLM, pero los procesos programados no llegan a él** (§ 8). Ya está en
   las decisiones abiertas de la [hoja de ruta](hoja-de-ruta.md#decisiones-abiertas).
 - **El dashboard como canal de carga** (§ 5). El ADR 0002 y la API dicen cosas distintas.

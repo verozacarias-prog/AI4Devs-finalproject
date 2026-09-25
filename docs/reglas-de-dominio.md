@@ -105,6 +105,49 @@ Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-princip
 
 La regla de negocio es que, para un período mensual, tiene que estar en `confirmed` antes de que arranque el mes (`period_start`); el mismo criterio aplica a quincenal con su propio `period_start`. El sistema genera el borrador del próximo período con anticipación y manda un recordatorio proactivo por WhatsApp si sigue en `draft` cerca de la fecha límite — mismo mecanismo que ya dispara las alertas de [HU3](05-historias-de-usuario.md), aplicado a un caso distinto.
 
+**El primer período nace en el alta.** Al completar la parte obligatoria del alta (§ 11), el
+sistema crea el primer período individual del usuario, ya confirmado: mensual, en su moneda
+primaria, con ingreso estimado 0 y sin topes, desde el día del alta hasta el último día de ese
+mes. Es la única excepción a que un período se confirme antes de arrancar, porque ya arrancó. Así
+el primer gasto, incluido el que el usuario escribió antes de darse de alta, tiene dónde
+imputarse. Un período sin topes registra el gastado igual, pero no dispara alertas. El mensaje
+que cierra el alta le avisa que ese primer período existe y que puede ponerle ingreso y topes
+desde el dashboard.
+
+**Un período mensual puede empezar cualquier día.** Termina el día anterior al mismo día del mes
+siguiente: uno que empieza el 10 de octubre termina el 9 de noviembre. Si ese día no existe en el
+mes, como el 31, se usa el último día del mes, igual que en las reglas recurrentes (§ 8). El
+período siguiente empieza el día después de que termina el anterior. Para mover el día de
+inicio, por ejemplo para alinearlo con el cobro, el usuario cambia las fechas de un borrador, y
+desde ahí los siguientes se calculan a partir de ese. El período de transición puede durar más o
+menos de un mes.
+
+**El borrador copia el período anterior.** Con anticipación al inicio de cada período, el sistema
+genera el borrador del siguiente para el mismo dueño, copiando del último período: la cadencia,
+la moneda, el ingreso estimado y cada tope. La anticipación con que se genera y la del
+recordatorio son configuración, igual que las cuotas de uso (§ 12). La sugerencia ajustada por
+inflación (could-have) reemplazará a la copia cuando exista, sin cambiar el resto de la regla.
+
+**Dónde se arma y dónde se confirma.**
+
+- **Confirmar tal cual, por WhatsApp.** El recordatorio de período sin confirmar lista el ingreso
+  estimado y los topes del borrador. Si el usuario responde que lo confirma, pasa a `confirmed`
+  sin cambios. La respuesta usa la cuota de registro.
+- **Armar o cambiar, en el dashboard.** Crear un período, cambiar sus fechas, el ingreso estimado
+  o los topes, y confirmarlo, se hace en el dashboard. Por WhatsApp no se editan topes: el
+  recordatorio incluye el enlace para hacerlo.
+- **Sin confirmar al empezar.** Si un período empieza sin confirmar, lo que caiga en él queda
+  pendiente como siempre. La pregunta de ese pendiente ofrece confirmar el borrador en el mismo
+  mensaje, con su resumen, y una sola respuesta confirma las dos cosas. Si no hay borrador, como en
+  un grupo familiar que todavía no tiene ningún período, la pregunta manda al dashboard para
+  armarlo.
+
+**En un presupuesto familiar confirma el dueño.** Solo el dueño vigente del grupo (§ 10) crea,
+cambia y confirma los períodos familiares, desde el dashboard o respondiendo al recordatorio, que
+recibe solo él. Los demás miembros ven el borrador. Si un miembro imputa algo a un período
+familiar que todavía no está confirmado, su pendiente espera: la pregunta le dice que falta la
+confirmación del dueño y le ofrece imputarlo a su presupuesto individual.
+
 **Los períodos de un mismo dueño no se solapan.** Un usuario, o un grupo familiar, no puede
 tener dos períodos que cubran el mismo día, y un período termina en su fecha de inicio o
 después. Así, para una fecha y un dueño hay como mucho un período candidato, y resolverlo es
@@ -403,11 +446,12 @@ versión de los términos.
 4. Al menos una cuenta, con la opción de dar de alta varias en el mismo mensaje. Por cada una se
    confirma tipo, moneda y saldo inicial, que es el saldo de ese día.
 
-Hasta completarla, el usuario no puede registrar movimientos.
+Hasta completarla, el usuario no puede registrar movimientos. Al completarla, el sistema crea su
+primer período de presupuesto, ya confirmado (§ 3).
 
 **El primer mensaje no se pierde.** Si lo primero que escribió fue un gasto, queda guardado y,
 al terminar la parte obligatoria, se retoma como un pendiente normal (§ 5), sin pedirle que lo
-repita.
+repita. El período que propone es ese primer período.
 
 **La configuración y el perfil son opcionales.** Al terminar la parte obligatoria, el asistente
 ofrece seguir, o dejarlo para otro día:
@@ -447,7 +491,7 @@ Las que hacen falta son:
 | Código de borrado de cuenta | Autenticación | Al pedir borrar la cuenta |
 | Alerta de presupuesto | Utilidad | Al pasar un umbral |
 | Pendientes sin confirmar | Utilidad | Antes de vencer, o cada 3 días si son de un recurrente |
-| Período sin confirmar | Utilidad | Cerca del inicio de un período que sigue en `draft` |
+| Período sin confirmar | Utilidad | Cerca del inicio de un período que sigue en `draft`: lista su ingreso y sus topes, y se confirma respondiendo. En un período familiar, solo al dueño |
 | Recurrente o cuota por confirmar | Utilidad | Cuando un recurrente o una cuota de tarjeta no encuentra período confirmado, o necesita que el usuario confirme la cotización |
 | Conciliación del resumen | Utilidad | Al cerrar un resumen de tarjeta: pide el total del banco y recomienda revisar los consumos |
 | Saldos del mes | Utilidad | Al terminar cada mes de presupuesto: muestra el saldo de cada cuenta y pregunta si coincide con el real |

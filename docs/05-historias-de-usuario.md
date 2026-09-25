@@ -31,8 +31,11 @@
 - Puedo crear un período de presupuesto individual o familiar, eligiendo cadencia mensual o quincenal.
 - Cargo el ingreso estimado del período y un tope por cada categoría que quiera controlar.
 - Mientras está en armado, el período figura como borrador y no se usa para calcular nada.
+- El borrador del próximo período se arma solo, copiando el ingreso estimado y los topes del período anterior. Lo cambio o armo uno nuevo desde el dashboard.
+- El período puede empezar el día que yo elija, por ejemplo el día que cobro.
 - Al confirmarlo queda activo y los movimientos pueden imputarse a él.
-- Si el período no está confirmado y su fecha de inicio se acerca, recibo un recordatorio por WhatsApp.
+- Si el período no está confirmado y su fecha de inicio se acerca, recibo un recordatorio por WhatsApp con su resumen, y puedo confirmarlo respondiendo.
+- Si es familiar, solo el dueño del grupo lo arma y lo confirma.
 
 *Prioridad:* Alta
 *Estimación:* 8 puntos
@@ -107,6 +110,7 @@
 
 - Lo primero que recibo es el pedido de aceptar los términos y la política de privacidad. Si no acepto, no se guarda nada mío más allá del mensaje que mandé.
 - La parte obligatoria me pide nombre, país, confirmar mi moneda primaria, si quiero recibir avisos y al menos una cuenta. Puedo dar de alta varias cuentas en un solo mensaje.
+- Al terminar el alta ya tengo un presupuesto del mes en curso, sin topes, para que mi primer gasto tenga dónde imputarse. Le pongo ingreso y topes cuando quiera, desde el dashboard.
 - Si mi primer mensaje fue un gasto, al terminar el alta se retoma sin que tenga que repetirlo.
 - Al terminar, el asistente me ofrece configurar mis categorías y responder unas preguntas para mejorar los consejos. Puedo saltear cualquiera, o todas, y completarlas después desde el dashboard.
 - Si no acepto recibir avisos, Platita nunca me escribe por su cuenta, pero sí me puede mencionar una alerta dentro de una respuesta a algo que escribí. Puedo cambiar ese permiso cuando quiera.
