@@ -260,6 +260,20 @@ pausa o la borra.
 borrada queda marcada con quién y cuándo, y no genera más; lo que ya generó sigue siendo
 movimientos comunes, que se borran uno por uno.
 
+**Lo que falta pagar es comprometido.** Las ocurrencias que le quedan a una regla con fin, por
+su monto, son lo comprometido a futuro: se muestran aparte y por período en el dashboard, para
+que un mes cargado de cuotas no sea una sorpresa. Vale igual para las cuotas de una tarjeta
+(§ 13) que para las de un préstamo.
+
+**Un préstamo es un ingreso y una regla de cuotas.** Cuando el usuario cuenta que sacó un
+préstamo, el asistente registra dos cosas, que confirma en el mismo mensaje: un ingreso por el
+monto recibido, en la cuenta donde entró, y una regla recurrente de gasto con el monto de la
+cuota y la cantidad de cuotas como fin. Así el presupuesto refleja el flujo de caja, como en las
+tarjetas: el mes del préstamo, el ingreso compensa lo que se compre con esa plata, y después
+pesa cada cuota, con sus intereses incluidos. Lo que queda por devolver es lo comprometido de la
+regla. Van en categorías propias del usuario, "Préstamos recibidos" y "Cuotas de préstamos", que
+se crean con confirmación como cualquier categoría nueva (§ 4) si todavía no existen.
+
 **En una tarjeta, la regla genera al cierre del resumen.** Si la cuenta de la regla es una
 tarjeta de crédito, cada ocurrencia se agenda igual que en cualquier regla, pero no se genera
 en su fecha: entra en el resumen que la incluye y se genera al cerrarse ese resumen, con fecha
@@ -394,6 +408,8 @@ ofrece seguir, o dejarlo para otro día:
 
 Cada pregunta se puede saltear, y todo se completa o cambia después desde el dashboard. El
 perfil guarda cuándo se actualizó, para que un consejo sepa si el dato puede haber quedado viejo.
+Si el usuario responde que tiene deudas, el asistente le ofrece crear sus categorías para
+préstamos, "Préstamos recibidos" y "Cuotas de préstamos" (§ 8), y las crea solo si confirma.
 
 **Mensajes proactivos: solo con permiso.** Un mensaje es proactivo cuando Platita lo inicia sin
 estar respondiendo a algo que el usuario acaba de escribir: alertas de presupuesto (HU5),
@@ -525,8 +541,8 @@ solo lo que ya ocurrió: los gastos ya vencidos menos los pagos recibidos. Lo fa
 resumen que todavía no venció no es saldo, es deuda: se muestra aparte como lo que hay que pagar
 en el próximo vencimiento, que es el total del resumen del banco. Un pago cancela primero lo
 vencido y después esa deuda, así que pagar antes del vencimiento la reduce en el momento. Lo
-comprometido a futuro, las ocurrencias de sus reglas todavía no generadas, se muestra aparte y
-por período en el dashboard, para que un mes cargado de cuotas no sea una sorpresa.
+comprometido a futuro, las ocurrencias de sus reglas todavía no generadas, se muestra aparte
+como el de cualquier regla con fin (§ 8).
 
 Ver también: [ADR 0012](adr/0012-tarjetas-de-credito-y-transferencias.md) · [ACCOUNT, RECURRING_RULE, CARD_STATEMENT y TRANSFER en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
 
