@@ -72,5 +72,6 @@ coste para un sitio de documentación.
 
 ---
 
-Los ADR son inmutables. Si esta decisión queda sin efecto, no edites este archivo: creá uno nuevo
-y cambiá el Estado de este a "Reemplazada por NNNN".
+Mientras no lleve la marca `En producción desde`, este ADR se corrige en este archivo. Con la
+marca es inmutable: si la decisión queda sin efecto, no edites este archivo; creá uno nuevo y
+cambiá el Estado de este a "Reemplazada por NNNN".

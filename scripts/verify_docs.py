@@ -255,8 +255,11 @@ def check_adrs():
                 fail('el ADR %s no tiene la sección "%s"' % (n, section))
         if '- Estado:' not in text:
             fail('el ADR %s no declara Estado' % n)
-        if 'Los ADR son inmutables' not in text:
+        if 'Con la marca es inmutable' not in ' '.join(text.split()):
             fail('el ADR %s no lleva la nota de inmutabilidad' % n)
+        for m in re.findall(r'^- En producción desde:(.*)$', text, re.M):
+            if not re.fullmatch(r' \d{4}-\d{2}-\d{2}', m):
+                fail('el ADR %s tiene la marca de producción sin fecha AAAA-MM-DD' % n)
     return found
 
 

@@ -47,9 +47,14 @@ En consecuencia, para cualquier diagrama nuevo:
 - Una decisión por archivo, en `docs/adr/`, numerados `NNNN-titulo-en-kebab-case.md`.
 - Formato Michael Nygard: Contexto, Decisión, Consecuencias (positivas / negativas y costos
   asumidos) y Alternativas descartadas.
-- Los ADR son inmutables. Si una decisión queda sin efecto, no se edita su archivo: se crea uno
-  nuevo y el Estado del anterior pasa a `Reemplazada por NNNN`.
-- **Única excepción: el mantenimiento de enlaces.** Un ADR se edita para corregir un enlace que
+- **Un ADR se corrige mientras su funcionalidad no está en producción.** Mientras la decisión
+  sigue en definición, se corrige en el mismo archivo tantas veces como haga falta: escribir un
+  ADR nuevo por cada corrección llenaría el registro de decisiones que nunca llegaron a regir.
+- **En producción, es inmutable.** Cuando la funcionalidad queda desarrollada y en producción, el
+  ADR suma a su cabecera la marca `- En producción desde: AAAA-MM-DD`. Desde ese momento no se
+  edita: si la decisión queda sin efecto, se crea uno nuevo y el Estado del anterior pasa a
+  `Reemplazada por NNNN`.
+- **Única excepción a la inmutabilidad: el mantenimiento de enlaces.** Un ADR se edita para corregir un enlace que
   quedó roto porque el archivo destino cambió de nombre o de ruta, nunca para revisar la decisión,
   su contexto o sus consecuencias. La corrección se anota en una línea `Mantenimiento:` en la
   cabecera del propio ADR, con fecha y motivo. Sin esta excepción, la alternativa era reemplazar
@@ -67,9 +72,9 @@ Las referencias entre documentos se escriben como enlaces relativos con ancla, n
 "ver 3.2".
 
 **Excepción: los ADR.** Un ADR tiene que poder leerse solo, años después, sin el resto del
-repositorio a mano: es un registro congelado de por qué se decidió algo con la información que
-había en ese momento. Si dependiera de un enlace a un documento vivo, su contenido cambiaría
-cuando ese documento cambie, y la nota de inmutabilidad del pie sería falsa. Así que un ADR
+repositorio a mano: una vez en producción, es un registro congelado de por qué se decidió algo
+con la información que había en ese momento. Si dependiera de un enlace a un documento vivo, su
+contenido cambiaría cuando ese documento cambie, y la inmutabilidad dejaría de ser cierta. Así que un ADR
 **puede repetir** el texto que necesite para ser autosuficiente.
 
 La excepción vale en una sola dirección. Lo que no puede pasar es lo contrario: **ningún
