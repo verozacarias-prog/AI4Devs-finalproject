@@ -11,6 +11,7 @@ globs:
 ignores:
   - "prompts.md"
   - "docs/conversacion-*.md"
+  - "docs/use-case-walkthrough.md"
   - "node_modules"
   - "site"
 

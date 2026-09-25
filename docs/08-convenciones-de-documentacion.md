@@ -126,6 +126,9 @@ duplicado.
 
 ## 8.8. Qué tiene autoridad
 
-Los archivos de `docs/` son la especificación del proyecto. `AGENTS.md` es el contrato
+Los archivos de `docs/` son la especificación del proyecto, salvo los registros:
+[la conversación de la reestructuración](conversacion-reestructuracion-docs.md) y
+[la validación por casos de uso](use-case-walkthrough.md), que describen la especificación en un
+momento dado y no la reemplazan. `AGENTS.md` es el contrato
 operativo para asistentes de IA y resume algunas de estas reglas: cuando difieran, manda
 `docs/`. El criterio completo está en [`AGENTS.md`](../AGENTS.md), sección 10.

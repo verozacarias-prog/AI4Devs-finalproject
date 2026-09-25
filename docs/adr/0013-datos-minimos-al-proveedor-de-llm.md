@@ -33,6 +33,11 @@ Todavía no se eligió el proveedor.
    por la API para entrenar modelos, y que los retenga el menor tiempo posible. Las condiciones se
    verifican al elegirlo, se dejan registradas en la política de privacidad, y se vuelven a
    revisar si el proveedor cambia sus términos.
+5. **El LLM no accede a la base.** No recibe herramientas que lean o escriban datos, ni genera
+   SQL que Platita ejecute. Devuelve una salida estructurada, como los campos de un movimiento o
+   la intención de una consulta, que el adaptador valida. Con eso, el caso de uso consulta o
+   escribe por los repositorios, filtrando siempre por el usuario del mensaje. Lo que el modelo
+   ve de los datos del usuario es solo lo que el caso de uso decidió enviarle, según el punto 1.
 
 ## Consecuencias
 
@@ -51,6 +56,10 @@ Todavía no se eligió el proveedor.
 - Algunos proveedores con buenas condiciones de privacidad pueden ser más caros o tener menos
   opciones de modelo.
 - Depender de las condiciones contractuales de un tercero obliga a revisarlas periódicamente.
+- Cada tipo de consulta que el asistente sabe responder necesita un caso de uso escrito para
+  ella. Una pregunta que no encaja en ninguno no se responde, aunque el modelo pudiera armar la
+  consulta. Se acepta porque un SQL generado por el modelo podría leer datos de otro usuario, o
+  escribir, ante un mensaje malicioso.
 
 ## Alternativas descartadas
 
@@ -62,6 +71,10 @@ Todavía no se eligió el proveedor.
 - **Anonimizar el texto del mensaje antes de enviarlo.** Detectar y reemplazar nombres propios o
   datos personales dentro de un texto libre es poco fiable y degrada la interpretación, que es la
   función central del producto.
+- **Que el modelo genere SQL, o consulte la base con herramientas, para responder preguntas
+  sobre los datos del usuario.** Cubriría cualquier pregunta sin escribir un caso de uso por
+  cada una, pero la consulta generada no pasa por la validación de pertenencia al usuario, y un
+  mensaje escrito para engañar al modelo podría leer datos ajenos o modificar registros.
 
 ---
 

@@ -46,9 +46,11 @@ https://github.com/verozacarias-prog/AI4Devs-finalproject
 | [6. Tickets de trabajo](docs/06-tickets.md) | Los tres tickets de backend, frontend y base de datos. |
 | [7. Pull requests](docs/07-pull-requests.md) | Los pull requests de la entrega final. |
 | [8. Convenciones de documentación](docs/08-convenciones-de-documentacion.md) | Idioma, diagramas, nombres de archivo y estructura de `docs/`. |
+| [Recorrido completo](docs/recorrido-completo.md) | El recorrido del usuario de punta a punta: qué proceso actúa, si la llamada es HTTPS o SQL y qué tablas escribe cada paso. |
 | [Reglas de dominio](docs/reglas-de-dominio.md) | Dueño único de las reglas de negocio, agrupadas por tema. |
 | [Convenciones de desarrollo](docs/convenciones-de-desarrollo.md) | Cortes verticales y los cuatro estados de una pantalla. |
 | [Términos y privacidad](docs/terminos-y-privacidad.md) | Qué tienen que cubrir los términos y la política de privacidad, antes de redactarlos. |
+| [Validación por casos de uso](docs/use-case-walkthrough.md) | Registro, no especificación: 42 casos cotidianos de usuarios argentinos recorridos sobre el diseño, las decisiones pendientes que dejan y los escenarios para las pruebas. |
 | [Hoja de ruta](docs/hoja-de-ruta.md) | Qué queda para la entrega 2 y para la app móvil, y por qué. |
 | [Operación](docs/operacion.md) | Propuesta sin decidir: entornos, pipeline, despliegue, copias de respaldo y observabilidad. |
 | [Flujo de trabajo con IA](docs/flujo-de-trabajo-con-ia.md) | Contratos, skill, commands, verificadores y hooks. |
@@ -77,7 +79,7 @@ Todo está descrito en el [flujo de trabajo con IA](docs/flujo-de-trabajo-con-ia
 ```sh
 git config core.hooksPath .githooks       # una vez por clon
 python3 scripts/verify_docs.py            # enlaces, anclas, duplicación, Mermaid
-python3 scripts/verify_architecture.py    # regla hexagonal y aislamiento del frontend
+python3 scripts/verify_architecture.py    # regla hexagonal, acceso a la base y aislamiento del frontend
 ```
 
 El hook de pre-commit los corre solo, y GitHub Actions los repite en cada pull request junto con

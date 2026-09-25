@@ -72,9 +72,11 @@ flowchart TB
 
 #### Nivel 3 — Componentes del backend
 
-El interior del backend, donde se ve el patrón arquitectónico elegido. El diagrama reúne los dos
-contenedores que comparten ese código: la API (routers y webhook handler) y el worker de mensajes,
-que es otro proceso con otro punto de entrada ([ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md)).
+El interior del backend, donde se ve el patrón arquitectónico elegido. El diagrama reúne los tres
+contenedores que comparten ese código: la API (routers y webhook handler), el worker de mensajes
+([ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md)) y los procesos programados. Los
+tres son adaptadores de entrada con su propio punto de entrada, y los tres llegan a la base solo
+por los casos de uso y los repositorios.
 
 ```mermaid
 flowchart TB
@@ -84,8 +86,9 @@ flowchart TB
         PARSE["Email parser<br/><i>could-have</i>"]
     end
 
-    subgraph WORKERBOX["Adaptador de entrada — contenedor worker"]
+    subgraph WORKERBOX["Adaptadores de entrada — contenedores worker y procesos programados"]
         MSGWK["Worker de mensajes<br/><i>procesa lo guardado</i>"]
+        SCHED["Procesos programados<br/><i>recurrentes, resúmenes,<br/>alertas, vencimientos</i>"]
     end
 
     subgraph DOMAIN["Dominio — núcleo hexagonal"]
@@ -95,7 +98,7 @@ flowchart TB
     end
 
     subgraph OUTBOUND["Adaptadores de salida"]
-        REPO["Repositorios<br/><i>SQLAlchemy</i>"]
+        REPO["Repositorios y unidad de trabajo<br/><i>SQLAlchemy</i>"]
         VECADAPT["Vector store<br/><i>pgvector</i>"]
         WACLIENT["Cliente WhatsApp"]
         LLMCLIENT["Cliente LLM<br/><i>interpretación + RAG</i>"]
@@ -107,6 +110,7 @@ flowchart TB
     ROUTERS --> UC
     HOOK --> UC
     MSGWK --> UC
+    SCHED --> UC
     PARSE -.-> UC
     UC --> ENT
     UC --> PORTS
@@ -125,7 +129,11 @@ flowchart TB
 
 **Patrón elegido:** **arquitectura hexagonal (ports & adapters)**, con el dominio (entidades + casos de uso) aislado de los detalles de infraestructura detrás de puertos, y **backend y frontend desacoplados**, comunicados únicamente por API REST.
 
-El contexto que llevó a elegirlo, sus beneficios, los sacrificios asumidos y la alternativa descartada están en el [ADR 0001](adr/0001-arquitectura-hexagonal.md).
+**Acceso a la base de datos:** solo el backend la toca. Desde afuera se entra únicamente por la API HTTP; adentro, la API, el worker y los procesos programados pasan por los casos de uso, ninguno llama a otro por HTTP, y el SQL vive solo en los repositorios. Las excepciones son las migraciones, el script de datos de prueba y el acceso operativo.
+
+El contexto que llevó a elegirlo, sus beneficios, los sacrificios asumidos, las alternativas descartadas y el detalle de quién accede a la base están en el [ADR 0001](adr/0001-arquitectura-hexagonal.md).
+
+El recorrido de un usuario de punta a punta, con el tipo de llamada y las tablas de cada paso, está en [Recorrido completo](recorrido-completo.md).
 
 ### **2.2. Descripción de componentes principales:**
 
@@ -164,8 +172,10 @@ El contexto que llevó a elegirlo, sus beneficios, los sacrificios asumidos y la
       /inbound
         /api               # FastAPI routers — translate HTTP into use case calls
         /whatsapp_webhook   # translate WhatsApp payloads into use case calls
+        /message_worker     # worker entry point: takes stored messages, calls use cases
+        /scheduler          # scheduled jobs entry point: calls use cases, never raw SQL
       /outbound
-        /postgres           # SQLAlchemy repositories implementing the *_repository ports
+        /postgres           # SQLAlchemy repositories, unit of work and connection setup
         /pgvector            # VectorStorePort implementation
         /whatsapp_client      # sends outbound WhatsApp messages
         /email_reader          # IMAP/Gmail integration (could-have, not in the MVP)
@@ -263,3 +273,5 @@ Cómo se operaría —entornos, pipeline de la aplicación, vuelta atrás de un 
 ### **2.6. Tests**
 
 `Se define con detalle en la Entrega final. Estrategia prevista: tests unitarios sobre los casos de uso del dominio (conversión de moneda, cálculo de saldo por cuenta, categorización, presupuesto ajustado por inflación) usando dobles de prueba en lugar de los adaptadores reales — la ventaja directa de tener puertos —, tests de integración sobre los adaptadores (Postgres, pgvector) y los endpoints principales, y al menos un test end-to-end del flujo principal (registrar un gasto por WhatsApp → verlo reflejado en el saldo de la cuenta y en el presupuesto del dashboard).`
+
+Los escenarios de los recorridos de usuario, con sus montos y resultados esperados, están en la [validación por casos de uso](use-case-walkthrough.md#14-uso-de-los-casos-en-las-pruebas).

@@ -55,6 +55,19 @@ El webhook solo recibe y confirma; el procesamiento ocurre después, en un proce
    efectos (crear o completar el pendiente, promoverlo a movimiento), marca el mensaje como
    procesado y encola la respuesta. O pasa todo o no pasa nada: un mensaje nunca queda
    procesado sin sus efectos, ni con sus efectos aplicados dos veces.
+
+   El vencimiento del `locked_until` no distingue un worker caído de uno lento: si el LLM tarda
+   más que el lock, otro worker toma el mismo mensaje y los dos llegan a la transacción final.
+   Para que solo uno la complete, el `attempts` que fijó el claim funciona como **token de
+   fencing**. La transacción final marca el mensaje como procesado solo si sigue en `processing`
+   con ese mismo `attempts`. Si esa actualización no afecta ninguna fila, otro worker lo tomó
+   después, y la transacción se deshace entera, efectos incluidos. Esa actualización va primero
+   dentro de la transacción, antes que los efectos, para que el worker desplazado no llegue a
+   escribirlos.
+
+   El tiempo máximo de la llamada al LLM, reintentos incluidos, es menor que la duración del
+   `locked_until`, y los dos son configuración. Así el fencing cubre un caso excepcional, como
+   una pausa larga del proceso, y no un LLM lento de todos los días.
 4. **Reintentos.** Si el procesamiento falla (el LLM no responde, por ejemplo), el mensaje vuelve
    a quedar disponible con espera creciente entre intentos. Superado un máximo de intentos queda
    como `failed` y el usuario recibe un aviso de que su mensaje no se pudo procesar. Un mensaje
@@ -95,6 +108,9 @@ salida.
   demora del worker además de la del LLM.
 - Hay que escribir el ciclo de toma de mensajes, los reintentos con espera y el envío de la
   salida, que un sistema de colas daría hechos. Se estima en uno o dos días.
+- Si el LLM tarda más que el lock, el trabajo del worker desplazado se descarta y ese mensaje se
+  procesa dos veces contra el LLM, con su costo. No se duplica ningún movimiento, porque el
+  fencing deja completar solo a un worker.
 - La tabla de entrada guarda el texto y el teléfono del usuario. Hace falta una política de
   retención, que queda por definir, y nunca se loggea su contenido sin enmascarar.
 - A partir de cientos de mensajes por minuto, una tabla como cola empieza a competir con el resto

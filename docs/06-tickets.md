@@ -22,6 +22,8 @@
 - **Orden por remitente:** dos mensajes del mismo remitente se procesan de a uno y por `sent_at`, aunque haya varios workers; los de remitentes distintos pueden ir en paralelo.
 - **Reintentos:** un fallo del LLM deja el mensaje disponible con espera creciente; al agotar los intentos queda `failed`, el usuario recibe un aviso y el siguiente mensaje del remitente se procesa.
 - **Atomicidad:** los efectos del mensaje, su paso a `processed` y la respuesta en `OUTBOUND_MESSAGE` se escriben en una sola transacción; una falla antes del commit no deja ninguno de los tres.
+- **Lock vencido:** si un worker termina después de que venció su `locked_until` y otro worker tomó el mismo mensaje, solo uno completa la transacción final. El otro la deshace entera y no deja ningún efecto: un test con dos workers sobre el mismo mensaje termina con un solo movimiento registrado.
+- **Sin SQL en el worker:** el worker llega a la base solo por los casos de uso y los repositorios, dentro de la unidad de trabajo que el caso de uso abre ([ADR 0001](adr/0001-arquitectura-hexagonal.md)).
 **Riesgos:** fricción excesiva si el asistente pregunta de más (mitigación: aplicar default a todo lo derivable —fecha, moneda, categoría— y preguntar solo lo que no lo tiene, todo junto en un mensaje con opciones elegibles); un default silencioso que el usuario no note (mitigación: el mensaje de confirmación lista siempre los valores asumidos y acepta corregirlos); interpretación errónea del LLM sobre montos o tipo de movimiento (mitigación: salida estructurada validada y confirmación explícita antes de registrar).
 
 ---

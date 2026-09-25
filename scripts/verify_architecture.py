@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 """Architecture rule checks for the Platita repository.
 
-Enforces the two structural rules of ADR 0001, declared in AGENTS.md:
+Enforces the three structural rules of ADR 0001, declared in AGENTS.md:
 
   1. backend/app/domain/ must not depend on adapters or on infrastructure libraries.
   2. frontend/ must not import from backend/ nor reach the database directly.
+  3. Inside backend/, database libraries are imported only by the postgres and pgvector
+     outbound adapters, the migrations and the tests.
 
 Tolerant by design: while backend/ or frontend/ do not exist yet, the matching
 checks are skipped instead of failing, so the net is in place before the first
@@ -23,6 +25,15 @@ BACKEND_DIR = 'backend'
 DOMAIN_DIR = os.path.join(BACKEND_DIR, 'app', 'domain')
 ADAPTERS_PKG = 'adapters'
 FRONTEND_DIR = 'frontend'
+
+# ADR 0001 — el SQL vive en un solo lugar. Rutas relativas a la raíz del repositorio.
+DB_ACCESS_ALLOWED = [
+    os.path.join(BACKEND_DIR, 'app', 'adapters', 'outbound', 'postgres'),
+    os.path.join(BACKEND_DIR, 'app', 'adapters', 'outbound', 'pgvector'),
+    os.path.join(BACKEND_DIR, 'migrations'),
+    os.path.join(BACKEND_DIR, 'tests'),
+]
+DB_LIBRARIES = {'sqlalchemy', 'psycopg', 'psycopg2', 'asyncpg', 'alembic', 'pgvector'}
 
 # AGENTS.md — imports prohibidos dentro de domain/
 FORBIDDEN_IN_DOMAIN = {
@@ -176,6 +187,45 @@ def check_money_types():
                               % (path, node.lineno, name))
 
 
+def imported_modules(tree):
+    """Pares (módulo, línea) de cada import absoluto del archivo."""
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                yield alias.name, node.lineno
+        elif isinstance(node, ast.ImportFrom) and node.module and not node.level:
+            yield node.module, node.lineno
+
+
+def inside(path, directory):
+    return os.path.normpath(path).startswith(os.path.normpath(directory) + os.sep)
+
+
+def check_database_access():
+    """Regla 3: fuera de los repositorios, las migraciones y los tests, nadie importa una
+    librería de acceso a la base. El dominio lo cubre la regla 1, así que acá se omite."""
+    if not os.path.isdir(BACKEND_DIR):
+        skipped.append('%s/ todavía no existe: acceso a la base no evaluado' % BACKEND_DIR)
+        return 0
+
+    checked = 0
+    for path in walk(BACKEND_DIR, ('.py',)):
+        if inside(path, DOMAIN_DIR) or any(inside(path, d) for d in DB_ACCESS_ALLOWED):
+            continue
+        checked += 1
+        try:
+            tree = ast.parse(read(path), filename=path)
+        except SyntaxError as exc:
+            errors.append('%s:%s no se pudo parsear (%s)' % (path, exc.lineno, exc.msg))
+            continue
+        for module, line in imported_modules(tree):
+            head = root_module(module)
+            if head in DB_LIBRARIES:
+                errors.append('%s:%d importa %s fuera de los repositorios — el acceso a la base va '
+                              'por un caso de uso y un puerto (ADR 0001)' % (path, line, head))
+    return checked
+
+
 def check_frontend_isolation():
     """Regla 2: el frontend habla con el backend sólo por la API REST."""
     if not os.path.isdir(FRONTEND_DIR):
@@ -201,10 +251,12 @@ def main():
 
     domain_files = check_domain_imports()
     check_money_types()
+    backend_files = check_database_access()
     frontend_files = check_frontend_isolation()
 
     print('Verificación de arquitectura')
     print('  archivos de dominio revisados  : %d' % domain_files)
+    print('  resto del backend revisado     : %d' % backend_files)
     print('  archivos de frontend revisados : %d' % frontend_files)
     print('')
 
@@ -219,7 +271,7 @@ def main():
         print('\n%d error(es). Las reglas están en AGENTS.md y en '
               'docs/adr/0001-arquitectura-hexagonal.md.' % len(errors))
         return 1
-    if skipped and not domain_files and not frontend_files:
+    if skipped and not domain_files and not backend_files and not frontend_files:
         print('Todavía no hay código que revisar. La verificación queda lista para cuando lo haya.')
     else:
         print('Sin errores%s.' % (' (%d aviso/s)' % len(warnings) if warnings else ''))

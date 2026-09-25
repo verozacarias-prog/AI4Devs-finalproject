@@ -1,8 +1,9 @@
 # Verificación de enlaces externos. scripts/verify_docs.py valida los relativos y
 # saltea explícitamente http/https: este archivo cubre justo ese hueco.
 
-# Los registros citan URLs de conversaciones pasadas que pueden haber caducado.
-exclude_path = ["prompts.md", "docs/conversacion-reestructuracion-docs.md", "node_modules", "site/node_modules"]
+# Los registros citan URLs de conversaciones pasadas, o fuentes periodísticas fechadas, que
+# pueden haber caducado.
+exclude_path = ["prompts.md", "docs/conversacion-reestructuracion-docs.md", "docs/use-case-walkthrough.md", "node_modules", "site/node_modules"]
 
 exclude = [
   "^http://localhost",

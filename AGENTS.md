@@ -39,10 +39,16 @@ Imports prohibidos dentro de `domain/`: `sqlalchemy`, `fastapi`, `httpx`, `psyco
 de LLM. Los casos de uso hablan solo con puertos.
 
 Backend y frontend están desacoplados y se comunican únicamente por API REST. `frontend/` no
-importa nada de `backend/` ni accede a la base de datos. Fundamento en el
-[ADR 0001](docs/adr/0001-arquitectura-hexagonal.md).
+importa nada de `backend/` ni accede a la base de datos.
 
-Las dos reglas se verifican con `python3 scripts/verify_architecture.py`, que corre en el hook
+Solo el backend toca la base. Desde afuera se entra únicamente por la API HTTP. Adentro, la API,
+el worker de mensajes y los procesos programados son adaptadores de entrada que llaman a casos
+de uso, y ninguno llama a otro por HTTP. Ningún archivo fuera de los repositorios, las
+migraciones y los tests puede importar una librería de base de datos. El LLM nunca accede a la
+base ni genera SQL. La regla completa, con sus
+excepciones, está en el [ADR 0001](docs/adr/0001-arquitectura-hexagonal.md).
+
+Las tres reglas se verifican con `python3 scripts/verify_architecture.py`, que corre en el hook
 de pre-commit. No son una recomendación: rompen el commit.
 
 ## 4. Mapa de carpetas
@@ -52,7 +58,9 @@ de pre-commit. No son una recomendación: rompen el commit.
 - `backend/app/domain/ports/` — interfaces que el dominio declara y no implementa.
 - `backend/app/adapters/inbound/api/` — routers de FastAPI: traducen HTTP a llamadas a casos de uso.
 - `backend/app/adapters/inbound/whatsapp_webhook/` — traduce payloads de WhatsApp a llamadas a casos de uso.
-- `backend/app/adapters/outbound/postgres/` — repositorios SQLAlchemy que implementan los puertos `*_repository`.
+- `backend/app/adapters/inbound/message_worker/` — punto de entrada del worker: toma los mensajes guardados y los pasa a casos de uso.
+- `backend/app/adapters/inbound/scheduler/` — punto de entrada de los procesos programados: recurrentes, cierres de resumen, alertas, vencimientos, cotizaciones y borrado de cuentas, siempre por casos de uso.
+- `backend/app/adapters/outbound/postgres/` — repositorios SQLAlchemy que implementan los puertos `*_repository`, la unidad de trabajo y la creación de la conexión.
 - `backend/app/adapters/outbound/pgvector/` — implementación de `VectorStorePort`.
 - `backend/app/adapters/outbound/whatsapp_client/` — envío de mensajes salientes de WhatsApp.
 - `backend/app/adapters/outbound/email_reader/` — integración IMAP/Gmail (could-have, fuera del MVP).
@@ -112,7 +120,10 @@ Antes de proponer una librería nueva, justificar por qué no alcanza lo instala
 
 **Qué no es la especificación**, aunque lo parezca: los comentarios y docstrings del código, los
 mensajes de commit, las descripciones de los pull requests, los tests, este archivo, `README.md`,
-`prompts.md`, y cualquier cosa dicha en una conversación con un asistente. Este archivo es el
+`prompts.md`, los registros que viven en `docs/` (`docs/conversacion-*.md` y
+`docs/use-case-walkthrough.md`), y cualquier cosa dicha en una conversación con un asistente.
+Una recomendación de `use-case-walkthrough.md` no se implementa hasta que su regla esté escrita en
+la especificación. Este archivo es el
 contrato operativo, no la especificación: cuando resume una regla, la versión que manda es la de
 `docs/`.
 
@@ -130,8 +141,10 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
 - Documentación: `python3 scripts/verify_docs.py`.
 - Arquitectura: `python3 scripts/verify_architecture.py`. Valida la regla de dependencia del
   dominio, que ninguna anotación del dominio cuyo nombre sea monetario (`amount`, `balance`,
-  `limit`, `income`, `total`, `price`, `monto`, `saldo`) use `float`, y el aislamiento del
-  frontend. No detecta un monto con otro nombre. Tolerante mientras `backend/` y `frontend/` no
+  `limit`, `income`, `total`, `price`, `monto`, `saldo`) use `float`, que las librerías de acceso
+  a la base no se importen fuera de los directorios permitidos, y el aislamiento del frontend. No
+  detecta un monto con otro nombre ni una llamada HTTP de un proceso del backend a la API.
+  Tolerante mientras `backend/` y `frontend/` no
   existan, pero falla si `backend/` existe y el dominio no está en `backend/app/domain/`.
 - Los dos tienen que pasar sin errores antes de commitear; el hook de pre-commit los corre solo,
   y el flujo `.github/workflows/docs-quality.yml` los repite en cada pull request junto con
