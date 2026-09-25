@@ -37,7 +37,9 @@ movimiento de octubre se eliminara, el motor podría volver a generarlo en una s
    comunes y se borran una por una, porque pueden estar en un resumen ya cerrado que el banco
    efectivamente cobró.
 5. **Qué muestra la interfaz no se decide acá.** Si los movimientos borrados aparecen en los
-   listados marcados, o si se pueden restaurar, se define al especificar cada pantalla.
+   listados marcados se define al especificar cada pantalla. Restaurar un movimiento borrado sí
+   está permitido: es volver a dejar `deleted_at` nulo, con la confirmación del usuario. Cómo se
+   pide por WhatsApp está en las reglas de dominio, § 15.
 
 ## Consecuencias
 

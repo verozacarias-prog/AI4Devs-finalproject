@@ -57,7 +57,8 @@
 - **El movimiento no se registra si falta el monto, la cuenta, la confirmación del presupuesto, o el tipo cuando el mensaje no deja claro si es gasto o ingreso.** Esos no se dan por supuestos.
 - Cuando falta más de uno, se piden todos juntos en un solo mensaje, ofreciendo las opciones disponibles del usuario (sus cuentas dadas de alta, sus presupuestos activos) para que responder sea elegir, no escribir. Lo ya interpretado se conserva: el usuario no repite el mensaje entero.
 - Si queda sin responder, el movimiento no se registra a medias ni se descarta en silencio: queda pendiente y el asistente lo recuerda una vez antes de expirarlo.
-- El asistente confirma el registro por el mismo canal, listando de forma explícita todo lo que quedó guardado —incluidos los valores que resolvió solo (fecha, moneda, categoría)—, y acepta correcciones sobre cualquiera de ellos en la respuesta.
+- El asistente confirma el registro por el mismo canal, listando de forma explícita todo lo que quedó guardado —incluidos los valores que resolvió solo (fecha, moneda, categoría)—, y acepta correcciones sobre cualquiera de ellos: respondiendo con una cita a esa confirmación, en cualquier momento, o describiendo el movimiento para que el asistente lo busque. Nunca corrige un movimiento que yo no señalé.
+- Puedo borrar un movimiento, o recuperar uno que borré, por WhatsApp. Antes de hacerlo, el asistente me pide confirmación.
 - El movimiento queda marcado con `source = manual`.
 
 *Prioridad:* Alta

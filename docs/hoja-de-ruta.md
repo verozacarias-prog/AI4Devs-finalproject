@@ -53,12 +53,6 @@ sus opciones y una recomendación. Las de esta lista son las que no salieron de 
   Sumarlo exige que una cuenta pueda ser de un usuario o de un grupo, que un aporte sea una
   transferencia entre la cuenta de un miembro y la del grupo, y cambiar esas claves foráneas.
   Con esas mismas restricciones, el cambio es explícito y no aparece por accidente.
-- **Corregir un movimiento citando su confirmación: a futuro.** Hoy, citar el "Listo. $3.500 ·
-  comida…" se procesa como un mensaje sin cita
-  ([reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)).
-  Que la cita apunte a ese movimiento haría las correcciones más directas, pero exige enlazar cada
-  mensaje de confirmación con el movimiento que confirma, y decidir qué pasa si el movimiento ya
-  se corrigió o se borró. Es una funcionalidad nueva, no una regla de borde.
 - **Qué pasa cuando un recurrente o una cuota no se pueden generar.** Los casos previstos, sin
   período confirmado o con una cotización por confirmar, quedan como pendiente
   ([reglas de dominio § 8](reglas-de-dominio.md#8-movimientos-recurrentes-la-excepción-a-la-confirmación)).

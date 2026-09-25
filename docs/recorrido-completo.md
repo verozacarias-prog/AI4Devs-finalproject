@@ -82,6 +82,7 @@ flowchart TB
 | 4. Lo que corre solo | Una hora del día | Procesos programados | `TRANSACTION` o `PENDING_TRANSACTION`, `CARD_STATEMENT`, `EXCHANGE_RATE` | [§ 6](#6-recurrentes-y-cuotas-de-tarjeta) y [§ 7](#7-cierre-y-conciliación-de-un-resumen) |
 | 5. Avisos y contrastes | Una hora del día | Procesos programados, y el worker para las respuestas | `SENT_ALERT`, `OUTBOUND_MESSAGE`, ajustes en `TRANSACTION` | [§ 8](#8-alertas-y-contraste-mensual-de-saldos) |
 | 6. Consulta y consejos | Navegador o WhatsApp | API o worker | `SESSION`, `LLM_USAGE` | [§ 9](#9-dashboard) y [§ 10](#10-consejo-por-whatsapp) |
+| Corregir, borrar o restaurar | WhatsApp o dashboard | Worker o API | `PENDING_TRANSACTION` de tipo cambio, luego el movimiento corregido | [§ 11](#11-corregir-o-borrar-por-whatsapp) |
 
 ## 3. Alta
 
@@ -398,7 +399,56 @@ sequenceDiagram
     W->>M: HTTPS envía la respuesta
 ```
 
-## 11. Lo que el recorrido deja a la vista
+## 11. Corregir o borrar por WhatsApp
+
+Un movimiento confirmado se señala citando su confirmación o describiéndolo. Nunca por ser el
+último ([reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado)).
+
+```mermaid
+sequenceDiagram
+    actor U as Usuario
+    participant M as Meta Cloud API
+    participant API as Servicio web
+    participant DB as PostgreSQL
+    participant W as Worker
+    participant L as LLM
+
+    alt Cita la confirmación
+        U->>M: cita "Listo. $3.500 · comida…" y escribe "eran 3.800"
+        M->>API: HTTPS POST /webhook/whatsapp con context.id
+        API->>DB: SQL INSERT INBOUND_MESSAGE
+        W->>DB: SQL busca PENDING_BATCH por confirmation_message_id<br/>y el movimiento por la columna de resultado
+        W->>L: HTTPS interpreta el cambio
+        rect rgb(240, 246, 252)
+            Note over W,DB: Una sola transacción SQL
+            W->>DB: UPDATE TRANSACTION amount, solo si user_id es el del mensaje
+            W->>DB: INSERT OUTBOUND_MESSAGE con el movimiento corregido
+        end
+    else Lo describe, sin cita
+        U->>M: "borrá el café de ayer, lo cargué dos veces"
+        M->>API: HTTPS POST /webhook/whatsapp
+        API->>DB: SQL INSERT INBOUND_MESSAGE
+        W->>L: HTTPS interpreta: borrar, café, ayer
+        W->>DB: SQL busca candidatos del usuario, como mucho 5
+        rect rgb(240, 246, 252)
+            Note over W,DB: Una sola transacción SQL
+            W->>DB: INSERT PENDING_BATCH y PENDING_TRANSACTION<br/>intent change, con los candidatos
+            W->>DB: INSERT OUTBOUND_MESSAGE con la lista numerada
+        end
+        U->>M: "el 2"
+        W->>DB: SQL guarda el elegido en el pendiente e INSERT OUTBOUND_MESSAGE:<br/>"¿Borro el café de $2.500 de ayer?"
+        U->>M: "sí"
+        rect rgb(240, 246, 252)
+            Note over W,DB: Una sola transacción SQL
+            W->>DB: UPDATE TRANSACTION deleted_at, el trigger fija deleted_by
+            W->>DB: UPDATE PENDING_TRANSACTION promoted, sin columna de resultado
+            W->>DB: INSERT OUTBOUND_MESSAGE "Listo, lo borré"
+        end
+    end
+    W->>M: HTTPS envía la respuesta
+```
+
+## 12. Lo que el recorrido deja a la vista
 
 Los diagramas marcan dos puntos que la especificación todavía no resuelve:
 

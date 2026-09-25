@@ -64,7 +64,8 @@ respuesta, ese mes queda sin contrastar y se vuelve a preguntar al siguiente.
 regla recurrente que ya confirmó, incluida una compra con tarjeta. El movimiento queda marcado
 como borrado, con quién y cuándo, y deja de contar en el saldo, en el gastado de los
 presupuestos y en las alertas. Borrar una regla corta las ocurrencias que faltaban generar,
-como las cuotas pendientes de una compra; las ya generadas se borran una por una (§ 8 y § 13). El fundamento está en el
+como las cuotas pendientes de una compra; las ya generadas se borran una por una (§ 8 y § 13).
+Cómo se pide por WhatsApp, y cómo se restaura lo borrado, está en § 15. El fundamento está en el
 [ADR 0015](adr/0015-borrado-logico-de-movimientos.md).
 
 **Una cuenta, una moneda.** Cada cuenta tiene una sola moneda, igual que en el banco, donde una
@@ -195,6 +196,11 @@ completarse se promueven a `TRANSFER` o a `RECURRING_RULE` en vez de a `TRANSACT
 compra con tarjeta es una regla recurrente (§ 13). Lotes, recordatorios y vencimiento son
 los mismos para los tres.
 
+**Un pendiente también puede ser un cambio sobre un movimiento ya confirmado:** una corrección,
+un borrado o una restauración que espera que el usuario elija el movimiento o confirme el cambio
+(§ 15). Tiene `intent = 'change'`, guarda en `parsed_data` qué movimiento o qué candidatos y qué
+cambio, y al confirmarse aplica el cambio sobre el movimiento existente en vez de crear uno.
+
 **Los pendientes de un recurrente no vencen.** Un pendiente generado por una regla recurrente
 (§ 8) representa un gasto que ocurre sí o sí, como el alquiler: descartarlo sería perder el
 registro de ese mes. Por eso no tiene `expires_at` y, en vez de vencer, se vuelve a recordar
@@ -230,9 +236,10 @@ Cada pendiente pertenece a un lote (`PENDING_BATCH`), y un gasto suelto es un lo
   correcciones también pueden ir por número ("el 2 fueron 3800").
 - **Responder citando un mensaje manda.** Si el usuario responde citando la pregunta de un lote
   concreto, la respuesta va a ese lote aunque no sea el que está en conversación. Es lo que
-  permite contestar fuera de orden sin ambigüedad. Si el mensaje citado no es la pregunta de un
-  lote abierto —una confirmación, una alerta, la pregunta de un lote ya cerrado—, la respuesta
-  se procesa como si no citara nada.
+  permite contestar fuera de orden sin ambigüedad. Si el mensaje citado es la confirmación de un
+  lote ya cerrado, la respuesta es un pedido de corrección, borrado o restauración de los
+  movimientos de ese lote (§ 15). Si no es ninguna de las dos cosas —una alerta, la pregunta de
+  un lote ya cerrado—, la respuesta se procesa como si no citara nada.
 - **Como mucho 10 pendientes por lote.** Más que eso no se lee bien en un mensaje de WhatsApp y
   multiplica las chances de una interpretación errónea. Si el usuario manda más, el asistente
   toma los primeros 10 y le avisa que siga con el resto.
@@ -689,7 +696,7 @@ dashboard:
 
 - **Acceso:** puede descargar en cualquier momento todos sus datos en Excel desde el dashboard.
 - **Rectificación:** puede corregir sus datos desde el dashboard, y sus movimientos también por
-  WhatsApp. Un movimiento ya confirmado que se corrige queda marcado con cuándo y quién lo
+  WhatsApp (§ 15). Un movimiento ya confirmado que se corrige queda marcado con cuándo y quién lo
   corrigió por última vez; el valor anterior no se conserva
   ([ADR 0014](adr/0014-marca-de-edicion-en-movimientos.md)).
 - **Supresión:** el borrado de cuenta descrito arriba.
@@ -699,3 +706,64 @@ email ni ids internos), solo lo necesario para la tarea. El detalle está en el
 [ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md).
 
 Ver también: [Términos y política de privacidad](terminos-y-privacidad.md) · [APP_USER, INBOUND_MESSAGE y OUTBOUND_MESSAGE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
+
+## 15. Corregir, borrar y restaurar un movimiento confirmado
+
+Un movimiento ya confirmado —un gasto, un ingreso, una transferencia o una regla recurrente,
+incluida una compra con tarjeta— se corrige, se borra o se restaura desde el dashboard o por
+WhatsApp. Esta sección dice cómo se hace por WhatsApp. Qué se guarda de cada cambio está en el
+[ADR 0014](adr/0014-marca-de-edicion-en-movimientos.md) y en el
+[ADR 0015](adr/0015-borrado-logico-de-movimientos.md).
+
+**Solo quien lo registró.** Un usuario corrige, borra o restaura solo los movimientos que
+registró él, también los que imputó a un presupuesto familiar. Los demás miembros los ven
+marcados como corregidos o borrados, con quién y cuándo. La única excepción a que cada uno
+resuelva lo suyo sigue siendo la del dueño que saca a un miembro con pendientes abiertos (§ 10),
+y vale solo para pendientes, no para movimientos confirmados.
+
+**Cómo se señala el movimiento.** Hay dos formas, y ninguna adivina:
+
+1. **Citando la confirmación.** El usuario responde citando el "Listo…" con que Platita confirmó
+   el movimiento. La cita apunta exactamente a los movimientos de ese lote, sin importar cuánto
+   tiempo pasó. Si el lote tenía varios, el cambio va por número: "el 2 fueron 3.800". Pasado el
+   plazo de retención el texto de la confirmación se borra, pero su identificador queda, así que
+   la cita sigue funcionando (§ 14). Si el movimiento se corrigió después de esa confirmación, el
+   cambio se aplica sobre sus valores actuales, y la respuesta los muestra. Si se borró, el
+   asistente lo dice y ofrece restaurarlo.
+2. **Describiéndolo.** Sin cita, el asistente busca entre los movimientos del usuario por lo que
+   describe: fecha, monto, descripción, categoría o cuenta. Si encuentra uno solo, pregunta si es
+   ese. Si encuentra varios, los ofrece numerados, como mucho 5, y el usuario elige. Si hay más,
+   pide un dato que achique la búsqueda ("¿de qué día?") o manda el enlace al dashboard con la
+   búsqueda aplicada. El tope es configuración.
+
+Una corrección sin cita nunca se aplica al último movimiento por ser el último. Aunque llegue un
+minuto después del "Listo", pasa por la búsqueda, donde ese movimiento aparece primero para que el
+usuario lo confirme.
+
+**Qué pide confirmación.**
+
+- **Corregir.** Con cita, el movimiento ya está identificado: el cambio se aplica y el asistente
+  responde con el movimiento completo, igual que en una confirmación, donde el usuario puede
+  volver a corregir. Con búsqueda, elegir el candidato confirma el cambio.
+- **Borrar y restaurar.** Siempre piden confirmación, con cita o sin ella: "¿Borro el café de
+  $2.500 de ayer?". Restaurar busca entre los movimientos borrados del usuario. Una regla
+  recurrente borrada no se restaura: se vuelve a crear.
+- **Una fecha que cambia de período.** Si la fecha corregida cae en otro período, se vuelve a
+  pedir la confirmación del período (§ 1), porque ningún movimiento se imputa a un período sin que
+  el usuario lo confirme. Una fecha anterior al alta de la cuenta se rechaza, como en cualquier
+  registro (§ 2).
+
+**Qué no se corrige por WhatsApp.**
+
+- **La fecha de una cuota de tarjeta.** Es la del vencimiento del resumen (§ 13). Su monto y su
+  categoría sí se corrigen.
+- **Muchos movimientos a la vez**, como "pasá todos los de delivery de septiembre a comida". El
+  asistente manda el enlace al dashboard, porque la lista no se lee bien en un chat.
+
+**La conversación de un cambio es un pendiente.** Mientras espera que el usuario elija un
+candidato, confirme un borrado o confirme el período de una fecha nueva, el cambio vive como un
+pendiente de tipo cambio, en un lote de uno (§ 5). Así respeta las mismas reglas: un solo lote en
+conversación, la respuesta citando su pregunta y el vencimiento. Mientras tanto, el movimiento no
+cambia. Corregir, borrar y restaurar consumen la cuota de registro (§ 12).
+
+Ver también: [PENDING_TRANSACTION y PENDING_BATCH en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [HU3](05-historias-de-usuario.md).

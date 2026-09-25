@@ -42,6 +42,7 @@ erDiagram
     APP_USER ||--o{ PENDING_BATCH : "is asked about"
     PENDING_BATCH ||--|{ PENDING_TRANSACTION : groups
     OUTBOUND_MESSAGE |o--o{ PENDING_BATCH : "asks about"
+    OUTBOUND_MESSAGE |o--o{ PENDING_BATCH : "confirms"
     PENDING_TRANSACTION ||--o| TRANSACTION : "becomes, once complete"
     PENDING_TRANSACTION |o--o| TRANSFER : "becomes, once complete"
     PENDING_TRANSACTION |o--o| RECURRING_RULE : "becomes, once complete"
@@ -354,6 +355,7 @@ erDiagram
     APP_USER ||--o{ PENDING_BATCH : "is asked about"
     PENDING_BATCH ||--|{ PENDING_TRANSACTION : groups
     OUTBOUND_MESSAGE |o--o{ PENDING_BATCH : "asks about"
+    OUTBOUND_MESSAGE |o--o{ PENDING_BATCH : "confirms"
     PENDING_TRANSACTION ||--o| TRANSACTION : "becomes, once complete"
     PENDING_TRANSACTION |o--o| TRANSFER : "becomes, once complete"
     PENDING_TRANSACTION |o--o| RECURRING_RULE : "becomes, once complete"
@@ -364,7 +366,7 @@ erDiagram
     PENDING_TRANSACTION {
         uuid id PK
         uuid user_id FK "NOT NULL"
-        string intent "NOT NULL, CHECK IN ('transaction','transfer','recurring_rule'), DEFAULT 'transaction' — what it becomes once complete; a card purchase becomes a recurring_rule"
+        string intent "NOT NULL, CHECK IN ('transaction','transfer','recurring_rule','change'), DEFAULT 'transaction' — what it becomes once complete; a card purchase becomes a recurring_rule; change: a correction, deletion or restoration of a confirmed movement"
         jsonb parsed_data "NOT NULL — whatever was successfully extracted so far"
         string missing_fields "NOT NULL — array of required fields still unanswered"
         string source "NOT NULL, CHECK IN ('manual','automatic')"
@@ -388,6 +390,7 @@ erDiagram
         string source "NOT NULL, CHECK IN ('manual','automatic'), UNIQUE (id, source)"
         boolean awaiting_reply "NOT NULL, DEFAULT FALSE — at most one TRUE per user"
         uuid question_message_id FK "NULLABLE — last outbound message that asked about this batch; indexed"
+        uuid confirmation_message_id FK "NULLABLE — outbound message that confirmed the batch once closed; indexed; quoting it targets the batch's movements"
         string status "NOT NULL, CHECK IN ('open','closed'), DEFAULT 'open'"
         timestamptz reminded_at "NULLABLE — set when the one reminder before expiry was sent"
         timestamptz created_at "DEFAULT now()"
@@ -624,11 +627,11 @@ Ver también, en otra tabla: [la categoría del mismo tipo, la cuenta del mismo 
 
 ##### PENDING_TRANSACTION
 
-Movimiento a medio completar, todavía no registrado. Puede terminar siendo un gasto o ingreso, una transferencia o una regla recurrente, como una compra con tarjeta en cuotas, según `intent`, y al promoverse queda enlazado a la fila que generó por la columna de resultado de ese tipo. Cuándo se crea y cuándo no, cómo continúa la conversación, cómo se promueve y cómo expira está en [reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración). Será también el estado natural de lo que detecte el parser de emails cuando se implemente: un mail de aviso trae monto, fecha y normalmente la cuenta, pero nunca a qué presupuesto imputarlo, así que esperará acá la confirmación. Guarda lo interpretado (`parsed_data`), la lista de `missing_fields`, y el asistente pregunta por WhatsApp. Tener una tabla aparte, en vez de un `status` dentro de `TRANSACTION` con columnas nullables, es lo que permite que `TRANSACTION` mantenga sus `NOT NULL` reales: los datos incompletos no contaminan la tabla de la que salen saldos y presupuestos.
+Movimiento a medio completar, todavía no registrado. Puede terminar siendo un gasto o ingreso, una transferencia o una regla recurrente, como una compra con tarjeta en cuotas, según `intent`, y al promoverse queda enlazado a la fila que generó por la columna de resultado de ese tipo. Con `intent = 'change'` no es un movimiento nuevo sino un cambio pendiente sobre uno ya confirmado: `parsed_data` guarda el movimiento o los candidatos y el cambio pedido, y al promoverse se aplica sobre ese movimiento, cuya pertenencia al usuario se valida en la misma transacción ([reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado)). Cuándo se crea y cuándo no, cómo continúa la conversación, cómo se promueve y cómo expira está en [reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración). Será también el estado natural de lo que detecte el parser de emails cuando se implemente: un mail de aviso trae monto, fecha y normalmente la cuenta, pero nunca a qué presupuesto imputarlo, así que esperará acá la confirmación. Guarda lo interpretado (`parsed_data`), la lista de `missing_fields`, y el asistente pregunta por WhatsApp. Tener una tabla aparte, en vez de un `status` dentro de `TRANSACTION` con columnas nullables, es lo que permite que `TRANSACTION` mantenga sus `NOT NULL` reales: los datos incompletos no contaminan la tabla de la que salen saldos y presupuestos.
 
 **Restricciones:**
 
-- En `PENDING_TRANSACTION`, `status = 'promoted'` si y solo si está informada la columna de resultado que corresponde a su `intent` —`resulting_transaction_id`, `resulting_transfer_id` o `resulting_recurring_rule_id`—, y las otras dos son siempre nulas (`CHECK`). Un pendiente generado por una regla recurrente, incluida una cuota de tarjeta, tiene `intent = 'transaction'` (`CHECK`), porque lo que genera es un gasto o un ingreso. Un pendiente `open` es el que bloquea la salida de un grupo familiar.
+- En `PENDING_TRANSACTION`, `status = 'promoted'` si y solo si está informada la columna de resultado que corresponde a su `intent` —`resulting_transaction_id`, `resulting_transfer_id` o `resulting_recurring_rule_id`—, y las otras dos son siempre nulas (`CHECK`). Un pendiente con `intent = 'change'` no tiene columna de resultado: las tres son siempre nulas, porque no crea una fila sino que cambia una existente. Un pendiente generado por una regla recurrente, incluida una cuota de tarjeta, tiene `intent = 'transaction'` (`CHECK`), porque lo que genera es un gasto o un ingreso. Un pendiente `open` es el que bloquea la salida de un grupo familiar.
 - En `PENDING_TRANSACTION`, un pendiente tiene el mismo `source` que su lote: clave foránea compuesta `(batch_id, source)` contra `PENDING_BATCH (id, source)`, así un lote nunca mezcla manuales y automáticos. `UNIQUE (batch_id, position)` y `CHECK (position BETWEEN 1 AND 10)` garantizan que cada número que ve el usuario señala un solo pendiente, y que un lote no pasa de 10. La regla de lotes está en [reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración).
 - En `PENDING_TRANSACTION`, `expires_at` es nulo si y solo si `recurring_rule_id` está informado (`CHECK`): los pendientes de un recurrente, incluidas las cuotas de tarjeta, no vencen, y todos los demás sí. `recurring_rule_id` y `occurrence_date` van los dos nulos o los dos informados (`CHECK`), con `UNIQUE (recurring_rule_id, occurrence_date)`: una regla recurrente genera como mucho un pendiente por ocurrencia, igual que como mucho un movimiento.
 
@@ -636,7 +639,7 @@ Ver también, en otra tabla: [la unicidad por ocurrencia, en TRANSACTION](#trans
 
 ##### PENDING_BATCH
 
-Grupo de pendientes que el asistente pregunta juntos, en un solo mensaje numerado. Es la unidad de conversación: el usuario responde sobre el lote, en general ("todos al familiar") o por número. `awaiting_reply` marca el único lote por el que el asistente espera respuesta; `question_message_id` es el mensaje que lo preguntó, y es lo que permite asociar una respuesta que cita ese mensaje aunque el lote no esté en conversación. `reminded_at` marca el último recordatorio enviado. En un lote que vence, es el único recordatorio previo al vencimiento que promete [HU3](05-historias-de-usuario.md), y el proceso que recuerda solo toma lotes sin esa marca; en un lote con pendientes de un recurrente, que no vencen, el proceso vuelve a recordar cuando pasaron 3 días desde `reminded_at`. Un gasto suelto es un lote de uno. Se cierra cuando todos sus pendientes quedan promovidos, rechazados o vencidos.
+Grupo de pendientes que el asistente pregunta juntos, en un solo mensaje numerado. Es la unidad de conversación: el usuario responde sobre el lote, en general ("todos al familiar") o por número. `awaiting_reply` marca el único lote por el que el asistente espera respuesta; `question_message_id` es el mensaje que lo preguntó, y es lo que permite asociar una respuesta que cita ese mensaje aunque el lote no esté en conversación. `confirmation_message_id` es el mensaje que confirmó el lote al cerrarse; una respuesta que lo cita es un pedido de cambio sobre los movimientos de ese lote, que se encuentran por la columna de resultado de cada pendiente y su `position` ([reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado)). `reminded_at` marca el último recordatorio enviado. En un lote que vence, es el único recordatorio previo al vencimiento que promete [HU3](05-historias-de-usuario.md), y el proceso que recuerda solo toma lotes sin esa marca; en un lote con pendientes de un recurrente, que no vencen, el proceso vuelve a recordar cuando pasaron 3 días desde `reminded_at`. Un gasto suelto es un lote de uno. Se cierra cuando todos sus pendientes quedan promovidos, rechazados o vencidos.
 
 **Restricciones:**
 
@@ -659,6 +662,6 @@ Todo mensaje que Platita manda por WhatsApp, ya sea una respuesta, una alerta o 
 
 **Restricciones:**
 
-- En `OUTBOUND_MESSAGE`, `UNIQUE (provider, provider_message_id)`, y un índice sobre `PENDING_BATCH (question_message_id)`. Una respuesta que cita un mensaje trae el identificador de WhatsApp del mensaje citado; con él se encuentra el mensaje enviado y, desde ese mensaje, el lote que preguntaba ([reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)). La columna es nula hasta que el mensaje se envía, y en un `UNIQUE` dos nulos no chocan.
+- En `OUTBOUND_MESSAGE`, `UNIQUE (provider, provider_message_id)`, y un índice sobre `PENDING_BATCH (question_message_id)` y otro sobre `PENDING_BATCH (confirmation_message_id)`. Una respuesta que cita un mensaje trae el identificador de WhatsApp del mensaje citado; con él se encuentra el mensaje enviado y, desde ese mensaje, el lote que preguntaba ([reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)). La columna es nula hasta que el mensaje se envía, y en un `UNIQUE` dos nulos no chocan.
 
 Ver también, en otra tabla: [la purga del contenido y del teléfono, en INBOUND_MESSAGE](#inbound_message).
