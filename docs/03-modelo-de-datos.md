@@ -295,6 +295,7 @@ erDiagram
         date closing_date "NOT NULL, UNIQUE (account_id, closing_date)"
         date due_date "NOT NULL, CHECK (due_date > closing_date), UNIQUE (account_id, due_date)"
         string status "NOT NULL, CHECK IN ('open','closed','reconciled'), DEFAULT 'open' — reconciled once adjusted against the bank's total"
+        decimal exchange_rate "NUMERIC(24,10), NULLABLE, > 0 — rate confirmed for the statement when the card currency differs from the budget; its occurrences and its adjustment copy it"
     }
 
     TRANSFER {
@@ -599,6 +600,7 @@ Cada resumen de una tarjeta. Sus fechas se generan a partir de `closing_day` y `
 
 **Restricciones:**
 
+- En `CARD_STATEMENT`, `exchange_rate` es la cotización confirmada para todo el resumen cuando la moneda de la tarjeta no es la del presupuesto, según cómo se paga ([reglas de dominio § 13](reglas-de-dominio.md#13-tarjetas-de-crédito-y-transferencias)). Las ocurrencias y el ajuste del resumen la copian en su `TRANSACTION.exchange_rate`, y el residuo de un pago se calcula contra ella. `exchange_rate > 0` (`CHECK`).
 - En `CARD_STATEMENT`, `UNIQUE (account_id, closing_date)` y `UNIQUE (account_id, due_date)`: una tarjeta no tiene dos resúmenes con el mismo cierre ni con el mismo vencimiento. `due_date` posterior a `closing_date` (`CHECK`). Un movimiento no guarda su resumen: pertenece al resumen de su cuenta cuyo `due_date` es igual a su `transaction_date`, que es la fecha con que se generó. Un resumen cerrado no se corrige, así que ese vínculo no cambia.
 
 ##### TRANSFER

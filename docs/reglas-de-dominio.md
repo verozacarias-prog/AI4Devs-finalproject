@@ -281,7 +281,9 @@ corrige. Una cotización nunca se aplica sin que el usuario vea el resultado.
 **De dónde sale la cotización.** Se busca sola, desde las fuentes configuradas, y se guarda por
 fuente y fecha; convertir nunca consulta al proveedor en el momento. En el MVP hay fuentes solo
 para Argentina, donde cada usuario elige cuál usa (por ejemplo, MEP u oficial). El mecanismo está
-en el [ADR 0011](adr/0011-cotizaciones-con-adaptador-generico-configurable.md).
+en el [ADR 0011](adr/0011-cotizaciones-con-adaptador-generico-configurable.md). Una tarjeta en
+otra moneda no usa la cotización de referencia sino la de cómo se paga su resumen, que en
+Argentina puede ser la fuente del dólar tarjeta (§ 13).
 
 **Sin cotización, se pregunta.** Si el usuario no tiene fuente de referencia, porque su país
 todavía no tiene una configurada, o si la última cotización guardada es demasiado vieja, el
@@ -531,7 +533,7 @@ Las que hacen falta son:
 | Pendientes sin confirmar | Utilidad | Antes de vencer, o cada 3 días si son de un recurrente |
 | Período sin confirmar | Utilidad | Cerca del inicio de un período que sigue en `draft`: lista su ingreso y sus topes, y se confirma respondiendo. En un período familiar, solo al dueño |
 | Recurrente o cuota por confirmar | Utilidad | Cuando un recurrente o una cuota de tarjeta no encuentra período confirmado, necesita que el usuario confirme la cotización, o es de monto variable y su monto no está confirmado. Las ocurrencias variables de una tarjeta no usan esta plantilla: se preguntan en la conciliación |
-| Conciliación del resumen | Utilidad | Unos días después del cierre de un resumen de tarjeta: pide los montos de las suscripciones variables sin confirmar y el total del banco, y recomienda revisar los consumos |
+| Conciliación del resumen | Utilidad | Unos días después del cierre de un resumen de tarjeta: pide los montos de las suscripciones variables sin confirmar, en una tarjeta en otra moneda cómo se va a pagar y la cotización del resumen, y el total del banco, y recomienda revisar los consumos |
 | Saldos del mes | Utilidad | Al terminar cada mes de presupuesto: muestra el saldo de cada cuenta y pregunta si coincide con el real |
 
 Ver también: [HU6](05-historias-de-usuario.md) · [APP_USER y FINANCIAL_PROFILE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [OUTBOUND_MESSAGE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
@@ -602,9 +604,10 @@ tarjeta es una regla igual, pero sin límite de ocurrencias. El fundamento está
 **Cada ocurrencia se genera al cerrar el resumen.** Al cerrar cada resumen, el sistema genera,
 por cada ocurrencia de las reglas de esa tarjeta que entra en él, un gasto sobre la cuenta de la
 tarjeta con fecha igual al vencimiento, imputado al período confirmado de ese dueño que cubre
-esa fecha. Si ese período no está confirmado, o si la moneda de la tarjeta no es la del período,
-la ocurrencia queda pendiente igual que la de cualquier regla recurrente (§ 8): no vence y se
-recuerda cada 3 días. Si la regla es de monto variable, como una suscripción que sube de precio,
+esa fecha. Si ese período no está confirmado, la ocurrencia queda pendiente igual que la de
+cualquier regla recurrente (§ 8): no vence y se recuerda cada 3 días. Si la moneda de la tarjeta
+no es la del período, también queda pendiente, pero sin aviso: su cotización se confirma una sola
+vez para todo el resumen, en la conciliación (ver "Una tarjeta en otra moneda", más abajo). Si la regla es de monto variable, como una suscripción que sube de precio,
 y su monto no quedó confirmado al armar el presupuesto, la ocurrencia también queda pendiente,
 pero el cierre no avisa: se pregunta en la conciliación, donde el usuario tiene el resumen con el
 precio real. Una regla genera como mucho un movimiento, o un pendiente, por ocurrencia,
@@ -616,6 +619,32 @@ veces las corren. Un resumen ya cerrado no se corrige.
 
 **Pagar el resumen es una transferencia** de una cuenta del usuario a la tarjeta. Si paga el
 saldo en dólares con pesos, la transferencia tiene un monto en cada moneda.
+
+**Una tarjeta en otra moneda: una cotización por resumen, según cómo se paga.** Cuando la moneda
+de la tarjeta, por ejemplo dólares, no es la del presupuesto, sus consumos no pesan con la
+cotización de referencia del usuario, sino con la que corresponde a cómo se va a pagar el
+resumen. En Argentina, pagar dólares con pesos cuesta el dólar tarjeta: el oficial más la
+percepción.
+
+- **Se pregunta en la conciliación.** Las ocurrencias de un resumen en dólares nacen pendientes
+  de cotización al cierre, sin aviso, y el mensaje de la conciliación pregunta cómo se va a pagar
+  el saldo: con dólares o con pesos. Con pesos, sugiere la cotización de la fuente del dólar
+  tarjeta. Con dólares, la cotización de referencia del usuario (§ 6). El usuario la confirma una
+  sola vez, y vale para todas las ocurrencias del resumen y para su ajuste de conciliación. El
+  resumen guarda esa cotización.
+- **Si paga antes de confirmar.** Si el usuario paga con pesos antes de que se confirme la
+  cotización del resumen, la cotización del resumen es la que resulta del pago: los pesos que
+  pagó divididos por los dólares que canceló.
+- **El residuo al pagar.** Entre la conciliación y el pago, el dólar se mueve. Al registrar un
+  pago con pesos, los dólares pagados se asignan como cualquier pago, primero a lo vencido y
+  después a la deuda del próximo vencimiento, cada tramo con la cotización de su resumen. Si los
+  pesos pagados no coinciden con esa cuenta, la diferencia se registra como un ajuste imputado
+  al período del pago y confirmado en el mismo mensaje. Si pagó de más es un gasto en la
+  categoría base "Diferencia de cambio", y si pagó de menos, un ingreso en "Diferencia de cambio
+  a favor". Un pago con dólares propios no tiene residuo.
+- **La percepción es parte del costo.** Queda incluida en lo que pesa cada consumo, en su
+  categoría. Aunque es recuperable ante ARCA, separarla para mostrar cuánto se puede recuperar
+  queda como mejora futura.
 
 **Cada resumen se concilia contra el total del banco.** Un resumen trae cargos que no salen de
 ninguna compra: intereses por no haber pagado el total, impuestos que cambian mes a mes,

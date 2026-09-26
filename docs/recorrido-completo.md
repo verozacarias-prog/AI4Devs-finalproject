@@ -275,7 +275,7 @@ sequenceDiagram
         S->>DB: INSERT TRANSACTION por cada ocurrencia del resumen,<br/>con fecha de vencimiento, o PENDING_TRANSACTION<br/>si es variable sin confirmar, sin avisar
         S->>DB: UPDATE RECURRING_RULE de cada compra
     end
-    Note over S,DB: Unos días después del cierre, 3 por defecto
+    Note over S,DB: Unos días después del cierre, 3 por defecto.<br/>En una tarjeta en dólares, la pregunta suma cómo se<br/>va a pagar y la cotización del resumen
     S->>DB: SQL INSERT OUTBOUND_MESSAGE, plantilla Conciliación del resumen
     W->>M: HTTPS envía la plantilla
     M->>U: "Spotify: ¿$4.058 o cambió?<br/>¿Cuál es el total a pagar de tu resumen?"
@@ -292,6 +292,9 @@ sequenceDiagram
     end
     U->>M: "pagué la visa con la Galicia"
     W->>DB: SQL INSERT TRANSFER de Galicia a la tarjeta,<br/>tras confirmar como en § 5
+    opt Tarjeta en dólares pagada con pesos
+        W->>DB: SQL INSERT TRANSACTION del residuo en Diferencia de cambio,<br/>si los pesos no coinciden con la cotización del resumen
+    end
 ```
 
 ## 8. Alertas y contraste mensual de saldos

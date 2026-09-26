@@ -77,6 +77,12 @@ presupuesto, y sin registrar dejaban mal los saldos.
    mensaje, el asistente recomienda revisar que no haya consumos no reconocidos, que se registran
    aparte y no dentro del ajuste.
 
+8. **Una tarjeta en dólares pesa según cómo se paga.** Sus consumos no pesan con la cotización
+   de referencia del usuario, sino con una cotización por resumen que el usuario confirma en la
+   conciliación, según pague con dólares propios o con pesos, en cuyo caso se sugiere el dólar
+   tarjeta. Al pagar con pesos, la diferencia que dejó el movimiento del dólar entre la
+   conciliación y el pago se registra como un ajuste en "Diferencia de cambio".
+
 ## Consecuencias
 
 ### Positivas
@@ -94,6 +100,11 @@ presupuesto, y sin registrar dejaban mal los saldos.
   la compra de dólares.
 
 ### Negativas y costos asumidos
+
+- El usuario responde una pregunta más por resumen en dólares: con qué lo va a pagar. A cambio,
+  confirma una sola cotización por resumen en vez de una por consumo.
+- La percepción del 30% queda sumada al costo de cada consumo. No se puede ver cuánto de lo
+  gastado es recuperable ante ARCA sin separarla, que queda como mejora futura.
 
 - Tres conceptos nuevos: un tipo de cuenta, resúmenes y transferencias, más un final opcional
   para las reglas recurrentes. Es la parte más compleja del modelo.
