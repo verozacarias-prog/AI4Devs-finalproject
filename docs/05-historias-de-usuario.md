@@ -12,6 +12,7 @@
 
 - Puedo crear una cuenta indicando nombre, institución, tipo (banco, billetera, broker, efectivo, tarjeta o "me deben"), moneda y saldo inicial.
 - El saldo de cada cuenta se muestra calculado a partir del saldo inicial más los movimientos imputados a ella, no como un valor que yo tenga que actualizar.
+- Una cuenta de broker solo recibe lo que le aporto y lo que retiro, y muestra lo aportado neto: Platita no sigue el valor de mis inversiones.
 - El dashboard lista mis cuentas con su saldo actual, agrupadas por moneda.
 - Puedo editar los datos de una cuenta sin perder el historial de movimientos asociados.
 

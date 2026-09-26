@@ -325,7 +325,7 @@ sequenceDiagram
         W->>M: HTTPS envía la alerta
     end
     Note over S,DB: Al terminar el mes de presupuesto
-    S->>DB: SQL calcula el saldo de cada cuenta que no es tarjeta:<br/>ACCOUNT, TRANSACTION y TRANSFER hasta ese día
+    S->>DB: SQL calcula el saldo de cada cuenta que no es tarjeta,<br/>Me deben ni inversión: ACCOUNT, TRANSACTION y TRANSFER hasta ese día
     S->>DB: SQL INSERT OUTBOUND_MESSAGE, plantilla Saldos del mes
     W->>M: HTTPS envía los saldos
     M->>U: "¿Coinciden con lo que tenés?"

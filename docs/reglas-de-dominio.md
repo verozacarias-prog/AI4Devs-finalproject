@@ -51,15 +51,26 @@ saldo de Platita se separa del real: gastos que no cargó, comisiones, rendimien
 usado sin registrar. Al terminar cada mes de presupuesto (el fin de su período individual
 mensual, o el fin de mes si sus períodos son quincenales o solo familiares), el asistente manda
 un solo mensaje con el saldo de cada cuenta, salvo las tarjetas, que se concilian contra su
-resumen (§ 13), y las cuentas "Me deben", cuyo saldo no existe fuera de Platita (§ 16), y
-pregunta si coincide. Si no coincide, el usuario dice cuánto tiene y el
+resumen (§ 13), las cuentas "Me deben", cuyo saldo no existe fuera de Platita (§ 16), y las
+cuentas de inversión, cuyo valor cambia con el mercado (ver abajo). Y pregunta si coincide. Si no coincide, el usuario dice cuánto tiene y el
 asistente primero ayuda a encontrar lo que falta cargar, que se registra como cualquier
 movimiento. Lo que quede sin explicar se registra como un ajuste confirmado por el usuario,
 imputado al período que terminó, con su último día como fecha: un gasto en la categoría base
 "Faltantes sin identificar" si falta plata, o un ingreso en "Sobrantes sin identificar" si
-sobra, o en "Devoluciones y reintegros" si el usuario reconoce un rendimiento o un reintegro. El ajuste pesa en el
-presupuesto, porque un gasto olvidado es plata que salió. Responder no es obligatorio: sin
+sobra. Si el usuario reconoce lo que sobra como un rendimiento de una cuenta remunerada o de un
+plazo fijo, es un ingreso en la categoría base "Rendimientos", y si lo reconoce como un
+reintegro, en "Devoluciones y reintegros" (§ 16). El ajuste pesa en el presupuesto, porque un
+gasto olvidado es plata que salió. Responder no es obligatorio: sin
 respuesta, ese mes queda sin contrastar y se vuelve a preguntar al siguiente.
+
+**Una cuenta de inversión solo recibe aportes y retiros.** Una cuenta de tipo broker, como la de
+un agente de bolsa, se mueve solo con transferencias desde y hacia otras cuentas propias (§ 13):
+aportar es transferirle plata, y retirar es transferir desde ella. No lleva gastos, ingresos ni
+reglas recurrentes, y la base lo impone. Lo que pasa adentro, como comprar CEDEARs, cobrar
+dividendos o la suba y baja de los precios, no se registra. Por eso su saldo es lo aportado
+neto: lo transferido menos lo retirado. Puede quedar negativo, si el usuario retiró más de lo que
+aportó, y el dashboard lo muestra como "aportado neto" y no como saldo. Platita no sabe cuánto
+vale la cartera, y la cuenta no entra en el contraste mensual.
 
 **Borrar un movimiento.** El usuario puede borrar un gasto, un ingreso, una transferencia o una
 regla recurrente que ya confirmó, incluida una compra con tarjeta. El movimiento queda marcado
