@@ -51,7 +51,8 @@ saldo de Platita se separa del real: gastos que no cargó, comisiones, rendimien
 usado sin registrar. Al terminar cada mes de presupuesto (el fin de su período individual
 mensual, o el fin de mes si sus períodos son quincenales o solo familiares), el asistente manda
 un solo mensaje con el saldo de cada cuenta, salvo las tarjetas, que se concilian contra su
-resumen (§ 13), y pregunta si coincide. Si no coincide, el usuario dice cuánto tiene y el
+resumen (§ 13), y las cuentas "Me deben", cuyo saldo no existe fuera de Platita (§ 16), y
+pregunta si coincide. Si no coincide, el usuario dice cuánto tiene y el
 asistente primero ayuda a encontrar lo que falta cargar, que se registra como cualquier
 movimiento. Lo que quede sin explicar se registra como un ajuste confirmado por el usuario,
 imputado al período que terminó, con su último día como fecha: un gasto en la categoría base
@@ -574,8 +575,8 @@ Ver también: [LLM_USAGE en 3.2](03-modelo-de-datos.md#llm_usage) · [ADR 0010](
 ## 13. Tarjetas de crédito y transferencias
 
 **Transferencias entre cuentas propias.** Mover plata entre dos cuentas del mismo usuario (sacar
-efectivo, pasar de un banco a una billetera, comprar dólares, pagar la tarjeta) es una
-transferencia, no un gasto ni un ingreso. Baja el saldo de una cuenta y sube el de otra, y no
+efectivo, pasar de un banco a una billetera, comprar dólares, pagar la tarjeta, prestarle plata a
+alguien con una cuenta "Me deben", § 16) es una transferencia, no un gasto ni un ingreso. Baja el saldo de una cuenta y sube el de otra, y no
 entra en ningún presupuesto ni en ninguna alerta. Cada lado va en la moneda de su cuenta; si las
 monedas difieren, se guarda la cotización usada y, como toda conversión, se confirma con el
 usuario (§ 6). Origen y destino son cuentas distintas del mismo usuario.
@@ -767,3 +768,52 @@ conversación, la respuesta citando su pregunta y el vencimiento. Mientras tanto
 cambia. Corregir, borrar y restaurar consumen la cuota de registro (§ 12).
 
 Ver también: [PENDING_TRANSACTION y PENDING_BATCH en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [HU3](05-historias-de-usuario.md).
+
+## 16. Reintegros, devoluciones y plata que te deben
+
+Hay dos situaciones en las que entra plata que no es un ingreso, y cada una tiene su mecanismo.
+
+**Un reintegro resta del gasto que devuelve.** Un reintegro, la devolución de una compra o lo
+que otros le pagan al usuario por un gasto que ya registró se registran como un ingreso vinculado
+a ese gasto (`refund_of`), en la categoría base "Devoluciones y reintegros".
+
+- **Qué cambia en los números.** El ingreso vinculado no suma como ingreso del período: resta
+  del gastado de la categoría del gasto que devuelve. El saldo de la cuenta sube igual, porque la
+  plata entró.
+- **En qué período resta.** En el período en que llega el reintegro, no en el del gasto: es el
+  mismo criterio de flujo de caja que las cuotas de tarjeta (§ 13). Un período ya terminado no
+  cambia. Si en ese período la categoría tuvo menos gastos que el reintegro, su gastado puede
+  quedar negativo, y se muestra así.
+- **Cómo se vincula.** Cuando el usuario registra un ingreso que el asistente clasifica en
+  "Devoluciones y reintegros", o que habla de una devolución, un reintegro o lo que le pagaron
+  por un gasto, el asistente pregunta de qué gasto es. Lo busca igual que en § 15 y ofrece hasta
+  5 candidatos numerados. El usuario elige, o dice que no es de ningún gasto, y entonces queda
+  como un ingreso común. El vínculo nunca se adivina.
+- **Topes.** Si los reintegros vinculados a un gasto suman más que su monto, el asistente lo avisa
+  antes de confirmar.
+- **Si se borra el gasto.** Sus reintegros se desvinculan y pasan a ser ingresos comunes. El
+  asistente lo avisa al pedir la confirmación del borrado.
+
+El ajuste de una conciliación de tarjeta en "Devoluciones y reintegros" (§ 13) es un solo número
+por resumen y no se vincula a ninguna compra.
+
+**La plata que te deben es una cuenta.** Un préstamo a otra persona, o la parte de un gasto
+compartido que otro va a pagar, no es un gasto: es plata del usuario que tiene otro. Se registra
+como una transferencia a una cuenta de tipo "Me deben", y cuando la devuelven, como una
+transferencia desde esa cuenta. Ninguna de las dos pesa en el presupuesto.
+
+- **Una cuenta por persona.** El asistente usa el nombre de la persona: "Me debe Juan". La crea la
+  primera vez, con confirmación, como cualquier cuenta. Si el usuario no nombra a nadie, usa una
+  cuenta genérica "Me deben". Tiene una moneda, como toda cuenta, y saldo inicial 0.
+- **Su saldo es lo que te deben.** Lo calcula Platita con las transferencias, así que no entra en
+  el contraste mensual de saldos (§ 2), y el dashboard lo muestra aparte de la plata disponible.
+- **Dividir en el momento.** Si al pagar el usuario ya sabe su parte, el asistente registra las
+  dos cosas en una sola confirmación. Por ejemplo, con "pagué la cena, 64 mil de MP, mi parte 16,
+  el resto Juan, Pedro y Ana", registra un gasto de $16.000 y tres transferencias de $16.000 a
+  "Me debe Juan", "Me debe Pedro" y "Me debe Ana". Si no lo sabe al pagar, registra el gasto
+  completo, y lo que le pagan después se vincula como reintegro.
+
+Lo que el usuario le debe a otro, como cuando otra persona pagó la cena, no tiene cuenta propia
+todavía: se registra como gasto cuando el usuario le paga.
+
+Ver también: [TRANSACTION y ACCOUNT en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [HU4](05-historias-de-usuario.md).

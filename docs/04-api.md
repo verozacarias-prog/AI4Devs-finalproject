@@ -49,7 +49,7 @@ La misma ruta atiende la verificación de la URL que Meta hace al configurar el 
 
 ### `GET /budgets/{budget_id}`
 
-Devuelve el estado actual del límite de **una categoría** dentro de un período de presupuesto: límite, gastado hasta el momento (convertido a la moneda primaria del período) y movimientos asociados. El dashboard arma la vista completa del período ([HU2](05-historias-de-usuario.md)) iterando los `BUDGET` de un mismo `budget_period_id` — agregar un endpoint de rollup a nivel de período es candidato para la Entrega 2.
+Devuelve el estado actual del límite de **una categoría** dentro de un período de presupuesto: límite, gastado hasta el momento (convertido a la moneda primaria del período, y neto de los reintegros vinculados que llegaron en ese período, según [reglas de dominio § 16](reglas-de-dominio.md#16-reintegros-devoluciones-y-plata-que-te-deben)) y movimientos asociados. El dashboard arma la vista completa del período ([HU2](05-historias-de-usuario.md)) iterando los `BUDGET` de un mismo `budget_period_id` — agregar un endpoint de rollup a nivel de período es candidato para la Entrega 2.
 
 Quién puede leerlo: si el período es individual, solo su dueño. Si es familiar, cualquier miembro
 vigente del grupo, que ve todos los movimientos del período sin importar quién los registró, y
@@ -166,6 +166,8 @@ Lo que el cliente **no** manda:
 - `user_id` no viaja en el cuerpo: sale de la sesión autenticada. Aceptarlo del cliente sería dejar que cualquiera escriba movimientos en la cuenta de otro.
 - `source` lo fija el servidor en `"manual"`, ignorando cualquier valor recibido. Los movimientos `automatic` —el motor de recurrentes y, cuando se implemente, la carga por email— nacen del caso de uso `RegisterTransaction` por dentro, no de este endpoint. Lo que el usuario escribe por WhatsApp y confirma también es `manual`, igual que lo cargado acá, porque lo ingresó él (ver [HU3](05-historias-de-usuario.md)). Así, así que la trazabilidad de origen ([reglas de dominio § 9](reglas-de-dominio.md#9-trazabilidad-de-origen-source)) no depende de la buena fe del cliente.
 
+`refund_of` es opcional y solo vale en un ingreso: el gasto del mismo usuario que ese ingreso devuelve. En un gasto, o apuntando a algo que no es un gasto, se rechaza con `422`. Apuntando a un movimiento de otro usuario, `404`.
+
 Validaciones de pertenencia, antes de insertar: `account_id` tiene que ser una cuenta del usuario autenticado; `budget_period_id`, un período de ese usuario o de un grupo familiar al que pertenezca; y `category_id`, una categoría propia del usuario o una del catálogo base del sistema (`user_id` nulo e `is_base = true`), que es exactamente lo que el catálogo mixto de [CATEGORY](03-modelo-de-datos.md#category) permite. Si no, `404` —no `403`— para no confirmar que el recurso existe.
 
 `transaction_date` y `currency` son opcionales. La fecha es hoy por defecto, y no puede ser anterior al día de alta de la cuenta: si lo es, se rechaza con `422` ([reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado)). La moneda es la de la cuenta indicada en `account_id`. Si llega una `currency` distinta de la de la cuenta, se rechaza con `422`: desde el dashboard, un movimiento se carga en la moneda de su cuenta, y cargar un gasto en otra moneda es solo del flujo conversacional.
@@ -193,6 +195,7 @@ requestBody:
         currency: "ARS"              # opcional — default: the account's currency; any other is 422
         transaction_date: "2026-09-15" # opcional — default: today in the user's time_zone
         exchange_rate: null            # required only when the account and the period differ in currency
+        refund_of: null                # optional, only on an income: the expense it refunds
 responses:
   201:
     content:

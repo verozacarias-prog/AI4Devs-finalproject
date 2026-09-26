@@ -10,7 +10,7 @@
 
 *Criterios de aceptación:*
 
-- Puedo crear una cuenta indicando nombre, institución, tipo (banco, billetera, broker, efectivo), moneda y saldo inicial.
+- Puedo crear una cuenta indicando nombre, institución, tipo (banco, billetera, broker, efectivo, tarjeta o "me deben"), moneda y saldo inicial.
 - El saldo de cada cuenta se muestra calculado a partir del saldo inicial más los movimientos imputados a ella, no como un valor que yo tenga que actualizar.
 - El dashboard lista mis cuentas con su saldo actual, agrupadas por moneda.
 - Puedo editar los datos de una cuenta sin perder el historial de movimientos asociados.
@@ -75,6 +75,8 @@
 *Criterios de aceptación:*
 
 - El dashboard muestra, para el período seleccionado, el ingreso estimado y el tope, lo gastado y el porcentaje usado de cada categoría.
+- Un reintegro o una devolución que vinculé a un gasto resta del gastado de su categoría, en el período en que llegó, y se ve junto a ese gasto.
+- Lo que presté, o lo que otros me deben de un gasto compartido, se ve aparte como "me deben", por persona, y no cuenta como gastado.
 - Se distingue visualmente entre presupuestos individuales y familiares.
 - Puedo ver el detalle de movimientos de una categoría, con la cuenta afectada y el origen (manual / automático) de cada uno.
 - *(Should-have)* Los movimientos en moneda distinta a la primaria se muestran convertidos, con la cotización usada visible.
