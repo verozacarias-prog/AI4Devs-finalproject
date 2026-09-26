@@ -286,6 +286,7 @@ erDiagram
         decimal initial_balance "NUMERIC(20,2), NOT NULL, DEFAULT 0 — the balance on the day of created_at"
         int closing_day "NULLABLE, 1 to 31 — only for credit_card"
         int due_day "NULLABLE, 1 to 31 — only for credit_card"
+        boolean uses_linked_cards "NULLABLE — only for digital_wallet; null until asked whether the user pays with cards linked to it"
         timestamptz created_at "DEFAULT now()"
     }
 
@@ -588,6 +589,7 @@ Cuenta bancaria, billetera virtual, broker de inversión, efectivo, tarjeta de c
 **Restricciones:**
 
 - En `ACCOUNT`, `closing_day` y `due_day` son obligatorios si y solo si `type = 'credit_card'` (`CHECK`).
+- En `ACCOUNT`, `uses_linked_cards` solo puede estar informado si `type = 'digital_wallet'` (`CHECK`). Nulo quiere decir que todavía no se le preguntó al usuario; con `true`, cada pago con esa billetera pregunta si fue con saldo o con una tarjeta ([reglas de dominio § 13](reglas-de-dominio.md#13-tarjetas-de-crédito-y-transferencias)).
 - Una cuenta no registra nada anterior a su alta: en `TRANSACTION` y en `TRANSFER`, la fecha no puede ser anterior al día de `created_at` de la cuenta, en la zona horaria del usuario. Un trigger `BEFORE INSERT OR UPDATE` en cada tabla lo rechaza; en `TRANSFER`, contra las dos cuentas. `initial_balance` es el saldo de ese día ([reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado)).
 - En `ACCOUNT`, `currency` no cambia nunca: un trigger `BEFORE UPDATE` rechaza el cambio. Una cuenta en otra moneda es otra cuenta ([reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado)).
 - En `ACCOUNT`, un usuario no tiene dos cuentas con el mismo nombre, sin distinguir mayúsculas: índice único sobre `(user_id, lower(name))`. El asistente resuelve la cuenta por el nombre que el usuario menciona, y dos cuentas "Galicia" harían imposible saber a cuál se refiere ([reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado)).

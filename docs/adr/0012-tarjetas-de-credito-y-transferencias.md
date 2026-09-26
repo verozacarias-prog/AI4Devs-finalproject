@@ -72,7 +72,8 @@ presupuesto, y sin registrar dejaban mal los saldos.
    devoluciones cambian mes a mes y Platita no los calcula. Unos días después del cierre, cuando
    el banco ya publicó el resumen, el asistente pide los montos de las suscripciones de monto
    variable que no se confirmaron antes y el total a pagar. La diferencia con lo que Platita tiene
-   pendiente se registra como un único movimiento de ajuste, confirmado por el usuario: un gasto
+   pendiente, después de preguntar si falta cargar alguna compra y registrar las que el usuario
+   nombre, se registra como un único movimiento de ajuste, confirmado por el usuario: un gasto
    en "Intereses, impuestos y cargos" o un ingreso en "Devoluciones y reintegros". En el mismo
    mensaje, el asistente recomienda revisar que no haya consumos no reconocidos, que se registran
    aparte y no dentro del ajuste.

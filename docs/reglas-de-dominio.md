@@ -533,7 +533,7 @@ Las que hacen falta son:
 | Pendientes sin confirmar | Utilidad | Antes de vencer, o cada 3 días si son de un recurrente |
 | Período sin confirmar | Utilidad | Cerca del inicio de un período que sigue en `draft`: lista su ingreso y sus topes, y se confirma respondiendo. En un período familiar, solo al dueño |
 | Recurrente o cuota por confirmar | Utilidad | Cuando un recurrente o una cuota de tarjeta no encuentra período confirmado, necesita que el usuario confirme la cotización, o es de monto variable y su monto no está confirmado. Las ocurrencias variables de una tarjeta no usan esta plantilla: se preguntan en la conciliación |
-| Conciliación del resumen | Utilidad | Unos días después del cierre de un resumen de tarjeta: pide los montos de las suscripciones variables sin confirmar, en una tarjeta en otra moneda cómo se va a pagar y la cotización del resumen, y el total del banco, y recomienda revisar los consumos |
+| Conciliación del resumen | Utilidad | Unos días después del cierre de un resumen de tarjeta: pide los montos de las suscripciones variables sin confirmar, en una tarjeta en otra moneda cómo se va a pagar y la cotización del resumen, y el total del banco. Antes del ajuste pregunta por compras sin cargar, y recomienda revisar los consumos |
 | Saldos del mes | Utilidad | Al terminar cada mes de presupuesto: muestra el saldo de cada cuenta y pregunta si coincide con el real |
 
 Ver también: [HU6](05-historias-de-usuario.md) · [APP_USER y FINANCIAL_PROFILE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [OUTBOUND_MESSAGE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
@@ -656,7 +656,11 @@ quedaron sin confirmar, numeradas y con su último monto, y después el total a 
 en el resumen del banco. Una respuesta general, como "todo igual, el total es 184.300", confirma
 los montos sugeridos, igual que en un lote (§ 5). Recién con esos montos confirmados, compara el
 total con lo que Platita tiene pendiente de pago en esa tarjeta: la deuda del próximo vencimiento más el saldo vencido que se
-arrastra. La diferencia se registra como un solo movimiento de ajuste sobre la tarjeta, imputado
+arrastra. Antes de registrar la diferencia como ajuste, muestra cuánto es y pregunta si falta
+cargar alguna compra de ese resumen, con el enlace al dashboard donde ver lo registrado. Cada
+compra que el usuario nombra se registra como una compra con tarjeta de ese resumen, en su
+categoría, y la diferencia se recalcula. Si responde que está todo, no se registra ninguna. Lo
+que queda sin explicar se registra como un solo movimiento de ajuste sobre la tarjeta, imputado
 al período del vencimiento y confirmado por el usuario. Si el banco cobra de más, es un gasto en
 la categoría base "Intereses, impuestos y cargos"; si cobra de menos, porque una devolución
 superó a los cargos, es un ingreso en la categoría base "Devoluciones y reintegros". Desde ahí,
@@ -671,6 +675,25 @@ recomienda revisar que no haya ningún consumo que el usuario no reconozca, y m�
 diferencia es mayor de lo esperable. Un consumo no reconocido no va al ajuste: se registra
 aparte, como cualquier gasto, para que quede visible mientras el usuario lo desconoce ante el
 banco. Si el banco lo revierte, la devolución aparece en la conciliación de un resumen siguiente.
+
+**Una compra cargada después del cierre.** Si el usuario registra una compra con tarjeta cuya
+fecha cae en un resumen ya cerrado:
+
+- **Si ese resumen todavía no se concilió,** la compra entra en él, y la conciliación la tiene en
+  cuenta.
+- **Si ya se concilió,** el asistente pregunta si la compra estaba incluida en el ajuste de ese
+  resumen, mostrando su monto. Si estaba, registra la compra en ese resumen y recalcula el ajuste
+  restándole la compra, en la misma confirmación. Si el ajuste queda en cero se borra, y si cambia
+  de signo pasa a la otra categoría. Si no estaba, la compra entra en el resumen siguiente.
+
+**Pagar con una billetera usando una tarjeta vinculada.** Con el QR de una billetera se puede
+pagar con su saldo o con una tarjeta vinculada a ella, y la cuenta afectada es distinta en cada
+caso. Si el usuario tiene al menos una tarjeta dada de alta, la primera vez que registra un pago
+con una billetera el asistente pregunta si a veces paga con tarjetas vinculadas a ella, y guarda
+la respuesta en la cuenta de la billetera. Si dice que no, no vuelve a preguntar. Si dice que sí,
+en cada pago con esa billetera pregunta "¿con saldo o con qué tarjeta?", ofreciendo sus
+tarjetas. Pagado con tarjeta, es una compra con tarjeta sobre esa cuenta. La respuesta se puede
+cambiar después.
 
 **Saldo, deuda y comprometido.** Como en cualquier cuenta (§ 2), el saldo de la tarjeta cuenta
 solo lo que ya ocurrió: los gastos ya vencidos menos los pagos recibidos. Lo facturado en un
@@ -782,6 +805,12 @@ usuario lo confirme.
   pedir la confirmación del período (§ 1), porque ningún movimiento se imputa a un período sin que
   el usuario lo confirme. Una fecha anterior al alta de la cuenta se rechaza, como en cualquier
   registro (§ 2).
+
+**Cambiar la cuenta a una tarjeta.** Si un gasto se registró en una cuenta y en realidad se pagó
+con una tarjeta, como un pago con la billetera que fue con la tarjeta vinculada, la corrección no
+cambia la cuenta del gasto: lo borra y registra una compra con esa tarjeta, en el resumen que
+incluye su fecha, en una sola confirmación. Una compra con tarjeta es una regla y no un gasto
+común (§ 13).
 
 **Qué no se corrige por WhatsApp.**
 

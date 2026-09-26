@@ -283,6 +283,9 @@ sequenceDiagram
     W->>DB: SQL promueve la ocurrencia de Spotify a TRANSACTION
     Note over W,DB: Entra por el webhook como cualquier mensaje (§ 5)
     W->>DB: SQL compara con la deuda del próximo vencimiento
+    W->>M: HTTPS "Faltan $7.900. ¿Hay alguna compra que no me cargaste?"
+    U->>M: "no, está todo" o las compras que faltan
+    Note over W,DB: Cada compra nombrada se registra en el resumen<br/>como en § 5, y la diferencia se recalcula
     W->>DB: SQL INSERT PENDING_TRANSACTION con el ajuste
     U->>M: confirma el ajuste
     rect rgb(240, 246, 252)
