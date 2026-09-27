@@ -1101,14 +1101,30 @@ producto: sin movimientos borrados ni duplicados (§ 2 y § 7), con el gastado n
 
 | Función | Qué devuelve |
 |---|---|
-| Gastado | El total gastado en un rango de fechas, opcionalmente por categoría, por cuenta o agrupado por categoría |
-| Ingresos | El total de ingresos en un rango de fechas, opcionalmente por categoría |
+| Gastado | El total gastado en un rango de fechas y un alcance de presupuesto (ver abajo), opcionalmente por categoría, por cuenta o agrupado por categoría |
+| Ingresos | El total de ingresos en un rango de fechas y un alcance de presupuesto (ver abajo), opcionalmente por categoría |
 | Movimientos | Los movimientos que cumplen unos filtros (fechas, categoría, cuenta, monto, descripción), como mucho 20 |
 | Saldos | El saldo de una cuenta o de todas, agrupadas por moneda, y, aparte y sin sumarlo a ningún total, lo aportado neto de las cuentas de inversión (§ 2) |
 | Presupuesto | Para un período, el ingreso estimado y real, y el tope, el gastado y el porcentaje de cada categoría. En un período de grupo, además, cuánto imputó cada miembro, y en uno individual, lo retirado de inversiones |
 | Tarjeta | La deuda del próximo vencimiento de una tarjeta, su fecha y lo comprometido en cuotas |
 | Me deben | El saldo de cada cuenta "Me deben" (§ 16) |
 | Indicadores | La última cotización de cada fuente configurada y el último valor de cada indicador de mercado, con su fuente y su fecha (§ 18) |
+
+**A qué presupuesto se refiere una pregunta.** Gastado e Ingresos suman los movimientos de un
+alcance, que sale de la pregunta:
+
+- **Si no nombra ningún presupuesto**, como "¿cuánto gasté este mes?", suman solo el presupuesto
+  individual del usuario. "Gasté" habla de su plata personal, y así una respuesta nunca mezcla sin
+  avisar los insumos de una actividad o lo que imputó otro miembro de la familia.
+- **Si nombra un grupo**, como "¿cuánto gastamos en la casa?", suman ese grupo entero, con lo que
+  imputó cada miembro.
+- **Si pide el total**, como "¿cuánto gasté contando todo?", suman todos los presupuestos que el
+  usuario puede leer, cada grupo entero, sin los retiros ni los aportes del titular (§ 10).
+
+La respuesta dice siempre qué sumó: "En tu presupuesto personal gastaste $812.000 este mes", o
+"Sumando tu presupuesto personal, Casa y Cocina de Carla, $1.940.000, sin contar los retiros". Si
+el usuario esperaba otro alcance, lo corrige con una respuesta corta y se vuelve a calcular. El
+dashboard no cambia: muestra un período por vez.
 
 **Qué garantiza el código, no el modelo.**
 
