@@ -53,6 +53,15 @@ sus opciones y una recomendación. Las de esta lista son las que no salieron de 
   Sumarlo exige que una cuenta pueda ser de un usuario o de un grupo, que un aporte sea una
   transferencia entre la cuenta de un miembro y la del grupo, y cambiar esas claves foráneas.
   Con esas mismas restricciones, el cambio es explícito y no aparece por accidente.
+- **Devoluciones con tarjeta: limitación conocida, no bloqueante.** Lo que el banco acredita por
+  una devolución o una reversión llega en la conciliación como un ajuste en "Devoluciones y
+  reintegros" que no se vincula a la compra
+  ([reglas de dominio § 13 y § 16](reglas-de-dominio.md#16-reintegros-devoluciones-y-plata-que-te-deben)).
+  El total de la tarjeta queda bien, pero el gastado del rubro de la compra no baja y el ingreso
+  del período sube. Si la compra era en cuotas, las restantes se siguen generando hasta que el
+  usuario borra la regla, y cada conciliación las compensa. Resolverlo exige que un reintegro pueda
+  apuntar a una compra con tarjeta, que es una regla y no un movimiento. Caso A1.4 y decisión D18
+  de la [validación por casos de uso](use-case-walkthrough.md).
 - **Varios intervalos de membresía en un grupo: mejora.** Quien sale de un grupo y vuelve reabre
   su única fila de `USER_GROUP`, y pierde el intervalo anterior: si vuelve a salir, solo conserva
   la lectura de los períodos de su último intervalo

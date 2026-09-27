@@ -13,7 +13,9 @@
 - Puedo crear una cuenta indicando nombre, institución, tipo (banco, billetera, broker, efectivo, tarjeta o "me deben"), moneda y saldo inicial.
 - El saldo de cada cuenta se muestra calculado a partir del saldo inicial más los movimientos imputados a ella, no como un valor que yo tenga que actualizar.
 - Una cuenta de broker solo recibe lo que le aporto y lo que retiro, y muestra lo aportado neto: Platita no sigue el valor de mis inversiones.
-- El dashboard lista mis cuentas con su saldo actual, agrupadas por moneda.
+- El dashboard lista mis cuentas con su saldo actual, agrupadas por moneda. Las cuentas de inversión van aparte, con lo aportado neto, que no suma en ningún total.
+- Tengo una cuenta de inversión por moneda. Comprar dólares adentro del broker lo registro como una transferencia entre las dos.
+- Un plazo fijo es una cuenta más: al vencer, su interés entra como rendimiento.
 - Puedo editar los datos de una cuenta sin perder el historial de movimientos asociados.
 
 *Prioridad:* Alta

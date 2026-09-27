@@ -101,6 +101,30 @@ neto: lo transferido menos lo retirado. Puede quedar negativo, si el usuario ret
 aportó, y el dashboard lo muestra como "aportado neto" y no como saldo. Platita no sabe cuánto
 vale la cartera, y la cuenta no entra en el contraste mensual.
 
+**Una cuenta de inversión por moneda.** Como toda cuenta, una de inversión tiene una sola moneda:
+"Balanz ARS" y "Balanz USD" son dos cuentas. Comprar dólares adentro del broker, como el MEP, es
+una transferencia entre esas dos cuentas, con un monto en cada moneda y la cotización que el
+usuario confirma (§ 6 y § 13). Es la única operación de adentro que se registra, porque cambia la
+moneda de lo aportado y sin ella un retiro en dólares de una cuenta en pesos mezclaría pesos de
+fechas distintas con una conversión que nadie hizo. Comprar instrumentos, cobrar dividendos o la
+suba y baja de los precios siguen sin registrarse.
+
+**El aportado neto no suma en ningún total.** No entra en el total disponible, ni en un total por
+moneda, ni en uno de patrimonio: se muestra aparte, por cuenta y por moneda, con la aclaración de
+que es lo que el usuario puso menos lo que sacó, no lo que vale. Sumarlo sería mezclar plata
+disponible con una cifra que puede ser negativa justo cuando el usuario ganó.
+
+**Un plazo fijo es una cuenta bancaria, no una de inversión.** Su interés se conoce desde que se
+constituye y no depende del mercado, así que registrarlo no contradice que Platita no valúa
+inversiones. Se da de alta como una cuenta de tipo banco, como "Plazo fijo Galicia", y
+constituirlo es una transferencia desde la cuenta de donde sale la plata. Al vencer, el usuario
+avisa ("venció el plazo fijo") y el asistente registra, en una sola confirmación, el interés como
+un ingreso en la categoría base "Rendimientos" sobre la cuenta del plazo fijo, con su período
+confirmado como cualquier ingreso, y la transferencia del capital más el interés a la cuenta de
+destino. La cuenta del plazo fijo queda en cero. Si lo renueva, se registra el interés y no hay
+transferencia: el capital sigue en la cuenta. El vencimiento no se agenda: si el usuario no avisa,
+la diferencia aparece en el contraste mensual como la de cualquier cuenta.
+
 **Borrar un movimiento.** El usuario puede borrar un gasto, un ingreso, una transferencia o una
 regla recurrente que ya confirmó, incluida una compra con tarjeta. El movimiento queda marcado
 como borrado, con quién y cuándo, y deja de contar en el saldo, en el gastado de los
@@ -1060,8 +1084,8 @@ producto: sin movimientos borrados ni duplicados (§ 2 y § 7), con el gastado n
 | Gastado | El total gastado en un rango de fechas, opcionalmente por categoría, por cuenta o agrupado por categoría |
 | Ingresos | El total de ingresos en un rango de fechas, opcionalmente por categoría |
 | Movimientos | Los movimientos que cumplen unos filtros (fechas, categoría, cuenta, monto, descripción), como mucho 20 |
-| Saldos | El saldo de una cuenta o de todas, agrupadas por moneda, y lo aportado neto de las cuentas de inversión (§ 2) |
-| Presupuesto | Para un período, el ingreso estimado y real, y el tope, el gastado y el porcentaje de cada categoría. En un período de grupo, además, cuánto imputó cada miembro |
+| Saldos | El saldo de una cuenta o de todas, agrupadas por moneda, y, aparte y sin sumarlo a ningún total, lo aportado neto de las cuentas de inversión (§ 2) |
+| Presupuesto | Para un período, el ingreso estimado y real, y el tope, el gastado y el porcentaje de cada categoría. En un período de grupo, además, cuánto imputó cada miembro, y en uno individual, lo retirado de inversiones |
 | Tarjeta | La deuda del próximo vencimiento de una tarjeta, su fecha y lo comprometido en cuotas |
 | Me deben | El saldo de cada cuenta "Me deben" (§ 16) |
 
@@ -1084,6 +1108,13 @@ borrar, sigue ese flujo.
 **En el dashboard, el resumen del período.** El dashboard muestra, para un período, el ingreso
 estimado y el real, el gastado de todas las categorías, con tope o sin él, el total gastado y lo
 comprometido para los períodos siguientes. Sale de las mismas reglas que la función Presupuesto.
+
+**Lo retirado de inversiones se muestra aparte.** En un período individual, el resumen y la
+función Presupuesto muestran también cuánto retiró el usuario de sus cuentas de inversión con
+fecha en el período: la suma de las transferencias que salieron de ellas, convertida a la moneda
+del período con la cotización de cada transferencia. No suma al ingreso real, porque es ahorro que
+se gasta y no un ingreso, pero explica con qué se cubrió un período que gastó más de lo que
+ingresó. Se calcula con los movimientos, sin preguntar nada.
 
 Ver también: [LLM_USAGE en 3.2](03-modelo-de-datos.md#llm_usage) · [la API](04-api.md) · [HU4](05-historias-de-usuario.md).
 

@@ -183,6 +183,7 @@ responses:
               spent_amount: 38500
               used_percentage: null
           committed_next_periods: 1100000
+          withdrawn_from_investments: 400000   # individual period only: transfers out of investment accounts, not income
           by_member:                   # only in a group period: what each member charged to it
             - member: "Sofía"
               spent_amount: 540000
