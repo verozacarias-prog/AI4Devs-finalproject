@@ -183,6 +183,11 @@ responses:
               spent_amount: 38500
               used_percentage: null
           committed_next_periods: 1100000
+          by_member:                   # only in a group period: what each member charged to it
+            - member: "Sofía"
+              spent_amount: 540000
+            - member: "Nico"
+              spent_amount: 442300
   404:
     description: The period does not exist or the user cannot read it
 ```

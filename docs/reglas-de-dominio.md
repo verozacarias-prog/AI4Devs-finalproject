@@ -111,6 +111,12 @@ saldo suma cada movimiento ya convertido a la moneda de la cuenta (§ 6), así q
 montos de monedas distintas. La moneda de una cuenta no se puede cambiar: una cuenta en otra
 moneda es otra cuenta.
 
+**Una stablecoin es una cuenta en dólares.** Las monedas son las del catálogo ISO 4217, y USDT o
+USDC no están en él. Una stablecoin que sigue al dólar se registra en una cuenta en USD, real y
+con su propio nombre, como "Binance USDT", y sus movimientos son en dólares. Que la stablecoin
+pierda la paridad no se modela. Una cripto volátil, como BTC, va en una cuenta de inversión, que
+solo recibe aportes y retiros (ver abajo).
+
 **Cada cuenta tiene un nombre distinto.** Un usuario no puede tener dos cuentas con el mismo
 nombre, sin distinguir mayúsculas, porque el asistente las reconoce por el nombre que el usuario
 menciona. Aun así, una mención puede coincidir con más de una: "la Galicia" puede ser "Galicia
@@ -346,6 +352,15 @@ Lo que no se duplica es el dinero: **una fila con `duplicate_of` no nulo no entr
 
 `TRANSACTION.duplicate_of` referencia otra `TRANSACTION` del mismo usuario cuando el sistema detecta que probablemente describen el mismo gasto real (mismo monto y moneda, fecha cercana, un origen manual y el otro automático). La columna se crea desde la migración inicial, pero la lógica que la puebla depende de la carga por email, que es could-have (ver [1.2](01-producto.md#12-características-y-funcionalidades-principales)).
 
+**Entre miembros de un grupo, se pregunta antes de confirmar.** Dos miembros pueden cargar el
+mismo gasto al presupuesto del grupo, por ejemplo el super que pagó uno. Antes de confirmar un
+movimiento imputado a un período de grupo, el asistente busca si otro miembro ya registró uno con
+el mismo monto y la misma moneda en ese período, el mismo día o con un día de diferencia. Si lo
+encuentra, pregunta: "Sofía ya cargó $92.000 en super hoy al presupuesto del grupo. ¿Es el mismo
+gasto?". Si el usuario dice que sí, el pendiente se rechaza y no se registra nada. Si dice que no,
+se registra normalmente. El sistema nunca lo descarta solo, y no muestra nada que el miembro no
+viera ya, porque los miembros ven los movimientos del grupo.
+
 Ver también: [1.2, detección de duplicados](01-producto.md#12-características-y-funcionalidades-principales) · [Ticket 3](06-tickets.md), que crea el índice de soporte.
 
 ## 8. Movimientos recurrentes: la excepción a la confirmación
@@ -446,6 +461,26 @@ Ver: [1.2, trazabilidad de origen](01-producto.md#12-características-y-funciona
 
 ## 10. Grupos familiares: administración, salida y visibilidad
 
+**Un grupo puede ser una familia o una actividad.** Además de una familia, un grupo puede ser una
+actividad del usuario, como el consultorio de una monotributista: un grupo de un solo miembro,
+que es su dueño. Su presupuesto separa los gastos y los cobros de la actividad de los personales,
+sin cuentas ficticias, porque en Platita la cuenta y el presupuesto son independientes: la misma
+cuenta real puede alimentar el presupuesto individual y el del grupo. Todo lo de esta sección
+vale igual para los dos. No hay un campo que diga de qué tipo es: el asistente y el dashboard
+nombran cada presupuesto por el nombre del grupo, así que el usuario nunca ve la palabra
+"familiar" en un grupo que no lo es. En la base, la tabla sigue siendo `FAMILY_GROUP`.
+
+**El retiro del titular.** Si los cobros de una actividad van al presupuesto del grupo, el
+presupuesto individual se queda sin esos ingresos. Lo que la educación financiera llama
+"pagarse un sueldo" se registra como un retiro: dos movimientos sobre la misma cuenta, por el
+mismo monto y con la misma fecha, que se confirman juntos en un solo mensaje. Uno es un gasto en
+el período del grupo, en la categoría base "Retiro del titular". El otro es un ingreso en el
+período individual, en la categoría base "Retiro de la actividad". El saldo de la cuenta no
+cambia, porque se compensan. Los dos quedan enlazados: corregir o borrar uno corrige o borra el
+otro (§ 15). En un total que suma más de un presupuesto del mismo usuario, los retiros no se
+cuentan, porque son plata que cambió de presupuesto y no salió ni entró. Con una cuenta real
+separada para la actividad, el retiro es una transferencia común (§ 13).
+
 **Quién administra.** Cada grupo familiar tiene un dueño (`role = 'owner'` en `USER_GROUP`), que
 es quien administra sus miembros: agrega y saca usuarios del grupo. El resto de los miembros
 tiene `role = 'member'`.
@@ -500,7 +535,11 @@ un vencimiento (§ 5).
 el historial de lo ya generado, y reactivarla hacia otro presupuesto es una decisión del usuario.
 
 **Quién ve el presupuesto familiar.** Los miembros actuales del grupo ven todos sus períodos y
-todos los movimientos imputados a ellos, sin importar qué miembro los registró. Un
+todos los movimientos imputados a ellos, sin importar qué miembro los registró. También ven
+cuánto imputó cada miembro al período, en el dashboard y en las consultas (§ 17). Platita no
+calcula quién le debe a quién: saldar cuentas entre miembros exige transferencias entre usuarios
+distintos, que quedan para cuando exista la cuenta compartida del grupo
+([hoja de ruta](hoja-de-ruta.md#decisiones-abiertas)). Un
 usuario que salió conserva acceso **de solo lectura** a los períodos del grupo en los que fue
 miembro, es decir, los que se superponen con su intervalo de membresía (`joined_at` a
 `left_at`). No ve los posteriores ni puede imputarles movimientos.
@@ -845,6 +884,8 @@ usuario lo confirme.
 - **Corregir.** Con cita, el movimiento ya está identificado: el cambio se aplica y el asistente
   responde con el movimiento completo, igual que en una confirmación, donde el usuario puede
   volver a corregir. Con búsqueda, elegir el candidato confirma el cambio.
+- **Un retiro del titular** se corrige o se borra entero: cambiar el monto o la fecha de una mitad
+  cambia la otra, y borrar una borra las dos (§ 10).
 - **Borrar y restaurar.** Siempre piden confirmación, con cita o sin ella: "¿Borro el café de
   $2.500 de ayer?". Restaurar busca entre los movimientos borrados del usuario. Una regla
   recurrente borrada no se restaura: se vuelve a crear.
@@ -915,7 +956,9 @@ transferencia desde esa cuenta. Ninguna de las dos pesa en el presupuesto.
   primera vez, con confirmación, como cualquier cuenta. Si el usuario no nombra a nadie, usa una
   cuenta genérica "Me deben". Tiene una moneda, como toda cuenta, y saldo inicial 0.
 - **Su saldo es lo que te deben.** Lo calcula Platita con las transferencias, así que no entra en
-  el contraste mensual de saldos (§ 2), y el dashboard lo muestra aparte de la plata disponible.
+  el contraste mensual de saldos (§ 2). Aunque por dentro es una cuenta, el dashboard no la
+  muestra en la lista de cuentas ni la suma al total disponible: aparece en una sección propia,
+  "Me deben", por persona, porque no es una cuenta que el usuario tenga en un banco.
 - **Dividir en el momento.** Si al pagar el usuario ya sabe su parte, el asistente registra las
   dos cosas en una sola confirmación. Por ejemplo, con "pagué la cena, 64 mil de MP, mi parte 16,
   el resto Juan, Pedro y Ana", registra un gasto de $16.000 y tres transferencias de $16.000 a
@@ -945,7 +988,7 @@ producto: sin movimientos borrados ni duplicados (§ 2 y § 7), con el gastado n
 | Ingresos | El total de ingresos en un rango de fechas, opcionalmente por categoría |
 | Movimientos | Los movimientos que cumplen unos filtros (fechas, categoría, cuenta, monto, descripción), como mucho 20 |
 | Saldos | El saldo de una cuenta o de todas, agrupadas por moneda, y lo aportado neto de las cuentas de inversión (§ 2) |
-| Presupuesto | Para un período, el ingreso estimado y real, y el tope, el gastado y el porcentaje de cada categoría |
+| Presupuesto | Para un período, el ingreso estimado y real, y el tope, el gastado y el porcentaje de cada categoría. En un período de grupo, además, cuánto imputó cada miembro |
 | Tarjeta | La deuda del próximo vencimiento de una tarjeta, su fecha y lo comprometido en cuotas |
 | Me deben | El saldo de cada cuenta "Me deben" (§ 16) |
 
@@ -987,6 +1030,12 @@ reservado a agentes registrados en la CNV, así que Platita explica y el usuario
   fondo de emergencia y la capacidad de ahorro se calculan sobre varios meses, no sobre uno.
 - **Ordena prioridades generales:** antes de invertir, salir de deudas caras y armar un fondo de
   emergencia. Es criterio general de educación financiera, no una elección hecha para el usuario.
+
+**Los consejos son individuales.** Usan los datos del usuario que pregunta: su presupuesto
+individual, sus cuentas y su perfil. No usan un presupuesto de grupo ni el perfil de otro
+miembro. Una pareja no puede pedir un consejo conjunto; cada uno lo pide sobre lo suyo. Las
+consultas sobre datos (§ 17) sí leen los períodos del grupo, porque solo muestran cifras que el
+miembro ya puede ver.
 
 **Qué no hace.**
 

@@ -61,6 +61,7 @@
 - El asistente confirma el registro por el mismo canal, listando de forma explícita todo lo que quedó guardado —incluidos los valores que resolvió solo (fecha, moneda, categoría)—, y acepta correcciones sobre cualquiera de ellos: respondiendo con una cita a esa confirmación, en cualquier momento, o describiendo el movimiento para que el asistente lo busque. Nunca corrige un movimiento que yo no señalé.
 - Puedo borrar un movimiento, o recuperar uno que borré, por WhatsApp. Antes de hacerlo, el asistente me pide confirmación.
 - Si lo que escribí es plata que moví entre mis cuentas, el asistente lo registra como transferencia y me lo dice en la confirmación, aclarando que no cuenta como gasto. Si se equivocó de tipo, lo corrijo con una respuesta corta.
+- Si otro miembro del grupo ya cargó el mismo monto al mismo presupuesto ese día o el anterior, el asistente me pregunta si es el mismo gasto antes de registrarlo.
 - El movimiento queda marcado con `source = manual`.
 - Si prefiero la computadora, también puedo cargar gastos, ingresos y transferencias desde el dashboard, eligiendo yo la cuenta y el presupuesto. Las compras con tarjeta y los movimientos recurrentes los cargo por WhatsApp.
 
@@ -81,7 +82,8 @@
 - *(Should-have)* Puedo preguntarle al asistente por WhatsApp lo que quiera sobre mis gastos, ingresos, saldos y presupuesto, como "¿gasté más en comida que el mes pasado?", y me responde con mis datos. Si no puede responder algo, me lo dice y me manda al dashboard.
 - Un reintegro o una devolución que vinculé a un gasto resta del gastado de su categoría, en el período en que llegó, y se ve junto a ese gasto.
 - Lo que presté, o lo que otros me deben de un gasto compartido, se ve aparte como "me deben", por persona, y no cuenta como gastado.
-- Se distingue visualmente entre presupuestos individuales y familiares.
+- Se distingue visualmente entre presupuestos individuales y de grupo, sea una familia o una actividad como un consultorio.
+- En un presupuesto de grupo veo cuánto imputó cada miembro al período.
 - Puedo ver el detalle de movimientos de una categoría, con la cuenta afectada y el origen (manual / automático) de cada uno.
 - *(Should-have)* Los movimientos en moneda distinta a la primaria se muestran convertidos, con la cotización usada visible.
 
