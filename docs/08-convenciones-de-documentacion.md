@@ -1,0 +1,134 @@
+# 8. Convenciones de documentación
+
+Cómo se escribe la documentación de este proyecto. No describe el producto: describe el
+repositorio. Quien agregue un documento, un diagrama o una decisión de arquitectura en las
+entregas siguientes tiene que respetar lo que está acá.
+
+Las secciones 1 a 7 siguen la plantilla oficial del curso. Esta sección no forma parte de esa
+plantilla: es un agregado del proyecto.
+
+## 8.1. Idioma
+
+> **Nota de idioma:** todo el desarrollo (código, nombres de tablas y campos, endpoints, payloads) va en **inglés**, de acá en adelante en todo el documento. El texto explicativo de esta entrega queda en español porque es el idioma de la documentación del curso; lo que el usuario final lee o le dice al asistente por WhatsApp también sigue en español, porque el público objetivo del producto es hispanohablante.
+
+## 8.2. Diagramas
+
+Los diagramas están escritos en **Mermaid** con sintaxis `flowchart` y no con la extensión `C4Context`/`C4Container`: el renderizador Mermaid de GitHub no soporta esa extensión, así que los diagramas no se verían en el repositorio. Usar `flowchart` con subgrafos es la práctica habitual para representar C4 en Markdown de GitHub y mantiene el diagrama versionado junto al código, sin depender de imágenes exportadas que quedan desactualizadas.
+
+En consecuencia, para cualquier diagrama nuevo:
+
+- Mermaid inline en el Markdown, nunca una imagen exportada.
+- Sintaxis `flowchart` con subgrafos, aunque el diagrama sea conceptualmente C4.
+- El diagrama de modelo de datos usa `erDiagram` y el de flujo conversacional `sequenceDiagram`,
+  que sí están soportados por el renderizador de GitHub.
+
+## 8.3. Nombres de archivo
+
+- Kebab-case, sin acentos ni ñ: rompen en Linux y en CI.
+- Sin espacios.
+- Conservan su nombre canónico, porque las herramientas los buscan así: `README.md`,
+  `AGENTS.md`, `CLAUDE.md`, `LICENSE`, `prompts.md`.
+- `CLAUDE.md` es un enlace simbólico a `AGENTS.md`, que es la fuente única del contrato para
+  asistentes de IA ([ADR 0007](adr/0007-agents-md-como-fuente-unica.md)). GitHub no renderiza un
+  `.md` que es symlink: muestra el puntero. Por eso **ningún enlace de la documentación apunta a
+  `CLAUDE.md`**; todos apuntan a `AGENTS.md`.
+
+## 8.4. Estructura de `docs/`
+
+- La serie numerada `01-` a `08-` está cerrada. No se crean archivos nuevos con número.
+- Todo documento futuro va en `docs/` con nombre descriptivo y sin número.
+- `README.md` es portada e índice: la ficha del proyecto, una línea por documento y los enlaces.
+  Nunca el resumen de una sección ni la descripción de un subsistema: para eso está el documento
+  enlazado.
+- Todo archivo de `docs/` tiene que estar enlazado desde el `README.md`.
+
+## 8.5. Decisiones de arquitectura
+
+- Una decisión por archivo, en `docs/adr/`, numerados `NNNN-titulo-en-kebab-case.md`.
+- Formato Michael Nygard: Contexto, Decisión, Consecuencias (positivas / negativas y costos
+  asumidos) y Alternativas descartadas.
+- **Un ADR se corrige mientras su funcionalidad no está en producción.** Mientras la decisión
+  sigue en definición, se corrige en el mismo archivo tantas veces como haga falta: escribir un
+  ADR nuevo por cada corrección llenaría el registro de decisiones que nunca llegaron a regir.
+- **En producción, es inmutable.** Cuando la funcionalidad queda desarrollada y en producción, el
+  ADR suma a su cabecera la marca `- En producción desde: AAAA-MM-DD`. Desde ese momento no se
+  edita: si la decisión queda sin efecto, se crea uno nuevo y el Estado del anterior pasa a
+  `Reemplazada por NNNN`.
+- **Única excepción a la inmutabilidad: el mantenimiento de enlaces.** Un ADR se edita para corregir un enlace que
+  quedó roto porque el archivo destino cambió de nombre o de ruta, nunca para revisar la decisión,
+  su contexto o sus consecuencias. La corrección se anota en una línea `Mantenimiento:` en la
+  cabecera del propio ADR, con fecha y motivo. Sin esta excepción, la alternativa era reemplazar
+  un ADR entero por un enlace, que es peor: ensucia el historial de decisiones con reemplazos que
+  no cambian ninguna decisión.
+
+## 8.6. Un solo dueño por hecho
+
+Ningún contenido puede estar completo en dos archivos. Cuando una regla o una explicación
+pertenece a otro documento, en el origen queda un resumen de dos o tres líneas y un enlace
+relativo, nunca el texto repetido.
+
+Las reglas de negocio tienen un dueño único: [`reglas-de-dominio.md`](reglas-de-dominio.md).
+Las referencias entre documentos se escriben como enlaces relativos con ancla, no como
+"ver 3.2".
+
+**Excepción: los ADR.** Un ADR tiene que poder leerse solo, años después, sin el resto del
+repositorio a mano: una vez en producción, es un registro congelado de por qué se decidió algo
+con la información que había en ese momento. Si dependiera de un enlace a un documento vivo, su
+contenido cambiaría cuando ese documento cambie, y la inmutabilidad dejaría de ser cierta. Así que un ADR
+**puede repetir** el texto que necesite para ser autosuficiente.
+
+La excepción vale en una sola dirección. Lo que no puede pasar es lo contrario: **ningún
+documento de `docs/` repite el contenido de un ADR**. Cuando una sección necesita mencionar una
+decisión de arquitectura, enuncia qué se decidió y enlaza al ADR, que es el dueño del porqué.
+Por ejemplo, [2.1](02-arquitectura.md#21-diagrama-de-arquitectura) nombra el patrón hexagonal
+porque hace falta para leer el diagrama, y manda al
+[ADR 0001](adr/0001-arquitectura-hexagonal.md) para el fundamento.
+
+## 8.7. Verificación automática
+
+Estas convenciones se verifican con un script, no a ojo:
+
+```sh
+python3 scripts/verify_docs.py
+```
+
+Chequea que los enlaces relativos resuelvan a un archivo y a un ancla que existen, que ningún
+documento de `docs/` quede sin enlazar desde el `README.md`, que no haya texto duplicado entre
+archivos, que los bloques de código y de Mermaid estén completos, que los nombres de archivo no
+tengan acentos ni espacios, que la serie numerada no tenga huecos, que los ADR conserven su
+plantilla, y que los commands de `.claude/commands/` y los skills de `.claude/skills/` abran y
+cierren su frontmatter y declaren sus campos obligatorios. Un frontmatter roto no avisa: el
+command no se carga y el skill pierde todos sus campos, cayendo al nombre del directorio y a la
+primera línea del cuerpo. Los avisos no frenan nada; los errores sí.
+
+Un enlace a un directorio cubre su contenido: alcanza con que el `README.md` enlace
+`docs/adr/` o `docs/features/` para que sus archivos no cuenten como huérfanos.
+
+Para que corra solo antes de cada commit que toque documentación, una vez por clon:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+El hook está versionado en `.githooks/pre-commit`. Se saltea con `git commit --no-verify`.
+
+Las mismas comprobaciones se repiten en `.github/workflows/docs-quality.yml`, junto con dos
+herramientas más y la construcción del portal. El fundamento está en el
+[ADR 0009](adr/0009-validacion-de-documentacion-en-ci.md).
+
+| Herramienta | Qué agrega | Configuración |
+|---|---|---|
+| `markdownlint-cli2` | Formato del Markdown | `.markdownlint-cli2.yaml` |
+| `lychee` | Enlaces externos, semanalmente además de en cada pull request | `.lychee.toml` |
+
+Los registros quedan exentos de las dos, igual que ya lo estaban de la comprobación de texto
+duplicado.
+
+## 8.8. Qué tiene autoridad
+
+Los archivos de `docs/` son la especificación del proyecto, salvo los registros:
+[la conversación de la reestructuración](conversacion-reestructuracion-docs.md) y
+[la validación por casos de uso](use-case-walkthrough.md), que describen la especificación en un
+momento dado y no la reemplazan. `AGENTS.md` es el contrato
+operativo para asistentes de IA y resume algunas de estas reglas: cuando difieran, manda
+`docs/`. El criterio completo está en [`AGENTS.md`](../AGENTS.md), sección 10.
