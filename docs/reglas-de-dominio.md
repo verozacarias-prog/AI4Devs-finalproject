@@ -46,7 +46,7 @@ persona, y "le pasé 30 a Juan", un préstamo (§ 16) o un pago. El modelo elige
 interpretar el mensaje, sin una pregunta previa. Lo que lo hace seguro no depende del modelo:
 
 - **La confirmación dice el tipo y su efecto:** "Transferencia de $300.000 de Galicia a Mercado
-  Pago. No cuenta como gasto", o "Gasto de $30.000 · Juan · varios". El usuario ve siempre qué se
+  Pago. No cuenta como gasto", o "Gasto de $30.000 · Juan · Salidas y ocio". El usuario ve siempre qué se
   va a registrar antes de confirmarlo.
 - **Una transferencia necesita dos cuentas propias.** Si el modelo la clasifica como transferencia
   y el destino o el origen no es una cuenta del usuario, esa cuenta falta y se pregunta como
@@ -260,8 +260,41 @@ Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-princip
 
 **Cada categoría es de gasto o de ingreso.** Una categoría declara si clasifica gastos o
 ingresos, y un movimiento solo puede usar una categoría de su mismo tipo: un sueldo no se
-clasifica como "comida". La base lo impone. El catálogo base trae categorías de los dos tipos, y
+clasifica como "Supermercado". La base lo impone. El catálogo base trae categorías de los dos tipos, y
 el usuario puede sumar propias de cualquiera de ellos.
+
+**El catálogo base.** Es el mismo para todos los usuarios y no se puede borrar ni renombrar. Las
+categorías de uso diario cubren lo más común en un hogar argentino, sin una categoría "otros":
+si un gasto no encaja en ninguna, el asistente propone crear una propia (§ 1), que es lo que
+mantiene los rubros legibles.
+
+| Tipo | Categorías de uso diario |
+|---|---|
+| Gasto | Supermercado · Comida afuera y delivery · Vivienda (alquiler y expensas) · Servicios (luz, gas, agua, internet y celular) · Transporte · Salud · Educación · Ropa · Hogar · Salidas y ocio · Suscripciones · Mascotas · Regalos · Impuestos y trámites · Insumos |
+| Ingreso | Sueldo · Aguinaldo · Honorarios · Ventas · Jubilación y pensión · Otros ingresos |
+
+Las categorías especiales las usa el sistema en flujos concretos, y el usuario las ve igual que
+las demás:
+
+| Categoría | Tipo | Dónde se usa |
+|---|---|---|
+| Intereses, impuestos y cargos | Gasto | Ajuste de la conciliación de una tarjeta (§ 13) |
+| Devoluciones y reintegros | Ingreso | Reintegros vinculados y ajuste de la conciliación (§ 13 y § 16) |
+| Diferencia de cambio | Gasto | Residuo de pagar con pesos una tarjeta en otra moneda (§ 13) |
+| Diferencia de cambio a favor | Ingreso | El mismo residuo, a favor (§ 13) |
+| Comisiones | Gasto | Diferencia de una transferencia en la misma moneda (§ 13) |
+| Faltantes sin identificar | Gasto | Contraste mensual de saldos (§ 2) |
+| Sobrantes sin identificar | Ingreso | Contraste mensual de saldos (§ 2) |
+| Rendimientos | Ingreso | Contraste mensual y vencimiento de un plazo fijo (§ 2) |
+| Retiro del titular | Gasto | Retiro, en el presupuesto del grupo (§ 10) |
+| Retiro de la actividad | Ingreso | Retiro, en el presupuesto individual (§ 10) |
+| Aporte a la actividad | Gasto | Aporte, en el presupuesto individual (§ 10) |
+| Aporte del titular | Ingreso | Aporte, en el presupuesto del grupo (§ 10) |
+
+"Otros ingresos" existe porque un ingreso suelto, como una venta de algo usado, rara vez merece
+una categoría propia, y un ingreso no tiene tope que se desvirtúe. "Préstamos recibidos" y "Cuotas
+de préstamos" no son base: se crean con confirmación cuando el usuario cuenta que tiene deudas
+(§ 8 y § 11).
 
 Del alcance técnico del Ticket 1:
 
@@ -744,7 +777,7 @@ bucle, se traslada directo a la factura del proveedor de LLM.
 
 | Cuota | Qué cuenta | Límite inicial |
 |---|---|---|
-| Registro | Mensajes interpretados para cargar, completar o corregir movimientos, incluidas las respuestas del alta | 50 por día |
+| Registro | Mensajes interpretados para cargar, completar o corregir movimientos, incluidas las respuestas del alta y los mensajes para crear un grupo, invitar a alguien o aceptar una invitación (§ 10) | 50 por día |
 | Consultas | Preguntas sobre los datos propios o sobre un dato de mercado, respondidas con las funciones de lectura (§ 17). Cuenta una por pregunta, aunque el modelo llame a varias funciones | 20 por día |
 | Consejos | Consultas respondidas con la base de conocimiento financiero | 10 por día |
 
@@ -1016,6 +1049,14 @@ usuario lo confirme.
   pedir la confirmación del período (§ 1), porque ningún movimiento se imputa a un período sin que
   el usuario lo confirme. Una fecha anterior al alta de la cuenta se rechaza, como en cualquier
   registro (§ 2).
+- **Cambiar el presupuesto.** Un gasto o un ingreso se puede pasar a otro presupuesto, como la
+  harina que se imputó al personal y era de la actividad. El presupuesto nuevo lo nombra el
+  usuario, y tiene que tener un período confirmado que cubra la fecha del movimiento, suyo o de un
+  grupo del que sea miembro vigente. Nombrarlo es la confirmación (§ 1). Una mitad de un retiro o
+  de un aporte del titular no cambia de presupuesto, porque cada mitad va en su lado por
+  definición: se borra el par y se registra otro. En una regla recurrente, incluida una compra con
+  tarjeta, el cambio de dueño de presupuesto vale para las ocurrencias que todavía no se
+  generaron.
 
 **Cambiar la cuenta a una tarjeta.** Si un gasto se registró en una cuenta y en realidad se pagó
 con una tarjeta, como un pago con la billetera que fue con la tarjeta vinculada, la corrección no
@@ -1031,7 +1072,7 @@ del otro tipo, en una sola confirmación, pidiendo lo que el tipo nuevo necesite
 
 - **La fecha de una cuota de tarjeta.** Es la del vencimiento del resumen (§ 13). Su monto y su
   categoría sí se corrigen.
-- **Muchos movimientos a la vez**, como "pasá todos los de delivery de septiembre a comida". El
+- **Muchos movimientos a la vez**, como "pasá todos los de Salidas y ocio de septiembre a Comida afuera y delivery". El
   asistente manda el enlace al dashboard, porque la lista no se lee bien en un chat.
 
 **La conversación de un cambio es un pendiente.** Mientras espera que el usuario elija un
@@ -1096,7 +1137,7 @@ Ver también: [TRANSACTION y ACCOUNT en 3.2](03-modelo-de-datos.md#32-descripci�
 ## 17. Preguntas sobre los propios datos
 
 El usuario le puede preguntar al asistente lo que quiera sobre su plata: "¿cuánto gasté en
-delivery este mes?", "¿gasté más en comida que el mes pasado?", "¿cuánto tengo en MP?". El
+delivery este mes?", "¿gasté más en el super que el mes pasado?", "¿cuánto tengo en MP?". El
 modelo no consulta la base: pide datos a un conjunto de funciones de solo lectura escritas en
 código, las combina y responde. El fundamento está en el
 [ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md).

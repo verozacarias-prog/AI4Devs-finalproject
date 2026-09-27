@@ -62,20 +62,20 @@ sequenceDiagram
     API-->>WA: 200 recibido
     DB-->>W: mensaje pendiente
     W->>LLM: interpretar mensaje
-    LLM-->>W: monto 3500 · tipo gasto · categoría "comida"
+    LLM-->>W: monto 3500 · tipo gasto · categoría "Supermercado"
     Note over W: Aplica defaults derivables:<br/>fecha = hoy · moneda = primaria
     W->>DB: ¿cuentas y presupuestos activos del usuario?
     DB-->>W: 3 cuentas · presupuesto individual y familiar
     Note over W: Falta la cuenta y falta confirmar<br/>el presupuesto: no se registra todavía
     W->>DB: guarda PENDING_TRANSACTION
-    W->>WA: "Entendí $3.500 en comida, hoy. ¿Es correcto?<br/>¿De qué cuenta salió y a qué presupuesto va?"
+    W->>WA: "Entendí $3.500 en Supermercado, hoy. ¿Es correcto?<br/>¿De qué cuenta salió y a qué presupuesto va?"
     WA->>U: pregunta con opciones
     U->>WA: "Sí, Galicia, el familiar"
     WA->>API: webhook (respuesta, se guarda igual)
     DB-->>W: respuesta pendiente
     Note over W: Monto confirmado, cuenta y<br/>presupuesto elegidos: recién ahora se promueve
     W->>DB: completa y promueve a TRANSACTION
-    W->>WA: "Listo. $3.500 · comida · Galicia ·<br/>presupuesto familiar de septiembre.<br/>Llevás 71% del rubro."
+    W->>WA: "Listo. $3.500 · Supermercado · Galicia ·<br/>presupuesto familiar de septiembre.<br/>Llevás 71% del rubro."
     WA->>U: confirmación explícita
 ```
 

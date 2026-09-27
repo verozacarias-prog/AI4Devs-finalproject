@@ -65,7 +65,7 @@ responses:
         example:
           id: "c1a2..."
           budget_period_id: "bp1..."
-          category: "food"
+          category: "Supermercado"
           primary_currency: "ARS"
           limit_amount: 300000
           spent_amount: 214500
@@ -116,9 +116,9 @@ requestBody:
         primary_currency: "ARS"
         estimated_income: 1450000
         budgets:
-          - category_id: "cat-food"
+          - category_id: "cat-supermercado"
             limit_amount: 300000
-          - category_id: "cat-transport"
+          - category_id: "cat-transporte"
             limit_amount: 80000
 responses:
   201:
@@ -174,11 +174,11 @@ responses:
           actual_income: 1450000
           total_spent: 982300
           categories:
-            - category: "food"
+            - category: "Supermercado"
               limit_amount: 300000
               spent_amount: 214500
               used_percentage: 71.5
-            - category: "delivery"
+            - category: "Comida afuera y delivery"
               limit_amount: null           # no limit: listed anyway
               spent_amount: 38500
               used_percentage: null
@@ -229,7 +229,7 @@ requestBody:
         budget_period_id: "bp1..."
         amount: 3500
         type: "expense"
-        category_id: "cat-food"
+        category_id: "cat-supermercado"
         currency: "ARS"              # opcional — default: the account's currency; any other is 422
         transaction_date: "2026-09-15" # opcional — default: today in the user's time_zone
         exchange_rate: null            # required only when the account and the period differ in currency

@@ -214,7 +214,7 @@ sequenceDiagram
         W->>DB: INSERT OUTBOUND_MESSAGE con la confirmación
     end
     W->>M: HTTPS envía la confirmación
-    M->>U: "Listo. $3.500 · comida · Galicia · familiar"
+    M->>U: "Listo. $3.500 · Supermercado · Galicia · familiar"
 ```
 
 Desde el dashboard, el mismo movimiento entra por `POST /transactions` y el servicio web escribe
@@ -421,7 +421,7 @@ sequenceDiagram
     participant L as LLM
 
     alt Cita la confirmación
-        U->>M: cita "Listo. $3.500 · comida…" y escribe "eran 3.800"
+        U->>M: cita "Listo. $3.500 · Supermercado…" y escribe "eran 3.800"
         M->>API: HTTPS POST /webhook/whatsapp con context.id
         API->>DB: SQL INSERT INBOUND_MESSAGE
         W->>DB: SQL busca PENDING_BATCH por confirmation_message_id<br/>y el movimiento por la columna de resultado
@@ -475,7 +475,7 @@ sequenceDiagram
     API->>DB: SQL INSERT INBOUND_MESSAGE
     W->>DB: SQL claim del mensaje y lectura de LLM_USAGE, cuota de consultas
     W->>L: HTTPS pregunta y lista de funciones disponibles
-    L-->>W: pide Gastado(delivery, septiembre) y Gastado(delivery, agosto)
+    L-->>W: pide Gastado(Comida afuera y delivery, septiembre)<br/>y Gastado(Comida afuera y delivery, agosto)
     W->>DB: SQL las dos consultas, por repositorio,<br/>con el user_id del mensaje
     W->>L: HTTPS resultados: $38.500 y $24.000
     L-->>W: respuesta armada con esas cifras
