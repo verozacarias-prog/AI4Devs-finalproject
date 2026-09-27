@@ -75,7 +75,8 @@
 
 *Criterios de aceptación:*
 
-- El dashboard muestra, para el período seleccionado, el ingreso estimado y el tope, lo gastado y el porcentaje usado de cada categoría.
+- El dashboard muestra, para el período seleccionado, el ingreso estimado y el real, y el tope, lo gastado y el porcentaje usado de cada categoría. Las categorías sin tope también aparecen, con lo gastado, así veo en qué se me fue la plata.
+- *(Should-have)* Puedo preguntarle al asistente por WhatsApp lo que quiera sobre mis gastos, ingresos, saldos y presupuesto, como "¿gasté más en comida que el mes pasado?", y me responde con mis datos. Si no puede responder algo, me lo dice y me manda al dashboard.
 - Un reintegro o una devolución que vinculé a un gasto resta del gastado de su categoría, en el período en que llegó, y se ve junto a ese gasto.
 - Lo que presté, o lo que otros me deben de un gasto compartido, se ve aparte como "me deben", por persona, y no cuenta como gastado.
 - Se distingue visualmente entre presupuestos individuales y familiares.

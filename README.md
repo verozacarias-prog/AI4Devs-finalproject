@@ -2,7 +2,7 @@
 
 Asistente financiero personal y familiar que funciona por WhatsApp: el usuario registra gastos, ingresos y presupuestos conversando en lenguaje natural, y una capa de IA interpreta, categoriza y guarda cada movimiento en la cuenta correspondiente.
 Un módulo complementario lee automáticamente los emails de notificación bancaria y de servicios para reducir la carga manual.
-Toda la información —cuentas y su saldo, presupuestos multimoneda, comparación contra inflación y consejos financieros generados con RAG— se visualiza desde una aplicación web con dashboards.
+Toda la información —cuentas y su saldo, presupuestos multimoneda y consejos financieros generados con RAG— se visualiza desde una aplicación web con dashboards, y la comparación contra la inflación queda prevista para una versión futura.
 
 **Estado:** Entrega 1 — documentación. Fecha límite de entrega: 24 de septiembre de 2026.
 
@@ -22,7 +22,7 @@ Verónica Noemi Zacarías
 
 ### 0.3. Descripción breve del proyecto:
 
-Platita es un asistente financiero personal y familiar que funciona por WhatsApp: el usuario registra gastos, ingresos y presupuestos conversando en lenguaje natural, y una capa de IA interpreta, categoriza y guarda cada movimiento en la cuenta correspondiente. Un módulo complementario lee automáticamente los emails de notificación bancaria y de servicios para reducir la carga manual. Toda la información —incluyendo cuentas y su saldo, presupuestos multimoneda, comparación contra inflación y consejos financieros generados con RAG— se visualiza en detalle desde una aplicación web con dashboards.
+Platita es un asistente financiero personal y familiar que funciona por WhatsApp: el usuario registra gastos, ingresos y presupuestos conversando en lenguaje natural, y una capa de IA interpreta, categoriza y guarda cada movimiento en la cuenta correspondiente. Un módulo complementario lee automáticamente los emails de notificación bancaria y de servicios para reducir la carga manual. Toda la información —incluyendo cuentas y su saldo, presupuestos multimoneda y consejos financieros generados con RAG— se visualiza en detalle desde una aplicación web con dashboards. La comparación contra la inflación queda prevista para una versión futura.
 
 ### 0.4. URL del proyecto:
 

@@ -114,7 +114,7 @@ erDiagram
     LLM_USAGE {
         uuid user_id FK "NOT NULL"
         date usage_date "NOT NULL — calendar day in the user's time_zone"
-        string quota "NOT NULL, CHECK IN ('registration','advice'), PK (user_id, usage_date, quota)"
+        string quota "NOT NULL, CHECK IN ('registration','query','advice'), PK (user_id, usage_date, quota)"
         int message_count "NOT NULL, DEFAULT 0, CHECK (message_count >= 0)"
         int input_tokens "NOT NULL, DEFAULT 0"
         int output_tokens "NOT NULL, DEFAULT 0"

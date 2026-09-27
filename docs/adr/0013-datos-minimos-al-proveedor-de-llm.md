@@ -33,11 +33,18 @@ Todavía no se eligió el proveedor.
    por la API para entrenar modelos, y que los retenga el menor tiempo posible. Las condiciones se
    verifican al elegirlo, se dejan registradas en la política de privacidad, y se vuelven a
    revisar si el proveedor cambia sus términos.
-5. **El LLM no accede a la base.** No recibe herramientas que lean o escriban datos, ni genera
-   SQL que Platita ejecute. Devuelve una salida estructurada, como los campos de un movimiento o
-   la intención de una consulta, que el adaptador valida. Con eso, el caso de uso consulta o
-   escribe por los repositorios, filtrando siempre por el usuario del mensaje. Lo que el modelo
-   ve de los datos del usuario es solo lo que el caso de uso decidió enviarle, según el punto 1.
+5. **El LLM no accede a la base y nunca escribe.** No genera SQL que Platita ejecute ni recibe
+   herramientas que escriban. Para registrar, devuelve una salida estructurada, como los campos
+   de un movimiento, que el adaptador valida, y el caso de uso escribe por los repositorios
+   después de la confirmación del usuario.
+6. **Para responder preguntas, pide datos a funciones de solo lectura.** Platita le ofrece un
+   conjunto cerrado de funciones escritas en código, como el gastado de una categoría en un
+   rango de fechas o el saldo de una cuenta. El modelo decide cuáles llamar y con qué filtros, y
+   el caso de uso las ejecuta por los repositorios. El usuario nunca es un parámetro: cada función
+   filtra por el usuario del mensaje en el código, así que el modelo no puede pedir datos de otro.
+   Ninguna función escribe. Lo que el modelo ve de los datos del usuario es solo lo que devolvieron
+   las funciones que pidió para esa pregunta, según el punto 1. Las funciones y sus topes están en
+   las reglas de dominio, § 17.
 
 ## Consecuencias
 
@@ -56,10 +63,16 @@ Todavía no se eligió el proveedor.
 - Algunos proveedores con buenas condiciones de privacidad pueden ser más caros o tener menos
   opciones de modelo.
 - Depender de las condiciones contractuales de un tercero obliga a revisarlas periódicamente.
-- Cada tipo de consulta que el asistente sabe responder necesita un caso de uso escrito para
-  ella. Una pregunta que no encaja en ninguno no se responde, aunque el modelo pudiera armar la
-  consulta. Se acepta porque un SQL generado por el modelo podría leer datos de otro usuario, o
+- Una pregunta que no se puede armar con las funciones disponibles no se responde, aunque el
+  modelo pudiera escribir la consulta. Ampliar lo que se puede preguntar es sumar una función en
+  código. Se acepta porque un SQL generado por el modelo podría leer datos de otro usuario, o
   escribir, ante un mensaje malicioso.
+- Responder una pregunta puede llevar varias vueltas con el modelo, una por cada función que
+  pide, y cuesta más tokens que interpretar un gasto. Pesa sobre el tope global de gasto del
+  proveedor.
+- Al proveedor le llegan datos del usuario que antes no salían, como totales por categoría o
+  una lista de movimientos con sus descripciones. Son solo los de esa pregunta, sin
+  identificadores, pero una descripción puede nombrar personas o lugares.
 
 ## Alternativas descartadas
 
@@ -71,10 +84,16 @@ Todavía no se eligió el proveedor.
 - **Anonimizar el texto del mensaje antes de enviarlo.** Detectar y reemplazar nombres propios o
   datos personales dentro de un texto libre es poco fiable y degrada la interpretación, que es la
   función central del producto.
-- **Que el modelo genere SQL, o consulte la base con herramientas, para responder preguntas
-  sobre los datos del usuario.** Cubriría cualquier pregunta sin escribir un caso de uso por
-  cada una, pero la consulta generada no pasa por la validación de pertenencia al usuario, y un
-  mensaje escrito para engañar al modelo podría leer datos ajenos o modificar registros.
+- **Que el modelo genere SQL para responder preguntas sobre los datos del usuario.** Cubriría
+  cualquier pregunta sin escribir ninguna función, pero la consulta generada no pasa por la
+  validación de pertenencia al usuario, y un mensaje escrito para engañar al modelo podría leer
+  datos ajenos o modificar registros.
+- **Un conjunto cerrado de consultas fijas**, cada una con su caso de uso y su respuesta armada.
+  Es más barato y más predecible, pero el usuario solo puede preguntar lo que se previó, y
+  combinar dos datos, como comparar dos meses, exige escribir una consulta nueva.
+- **Mandar un resumen del mes del usuario como contexto de cada pregunta.** Es simple, pero envía
+  más datos de los que la pregunta necesita, solo sabe lo que entra en el resumen, y deja que el
+  modelo haga las cuentas, que es donde más se equivoca.
 
 ---
 

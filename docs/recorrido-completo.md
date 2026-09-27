@@ -81,7 +81,7 @@ flowchart TB
 | 3. Registro diario | WhatsApp o dashboard | Worker o API | `PENDING_*`, luego `TRANSACTION`, `TRANSFER` o `RECURRING_RULE` | [§ 5](#5-registro-de-un-movimiento-por-whatsapp) |
 | 4. Lo que corre solo | Una hora del día | Procesos programados | `TRANSACTION` o `PENDING_TRANSACTION`, `CARD_STATEMENT`, `EXCHANGE_RATE` | [§ 6](#6-recurrentes-y-cuotas-de-tarjeta) y [§ 7](#7-cierre-y-conciliación-de-un-resumen) |
 | 5. Avisos y contrastes | Una hora del día | Procesos programados, y el worker para las respuestas | `SENT_ALERT`, `OUTBOUND_MESSAGE`, ajustes en `TRANSACTION` | [§ 8](#8-alertas-y-contraste-mensual-de-saldos) |
-| 6. Consulta y consejos | Navegador o WhatsApp | API o worker | `SESSION`, `LLM_USAGE` | [§ 9](#9-dashboard) y [§ 10](#10-consejo-por-whatsapp) |
+| 6. Consulta y consejos | Navegador o WhatsApp | API o worker | `SESSION`, `LLM_USAGE` | [§ 9](#9-dashboard), [§ 10](#10-consejo-por-whatsapp) y [§ 12](#12-pregunta-sobre-los-propios-datos) |
 | Corregir, borrar o restaurar | WhatsApp o dashboard | Worker o API | `PENDING_TRANSACTION` de tipo cambio, luego el movimiento corregido | [§ 11](#11-corregir-o-borrar-por-whatsapp) |
 
 ## 3. Alta
@@ -454,7 +454,40 @@ sequenceDiagram
     W->>M: HTTPS envía la respuesta
 ```
 
-## 12. Lo que el recorrido deja a la vista
+## 12. Pregunta sobre los propios datos
+
+El modelo no consulta la base: pide datos a funciones de solo lectura, que el caso de uso ejecuta
+filtrando por el usuario del mensaje
+([reglas de dominio § 17](reglas-de-dominio.md#17-preguntas-sobre-los-propios-datos)).
+
+```mermaid
+sequenceDiagram
+    actor U as Usuario
+    participant M as Meta Cloud API
+    participant API as Servicio web
+    participant DB as PostgreSQL
+    participant W as Worker
+    participant L as LLM
+
+    U->>M: "¿gasté más en delivery que el mes pasado?"
+    M->>API: HTTPS POST /webhook/whatsapp
+    API->>DB: SQL INSERT INBOUND_MESSAGE
+    W->>DB: SQL claim del mensaje y lectura de LLM_USAGE, cuota de consultas
+    W->>L: HTTPS pregunta y lista de funciones disponibles
+    L-->>W: pide Gastado(delivery, septiembre) y Gastado(delivery, agosto)
+    W->>DB: SQL las dos consultas, por repositorio,<br/>con el user_id del mensaje
+    W->>L: HTTPS resultados: $38.500 y $24.000
+    L-->>W: respuesta armada con esas cifras
+    rect rgb(240, 246, 252)
+        Note over W,DB: Una sola transacción SQL
+        W->>DB: UPDATE INBOUND_MESSAGE processed, con fencing
+        W->>DB: UPDATE LLM_USAGE, una consulta
+        W->>DB: INSERT OUTBOUND_MESSAGE con la respuesta
+    end
+    W->>M: HTTPS "Sí: $38.500 contra $24.000, un 60% más."
+```
+
+## 13. Lo que el recorrido deja a la vista
 
 Los diagramas marcan dos puntos que la especificación todavía no resuelve:
 

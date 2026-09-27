@@ -49,7 +49,7 @@ La misma ruta atiende la verificación de la URL que Meta hace al configurar el 
 
 ### `GET /budgets/{budget_id}`
 
-Devuelve el estado actual del límite de **una categoría** dentro de un período de presupuesto: límite, gastado hasta el momento (convertido a la moneda primaria del período, y neto de los reintegros vinculados que llegaron en ese período, según [reglas de dominio § 16](reglas-de-dominio.md#16-reintegros-devoluciones-y-plata-que-te-deben)) y movimientos asociados. El dashboard arma la vista completa del período ([HU2](05-historias-de-usuario.md)) iterando los `BUDGET` de un mismo `budget_period_id` — agregar un endpoint de rollup a nivel de período es candidato para la Entrega 2.
+Devuelve el estado actual del límite de **una categoría** dentro de un período de presupuesto: límite, gastado hasta el momento (convertido a la moneda primaria del período, y neto de los reintegros vinculados que llegaron en ese período, según [reglas de dominio § 16](reglas-de-dominio.md#16-reintegros-devoluciones-y-plata-que-te-deben)) y movimientos asociados. La vista completa del período, con todas las categorías, sale de `GET /budget-periods/{period_id}/summary`.
 
 Quién puede leerlo: si el período es individual, solo su dueño. Si es familiar, cualquier miembro
 vigente del grupo, que ve todos los movimientos del período sin importar quién los registró, y
@@ -153,6 +153,38 @@ responses:
     description: A listed rule is not a variable rule of this user due in the period
   409:
     description: Overlaps a confirmed period of the same owner
+```
+
+### `GET /budget-periods/{period_id}/summary`
+
+El resumen de un período para el dashboard, con todas sus categorías, tengan tope o no. Qué
+incluye y cómo se calcula está en
+[reglas de dominio § 17](reglas-de-dominio.md#17-preguntas-sobre-los-propios-datos). Quién puede leerlo sigue la misma regla que
+`GET /budgets/{budget_id}`: si no puede, `404`.
+
+```yaml
+responses:
+  200:
+    content:
+      application/json:
+        example:
+          budget_period_id: "bp1..."
+          primary_currency: "ARS"
+          estimated_income: 1450000
+          actual_income: 1450000
+          total_spent: 982300
+          categories:
+            - category: "food"
+              limit_amount: 300000
+              spent_amount: 214500
+              used_percentage: 71.5
+            - category: "delivery"
+              limit_amount: null           # no limit: listed anyway
+              spent_amount: 38500
+              used_percentage: null
+          committed_next_periods: 1100000
+  404:
+    description: The period does not exist or the user cannot read it
 ```
 
 ### `POST /transactions`

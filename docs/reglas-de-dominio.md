@@ -555,15 +555,18 @@ Cada mensaje que el asistente interpreta o responde con IA tiene un costo, y Pla
 abierta a cualquier persona. Sin límites, un uso abusivo, o un error que dispare mensajes en
 bucle, se traslada directo a la factura del proveedor de LLM.
 
-**Dos cuotas diarias por usuario, separadas.**
+**Tres cuotas diarias por usuario, separadas.**
 
 | Cuota | Qué cuenta | Límite inicial |
 |---|---|---|
 | Registro | Mensajes interpretados para cargar, completar o corregir movimientos, incluidas las respuestas del alta | 50 por día |
+| Consultas | Preguntas sobre los datos propios, respondidas con las funciones de lectura (§ 17). Cuenta una por pregunta, aunque el modelo llame a varias funciones | 20 por día |
 | Consejos | Consultas respondidas con la base de conocimiento financiero | 10 por día |
 
 Están separadas porque registrar es el núcleo del producto y no puede quedar bloqueado porque el
-usuario hizo muchas preguntas. El día es el día calendario en la zona horaria del usuario
+usuario hizo muchas preguntas. Una pregunta que necesita la base de conocimiento es un consejo,
+aunque además use datos propios, y cuenta en esa cuota; una que solo usa datos propios es una
+consulta. El día es el día calendario en la zona horaria del usuario
 (`time_zone`). Los límites son configuración, no valores escritos en el código, para poder ajustarlos
 sin desplegar.
 
@@ -572,8 +575,9 @@ sin desplegar.
 - **Registro:** el mensaje se guarda igual y queda sin procesar hasta que la cuota se renueva al
   día siguiente. El asistente responde con un texto fijo, sin llamar al LLM, que avisa que lo va
   a procesar mañana. Perder un gasto que el usuario escribió sería peor que demorarlo.
-- **Consejos:** el asistente responde con un texto fijo que avisa que llegó al límite de
-  consultas del día. Registrar movimientos sigue funcionando.
+- **Consultas y consejos:** el asistente responde con un texto fijo, sin llamar al LLM, que avisa
+  que llegó al límite del día, y ofrece el enlace al dashboard. Registrar movimientos sigue
+  funcionando.
 
 **Un tope global mensual como corte de emergencia.** Además de las cuotas por usuario, la cuenta
 del proveedor de LLM tiene un límite de gasto mensual de 20 dólares, configurado en la consola
@@ -886,3 +890,47 @@ Lo que el usuario le debe a otro, como cuando otra persona pagó la cena, no tie
 todavía: se registra como gasto cuando el usuario le paga.
 
 Ver también: [TRANSACTION y ACCOUNT en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [HU4](05-historias-de-usuario.md).
+
+## 17. Preguntas sobre los propios datos
+
+El usuario le puede preguntar al asistente lo que quiera sobre su plata: "¿cuánto gasté en
+delivery este mes?", "¿gasté más en comida que el mes pasado?", "¿cuánto tengo en MP?". El
+modelo no consulta la base: pide datos a un conjunto de funciones de solo lectura escritas en
+código, las combina y responde. El fundamento está en el
+[ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md).
+
+**Las funciones.** Cada una devuelve datos ya calculados, con las mismas reglas que el resto del
+producto: sin movimientos borrados ni duplicados (§ 2 y § 7), con el gastado neto de reintegros
+(§ 16) y convertido con la cotización guardada en cada movimiento (§ 6).
+
+| Función | Qué devuelve |
+|---|---|
+| Gastado | El total gastado en un rango de fechas, opcionalmente por categoría, por cuenta o agrupado por categoría |
+| Ingresos | El total de ingresos en un rango de fechas, opcionalmente por categoría |
+| Movimientos | Los movimientos que cumplen unos filtros (fechas, categoría, cuenta, monto, descripción), como mucho 20 |
+| Saldos | El saldo de una cuenta o de todas, agrupadas por moneda, y lo aportado neto de las cuentas de inversión (§ 2) |
+| Presupuesto | Para un período, el ingreso estimado y real, y el tope, el gastado y el porcentaje de cada categoría |
+| Tarjeta | La deuda del próximo vencimiento de una tarjeta, su fecha y lo comprometido en cuotas |
+| Me deben | El saldo de cada cuenta "Me deben" (§ 16) |
+
+**Qué garantiza el código, no el modelo.**
+
+- **El usuario no es un parámetro.** Cada función filtra por el usuario del mensaje. Los períodos
+  familiares que devuelve son los que ese usuario puede leer (§ 10).
+- **Nada escribe.** Registrar, corregir o borrar siguen por sus flujos, con confirmación.
+- **Las cifras salen de las funciones.** El modelo tiene la instrucción de no dar ningún número
+  que no le haya devuelto una función. Si la respuesta necesita una cuenta que ninguna función
+  hace, la función la tiene que hacer: el modelo no suma ni resta.
+- **Topes por pregunta.** Como mucho 5 llamadas a funciones y 20 movimientos por lista. Los dos
+  son configuración.
+
+**Lo que no se puede responder.** Si la pregunta no se puede armar con las funciones, o el
+resultado no entra en un mensaje, el asistente lo dice con un texto fijo y manda el enlace al
+dashboard. Nunca estima ni inventa un dato. Si la pregunta es un pedido de registrar, corregir o
+borrar, sigue ese flujo.
+
+**En el dashboard, el resumen del período.** El dashboard muestra, para un período, el ingreso
+estimado y el real, el gastado de todas las categorías, con tope o sin él, el total gastado y lo
+comprometido para los períodos siguientes. Sale de las mismas reglas que la función Presupuesto.
+
+Ver también: [LLM_USAGE en 3.2](03-modelo-de-datos.md#llm_usage) · [la API](04-api.md) · [HU4](05-historias-de-usuario.md).
