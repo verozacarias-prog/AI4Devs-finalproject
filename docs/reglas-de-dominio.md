@@ -1034,20 +1034,42 @@ Ver también: [LLM_USAGE en 3.2](03-modelo-de-datos.md#llm_usage) · [la API](04
 
 ## 18. Alcance de los consejos
 
-Los consejos son educación financiera aplicada a la situación real del usuario, no asesoramiento
-de inversiones. En Argentina, recomendar a una persona en qué invertir según su situación está
-reservado a agentes registrados en la CNV, así que Platita explica y el usuario decide.
+Los consejos son educación financiera aplicada a la situación real del usuario, no asesoramiento.
+Platita enseña a evaluar una decisión y nunca la toma por el usuario, sea de inversión, de deuda o
+de consumo. En inversiones, además, recomendar a una persona en qué invertir según su situación
+está reservado en Argentina a agentes registrados en la CNV.
 
-**Qué hace un consejo.**
+**Tres clases de respuesta.** El asistente clasifica cada pregunta en una de tres clases, y cada
+clase tiene su forma de respuesta. Lo que hace segura la clasificación no es el modelo sino esa
+forma, que se puede verificar, igual que el tipo de un movimiento en la confirmación (§ 1).
 
-- **Explica** instrumentos, riesgos, costos y cómo funcionan: qué es un FCI, un plazo fijo, un
-  CEDEAR, cómo conviene pagar la tarjeta.
-- **Usa los datos del usuario** para lo que es suyo: su presupuesto, su deuda, cuánto ahorra por
-  mes y de cuánto debería ser su fondo de emergencia. Los pide con las funciones de § 17, así que
-  sale de su historial real y no de un número escrito en el perfil. Con ingresos irregulares, el
-  fondo de emergencia y la capacidad de ahorro se calculan sobre varios meses, no sobre uno.
-- **Ordena prioridades generales:** antes de invertir, salir de deudas caras y armar un fondo de
-  emergencia. Es criterio general de educación financiera, no una elección hecha para el usuario.
+| Clase | Ejemplo | Qué responde |
+|---|---|---|
+| Información | "¿Cuánto paga un plazo fijo?" | Datos objetivos, con fuente y fecha: tasas, cotizaciones, inflación, costos de un producto |
+| Educación | "¿Qué es un FCI?", "¿qué me cuesta pagar el mínimo de la tarjeta?" | Conceptos, riesgos y costos, y cómo funcionan |
+| Decisión | "¿Me conviene este préstamo?", "¿qué hago con lo que me sobró?" | La estructura fija de abajo, nunca un veredicto |
+
+**Cómo se responde una pregunta de decisión.** Siempre con la misma estructura, en este orden:
+
+1. **Los conceptos** que la decisión pone en juego, como deuda buena y deuda mala, costo
+   financiero total contra tasa nominal, o costo de oportunidad.
+2. **Los criterios** con que se evalúa, como qué parte del ingreso se lleva la cuota, si el bien
+   dura más que la deuda o si hay un fondo de emergencia.
+3. **Los datos del usuario aplicados a esos criterios, como cálculo:** "la cuota sería el 28% de
+   tu ingreso promedio de los últimos 6 meses". Las cifras salen de las funciones de § 17, como en
+   cualquier consulta, y van sin adjetivo: nada de "es mucho" ni "te alcanza". Con ingresos
+   irregulares, el promedio es de varios meses, no de uno.
+4. **Un cierre fijo:** la decisión es del usuario, y la respuesta es educación financiera, no una
+   recomendación. Es lo mismo que dicen los [términos](terminos-y-privacidad.md).
+
+Ordenar prioridades generales, como salir de deudas caras y armar un fondo de emergencia antes de
+invertir, es un criterio del paso 2: se explica como criterio de educación financiera, no se
+aplica como una indicación para el usuario.
+
+**Si el usuario insiste.** Cuando pide que decidan por él ("decime vos qué hago"), el asistente
+explica una vez por qué no lo hace y ofrece revisar juntos el criterio que más le cueste aplicar.
+Si vuelve a insistir sobre la misma pregunta, responde con un texto fijo que repite el límite, sin
+generar otra respuesta.
 
 **Los consejos son individuales.** Usan los datos del usuario que pregunta: su presupuesto
 individual, sus cuentas y su perfil. No usan un presupuesto de grupo ni el perfil de otro
@@ -1055,16 +1077,19 @@ miembro. Una pareja no puede pedir un consejo conjunto; cada uno lo pide sobre l
 consultas sobre datos (§ 17) sí leen los períodos del grupo, porque solo muestran cifras que el
 miembro ya puede ver.
 
-**Qué no hace.**
+**Qué no hace, en ninguna clase.**
 
-- **No elige un instrumento ni reparte montos** por el usuario: nada de "te conviene 70% CEDEARs".
+- **No da un veredicto** sobre una decisión del usuario: ni "te conviene", ni "no lo hagas", ni
+  "primero pagá la tarjeta".
+- **No elige un instrumento ni reparte montos:** nada de "te conviene 70% CEDEARs".
 - **No recomienda una entidad ni un producto con nombre.** Puede citar una tasa promedio del
   mercado, no "invertí en el plazo fijo del banco X".
 - **No usa un perfil de riesgo,** porque no lo pregunta (§ 11).
 
-Toda respuesta que habla de inversiones termina con una aclaración: es educación financiera, no
-una recomendación personalizada. Es lo mismo que dicen los
-[términos](terminos-y-privacidad.md).
+**El consejo de una alerta es educación.** El consejo relacionado que acompaña una alerta de
+presupuesto ([HU5](05-historias-de-usuario.md)) llega sin que el usuario pregunte, así que es
+siempre de la clase educación: puede explicar un concepto, como qué es un gasto hormiga, pero no
+sugiere qué recortar.
 
 **Los datos de mercado tienen fecha.** Las tasas y la inflación no se escriben en la base de
 conocimiento, porque cambian cada semana o cada mes. Salen de fuentes que se actualizan solas,

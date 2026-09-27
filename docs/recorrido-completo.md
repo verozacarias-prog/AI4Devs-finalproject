@@ -388,7 +388,7 @@ sequenceDiagram
     participant W as Worker
     participant L as LLM
 
-    U->>M: "¿cómo me conviene pagar la tarjeta?"
+    U->>M: "¿qué me cuesta pagar el mínimo de la tarjeta?"
     M->>API: HTTPS POST /webhook/whatsapp
     API->>DB: SQL INSERT INBOUND_MESSAGE
     W->>DB: SQL claim del mensaje y lectura de LLM_USAGE, cuota de consejos

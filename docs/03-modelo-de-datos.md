@@ -51,11 +51,11 @@ erDiagram
     INBOUND_MESSAGE |o--o{ OUTBOUND_MESSAGE : "is answered by"
 ```
 
-#### Usuarios, acceso y asesoramiento
+#### Usuarios, acceso y educación financiera
 
 Quién es el usuario, a qué grupo familiar pertenece, cómo entra al dashboard y cuánto consume
 del LLM. `ADVICE_DOCUMENT`, `INDICATOR_VALUE` y `AUTH_THROTTLE` no tienen relaciones: la
-primera es la base de conocimiento del asesoramiento, la segunda guarda los indicadores de
+primera es la base de conocimiento de la educación financiera, la segunda guarda los indicadores de
 mercado que usan los consejos, y la tercera cuenta intentos por teléfono o IP, no por usuario.
 
 ```mermaid
@@ -467,7 +467,7 @@ erDiagram
 Cada tabla lleva su descripción y, si las tiene, sus restricciones de integridad. Están agrupadas
 por área, en el mismo orden que los diagramas de [3.1](#31-diagrama-del-modelo-de-datos).
 
-#### Usuarios, acceso y asesoramiento
+#### Usuarios, acceso y educación financiera
 
 ##### APP_USER
 
@@ -520,7 +520,7 @@ Consumo diario de cada usuario, por cuota. Se suma en la misma transacción que 
 
 ##### ADVICE_DOCUMENT
 
-Base de conocimiento financiero curada por el equipo del producto (no por cada usuario final) — es contenido compartido que cualquier usuario puede consultar vía RAG, no datos personales. `topic` clasifica el fragmento (tarjeta de crédito, fondo de emergencia, inversión básica, etc.) para poder acotar la búsqueda además de la similitud semántica. `status` y `last_reviewed_at` existen para poder listar qué contenido lleva mucho sin revisarse y decidir si actualizarlo — no hay actualización automática en el MVP, es un chequeo periódico manual apoyado en esa marca.
+Base de conocimiento de educación financiera curada por el equipo del producto (no por cada usuario final) — es contenido compartido que cualquier usuario puede consultar vía RAG, no datos personales. `topic` clasifica el fragmento (tarjeta de crédito, fondo de emergencia, inversión básica, etc.) para poder acotar la búsqueda además de la similitud semántica. `status` y `last_reviewed_at` existen para poder listar qué contenido lleva mucho sin revisarse y decidir si actualizarlo — no hay actualización automática en el MVP, es un chequeo periódico manual apoyado en esa marca.
 
 ##### INDICATOR_VALUE
 

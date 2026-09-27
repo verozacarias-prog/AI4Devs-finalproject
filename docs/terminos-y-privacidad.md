@@ -31,7 +31,7 @@ así que bloquean abrir Platita a usuarios reales.
 | Tema | Qué tiene que decir | Dónde está la decisión |
 |---|---|---|
 | Qué es y qué no es | Un asistente de registro y educación financiera; no se conecta a bancos ni pide credenciales bancarias | [1. Producto](01-producto.md) |
-| Los consejos no son asesoramiento profesional | Son educación financiera general cruzada con los datos del usuario, no una recomendación de inversión personalizada: no eligen instrumentos ni entidades | [Reglas de dominio § 18](reglas-de-dominio.md#18-alcance-de-los-consejos) |
+| Los consejos no son asesoramiento profesional | Son educación financiera general cruzada con los datos del usuario. Platita no toma decisiones por el usuario sobre ningún tema financiero, sea de inversión, deuda o consumo: enseña conceptos y criterios, y no elige instrumentos ni entidades | [Reglas de dominio § 18](reglas-de-dominio.md#18-alcance-de-los-consejos) |
 | Confirmaciones | El usuario confirma cada movimiento; las cotizaciones son sugerencias que él valida | [Reglas de dominio § 1 y § 6](reglas-de-dominio.md) |
 | Límites de uso | Cuotas diarias de mensajes y consultas, y qué pasa al superarlas | [Reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente) |
 | Disponibilidad | Depende de WhatsApp y del proveedor de LLM; puede haber demoras | [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md) |
