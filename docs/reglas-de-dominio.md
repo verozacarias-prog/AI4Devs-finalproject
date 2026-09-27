@@ -542,6 +542,12 @@ como el primer gasto (§ 11). Antes de sumarlo, el asistente le muestra el nombr
 de su dueño y le pide que confirme, porque lo que impute al grupo lo van a ver los demás
 miembros. Confirmar crea su membresía con `role = 'member'` y consume el código, en la misma
 transacción. Si el dueño dio permiso para avisos, recibe un mensaje de que el invitado se sumó.
+
+**Si el nombre del grupo choca, el código espera.** Si el invitado ya es miembro de otro grupo
+con el mismo nombre, no puede sumarse (ver "El nombre no se repite…"). El asistente le explica
+que ya está en un grupo con ese nombre y que el dueño tiene que cambiarlo. El código no se
+consume y sigue valiendo hasta que vence. Si el dueño dio permiso para avisos, recibe un mensaje
+con el motivo. Cuando lo renombra, el invitado vuelve a escribir el mismo código.
 Aceptar solo se hace por WhatsApp, porque es lo que verifica que el número es del invitado.
 
 **Volver a un grupo reabre la membresía.** Si quien acepta una invitación ya fue miembro de ese
@@ -724,7 +730,7 @@ Las que hacen falta son:
 | Recurrente o cuota por confirmar | Utilidad | Cuando un recurrente o una cuota de tarjeta no encuentra período confirmado, necesita que el usuario confirme la cotización, o es de monto variable y su monto no está confirmado. Las ocurrencias variables de una tarjeta no usan esta plantilla: se preguntan en la conciliación |
 | Conciliación del resumen | Utilidad | Unos días después del cierre de un resumen de tarjeta: pide los montos de las suscripciones variables sin confirmar, en una tarjeta en otra moneda cómo se va a pagar y la cotización del resumen, y el total del banco. Antes del ajuste pregunta por compras sin cargar, y recomienda revisar los consumos |
 | Saldos del mes | Utilidad | Al terminar cada mes de presupuesto: muestra el saldo de cada cuenta y pregunta si coincide con el real |
-| Miembro nuevo | Utilidad | Cuando un invitado acepta sumarse a un grupo: le avisa al dueño |
+| Miembro nuevo | Utilidad | Cuando un invitado acepta sumarse a un grupo, o cuando no puede porque ya está en otro grupo con el mismo nombre: le avisa al dueño, con el motivo si no pudo |
 
 Ver también: [HU6](05-historias-de-usuario.md) · [APP_USER y FINANCIAL_PROFILE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [OUTBOUND_MESSAGE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
 
@@ -744,8 +750,8 @@ bucle, se traslada directo a la factura del proveedor de LLM.
 
 Están separadas porque registrar es el núcleo del producto y no puede quedar bloqueado porque el
 usuario hizo muchas preguntas. Una pregunta que necesita la base de conocimiento es un consejo,
-aunque además use datos propios, y cuenta en esa cuota; una que solo usa datos propios es una
-consulta. El día es el día calendario en la zona horaria del usuario
+aunque además use datos propios, y cuenta en esa cuota; una que solo usa datos propios, o solo
+pide un dato de mercado (§ 18), es una consulta. El día es el día calendario en la zona horaria del usuario
 (`time_zone`). Los límites son configuración, no valores escritos en el código, para poder ajustarlos
 sin desplegar.
 
@@ -1148,8 +1154,10 @@ comprometido para los períodos siguientes. Sale de las mismas reglas que la fun
 
 **Lo retirado de inversiones se muestra aparte.** En un período individual, el resumen y la
 función Presupuesto muestran también cuánto retiró el usuario de sus cuentas de inversión con
-fecha en el período: la suma de las transferencias que salieron de ellas, convertida a la moneda
-del período con la cotización de cada transferencia. No suma al ingreso real, porque es ahorro que
+fecha en el período: la suma de las transferencias que salieron de ellas hacia una cuenta que no
+es de inversión, convertida a la moneda del período con la cotización de cada transferencia. Una
+transferencia entre dos cuentas de inversión, como la compra de dólares adentro del broker, no
+cuenta, porque la plata sigue invertida. No suma al ingreso real, porque es ahorro que
 se gasta y no un ingreso, pero explica con qué se cubrió un período que gastó más de lo que
 ingresó. Se calcula con los movimientos, sin preguntar nada.
 
