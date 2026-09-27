@@ -45,7 +45,7 @@ bloque de configuración.
 1. **Configuración en un archivo versionado del repositorio**, no en la base de datos. Cada
    fuente declara su identificador (por ejemplo `DOLAR_MEP`), país, moneda de origen y de
    destino, URL, formato de la respuesta, ruta al valor y a la fecha dentro de ella, frecuencia
-   de actualización y, si hace falta, el header de autenticación con el **nombre** de la variable
+   de actualización, antigüedad máxima con que un valor guardado todavía se usa y, si hace falta, el header de autenticación con el **nombre** de la variable
    de entorno que guarda la clave, nunca la clave. Sumar un país pasa por pull request y por la
    integración continua como cualquier otro cambio.
 2. **La configuración se valida al arrancar.** Un bloque incompleto o mal escrito impide que la
@@ -65,7 +65,7 @@ bloque de configuración.
 7. **Cada fuente tiene un test con una respuesta real grabada**, de modo que la integración
    continua detecte una ruta mal configurada sin llamar al proveedor.
 8. **La ausencia de fuente no es un error.** Un país sin fuente configurada, o una cotización
-   guardada que ya envejeció, dejan al asistente sin sugerencia. En ese caso el valor lo aporta
+   guardada que superó la antigüedad máxima de su fuente, dejan al asistente sin sugerencia. En ese caso el valor lo aporta
    el usuario en la conversación, y el adaptador no interviene.
 
 En el MVP se configuran solo fuentes argentinas.

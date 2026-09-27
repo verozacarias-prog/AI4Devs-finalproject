@@ -13,20 +13,27 @@ Antes de escribir código para cualquier ticket de dominio, leer este documento 
 
 ## 1. Registro de un movimiento: qué se asume y qué se confirma
 
-**Qué se asume y qué se confirma**: para que cargar un gasto sea un solo mensaje, el asistente completa solo lo que puede resolver sin adivinar — la **fecha** es la de hoy salvo que el mensaje diga otra cosa, la **moneda** es la primaria del usuario salvo que se indique otra, y la **categoría** se ubica entre las existentes, sugiriendo crear una nueva solo si no encaja en ninguna. Todo eso aparece explícito en el mensaje de confirmación, donde el usuario corrige cualquiera de esos valores con una respuesta corta. En cambio hay datos que **requieren confirmación del usuario**: el **monto**, si es **gasto o ingreso** cuando el mensaje no lo deja claro, la **cuenta** (imputarla mal rompe el saldo calculado) y **a qué presupuesto se imputa el gasto** — la fecha acota los períodos posibles, pero elegir si el gasto pesa sobre el presupuesto individual o el familiar es una decisión del usuario, no algo que el sistema pueda deducir. El asistente propone lo más probable y el usuario confirma. Lo ya interpretado queda guardado mientras tanto, así se responde solo lo que falta y no se repite el mensaje entero.
+**Qué se asume y qué se confirma**: para que cargar un gasto sea un solo mensaje, el asistente completa solo lo que puede resolver sin adivinar — la **fecha** es la de hoy salvo que el mensaje diga otra cosa, la **moneda** es la de la cuenta que el mensaje nombra, o la primaria del usuario si no nombra ninguna, salvo que se indique otra, y la **categoría** se ubica entre las existentes, sugiriendo crear una nueva solo si no encaja en ninguna. Todo eso aparece explícito en el mensaje de confirmación, donde el usuario corrige cualquiera de esos valores con una respuesta corta. En cambio hay datos que **requieren confirmación del usuario**: el **monto**, si es **gasto o ingreso** cuando el mensaje no lo deja claro, la **cuenta** (imputarla mal rompe el saldo calculado) y **a qué presupuesto se imputa el gasto** — la fecha acota los períodos posibles, pero elegir si el gasto pesa sobre el presupuesto individual o el familiar es una decisión del usuario, no algo que el sistema pueda deducir. El asistente propone lo más probable y el usuario confirma. Lo ya interpretado queda guardado mientras tanto, así se responde solo lo que falta y no se repite el mensaje entero.
 
 **Campos obligatorios de un movimiento.** Una fila en `TRANSACTION` solo existe con todos estos datos presentes: `amount`, `currency`, `type`, `transaction_date`, `category_id`, `account_id` y `budget_period_id` — todos `NOT NULL` en la base de datos, así que ninguna vía de carga puede insertar un movimiento a medias. Lo que cambia entre ellos es **de dónde sale el valor**, no si es obligatorio:
 
-- **Resueltos por el sistema, sin preguntar:** `transaction_date` (hoy en la zona horaria del usuario, salvo que el mensaje indique otra fecha), `currency` (la primaria del usuario, salvo indicación contraria) y `category_id` (resuelto contra las categorías existentes; si ninguna encaja, se sugiere crear una). Quedan visibles en el mensaje de confirmación, que es donde el usuario los corrige.
+- **Resueltos por el sistema, sin preguntar:** `transaction_date` (hoy en la zona horaria del usuario, salvo que el mensaje indique otra fecha), `currency` (la de la cuenta que el mensaje nombra, o la primaria del usuario si no nombra ninguna, salvo indicación contraria) y `category_id` (resuelto contra las categorías existentes; si ninguna encaja, se sugiere crear una). Quedan visibles en el mensaje de confirmación, que es donde el usuario los corrige.
 - **Pedidos o confirmados por el usuario:** `amount`, `type` si el mensaje no lo deja claro, `account_id` siempre que no se mencione una cuenta, y `budget_period_id` **siempre**. Con el presupuesto el sistema no decide solo: `transaction_date` acota los períodos candidatos (y si el usuario pertenece a un grupo familiar, esa fecha cae dentro de su período individual y del familiar a la vez), pero cuál de ellos absorbe el gasto es una decisión del usuario, no algo derivable. El asistente propone el candidato más probable y el usuario confirma o elige otro; ninguna transacción se imputa a un presupuesto sin ese visto bueno. Hay dos excepciones a que ese visto bueno lo dé el propio usuario en el momento: las reglas recurrentes (§ 8) y el dueño de un grupo familiar que saca a un miembro con pendientes abiertos (§ 10).
 
 Si falta o queda sin confirmar alguno de los campos que dependen del usuario, el movimiento no se registra: queda como `PENDING_TRANSACTION` hasta que responda. La misma regla aplicará a los movimientos detectados por el parser de emails cuando se implemente (could-have): traen monto, fecha y normalmente cuenta, pero nunca el presupuesto, así que quedarán pendientes de confirmación igual que los manuales incompletos.
 
 Del alcance técnico del Ticket 1:
 
-- Aplicación de defaults derivables antes de decidir si falta algo: `transaction_date` = hoy si no viene, `currency` = primaria del usuario si no viene.
+- Aplicación de defaults derivables antes de decidir si falta algo: `transaction_date` = hoy si no viene, `currency` = la de la cuenta mencionada si no viene, o la primaria del usuario si tampoco se menciona una cuenta.
 - Resolución de cuenta por nombre si se menciona — **sin fallback ni cuenta por defecto**: si no se menciona, se pregunta.
 - Mensaje de confirmación que lista también los valores resueltos por defecto (fecha, moneda, categoría) y acepta una corrección posterior sobre cualquiera de ellos.
+
+**La moneda sale de la cuenta nombrada.** "Me pagaron 2400 en Payoneer", con una cuenta Payoneer
+en dólares, son USD 2.400, no $2.400 convertidos a dólares. Si el mensaje nombra una cuenta y no
+una moneda, la moneda es la de esa cuenta; si no nombra ninguna cuenta, es la primaria del
+usuario. Si el nombre coincide con más de una cuenta, como "la Galicia" con "Galicia pesos" y
+"Galicia USD", primero se pregunta la cuenta (§ 2) y la moneda sale de la que el usuario elige.
+La moneda sigue a la vista en la confirmación, donde se corrige como cualquier default.
 
 **Un movimiento, un presupuesto.** Todo gasto o ingreso se imputa entero a un solo período,
 aunque el usuario lo use para más de un fin, como un celular que sirve para la actividad y para lo
@@ -206,10 +213,13 @@ inflación (could-have) reemplazará a la copia cuando exista, sin cambiar el re
   estimado y los topes del borrador, y las reglas recurrentes de monto variable que vencen en el
   período, numeradas y con su último monto (§ 8). Si el usuario responde que lo confirma, pasa a
   `confirmed` sin cambios. Puede corregir montos de esas reglas en la misma respuesta ("el 1 es
-  850.356"), o dejar alguno sin confirmar. Los topes no se cambian por WhatsApp. La respuesta usa
+  850.356"), o dejar alguno sin confirmar. También puede corregir el ingreso estimado ("el
+  ingreso es 1.450.000"), porque el borrador lo copia del período anterior y un ingreso que no se
+  repite, como el aguinaldo, pasaría al mes siguiente. Los topes no se cambian por WhatsApp. La respuesta usa
   la cuota de registro.
 - **Armar o cambiar, en el dashboard.** Crear un período, cambiar sus fechas, el ingreso estimado
-  o los topes, y confirmarlo, se hace en el dashboard. Por WhatsApp no se editan topes: el
+  o los topes, y confirmarlo, se hace en el dashboard; del ingreso estimado, también por WhatsApp
+  al confirmar (ver arriba). Por WhatsApp no se editan topes: el
   recordatorio incluye el enlace para hacerlo.
 - **Sin confirmar al empezar.** Si un período empieza sin confirmar, lo que caiga en él queda
   pendiente como siempre. La pregunta de ese pendiente ofrece confirmar el borrador en el mismo
@@ -363,7 +373,8 @@ otra moneda no usa la cotización de referencia sino la de cómo se paga su resu
 Argentina puede ser la fuente del dólar tarjeta (§ 13).
 
 **Sin cotización, se pregunta.** Si el usuario no tiene fuente de referencia, porque su país
-todavía no tiene una configurada, o si la última cotización guardada es demasiado vieja, el
+todavía no tiene una configurada, o si la última cotización guardada superó la antigüedad máxima
+de su fuente (§ 18), el
 asistente no propone un valor: pregunta cuánto se debitó en la moneda de la cuenta, o cuánto
 representa en la moneda del presupuesto. De lo que el usuario responde sale la cotización
 usada, y un test verifica que recalcular con ella devuelve la cifra que dio.
@@ -728,7 +739,7 @@ bucle, se traslada directo a la factura del proveedor de LLM.
 | Cuota | Qué cuenta | Límite inicial |
 |---|---|---|
 | Registro | Mensajes interpretados para cargar, completar o corregir movimientos, incluidas las respuestas del alta | 50 por día |
-| Consultas | Preguntas sobre los datos propios, respondidas con las funciones de lectura (§ 17). Cuenta una por pregunta, aunque el modelo llame a varias funciones | 20 por día |
+| Consultas | Preguntas sobre los datos propios o sobre un dato de mercado, respondidas con las funciones de lectura (§ 17). Cuenta una por pregunta, aunque el modelo llame a varias funciones | 20 por día |
 | Consejos | Consultas respondidas con la base de conocimiento financiero | 10 por día |
 
 Están separadas porque registrar es el núcleo del producto y no puede quedar bloqueado porque el
@@ -765,6 +776,15 @@ alguien con una cuenta "Me deben", § 16) es una transferencia, no un gasto ni u
 entra en ningún presupuesto ni en ninguna alerta. Cada lado va en la moneda de su cuenta; si las
 monedas difieren, se guarda la cotización usada y, como toda conversión, se confirma con el
 usuario (§ 6). Origen y destino son cuentas distintas del mismo usuario.
+
+**Una comisión en una transferencia es un gasto aparte.** Si el usuario dice lo que salió y lo
+que llegó, y en la misma moneda los montos difieren, como "pasé 2.450 dólares de Payoneer a la
+Galicia, llegaron 2.401", el asistente registra en una sola confirmación la transferencia por lo
+que llegó y un gasto por la diferencia sobre la cuenta de origen, en la categoría base
+"Comisiones". El gasto pide confirmar su período, como cualquier gasto, porque es plata que
+salió. Si el usuario da un solo monto, no hay comisión: el asistente no la deduce ni pregunta por
+ella. Entre monedas distintas no se separa, porque el costo queda dentro de la cotización que
+resulta de los dos montos. Desde el dashboard, una comisión se carga como un gasto aparte.
 
 **La tarjeta es una cuenta.** Una tarjeta de crédito es una cuenta de tipo `credit_card`, con un
 día de cierre y un día de vencimiento. Por la regla de una moneda por cuenta (§ 2), una tarjeta
@@ -1088,6 +1108,7 @@ producto: sin movimientos borrados ni duplicados (§ 2 y § 7), con el gastado n
 | Presupuesto | Para un período, el ingreso estimado y real, y el tope, el gastado y el porcentaje de cada categoría. En un período de grupo, además, cuánto imputó cada miembro, y en uno individual, lo retirado de inversiones |
 | Tarjeta | La deuda del próximo vencimiento de una tarjeta, su fecha y lo comprometido en cuotas |
 | Me deben | El saldo de cada cuenta "Me deben" (§ 16) |
+| Indicadores | La última cotización de cada fuente configurada y el último valor de cada indicador de mercado, con su fuente y su fecha (§ 18) |
 
 **Qué garantiza el código, no el modelo.**
 
@@ -1163,6 +1184,13 @@ miembro. Una pareja no puede pedir un consejo conjunto; cada uno lo pide sobre l
 consultas sobre datos (§ 17) sí leen los períodos del grupo, porque solo muestran cifras que el
 miembro ya puede ver.
 
+**La excepción es un grupo de un solo miembro.** Un consejo puede leer los períodos de un grupo
+mientras el usuario que pregunta sea su único miembro vigente, como en una actividad propia
+(§ 10), porque todos esos datos son suyos. Así quien tiene un emprendimiento puede preguntar sobre
+él. Cuando entra otro miembro, el consejo deja de leer los períodos de ese grupo, también los
+anteriores a su entrada, porque el grupo pasó a ser compartido. Se decide contando los miembros
+vigentes en el momento de la pregunta.
+
 **Qué no hace, en ninguna clase.**
 
 - **No da un veredicto** sobre una decisión del usuario: ni "te conviene", ni "no lo hagas", ni
@@ -1182,7 +1210,22 @@ conocimiento, porque cambian cada semana o cada mes. Salen de fuentes que se act
 con el mismo adaptador que las cotizaciones
 ([ADR 0011](adr/0011-cotizaciones-con-adaptador-generico-configurable.md)): en el MVP, la tasa
 promedio de plazo fijo que publica el BCRA y la inflación mensual del INDEC. Cada respuesta que
-usa uno de esos datos dice de qué fecha es. Si el dato guardado es demasiado viejo, lo dice en
-vez de usarlo.
+usa uno de esos datos dice de qué fecha es.
+
+**Cada fuente tiene una antigüedad máxima.** Es un valor de su configuración: por ejemplo, 3 días
+para una cotización, 10 para la tasa de plazo fijo y 45 para la inflación mensual. Pasado ese
+plazo, el asistente no usa el dato: dice de qué fecha es el último que tiene y que puede estar
+desactualizado. Vale igual para las cotizaciones que se sugieren al registrar (§ 6).
+
+**Preguntar un dato de mercado es una consulta.** "¿A cuánto está el MEP?" o "¿cuánto paga un
+plazo fijo?" se responden con la función Indicadores (§ 17) y cuentan en la cuota de consultas,
+no en la de consejos (§ 12), porque devuelven un dato y no una explicación. Si la pregunta además
+pide entender algo, como qué conviene mirar de un plazo fijo, es un consejo.
+
+**Información con nombre de entidad, solo si una fuente la publica.** Mostrar la tasa o el costo
+de un producto de una entidad con nombre es información, no una recomendación, siempre que salga
+de una fuente configurada, con su fecha, y que la lista no sugiera una preferencia: va ordenada
+por nombre, nunca de mayor a menor. Mientras no haya una fuente así, y en el MVP no la hay, el
+asistente dice que no tiene ese dato y ofrece el promedio.
 
 Ver también: [1.2, consejos con RAG](01-producto.md#12-características-y-funcionalidades-principales) · [INDICATOR_VALUE en 3.2](03-modelo-de-datos.md#indicator_value) · [HU5](05-historias-de-usuario.md).

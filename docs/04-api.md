@@ -271,7 +271,8 @@ ante un pedido repetido.
 - `from_account_id` y `to_account_id` son cuentas distintas del usuario. Una cuenta de otro, `404`.
   La misma cuenta en los dos lados, `422`.
 - Cada monto va en la moneda de su cuenta. Si las monedas coinciden, `to_amount` es opcional y
-  vale lo mismo que `from_amount`. Si difieren, `to_amount` y `exchange_rate` son obligatorios: la
+  vale lo mismo que `from_amount`. Si viene distinto, `422`: una comisión se carga como un gasto aparte
+  (reglas de dominio § 13). Si difieren, `to_amount` y `exchange_rate` son obligatorios: la
   cotización es la que la pantalla sugirió y el usuario confirmó (reglas de dominio § 6).
 - `transfer_date` es opcional, hoy por defecto, y no puede ser anterior al alta de ninguna de las
   dos cuentas: `422`.

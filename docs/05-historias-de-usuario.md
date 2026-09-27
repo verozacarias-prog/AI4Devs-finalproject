@@ -38,7 +38,7 @@
 - El período puede empezar el día que yo elija, por ejemplo el día que cobro.
 - Al confirmarlo queda activo y los movimientos pueden imputarse a él.
 - Si el período no está confirmado y su fecha de inicio se acerca, recibo un recordatorio por WhatsApp con su resumen, y puedo confirmarlo respondiendo.
-- El recordatorio lista también los gastos e ingresos recurrentes que cambian de monto, como el alquiler o la luz, con el último monto. Al confirmar, confirmo esos montos o los corrijo, y puedo dejar sin confirmar los que todavía no sé: esos me los pregunta cuando vencen.
+- El recordatorio lista también los gastos e ingresos recurrentes que cambian de monto, como el alquiler o la luz, con el último monto. Al confirmar, confirmo esos montos o los corrijo, y puedo dejar sin confirmar los que todavía no sé: esos me los pregunta cuando vencen. En la misma respuesta puedo corregir el ingreso estimado.
 - Si es familiar, solo el dueño del grupo lo arma y lo confirma.
 
 *Prioridad:* Alta
@@ -55,7 +55,7 @@
 *Criterios de aceptación:*
 
 - El mensaje se interpreta y se ubica la categoría entre las existentes del usuario; si ninguna encaja, el asistente sugiere crear una nueva en vez de forzar una que no corresponde.
-- Si el mensaje no indica fecha, se toma la del día; si no indica moneda, se toma la primaria del usuario.
+- Si el mensaje no indica fecha, se toma la del día; si no indica moneda, se toma la de la cuenta que nombré, o mi moneda primaria si no nombré ninguna.
 - El asistente propone a qué presupuesto imputar el gasto (según la fecha y los períodos activos del usuario) y **el usuario lo confirma siempre** — ninguna transacción manual se imputa a un presupuesto sin visto bueno explícito.
 - **El movimiento no se registra si falta el monto, la cuenta, la confirmación del presupuesto, o el tipo cuando el mensaje no deja claro si es gasto o ingreso.** Esos no se dan por supuestos.
 - Cuando falta más de uno, se piden todos juntos en un solo mensaje, ofreciendo las opciones disponibles del usuario (sus cuentas dadas de alta, sus presupuestos activos) para que responder sea elegir, no escribir. Lo ya interpretado se conserva: el usuario no repite el mensaje entero.
