@@ -50,7 +50,7 @@ https://github.com/verozacarias-prog/AI4Devs-finalproject
 | [Reglas de dominio](docs/reglas-de-dominio.md) | Dueño único de las reglas de negocio, agrupadas por tema. |
 | [Convenciones de desarrollo](docs/convenciones-de-desarrollo.md) | Cortes verticales y los cuatro estados de una pantalla. |
 | [Términos y privacidad](docs/terminos-y-privacidad.md) | Qué tienen que cubrir los términos y la política de privacidad, antes de redactarlos. |
-| [Validación por casos de uso](docs/use-case-walkthrough.md) | Registro, no especificación: 42 casos cotidianos de usuarios argentinos recorridos sobre el diseño, las decisiones pendientes que dejan y los escenarios para las pruebas. |
+| [Validación por casos de uso](docs/use-case-walkthrough.md) | Registro, no especificación: 44 casos cotidianos de usuarios argentinos recorridos sobre el diseño, las decisiones pendientes que dejan y los escenarios para las pruebas. |
 | [Hoja de ruta](docs/hoja-de-ruta.md) | Qué queda para la entrega 2 y para la app móvil, y por qué. |
 | [Operación](docs/operacion.md) | Propuesta sin decidir: entornos, pipeline, despliegue, copias de respaldo y observabilidad. |
 | [Flujo de trabajo con IA](docs/flujo-de-trabajo-con-ia.md) | Contratos, skill, commands, verificadores y hooks. |

@@ -37,8 +37,8 @@ en [`prompts.md`](../prompts.md), no acá.
 
 ## Decisiones abiertas
 
-Las decisiones que salieron de recorrer casos de usuarios reales sobre el diseño, D1 a D12, están
-en la [validación por casos de uso](use-case-walkthrough.md#9-decisiones-pendientes-fase-3), con
+Las decisiones que salieron de recorrer casos de usuarios reales sobre el diseño, D13 a D26, están
+en la [validación por casos de uso](use-case-walkthrough.md#10-decisiones-pendientes-fase-3), con
 sus opciones y una recomendación. Las de esta lista son las que no salieron de ahí.
 
 - El grupo 9 (trazabilidad de origen) de [`reglas-de-dominio.md`](reglas-de-dominio.md) es un

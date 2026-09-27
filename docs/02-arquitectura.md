@@ -274,4 +274,4 @@ Cómo se operaría —entornos, pipeline de la aplicación, vuelta atrás de un 
 
 `Se define con detalle en la Entrega final. Estrategia prevista: tests unitarios sobre los casos de uso del dominio (conversión de moneda, cálculo de saldo por cuenta, categorización, presupuesto ajustado por inflación) usando dobles de prueba en lugar de los adaptadores reales — la ventaja directa de tener puertos —, tests de integración sobre los adaptadores (Postgres, pgvector) y los endpoints principales, y al menos un test end-to-end del flujo principal (registrar un gasto por WhatsApp → verlo reflejado en el saldo de la cuenta y en el presupuesto del dashboard).`
 
-Los escenarios de los recorridos de usuario, con sus montos y resultados esperados, están en la [validación por casos de uso](use-case-walkthrough.md#14-uso-de-los-casos-en-las-pruebas).
+Los escenarios de los recorridos de usuario, con sus montos y resultados esperados, están en la [validación por casos de uso](use-case-walkthrough.md#anexo-a-uso-de-los-casos-en-las-pruebas).
