@@ -316,12 +316,12 @@ sequenceDiagram
     actor U as Usuario
 
     S->>DB: SQL suma el gastado de cada BUDGET de períodos confirmados,<br/>sin borrados ni duplicados
-    opt Pasó un umbral y no hay SENT_ALERT para ese umbral
+    opt Pasó el 80% o el 100% y no hay SENT_ALERT<br/>para ese umbral y destinatario
         Note over S,L: En discusión: la alerta lleva un consejo del RAG,<br/>pero los procesos programados no llegan al LLM
         rect rgb(240, 246, 252)
             Note over S,DB: Una sola transacción SQL
-            S->>DB: INSERT SENT_ALERT
-            S->>DB: INSERT OUTBOUND_MESSAGE, plantilla Alerta de presupuesto
+            S->>DB: INSERT SENT_ALERT por destinatario:<br/>el usuario, o cada miembro del grupo con permiso
+            S->>DB: INSERT OUTBOUND_MESSAGE por destinatario,<br/>plantilla Alerta de presupuesto
         end
         W->>M: HTTPS envía la alerta
     end

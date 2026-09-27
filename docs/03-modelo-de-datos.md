@@ -261,7 +261,8 @@ erDiagram
     SENT_ALERT {
         uuid id PK
         uuid budget_id FK "NOT NULL"
-        int threshold "NOT NULL, CHECK (threshold BETWEEN 1 AND 100), percentage, UNIQUE (budget_id, threshold)"
+        int threshold "NOT NULL, CHECK (threshold BETWEEN 1 AND 100), percentage, UNIQUE (budget_id, threshold, user_id)"
+        uuid user_id FK "NOT NULL — who received it; in a family budget, one row per member"
         uuid outbound_message_id FK "NOT NULL — the alert that was queued"
         timestamptz sent_at "DEFAULT now()"
     }
@@ -571,11 +572,11 @@ El límite de gasto de **una** categoría dentro de un `BUDGET_PERIOD` (ej. "com
 
 ##### SENT_ALERT
 
-Registro de las alertas de presupuesto ya enviadas. Existe para que el proceso periódico que revisa presupuestos sepa que ya avisó: sin él, un presupuesto que pasó el umbral recibiría una alerta en cada corrida hasta fin de mes (ver [HU5](05-historias-de-usuario.md)). `threshold` deja lugar a más de un umbral por presupuesto (por ejemplo 80% y 100%) sin cambiar el esquema.
+Registro de las alertas de presupuesto ya enviadas. Existe para que el proceso periódico que revisa presupuestos sepa que ya avisó: sin él, un presupuesto que pasó el umbral recibiría una alerta en cada corrida hasta fin de mes (ver [HU5](05-historias-de-usuario.md)). Los umbrales son 80% y 100% del tope, iguales para todos y definidos en la configuración ([reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)). `user_id` es quien recibió la alerta: en un presupuesto familiar la recibe cada miembro, y cada uno tiene su fila.
 
 **Restricciones:**
 
-- En `SENT_ALERT`, `UNIQUE (budget_id, threshold)`: un presupuesto recibe como mucho una alerta por umbral. Como cada `BUDGET` pertenece a un solo período, eso equivale a una por período. La fila se inserta en la misma transacción que encola el mensaje, así una segunda corrida del proceso choca con la clave en vez de mandar otra alerta.
+- En `SENT_ALERT`, `UNIQUE (budget_id, threshold, user_id)`: cada destinatario recibe como mucho una alerta por umbral de un presupuesto. Como cada `BUDGET` pertenece a un solo período, eso equivale a una por período. Si un reintegro baja el gastado por debajo del umbral y después vuelve a subir, no hay una segunda alerta. La fila se inserta en la misma transacción que encola el mensaje, así una segunda corrida del proceso choca con la clave en vez de mandar otra alerta.
 
 ##### TRANSACTION
 

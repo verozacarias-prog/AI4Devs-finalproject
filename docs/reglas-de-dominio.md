@@ -167,6 +167,14 @@ inflación (could-have) reemplazará a la copia cuando exista, sin cambiar el re
   un grupo familiar que todavía no tiene ningún período, la pregunta manda al dashboard para
   armarlo.
 
+**Alertas de presupuesto.** Cuando el gastado de una categoría con tope pasa el 80% y cuando pasa
+el 100% del tope, el asistente manda una alerta proactiva ([HU5](05-historias-de-usuario.md)).
+Los dos umbrales son iguales para todos los usuarios y están en la configuración, igual que las
+cuotas de uso (§ 12). Cada umbral se avisa una sola vez por categoría y período, aunque un
+reintegro baje el gastado y después vuelva a subir. En un presupuesto familiar, la alerta le
+llega a cada miembro vigente que dio permiso para avisos (§ 11). Una categoría sin tope no manda
+alertas.
+
 **En un presupuesto familiar confirma el dueño.** Solo el dueño vigente del grupo (§ 10) crea,
 cambia y confirma los períodos familiares, desde el dashboard o respondiendo al recordatorio, que
 recibe solo él. Los demás miembros ven el borrador. Si un miembro imputa algo a un período
@@ -549,7 +557,7 @@ Las que hacen falta son:
 |---|---|---|
 | Código de login | Autenticación | Al pedir entrar al dashboard |
 | Código de borrado de cuenta | Autenticación | Al pedir borrar la cuenta |
-| Alerta de presupuesto | Utilidad | Al pasar un umbral |
+| Alerta de presupuesto | Utilidad | Al pasar el 80% y el 100% del tope de una categoría. En un presupuesto familiar, a cada miembro con permiso |
 | Pendientes sin confirmar | Utilidad | Antes de vencer, o cada 3 días si son de un recurrente |
 | Período sin confirmar | Utilidad | Cerca del inicio de un período que sigue en `draft`: lista su ingreso y sus topes, y se confirma respondiendo. En un período familiar, solo al dueño |
 | Recurrente o cuota por confirmar | Utilidad | Cuando un recurrente o una cuota de tarjeta no encuentra período confirmado, necesita que el usuario confirme la cotización, o es de monto variable y su monto no está confirmado. Las ocurrencias variables de una tarjeta no usan esta plantilla: se preguntan en la conciliación |

@@ -98,9 +98,10 @@
 *Criterios de aceptación:*
 
 - El sistema revisa periódicamente los presupuestos activos contra lo gastado hasta el momento.
-- Al superar un umbral configurado (ej. 80%) se envía una alerta proactiva por WhatsApp.
+- Al pasar el 80% y al pasar el 100% del tope de una categoría se envía una alerta proactiva por WhatsApp. Los dos umbrales son iguales para todos y se ajustan por configuración.
 - La alerta incluye un consejo relacionado, generado por el sistema de RAG a partir de la base de conocimiento curada por el producto.
-- No se envía más de una alerta por presupuesto y período para evitar spam.
+- No se envía más de una alerta por umbral, categoría y período para evitar spam: como mucho dos por categoría.
+- Si el presupuesto es familiar, la alerta me llega a mí y a los demás miembros, a cada uno que aceptó recibir avisos.
 
 *Prioridad:* Media
 *Estimación:* 8 puntos
