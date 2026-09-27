@@ -251,6 +251,58 @@ responses:
     description: account_id, budget_period_id or category_id does not belong to the authenticated user (category_id may also be from the base catalog)
 ```
 
+### `POST /transfers`
+
+Registra una transferencia entre dos cuentas del usuario desde el dashboard: sacar efectivo, pasar
+plata a una billetera, comprar dólares, aportar a una cuenta de inversión o pagar una tarjeta. No
+es un gasto ni un ingreso, así que no lleva categoría ni presupuesto
+([reglas de dominio § 13](reglas-de-dominio.md#13-tarjetas-de-crédito-y-transferencias)).
+
+Sigue las reglas de `POST /transactions`: el usuario sale de la sesión, `source` lo fija el
+servidor en `"manual"` y el header `Idempotency-Key` es obligatorio, con el mismo comportamiento
+ante un pedido repetido.
+
+- `from_account_id` y `to_account_id` son cuentas distintas del usuario. Una cuenta de otro, `404`.
+  La misma cuenta en los dos lados, `422`.
+- Cada monto va en la moneda de su cuenta. Si las monedas coinciden, `to_amount` es opcional y
+  vale lo mismo que `from_amount`. Si difieren, `to_amount` y `exchange_rate` son obligatorios: la
+  cotización es la que la pantalla sugirió y el usuario confirmó (reglas de dominio § 6).
+- `transfer_date` es opcional, hoy por defecto, y no puede ser anterior al alta de ninguna de las
+  dos cuentas: `422`.
+- Pagar con pesos una tarjeta en otra moneda responde `422`: se registra por WhatsApp, porque
+  puede dejar un residuo que se confirma conversando (reglas de dominio § 13).
+
+```yaml
+parameters:
+  - in: header
+    name: Idempotency-Key
+    required: true
+    example: "0b7e5c1a-4d2f-4e8a-9f13-6a2c8d4b7e90"
+requestBody:
+  content:
+    application/json:
+      example:
+        from_account_id: "a-dni..."
+        to_account_id: "a-cash..."
+        from_amount: 150000
+        to_amount: null                # optional when both accounts share the currency
+        exchange_rate: null            # required only when the currencies differ
+        transfer_date: "2026-09-20"    # optional — default: today in the user's time_zone
+responses:
+  201:
+    content:
+      application/json:
+        example:
+          id: "tr1..."
+          status: "created"
+  200:
+    description: The Idempotency-Key was already used by this user; nothing is inserted and the body is the transfer created the first time
+  404:
+    description: An account does not belong to the authenticated user
+  422:
+    description: Same account on both sides, missing amount or rate, date before an account was opened, or paying a card in another currency with pesos
+```
+
 ### `POST /auth/code`, `POST /auth/token`, `POST /auth/logout` y `POST /auth/logout-all`
 
 El login del dashboard, sin contraseñas: el usuario pide un código, lo recibe por WhatsApp y lo canjea por una sesión. El fundamento está en el [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md), los límites en el [ADR 0017](adr/0017-limites-del-login-y-codigos-con-proposito.md), y las restricciones del código y de la sesión en [LOGIN_CODE, SESSION y AUTH_THROTTLE](03-modelo-de-datos.md#32-descripción-de-entidades-principales).

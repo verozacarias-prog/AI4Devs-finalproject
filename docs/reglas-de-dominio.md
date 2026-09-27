@@ -28,6 +28,15 @@ Del alcance técnico del Ticket 1:
 - Resolución de cuenta por nombre si se menciona — **sin fallback ni cuenta por defecto**: si no se menciona, se pregunta.
 - Mensaje de confirmación que lista también los valores resueltos por defecto (fecha, moneda, categoría) y acepta una corrección posterior sobre cualquiera de ellos.
 
+**Desde el dashboard, las mismas reglas.** El dashboard carga gastos, ingresos y transferencias
+([ADR 0002](adr/0002-whatsapp-como-canal-principal.md)). En el formulario, la cuenta y el
+presupuesto no vienen preseleccionados: el usuario los elige, porque un campo ya elegido que se
+envía sin mirar sería un valor por defecto encubierto. La fecha, la moneda y la categoría pueden
+venir sugeridas y a la vista, igual que en la confirmación por WhatsApp. Enviar el formulario es
+la confirmación. Las compras con tarjeta y las reglas recurrentes se cargan solo por WhatsApp, y
+también un pago con pesos de una tarjeta en otra moneda, porque puede dejar un residuo que se
+confirma conversando (§ 13).
+
 Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-principales) · [HU3](05-historias-de-usuario.md) · [Ticket 1](06-tickets.md).
 
 ## 2. Cuentas y saldo calculado

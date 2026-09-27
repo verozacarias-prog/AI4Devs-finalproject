@@ -14,7 +14,11 @@ formulario cada vez que se gasta algo.
 ## Decisión
 
 WhatsApp es el canal principal de registro, mediante la API oficial de WhatsApp Business (Meta
-Cloud API / Twilio). El dashboard web queda como canal de visualización, no de carga.
+Cloud API / Twilio). El dashboard web es el canal de visualización y de configuración, y además
+un canal secundario de carga, para quien prefiere un formulario: desde ahí se cargan gastos,
+ingresos y transferencias. Las compras con tarjeta y las reglas recurrentes se cargan solo por
+WhatsApp, porque su conversación resuelve cuotas, dueño del presupuesto y montos variables que en
+un formulario serían varias pantallas.
 
 ## Consecuencias
 
@@ -36,8 +40,19 @@ Cloud API / Twilio). El dashboard web queda como canal de visualización, no de 
   falsificados.
 - WhatsApp no resuelve bien la visualización, así que hace falta igual un dashboard web: son dos
   superficies a mantener, no una.
+- Hay dos canales de carga, y las reglas de confirmación tienen que valer igual en los dos. En un
+  formulario, la cuenta y el presupuesto no vienen preseleccionados: un campo ya elegido que el
+  usuario envía sin mirar sería un valor por defecto encubierto.
+- Una compra con tarjeta o una regla recurrente no se puede cargar desde la computadora.
 
 ## Alternativas descartadas
+
+- **El dashboard solo para ver:** era la decisión anterior. Es la más simple, pero deja sin forma
+  de cargar a quien prefiere hacerlo desde la computadora, como una persona mayor ayudada por un
+  familiar.
+- **El dashboard con carga completa**, incluidas las compras con tarjeta y las reglas
+  recurrentes: suma al MVP dos formularios complejos, con sus endpoints, para cargas que por
+  WhatsApp ya se resuelven bien.
 
 - **Solo dashboard web para la carga:** descartado porque reintroduce exactamente la fricción
   que el producto quiere eliminar; queda como canal de visualización, que es lo que sí resuelve.

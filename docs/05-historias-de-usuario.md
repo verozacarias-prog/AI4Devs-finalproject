@@ -61,6 +61,7 @@
 - El asistente confirma el registro por el mismo canal, listando de forma explícita todo lo que quedó guardado —incluidos los valores que resolvió solo (fecha, moneda, categoría)—, y acepta correcciones sobre cualquiera de ellos: respondiendo con una cita a esa confirmación, en cualquier momento, o describiendo el movimiento para que el asistente lo busque. Nunca corrige un movimiento que yo no señalé.
 - Puedo borrar un movimiento, o recuperar uno que borré, por WhatsApp. Antes de hacerlo, el asistente me pide confirmación.
 - El movimiento queda marcado con `source = manual`.
+- Si prefiero la computadora, también puedo cargar gastos, ingresos y transferencias desde el dashboard, eligiendo yo la cuenta y el presupuesto. Las compras con tarjeta y los movimientos recurrentes los cargo por WhatsApp.
 
 *Prioridad:* Alta
 *Estimación:* 13 puntos

@@ -147,7 +147,7 @@ El recorrido de un usuario de punta a punta, con el tipo de llamada y las tablas
 | Motor RAG | LLM + embeddings sobre pgvector, detrás de un puerto propio | Responde consultas financieras y genera alertas proactivas a partir de la base de conocimiento curada por el producto |
 | Base de datos relacional | PostgreSQL | Adaptador de salida: usuarios, cuentas, grupos familiares, presupuestos, movimientos, categorías |
 | Base de datos vectorial | pgvector (extensión de PostgreSQL) | Adaptador de salida: embeddings del contenido de consejos financieros |
-| Frontend | Aplicación web responsiva | Dashboard de visualización y configuración de usuario |
+| Frontend | Aplicación web responsiva | Dashboard de visualización, configuración y correcciones, y canal secundario de carga de gastos, ingresos y transferencias |
 
 *(pgvector sobre PostgreSQL en vez de una base vectorial dedicada, como decisión de arranque — no definitiva, y aislada detrás de un puerto propio para poder reemplazarla. Ver [ADR 0004](adr/0004-postgres-con-pgvector-como-unico-almacen.md).)*
 

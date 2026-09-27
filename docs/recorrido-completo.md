@@ -219,8 +219,9 @@ sequenceDiagram
 
 Desde el dashboard, el mismo movimiento entra por `POST /transactions` y el servicio web escribe
 `TRANSACTION` en una sola transacción SQL, sin pendiente, porque la pantalla ya pidió todos los
-datos ([la API](04-api.md)). Que el dashboard sea un canal de carga está en discusión: el
-[ADR 0002](adr/0002-whatsapp-como-canal-principal.md) dice que no.
+datos ([la API](04-api.md)). Una transferencia entra igual por `POST /transfers`. Las compras con
+tarjeta y las reglas recurrentes se cargan solo por WhatsApp
+([ADR 0002](adr/0002-whatsapp-como-canal-principal.md)).
 
 ## 6. Recurrentes y cuotas de tarjeta
 
@@ -493,7 +494,6 @@ Los diagramas marcan dos puntos que la especificación todavía no resuelve:
 
 - **Las alertas usan el LLM, pero los procesos programados no llegan a él** (§ 8). Ya está en
   las decisiones abiertas de la [hoja de ruta](hoja-de-ruta.md#decisiones-abiertas).
-- **El dashboard como canal de carga** (§ 5). El ADR 0002 y la API dicen cosas distintas.
 
 El alta de cuentas desde el dashboard, que pide la HU1, tampoco tiene endpoint en
 [la API](04-api.md), que por ahora documenta solo los endpoints principales.

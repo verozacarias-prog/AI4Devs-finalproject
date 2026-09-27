@@ -320,6 +320,7 @@ erDiagram
         date transfer_date "NOT NULL"
         string description "NULLABLE"
         string source "NOT NULL, CHECK IN ('manual','automatic')"
+        uuid client_request_id "NULLABLE — Idempotency-Key of the dashboard request that created it; UNIQUE (user_id, client_request_id)"
         timestamptz created_at "DEFAULT now()"
         timestamptz updated_at "NULLABLE — last change; null while never modified; set by trigger"
         uuid updated_by FK "NULLABLE — user who made the last change; null if never modified or changed by a scheduled process"
@@ -628,6 +629,7 @@ Movimiento de plata entre dos cuentas del mismo usuario, incluido el pago del re
 
 **Restricciones:**
 
+- En `TRANSFER`, `UNIQUE (user_id, client_request_id)`, igual que en `TRANSACTION`: un pedido repetido del dashboard no crea una segunda transferencia ([la API](04-api.md)).
 - En `TRANSFER`, origen y destino son cuentas distintas del mismo usuario, cada monto en la moneda de su cuenta: `(from_account_id, user_id, from_currency)` y `(to_account_id, user_id, to_currency)` son claves foráneas compuestas contra `ACCOUNT (id, user_id, currency)`, así las dos cuentas son del usuario de la transferencia. Si las monedas coinciden, los montos son iguales y `exchange_rate` es nulo; si difieren, `exchange_rate` es obligatorio (`CHECK`).
 
 Ver también, en otra tabla: [la marca de edición y el borrado lógico, en TRANSACTION](#transaction).
