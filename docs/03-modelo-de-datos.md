@@ -570,7 +570,7 @@ Catálogo mixto — categorías base del sistema (`user_id` nulo, `is_base = tru
 
 **Restricciones:**
 
-- En `CATEGORY`, un usuario no tiene dos categorías con el mismo nombre, sin distinguir mayúsculas: índice único sobre `(user_id, lower(name))`, más un índice único parcial sobre `lower(name)` donde `user_id` es nulo para el catálogo base, porque en un `UNIQUE` dos nulos no chocan.
+- En `CATEGORY`, un usuario no tiene dos categorías con el mismo nombre, sin distinguir mayúsculas: índice único sobre `(user_id, lower(name))`, más un índice único parcial sobre `lower(name)` donde `user_id` es nulo para el catálogo base, porque en un `UNIQUE` dos nulos no chocan. Esos dos índices no cruzan una categoría propia con una base, así que un trigger `BEFORE INSERT OR UPDATE` en `CATEGORY` rechaza una categoría propia cuyo `lower(name)` coincide con el de una base. El catálogo base es fijo y se carga por migración: una migración que sume una categoría base tiene que resolver antes las propias que se llamen igual ([reglas de dominio § 4](reglas-de-dominio.md#4-categorías-catálogo-base-categorías-propias-y-creación-con-confirmación)).
 
 Ver también, en otra tabla: [la categoría del mismo tipo que el movimiento, en TRANSACTION](#transaction).
 
