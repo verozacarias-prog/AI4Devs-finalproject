@@ -472,14 +472,32 @@ nombran cada presupuesto por el nombre del grupo, así que el usuario nunca ve l
 
 **El retiro del titular.** Si los cobros de una actividad van al presupuesto del grupo, el
 presupuesto individual se queda sin esos ingresos. Lo que la educación financiera llama
-"pagarse un sueldo" se registra como un retiro: dos movimientos sobre la misma cuenta, por el
-mismo monto y con la misma fecha, que se confirman juntos en un solo mensaje. Uno es un gasto en
-el período del grupo, en la categoría base "Retiro del titular". El otro es un ingreso en el
-período individual, en la categoría base "Retiro de la actividad". El saldo de la cuenta no
-cambia, porque se compensan. Los dos quedan enlazados: corregir o borrar uno corrige o borra el
-otro (§ 15). En un total que suma más de un presupuesto del mismo usuario, los retiros no se
-cuentan, porque son plata que cambió de presupuesto y no salió ni entró. Con una cuenta real
-separada para la actividad, el retiro es una transferencia común (§ 13).
+"pagarse un sueldo" se registra como un retiro: dos movimientos por el mismo monto, en la misma
+moneda y con la misma fecha, que se confirman juntos en un solo mensaje. Uno es un gasto en el
+período del grupo, en la categoría base "Retiro del titular". El otro es un ingreso en el
+período individual, en la categoría base "Retiro de la actividad". Los dos quedan enlazados:
+corregir o borrar uno corrige o borra el otro (§ 15).
+
+**El retiro es igual con una cuenta o con dos.** Si todo pasa por la misma cuenta, las dos
+mitades van sobre ella y su saldo no cambia, porque se compensan. Si la actividad tiene una
+cuenta real propia y el sueldo se transfiere a una cuenta personal, el gasto va sobre la cuenta
+de la actividad y el ingreso sobre la personal: los saldos se mueven igual que con una
+transferencia, y además cada presupuesto refleja lo que pasó. No se registra como transferencia,
+porque una transferencia no entra en ningún presupuesto (§ 13) y el presupuesto individual se
+quedaría sin el sueldo. Si las dos cuentas tienen monedas distintas, las dos mitades van en la
+moneda en que se hizo el retiro, y la que queda en una cuenta de otra moneda se convierte con una
+cotización que el usuario confirma (§ 2 y § 6). Las dos mitades usan la misma cotización.
+
+**El aporte del titular es el camino inverso.** Cuando el usuario pone plata propia en la
+actividad, para una compra como un horno o para cubrir un mes flojo, se registra el par al revés:
+un gasto en el período individual, en la categoría base "Aporte a la actividad", y un ingreso en
+el período del grupo, en la categoría base "Aporte del titular". Vale todo lo del retiro: mismo
+monto, moneda y fecha, una cuenta o dos, confirmación conjunta y corrección entera. Lo que se
+compra con el aporte se registra aparte, como cualquier gasto de la actividad.
+
+**Retiros y aportes no cuentan en los totales consolidados.** En un total que suma más de un
+presupuesto del mismo usuario, ni los retiros ni los aportes se cuentan, porque son plata que
+cambió de presupuesto y no salió ni entró.
 
 **Quién administra.** Cada grupo familiar tiene un dueño (`role = 'owner'` en `USER_GROUP`), que
 es quien administra sus miembros: agrega y saca usuarios del grupo. El resto de los miembros
@@ -884,8 +902,8 @@ usuario lo confirme.
 - **Corregir.** Con cita, el movimiento ya está identificado: el cambio se aplica y el asistente
   responde con el movimiento completo, igual que en una confirmación, donde el usuario puede
   volver a corregir. Con búsqueda, elegir el candidato confirma el cambio.
-- **Un retiro del titular** se corrige o se borra entero: cambiar el monto o la fecha de una mitad
-  cambia la otra, y borrar una borra las dos (§ 10).
+- **Un retiro o un aporte del titular** se corrige o se borra entero: cambiar el monto o la fecha
+  de una mitad cambia la otra, y borrar una borra las dos (§ 10).
 - **Borrar y restaurar.** Siempre piden confirmación, con cita o sin ella: "¿Borro el café de
   $2.500 de ayer?". Restaurar busca entre los movimientos borrados del usuario. Una regla
   recurrente borrada no se restaura: se vuelve a crear.
