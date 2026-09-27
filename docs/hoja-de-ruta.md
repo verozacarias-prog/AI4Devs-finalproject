@@ -94,7 +94,8 @@ sus opciones y una recomendación. Las de esta lista son las que no salieron de 
 - **Obligaciones legales de los datos: sin validar.** Además de los términos, falta confirmar con
   alguien con conocimiento legal la inscripción de la base ante la autoridad de aplicación de la
   Ley 25.326, la transferencia de datos al proveedor de alojamiento y al de LLM fuera del país, y
-  si los consejos que cruzan el perfil de riesgo con los datos del usuario pueden encuadrarse como
+  que el alcance de los consejos, educación financiera que no elige instrumentos
+  ([reglas de dominio § 18](reglas-de-dominio.md#18-alcance-de-los-consejos)), no se encuadre como
   asesoramiento de inversiones regulado. Bloquea abrir a usuarios reales.
 - **Proveedor y plan de despliegue: sin decidir.** [Operación](operacion.md) propone Render en su
   plan pago más chico, por unos US$23 a 25 por mes, con una copia diaria cifrada fuera de Render.

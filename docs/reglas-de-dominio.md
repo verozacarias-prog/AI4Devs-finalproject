@@ -511,9 +511,9 @@ ofrece seguir, o dejarlo para otro día:
   le muestran y puede sumar propias, de gasto o de ingreso (§ 4).
 - **Perfil financiero**, para que los consejos se crucen con su situación real: ingreso mensual
   aproximado (por rangos, no exacto), cuántas personas dependen de ese ingreso, si tiene deudas,
-  si tiene fondo de emergencia y de cuántos meses, su objetivo principal (ahorrar, salir de
-  deudas, armar un fondo de emergencia o empezar a invertir) y con cuánto riesgo se siente
-  cómodo al invertir.
+  si tiene fondo de emergencia y de cuántos meses, y su objetivo principal (ahorrar, salir de
+  deudas, armar un fondo de emergencia o empezar a invertir). No se pregunta la tolerancia al
+  riesgo al invertir: los consejos no eligen instrumentos (§ 18), así que no tendría uso.
 
 Cada pregunta se puede saltear, y todo se completa o cambia después desde el dashboard. El
 perfil guarda cuándo se actualizó, para que un consejo sepa si el dato puede haber quedado viejo.
@@ -934,3 +934,41 @@ estimado y el real, el gastado de todas las categorías, con tope o sin él, el 
 comprometido para los períodos siguientes. Sale de las mismas reglas que la función Presupuesto.
 
 Ver también: [LLM_USAGE en 3.2](03-modelo-de-datos.md#llm_usage) · [la API](04-api.md) · [HU4](05-historias-de-usuario.md).
+
+## 18. Alcance de los consejos
+
+Los consejos son educación financiera aplicada a la situación real del usuario, no asesoramiento
+de inversiones. En Argentina, recomendar a una persona en qué invertir según su situación está
+reservado a agentes registrados en la CNV, así que Platita explica y el usuario decide.
+
+**Qué hace un consejo.**
+
+- **Explica** instrumentos, riesgos, costos y cómo funcionan: qué es un FCI, un plazo fijo, un
+  CEDEAR, cómo conviene pagar la tarjeta.
+- **Usa los datos del usuario** para lo que es suyo: su presupuesto, su deuda, cuánto ahorra por
+  mes y de cuánto debería ser su fondo de emergencia. Los pide con las funciones de § 17, así que
+  sale de su historial real y no de un número escrito en el perfil. Con ingresos irregulares, el
+  fondo de emergencia y la capacidad de ahorro se calculan sobre varios meses, no sobre uno.
+- **Ordena prioridades generales:** antes de invertir, salir de deudas caras y armar un fondo de
+  emergencia. Es criterio general de educación financiera, no una elección hecha para el usuario.
+
+**Qué no hace.**
+
+- **No elige un instrumento ni reparte montos** por el usuario: nada de "te conviene 70% CEDEARs".
+- **No recomienda una entidad ni un producto con nombre.** Puede citar una tasa promedio del
+  mercado, no "invertí en el plazo fijo del banco X".
+- **No usa un perfil de riesgo,** porque no lo pregunta (§ 11).
+
+Toda respuesta que habla de inversiones termina con una aclaración: es educación financiera, no
+una recomendación personalizada. Es lo mismo que dicen los
+[términos](terminos-y-privacidad.md).
+
+**Los datos de mercado tienen fecha.** Las tasas y la inflación no se escriben en la base de
+conocimiento, porque cambian cada semana o cada mes. Salen de fuentes que se actualizan solas,
+con el mismo adaptador que las cotizaciones
+([ADR 0011](adr/0011-cotizaciones-con-adaptador-generico-configurable.md)): en el MVP, la tasa
+promedio de plazo fijo que publica el BCRA y la inflación mensual del INDEC. Cada respuesta que
+usa uno de esos datos dice de qué fecha es. Si el dato guardado es demasiado viejo, lo dice en
+vez de usarlo.
+
+Ver también: [1.2, consejos con RAG](01-producto.md#12-características-y-funcionalidades-principales) · [INDICATOR_VALUE en 3.2](03-modelo-de-datos.md#indicator_value) · [HU5](05-historias-de-usuario.md).

@@ -70,6 +70,12 @@ bloque de configuración.
 
 En el MVP se configuran solo fuentes argentinas.
 
+El mismo adaptador y el mismo archivo de configuración sirven para **indicadores de mercado**, que
+no son pares de monedas: una fuente declara que publica un solo valor por fecha, como la tasa
+promedio de plazo fijo del BCRA o la inflación mensual del INDEC. Se guardan en una tabla propia,
+`INDICATOR_VALUE`, con los mismos controles antes de guardar. Los usan los consejos, que muestran
+la fecha de cada dato.
+
 Y para lo que guarda cada movimiento:
 
 1. **Tres columnas de monto.** `TRANSACTION` guarda `amount` y `currency` en la moneda en que se

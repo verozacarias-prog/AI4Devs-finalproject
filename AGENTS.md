@@ -64,7 +64,7 @@ de pre-commit. No son una recomendación: rompen el commit.
 - `backend/app/adapters/outbound/pgvector/` — implementación de `VectorStorePort`.
 - `backend/app/adapters/outbound/whatsapp_client/` — envío de mensajes salientes de WhatsApp.
 - `backend/app/adapters/outbound/email_reader/` — integración IMAP/Gmail (could-have, fuera del MVP).
-- `backend/app/adapters/outbound/exchange_rate_client/` — proveedor de cotizaciones.
+- `backend/app/adapters/outbound/exchange_rate_client/` — proveedor de cotizaciones e indicadores de mercado (tasa de plazo fijo, inflación).
 - `backend/app/adapters/outbound/llm_client/` — cliente de LLM (interpretación y RAG).
 - `backend/tests/` — tests unitarios, de integración y end-to-end.
 - `backend/migrations/` — migraciones de Alembic.

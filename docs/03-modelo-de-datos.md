@@ -54,8 +54,9 @@ erDiagram
 #### Usuarios, acceso y asesoramiento
 
 Quién es el usuario, a qué grupo familiar pertenece, cómo entra al dashboard y cuánto consume
-del LLM. `ADVICE_DOCUMENT` y `AUTH_THROTTLE` no tienen relaciones: la primera es la base de
-conocimiento del asesoramiento y la segunda cuenta intentos por teléfono o IP, no por usuario.
+del LLM. `ADVICE_DOCUMENT`, `INDICATOR_VALUE` y `AUTH_THROTTLE` no tienen relaciones: la
+primera es la base de conocimiento del asesoramiento, la segunda guarda los indicadores de
+mercado que usan los consejos, y la tercera cuenta intentos por teléfono o IP, no por usuario.
 
 ```mermaid
 erDiagram
@@ -107,7 +108,6 @@ erDiagram
         boolean has_debts "NULLABLE"
         decimal emergency_fund_months "NUMERIC(4,1), NULLABLE, CHECK (emergency_fund_months >= 0)"
         string main_goal "NULLABLE, CHECK IN ('save','pay_debts','emergency_fund','invest')"
-        string risk_tolerance "NULLABLE, CHECK IN ('low','medium','high')"
         timestamptz updated_at "NOT NULL, DEFAULT now()"
     }
 
@@ -159,6 +159,14 @@ erDiagram
         date last_reviewed_at "NOT NULL, DEFAULT now()"
         string status "NOT NULL, CHECK IN ('current','needs_review','outdated'), DEFAULT 'current'"
         timestamptz created_at "DEFAULT now()"
+    }
+
+    INDICATOR_VALUE {
+        uuid id PK
+        string source "NOT NULL, e.g. BCRA_TIME_DEPOSIT_30D, INDEC_CPI_MONTHLY — id of a configured source"
+        decimal value "NUMERIC(24,10), NOT NULL — a rate or a percentage, as the source publishes it"
+        date value_date "NOT NULL — the day or month the value refers to, UNIQUE (source, value_date)"
+        timestamptz fetched_at "NOT NULL, DEFAULT now()"
     }
 ```
 
@@ -510,6 +518,14 @@ Consumo diario de cada usuario, por cuota. Se suma en la misma transacción que 
 ##### ADVICE_DOCUMENT
 
 Base de conocimiento financiero curada por el equipo del producto (no por cada usuario final) — es contenido compartido que cualquier usuario puede consultar vía RAG, no datos personales. `topic` clasifica el fragmento (tarjeta de crédito, fondo de emergencia, inversión básica, etc.) para poder acotar la búsqueda además de la similitud semántica. `status` y `last_reviewed_at` existen para poder listar qué contenido lleva mucho sin revisarse y decidir si actualizarlo — no hay actualización automática en el MVP, es un chequeo periódico manual apoyado en esa marca.
+
+##### INDICATOR_VALUE
+
+Historial de indicadores de mercado que usan los consejos: en el MVP, la tasa promedio de plazo fijo del BCRA y la inflación mensual del INDEC. No pertenece a ningún usuario. Se llena con el mismo adaptador genérico que `EXCHANGE_RATE` y desde el mismo archivo de configuración de fuentes ([ADR 0011](adr/0011-cotizaciones-con-adaptador-generico-configurable.md)). Un consejo usa el último valor de cada fuente y muestra su fecha ([reglas de dominio § 18](reglas-de-dominio.md#18-alcance-de-los-consejos)). Es otra tabla que `EXCHANGE_RATE` porque un indicador no es un par de monedas.
+
+**Restricciones:**
+
+- En `INDICATOR_VALUE`, `UNIQUE (source, value_date)`: una fuente tiene un solo valor por fecha, así una segunda corrida del proceso no lo duplica.
 
 #### Presupuestos y movimientos
 
