@@ -28,6 +28,21 @@ Del alcance técnico del Ticket 1:
 - Resolución de cuenta por nombre si se menciona — **sin fallback ni cuenta por defecto**: si no se menciona, se pregunta.
 - Mensaje de confirmación que lista también los valores resueltos por defecto (fecha, moneda, categoría) y acepta una corrección posterior sobre cualquiera de ellos.
 
+**Gasto, ingreso o transferencia lo clasifica el modelo, y se ve en la confirmación.** Un mensaje
+como "le pasé 300 lucas a MP" puede ser una transferencia entre cuentas propias o un pago a otra
+persona, y "le pasé 30 a Juan", un préstamo (§ 16) o un pago. El modelo elige el tipo al
+interpretar el mensaje, sin una pregunta previa. Lo que lo hace seguro no depende del modelo:
+
+- **La confirmación dice el tipo y su efecto:** "Transferencia de $300.000 de Galicia a Mercado
+  Pago. No cuenta como gasto", o "Gasto de $30.000 · Juan · varios". El usuario ve siempre qué se
+  va a registrar antes de confirmarlo.
+- **Una transferencia necesita dos cuentas propias.** Si el modelo la clasifica como transferencia
+  y el destino o el origen no es una cuenta del usuario, esa cuenta falta y se pregunta como
+  cualquier dato que falta (§ 5). Nunca se inventa una cuenta.
+- **Se corrige con una respuesta corta.** Antes de confirmar, "no, era un gasto" cambia el tipo
+  del pendiente y el asistente pregunta lo que el tipo nuevo necesite, como la categoría o el
+  presupuesto. Después de confirmado, se corrige como cualquier movimiento (§ 15).
+
 **Desde el dashboard, las mismas reglas.** El dashboard carga gastos, ingresos y transferencias
 ([ADR 0002](adr/0002-whatsapp-como-canal-principal.md)). En el formulario, la cuenta y el
 presupuesto no vienen preseleccionados: el usuario los elige, porque un campo ya elegido que se
@@ -843,6 +858,10 @@ con una tarjeta, como un pago con la billetera que fue con la tarjeta vinculada,
 cambia la cuenta del gasto: lo borra y registra una compra con esa tarjeta, en el resumen que
 incluye su fecha, en una sola confirmación. Una compra con tarjeta es una regla y no un gasto
 común (§ 13).
+
+**Cambiar el tipo.** Un gasto que en realidad fue una transferencia, o al revés, no se corrige
+cambiándole el tipo, porque son tablas distintas: la corrección borra el movimiento y registra el
+del otro tipo, en una sola confirmación, pidiendo lo que el tipo nuevo necesite.
 
 **Qué no se corrige por WhatsApp.**
 
