@@ -15,6 +15,22 @@
 > corrida, la compara y sobrescribe el archivo. Las decisiones siguen una sola numeración entre
 > corridas: D1 a D26 están cerradas, y una referencia vieja nunca apunta a otra decisión.
 
+**Después de esta corrida** se resolvieron D27 y D28, la definición de consulta de §12 (X6), la
+hoja de ruta (X7) y el `README.md` (X5), el cambio de presupuesto de un movimiento (A3.9), la
+cuota de los grupos y el catálogo base de categorías. Además, la autora decidió que los dos casos
+que seguían abiertos se resuelven con lo que ya está definido, sin reglas nuevas:
+
+- **A3.3 · Efectivo de la actividad usado para gastos personales:** se registra como un retiro del
+  titular sobre la cuenta de efectivo (§10). Recordarlo es responsabilidad del usuario, no del
+  diseño.
+- **A5.2 · Plata que un miembro le pasa a otro para gastos del grupo:** quien la da la registra
+  como un gasto en su presupuesto individual; quien la recibe, como un ingreso en el suyo; y los
+  gastos del grupo los carga quien los paga. El camino no se escribe en la especificación: queda a
+  criterio del usuario, con el riesgo aceptado de que cargarla también en el grupo la cuente dos
+  veces.
+
+La próxima corrida tiene que tratar estos dos casos como decididos, no como abiertos.
+
 **Documentos analizados**
 
 - `AGENTS.md` (y `CLAUDE.md`, que es un enlace simbólico a él)
