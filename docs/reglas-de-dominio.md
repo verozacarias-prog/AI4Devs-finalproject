@@ -153,6 +153,15 @@ con su propio nombre, como "Binance USDT", y sus movimientos son en dólares. Qu
 pierda la paridad no se modela. Una cripto volátil, como BTC, va en una cuenta de inversión, que
 solo recibe aportes y retiros (ver abajo).
 
+**Una cuenta se da de alta en cualquier momento.** Además de las del alta (§ 11), el usuario puede
+sumar cuentas cuando las necesite, por WhatsApp: "agregá mi Visa del Santander" o "abrí una cuenta
+en Balanz en dólares". El asistente confirma lo mismo que en el alta —nombre, tipo, moneda y saldo
+inicial, que es el saldo de ese día— y, en una tarjeta de crédito, el día de cierre y el de
+vencimiento (§ 13). Nada se registra en la cuenta hasta que el usuario lo confirma, y el nombre
+sigue la regla de abajo. Si el usuario nombra una cuenta que no existe al registrar un movimiento,
+el asistente no la crea sola: pregunta si quiere darla de alta, y el movimiento queda pendiente
+mientras tanto (§ 5).
+
 **Cada cuenta tiene un nombre distinto.** Un usuario no puede tener dos cuentas con el mismo
 nombre, sin distinguir mayúsculas, porque el asistente las reconoce por el nombre que el usuario
 menciona. Aun así, una mención puede coincidir con más de una: "la Galicia" puede ser "Galicia
@@ -783,7 +792,7 @@ bucle, se traslada directo a la factura del proveedor de LLM.
 
 | Cuota | Qué cuenta | Límite inicial |
 |---|---|---|
-| Registro | Mensajes interpretados para cargar, completar o corregir movimientos, incluidas las respuestas del alta y los mensajes para crear un grupo, invitar a alguien o aceptar una invitación (§ 10) | 50 por día |
+| Registro | Mensajes interpretados para cargar, completar o corregir movimientos, incluidas las respuestas del alta y los mensajes para dar de alta una cuenta, crear un grupo, invitar a alguien o aceptar una invitación (§ 10) | 50 por día |
 | Consultas | Preguntas sobre los datos propios o sobre un dato de mercado, respondidas con las funciones de lectura (§ 17). Cuenta una por pregunta, aunque el modelo llame a varias funciones | 20 por día |
 | Consejos | Consultas respondidas con la base de conocimiento financiero | 10 por día |
 
