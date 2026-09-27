@@ -1,11 +1,11 @@
 # Platita — Validación de diseño por casos de uso
 
-- **Fecha de la corrida:** 2026-09-27 (cuarta corrida)
-- **Rama analizada:** `feature/entrega-1-VNZ`, commit `62199c9`
-- **Corrida anterior:** 2026-09-27, commit `bdeb19a` (3 commits antes)
+- **Fecha de la corrida:** 2026-09-27 (quinta corrida)
+- **Rama analizada:** `feature/entrega-1-VNZ`, commit `35433ef`
+- **Corrida anterior:** 2026-09-27, commit `62199c9` (2 commits antes)
 
 > **Esto no es especificación.** Es un registro: el diagnóstico de la especificación tal como
-> estaba en la fecha de la corrida. Sus recomendaciones y su decisión D29 son propuestas, no
+> estaba en la fecha de la corrida. Sus recomendaciones y su decisión D30 son propuestas, no
 > reglas. Ninguna se implementa hasta que la autora la decide y la regla se escribe en el
 > documento que corresponde —[reglas de dominio](reglas-de-dominio.md), el
 > [modelo de datos](03-modelo-de-datos.md) o un ADR—, que es lo que manda. Criterio en
@@ -13,10 +13,10 @@
 >
 > **Cómo se actualiza.** No se edita a mano: se vuelve a correr el mismo ejercicio, que lee esta
 > corrida, la compara y sobrescribe el archivo. Las decisiones siguen una sola numeración entre
-> corridas: D1 a D28 están cerradas, y una referencia vieja nunca apunta a otra decisión.
+> corridas: D1 a D29 están cerradas, y una referencia vieja nunca apunta a otra decisión.
 
-**Decisiones de la autora que esta corrida respeta.** Tomadas después de la corrida anterior y
-registradas en ella, se tratan como cerradas y no se vuelven a proponer:
+**Decisiones de la autora que esta corrida respeta.** Se tratan como cerradas y no se vuelven a
+proponer:
 
 - **Un movimiento pertenece a un solo presupuesto** (A3.8, `reglas-de-dominio.md` §1).
 - **Las devoluciones con tarjeta son una limitación conocida, no bloqueante** (A1.4,
@@ -24,8 +24,9 @@ registradas en ella, se tratan como cerradas y no se vuelven a proponer:
 - **El efectivo de la actividad usado para gastos personales** se registra como un retiro del
   titular; recordarlo es del usuario (A3.3).
 - **La plata que un miembro le pasa a otro para gastos del grupo** va como gasto individual de
-  quien la da e ingreso individual de quien la recibe, sin escribirlo en la especificación, con el
-  riesgo aceptado de contarla dos veces si también se carga en el grupo (A5.2).
+  quien la da e ingreso individual de quien la recibe, sin escribirlo en la especificación (A5.2).
+- **El alta y la edición de cuentas desde el dashboard quedan para después.** Por WhatsApp una
+  cuenta se da de alta en cualquier momento (§2).
 
 **Documentos analizados**
 
@@ -67,11 +68,11 @@ Los datos de mercado son los de las corridas anteriores, del mismo día.
 | Documento | Qué cubre | Nivel de detalle |
 |---|---|---|
 | `01-producto.md` | Objetivo, catálogo must/should/could, fuera de alcance y la secuencia del registro por WhatsApp | Especificación funcional |
-| `reglas-de-dominio.md` | Dueño de las reglas de negocio, en 18 grupos. Desde la corrida anterior suma el catálogo base de categorías (§4), el cambio de presupuesto de un movimiento (§15), la cuota de los mensajes de grupos (§12), lo retirado de inversiones sin transferencias internas (§17) y el conflicto de nombre al aceptar una invitación (§10) | Especificación funcional detallada, con reglas de borde |
-| `03-modelo-de-datos.md` | Diagramas ER por área y 26 entidades | Diseño técnico |
+| `reglas-de-dominio.md` | Dueño de las reglas de negocio, en 18 grupos. Desde la corrida anterior suma el alta de cuentas en cualquier momento (§2) y el nombre de una categoría propia contra el catálogo base (§4) | Especificación funcional detallada, con reglas de borde |
+| `03-modelo-de-datos.md` | Diagramas ER por área y 26 entidades; `CATEGORY` suma un trigger | Diseño técnico |
 | `04-api.md` | Webhook, presupuestos y períodos, resumen del período, movimientos, transferencias, grupos e invitaciones, login, exportaciones y borrado de cuenta | Diseño técnico, parcial ("endpoints principales") |
 | `05-historias-de-usuario.md` | HU1 a HU7 | Especificación funcional |
-| `06-tickets.md` | Webhook e interpretación, vista de presupuesto y esquema inicial; el seed apunta al catálogo de §4 | Diseño técnico |
+| `06-tickets.md` | Webhook e interpretación, vista de presupuesto y esquema inicial | Diseño técnico |
 | `02-arquitectura.md` y `recorrido-completo.md` | C4, despliegue, seguridad y el recorrido de punta a punta | Diseño técnico |
 | `hoja-de-ruta.md` | Pendientes de la entrega 2 y decisiones abiertas | Idea general y registro de decisiones |
 | `terminos-y-privacidad.md` | Índice de lo que tienen que cubrir los términos | Idea general |
@@ -86,10 +87,10 @@ Los datos de mercado son los de las corridas anteriores, del mismo día.
 
 | Entidad | Qué es |
 |---|---|
-| `ACCOUNT` | Una moneda por cuenta, saldo calculado. Una cuenta de inversión por moneda; un plazo fijo es una cuenta bancaria |
+| `ACCOUNT` | Una moneda por cuenta, saldo calculado, alta en cualquier momento. Una cuenta de inversión por moneda; un plazo fijo es una cuenta bancaria |
 | `TRANSACTION` | Gasto o ingreso completo, en un solo período. `paired_with` enlaza retiros y aportes del titular |
 | `TRANSFER` | Entre dos cuentas propias. En la misma moneda, montos iguales; la comisión es un gasto aparte |
-| `CATEGORY` | Catálogo base fijo (15 de gasto, 6 de ingreso y 12 especiales) más categorías propias |
+| `CATEGORY` | Catálogo base fijo más categorías propias, sin nombres repetidos entre las dos |
 | `BUDGET_PERIOD` y `BUDGET` | Período individual o de grupo, sin solapes, `draft` o `confirmed` |
 | `FAMILY_GROUP`, `USER_GROUP` y `GROUP_INVITATION` | Familia o actividad; se crea con su primer período y se entra con un código que comparte el dueño |
 | `RECURRING_RULE` y `CARD_STATEMENT` | Reglas fijas o variables, compras con tarjeta y resúmenes conciliados |
@@ -101,7 +102,7 @@ Los datos de mercado son los de las corridas anteriores, del mismo día.
 ```mermaid
 flowchart TB
     subgraph ENTRADA["Entrada"]
-        WA["Mensaje de WhatsApp"]
+        WA["Mensaje de WhatsApp<br/>movimientos, cuentas y grupos"]
         DASH["Dashboard<br/>movimientos, transferencias y grupos"]
         CRON["Procesos programados<br/>recurrentes y cierre de resumen"]
     end
@@ -141,12 +142,12 @@ flowchart TB
 
 - **Entrada.** Fecha, moneda (la de la cuenta nombrada, o la primaria) y categoría del catálogo
   se completan solas y se muestran; monto, cuenta y período se confirman siempre
-  (`reglas-de-dominio.md` §1 y §4).
+  (`reglas-de-dominio.md` §1 y §4). Una cuenta nombrada que no existe no se crea sola: el
+  asistente pregunta si darla de alta (§2).
 - **Registro.** Un movimiento pertenece a un solo presupuesto (§1), y se puede pasar a otro
-  nombrándolo (§15). El retiro y el aporte del titular son pares enlazados (§10).
+  nombrándolo (§15). Ninguna cuenta registra nada anterior a su alta (§2).
 - **Consulta.** Las funciones de §17 suman el presupuesto individual por defecto, un grupo si se
-  lo nombra, o todo si se pide el total. Lo retirado de inversiones cuenta solo lo que sale hacia
-  cuentas que no son de inversión. Los consejos responden en tres clases (§18).
+  lo nombra, o todo si se pide el total. Los consejos responden en tres clases (§18).
 
 ### 1.3. Decisiones confirmadas en la documentación
 
@@ -155,21 +156,21 @@ sección 2.
 
 ### 1.4. Áreas sin cobertura
 
-1. **Alta y edición de cuentas desde el dashboard**, que pide la HU1 y no tiene endpoint
-   (`recorrido-completo.md` §13). Sigue abierta desde la primera corrida.
-2. **Crear una categoría propia por pedido explícito** ("creá la categoría Prepaga"). §4 solo
-   describe la creación que propone el asistente cuando ninguna encaja. **[INFERIDO]** sigue la
-   misma confirmación.
+1. **Deuda anterior al alta de una tarjeta:** las compras del resumen abierto y las cuotas en
+   curso de una tarjeta que se da de alta con el ciclo empezado. Es el caso A1.7.
+
+El alta de cuentas desde el dashboard sigue sin endpoint, pero la autora decidió dejarla para
+después; ya no se cuenta como hueco.
 
 ### 1.5. Contradicciones visibles entre documentos
 
 | # | Contradicción | Documentos |
 |---|---|---|
 | X4 | Siguen registradas en la hoja de ruta: cuotas en YAML contra "sin desplegar", rama de despliegue y quién genera las alertas con RAG | `hoja-de-ruta.md`, Decisiones abiertas |
-| X8 | La regla dice que un usuario no tiene dos categorías con el mismo nombre, pero los dos índices que la imponen no cruzan las propias con las del catálogo base: una categoría propia puede llamarse igual que una base | `03-modelo-de-datos.md` CATEGORY (restricciones), contra `reglas-de-dominio.md` §4 |
-| X9 | *No es especificación, se reporta igual:* el `README.md` dice "46 casos" de esta validación; ahora son 47 | `README.md` |
+| X10 | §2 dice que un gasto anterior al alta de una cuenta "ya está reflejado en el saldo inicial", pero en una tarjeta el saldo no incluye lo facturado que todavía no venció ni las cuotas futuras | `reglas-de-dominio.md` §2 ("Nada antes del alta de la cuenta") contra §13 ("Saldo, deuda y comprometido") |
+| X11 | *No es especificación, se reporta igual:* el `README.md` dice "47 casos" de esta validación; ahora son 48 | `README.md` |
 
-X5, X6 y X7 de la corrida anterior quedaron resueltas (sección 5).
+X8 y X9 de la corrida anterior quedaron resueltas (sección 5).
 
 ### 1.6. Preguntas bloqueantes
 
@@ -181,9 +182,9 @@ Ninguna.
 
 | Decisión | ¿Documentada? | Dónde | Contradicciones | Casos límite sin resolver |
 |---|---|---|---|---|
-| **1. Actividades** con presupuesto propio y autotransferencias para pagarse un sueldo | Sí | `reglas-de-dominio.md` §10 (crear, invitar, aceptar, conflicto de nombre, retiro con una o dos cuentas, aporte, totales consolidados); §15 (cambiar el presupuesto de un movimiento); §18 (consejos sobre un grupo de un solo miembro); `03-modelo-de-datos.md` TRANSACTION y GROUP_INVITATION; `04-api.md`; HU7; §4 (categorías especiales del retiro y el aporte) | Ninguna | Ninguno. Los gastos mixtos van enteros a un presupuesto por decisión (A3.8) |
-| **2. Cuentas de inversión opacas** | Sí | `reglas-de-dominio.md` §2 (aportes y retiros, una cuenta por moneda, aportado neto fuera de los totales, plazo fijo como cuenta bancaria); §17 (Saldos y lo retirado de inversiones hacia cuentas que no lo son); HU1; `04-api.md` | Ninguna | Ninguno |
-| **3. Educación, no recomendación** | Sí | `reglas-de-dominio.md` §18; §17 (Indicadores); §12 (un dato de mercado es una consulta); `01-producto.md` §1.1 y §1.2; `terminos-y-privacidad.md` | Ninguna | Detectar que una insistencia es "sobre la misma pregunta" queda en manos del modelo. No hay fuente de datos con nombre de entidad en el MVP |
+| **1. Actividades** con presupuesto propio y autotransferencias para pagarse un sueldo | Sí | `reglas-de-dominio.md` §10 (crear, invitar, aceptar, conflicto de nombre, retiro con una o dos cuentas, aporte, totales consolidados); §2 (alta de la cuenta de una actividad en cualquier momento); §15; §18; `03-modelo-de-datos.md` TRANSACTION y GROUP_INVITATION; `04-api.md`; HU7; §4 | Ninguna | Ninguno |
+| **2. Cuentas de inversión opacas** | Sí | `reglas-de-dominio.md` §2 (aportes y retiros, una cuenta por moneda, aportado neto fuera de los totales, plazo fijo, alta en cualquier momento); §17; HU1; `04-api.md` | Ninguna | Ninguno |
+| **3. Educación, no recomendación** | Sí | `reglas-de-dominio.md` §18; §17 (Indicadores); §12; `01-producto.md` §1.1 y §1.2; `terminos-y-privacidad.md` | Ninguna | Detectar que una insistencia es "sobre la misma pregunta" queda en manos del modelo. No hay fuente de datos con nombre de entidad en el MVP |
 
 ---
 
@@ -207,73 +208,71 @@ Ninguna.
 
 ## 4. Resumen ejecutivo
 
-**Madurez general: alta, lista para implementar.** Las 28 decisiones de las corridas anteriores
-están cerradas. Las tres decisiones confirmadas quedaron reflejadas sin contradicciones ni casos
-límite abiertos. Queda un solo problema nuevo, chico y con arreglo de una línea.
+**Madurez general: alta.** Las 29 decisiones de las corridas anteriores están cerradas y las tres
+decisiones confirmadas no tienen casos límite abiertos. Queda un problema nuevo, y es el más
+relevante que encontró esta serie después del primer informe, porque le pasa a casi todo usuario
+con tarjeta.
 
-De los 47 casos recorridos (los 46 anteriores y 1 nuevo):
+De los 48 casos recorridos (los 47 anteriores y 1 nuevo):
 
 | Veredicto | Casos |
 |---|---|
-| INCORRECTO | 1 |
-| CONTRADICTORIO | 1 |
+| INCORRECTO | 2 |
+| CONTRADICTORIO | 0 |
 | NO ESPECIFICADO | 0 |
 | NO SOPORTADO | 1 |
 | PARCIAL | 0 |
-| SOPORTADO | 44 |
+| SOPORTADO | 45 |
 
 **Lo que queda**
 
-1. **Una categoría propia puede llamarse igual que una del catálogo base** (CONTRADICTORIO, A6.8,
-   nuevo). El modelo dice que un usuario no tiene dos categorías con el mismo nombre, pero los
-   índices no lo impiden cuando una es base. Si la hija de Norma crea "Salud" para la prepaga, el
-   asistente ve dos "Salud" y no puede resolver "gasté en salud" sin adivinar.
+1. **La deuda de una tarjeta anterior a su alta termina clasificada como cargos del banco**
+   (INCORRECTO, A1.7, nuevo). Quien da de alta una tarjeta casi siempre tiene compras en el
+   resumen abierto y cuotas en curso. §2 no deja registrar nada anterior al alta y le dice al
+   usuario que "ya está reflejado en el saldo inicial", pero en una tarjeta el saldo inicial no
+   incluye lo que todavía no venció. Esas compras aparecen en cada conciliación como diferencia y
+   van a "Intereses, impuestos y cargos": el celular en 12 cuotas de Lucía pesaría 9 meses como
+   un cargo del banco. Pasa igual con las tarjetas del alta del usuario, no solo con las que se
+   suman después.
 2. **Las devoluciones con tarjeta** siguen inflando el ingreso del período (INCORRECTO, A1.4),
    aceptado como limitación conocida.
 3. **Un gasto mixto va entero a un presupuesto** (NO SOPORTADO, A3.8), por decisión.
 
-**Decisión pendiente:** D29, que el nombre de una categoría propia no coincida con uno del
-catálogo base.
+**Decisión pendiente:** D30, cómo se carga la deuda anterior al alta de una tarjeta.
 
 ---
 
 ## 5. Comparación con la corrida anterior
 
-La corrida anterior recorrió 46 casos: 2 INCORRECTO, 0 CONTRADICTORIO, 0 NO ESPECIFICADO, 2 NO
-SOPORTADO, 2 PARCIAL y 40 SOPORTADO.
+La corrida anterior recorrió 47 casos: 1 INCORRECTO, 1 CONTRADICTORIO, 0 NO ESPECIFICADO, 1 NO
+SOPORTADO, 0 PARCIAL y 44 SOPORTADO.
 
 ### 5.1. Casos que cambiaron de veredicto
 
 | Caso | Antes | Ahora | Qué lo cerró |
 |---|---|---|---|
-| A4.10 · La compra de MEP contaba como retiro | INCORRECTO | SOPORTADO | §17: solo cuentan las transferencias hacia una cuenta que no es de inversión (D27) |
-| A5.7 · Conflicto de nombre al aceptar una invitación | PARCIAL | SOPORTADO | §10 "Si el nombre del grupo choca, el código espera"; §11 "Miembro nuevo" (D28) |
-| A3.3 · Efectivo de la actividad para gastos personales | PARCIAL | SOPORTADO | Decisión de la autora: se registra como retiro del titular (§10) |
-| A5.2 · Plata entre miembros para gastos del grupo | NO SOPORTADO | SOPORTADO [INFERIDO] | Decisión de la autora: gasto e ingreso individuales, con el riesgo de doble conteo aceptado |
-| A3.9 · Harina imputada al presupuesto equivocado | SOPORTADO [INFERIDO] | SOPORTADO | §15 "Cambiar el presupuesto" |
+| A6.8 · Categoría propia con el nombre de una base | CONTRADICTORIO | SOPORTADO | §4 "Una categoría propia no repite un nombre del catálogo base"; trigger en `CATEGORY` (D29) |
 
 ### 5.2. Decisiones pendientes que se cerraron
 
 | Decisión | Cómo se cerró |
 |---|---|
-| D27 · Qué cuenta como retirado de inversiones | Opción 1 |
-| D28 · Conflicto de nombre al aceptar una invitación | Opción 1 |
+| D29 · Nombre de una categoría propia contra el catálogo base | Opción 2: un trigger en la base. Además, una migración que sume una categoría base resuelve antes las propias con el mismo nombre, y una categoría se puede crear por pedido explícito |
 
-Se cerraron también los ajustes que no eran decisiones: la definición de consulta de §12 (X6), la
-hoja de ruta sin numerar las decisiones del informe (X7), la lectura de emails en el `README.md`
-(X5), la cuota de los mensajes de grupos y el catálogo base de categorías.
+También se cerró el alta de cuentas por WhatsApp en cualquier momento (§2), que no era una
+decisión numerada, y el conteo del `README.md` (X9).
 
 ### 5.3. Problemas nuevos
 
-- **A6.8** (CONTRADICTORIO): el catálogo base volvió concreto un hueco que ya estaba en las
-  restricciones de `CATEGORY`. Mientras no había nombres base fijos, nadie lo iba a notar.
-- **X9**: el conteo del `README.md` quedó atrás una vez más.
+- **A1.7** (INCORRECTO): la deuda anterior al alta de una tarjeta. La regla de §2 que la causa
+  existe desde la primera corrida; el alta de cuentas en cualquier momento la volvió visible,
+  porque ahora se describe el momento en que el usuario suma una tarjeta ya en uso.
+- **X11**: el conteo del `README.md` quedó atrás otra vez.
 
 ### 5.4. Problemas que siguen abiertos
 
 - A1.4, como limitación aceptada.
 - X4, en la hoja de ruta.
-- El alta de cuentas desde el dashboard sin endpoint.
 
 ---
 
@@ -281,7 +280,7 @@ hoja de ruta sin numerar las decisiones del informe (X7), la lectura de emails e
 
 | Arquetipo | Situación | Qué necesita de Platita |
 |---|---|---|
-| **A1 · Lucía, asalariada** | 34 años, CABA. Sueldo neto de $1.450.000 con paritarias. Galicia en pesos y en dólares, Mercado Pago, Visa con saldo en pesos y en dólares. Paga ChatGPT en dólares | Saber en qué se le va la plata, llegar al vencimiento sin sorpresas y entender qué cuesta un préstamo |
+| **A1 · Lucía, asalariada** | 34 años, CABA. Sueldo neto de $1.450.000 con paritarias. Galicia en pesos y en dólares, Mercado Pago, Visa con saldo en pesos y en dólares, y una Visa del Santander que suma después. Paga ChatGPT en dólares | Saber en qué se le va la plata, llegar al vencimiento sin sorpresas y entender qué cuesta un préstamo |
 | **A2 · Martín, freelancer que cobra del exterior** | 29 años, desarrollador, monotributista. Factura unos USD 2.500 por mes con factura E y cobra por Payoneer; a veces en USDT. Vende dólares al MEP | Llevar ingresos en dólares y gastos en pesos sin mezclar monedas, y aprender qué hacer con lo que ahorra |
 | **A3 · Carla, microemprendedora** (obligatorio) | 38 años, Morón. Vende viandas y tortas; monotributo categoría A ($49.527). Cobra por el mismo Mercado Pago que usa para lo personal y en efectivo en ferias. Factura unos $2.400.000 por mes y se paga $900.000 | Separar la actividad de lo personal, pagarse un sueldo y saber si el emprendimiento se sostiene |
 | **A4 · Diego, inversor** (obligatorio) | 46 años, Rosario. Empleado con $2.100.000 netos. Tiene CEDEARs y FCI en Balanz, en pesos y en dólares, saldo remunerado en Mercado Pago y un plazo fijo. Completa los gastos del mes retirando del broker | Saber cuánto puso y sacó de cada inversión, sin que Platita pretenda saber cuánto vale |
@@ -297,8 +296,8 @@ frecuente. A3 y A4 tienen más de seis casos porque incluyen los casos límite o
 
 | # | Arquetipo | Caso | Tipo | Frecuencia | Veredicto | Evidencia (doc/sección) | Cambio mínimo | Parte afectada |
 |---|---|---|---|---|---|---|---|---|
+| A1.7 | A1 | Da de alta su Visa del Santander el 27/09. Ya tiene un celular de $1.080.000 en 12 cuotas desde junio (quedan 9 de $90.000) y $64.000 de compras del 20/09 en el resumen abierto | Incómodo (tarjeta) | Ocasional (una vez por tarjeta; afecta a casi todo usuario con tarjeta) | INCORRECTO | `reglas-de-dominio.md` §2 ("Nada antes del alta de la cuenta… ya está reflejado en el saldo inicial") y §13 ("Saldo, deuda y comprometido"; conciliación y ajuste en "Intereses, impuestos y cargos") | Al dar de alta una tarjeta, registrar sus cuotas en curso y las compras del resumen abierto (D30) | Flujo de ingesta, modelo de datos |
 | A1.4 | A1 | Devuelve unas zapatillas de $180.000 compradas en 3 cuotas, después de pagar la primera | Incómodo (devolución) | Ocasional | INCORRECTO (limitación aceptada) | `reglas-de-dominio.md` §13 y §16; `hoja-de-ruta.md` ("Devoluciones con tarjeta: limitación conocida") | Ninguno: decidido como no bloqueante | Flujo de ingesta, reportes |
-| A6.8 | A6 | La hija de Norma le pide al asistente crear la categoría "Salud" para separar la prepaga; "Salud" ya está en el catálogo base | Error (categoría duplicada) | Ocasional | CONTRADICTORIO | `reglas-de-dominio.md` §4 (catálogo base); `03-modelo-de-datos.md` CATEGORY ("un usuario no tiene dos categorías con el mismo nombre", impuesto por dos índices que no cruzan base y propias) | Rechazar una categoría propia con el nombre de una base (D29) | Modelo de datos |
 | A3.8 | A3 | El celular ($60.000 por mes) lo usa para la actividad y para lo personal | Incómodo (gasto mixto) | Mensual | NO SOPORTADO (por decisión) | §1 "Un movimiento, un presupuesto" | — | — |
 | A1.1 | A1 | "Gasté 58.400 en el super con la Galicia" | Cotidiano | Diaria | SOPORTADO | `01-producto.md` §1.3; §1, §3 y §4 (Supermercado) | — | — |
 | A3.2 | A3 | Cobra una vianda de $18.000 por el Mercado Pago que usa también para lo personal | Cotidiano (actividad) | Diaria | SOPORTADO | §10 (cuenta y presupuesto independientes), §4 (Ventas) | — | — |
@@ -319,13 +318,13 @@ frecuente. A3 y A4 tienen más de seis casos porque incluyen los casos límite o
 | A2.5 | A2 | "Me sobraron USD 3.000 este mes, ¿qué hago?" | Educación (decisión) | Mensual | SOPORTADO | §18 "Cómo se responde una pregunta de decisión" | — | — |
 | A3.4 | A3 | Se paga $900.000 de sueldo; todo pasa por el mismo Mercado Pago | Incómodo (actividad) | Mensual | SOPORTADO | §10 "El retiro del titular"; TRANSACTION `paired_with` | — | — |
 | A3.5 | A3 | "¿Cuánto gasté este mes?" y "¿cuánto gasté contando todo?" | Cotidiano (revisar) | Mensual | SOPORTADO | §17 "A qué presupuesto se refiere una pregunta"; §10 | — | — |
-| A3.6 | A3 | Con una cuenta Galicia propia de la actividad, se transfiere $900.000 de sueldo a su Mercado Pago | Incómodo (actividad) | Mensual | SOPORTADO | §10 "El retiro es igual con una cuenta o con dos" | — | — |
+| A3.6 | A3 | Con una cuenta Galicia propia de la actividad, se transfiere $900.000 de sueldo a su Mercado Pago | Incómodo (actividad) | Mensual | SOPORTADO | §10 "El retiro es igual con una cuenta o con dos"; §2 (alta de la cuenta en cualquier momento) | — | — |
 | A3.9 | A3 | Imputó la harina ($35.000) al presupuesto personal en vez de a la actividad | Error (actividad equivocada) | Mensual | SOPORTADO | §15 "Cambiar el presupuesto" | — | — |
 | A3.10 | A3 | "¿Cuánto me puedo pagar de sueldo sin fundir el emprendimiento?" | Educación (decisión con datos) | Mensual | SOPORTADO | §18 "La excepción es un grupo de un solo miembro" y "Cómo se responde una pregunta de decisión" | — | — |
 | A4.1 | A4 | Aporta $500.000 de Galicia a Balanz ARS | Cotidiano (inversión) | Mensual | SOPORTADO | §2 y §13; `POST /transfers` | — | — |
 | A4.2 | A4 | Retira $400.000 por mes de Balanz para completar los gastos | Incómodo (inversión) | Mensual | SOPORTADO | §17 "Lo retirado de inversiones se muestra aparte" | — | — |
 | A4.6 | A4 | Mercado Pago le rinde $11.400 en el mes (18,62% TNA) | Cotidiano (rendimiento) | Mensual | SOPORTADO | §2 (contraste mensual, "Rendimientos") | — | — |
-| A4.7 | A4 | Arma un plazo fijo de $3.000.000 a 30 días al 20% de TNA | Incómodo (inversión) | Mensual | SOPORTADO | §2 "Un plazo fijo es una cuenta bancaria" | — | — |
+| A4.7 | A4 | Arma un plazo fijo de $3.000.000 a 30 días al 20% de TNA | Incómodo (inversión) | Mensual | SOPORTADO | §2 "Un plazo fijo es una cuenta bancaria" y "Una cuenta se da de alta en cualquier momento" | — | — |
 | A4.10 | A4 | Compra USD 1.000 al MEP ($1.544.350) dentro de Balanz, de "Balanz ARS" a "Balanz USD" | Incómodo (inversión) | Mensual | SOPORTADO | §2 "Una cuenta de inversión por moneda"; §17 (no cuenta como retirado) | — | — |
 | A5.5 | A5 | El alquiler sube por IPC en el ajuste | Cotidiano (recurrente variable) | Mensual | SOPORTADO | §8 | — | — |
 | A6.1 | A6 | Cobra la jubilación con aumento mensual y el bono de $70.000 | Cotidiano (ingreso) | Mensual | SOPORTADO | §8; §4 ("Jubilación y pensión") | — | — |
@@ -335,7 +334,7 @@ frecuente. A3 y A4 tienen más de seis casos porque incluyen los casos límite o
 | A3.1 | A3 | Crea la actividad "Cocina de Carla" | Cotidiano (configuración) | Ocasional | SOPORTADO | §10 "Crear un grupo" y "El primer período nace con el grupo"; §12; HU7 | — | — |
 | A3.7 | A3 | Pone $250.000 de sus ahorros para comprar un horno para la actividad | Incómodo (actividad) | Ocasional | SOPORTADO | §10 "El aporte del titular es el camino inverso"; §4 | — | — |
 | A4.3 | A4 | Aportó $2.000.000 en total y retira $2.600.000 | Incómodo (inversión) | Ocasional | SOPORTADO | §2 (aportado neto negativo, fuera de los totales) | — | — |
-| A4.4 | A4 | Aporta pesos a Balanz, compra MEP adentro y retira USD 1.000 a Galicia USD | Incómodo (inversión, monedas) | Ocasional | SOPORTADO | §2 "Una cuenta de inversión por moneda" | — | — |
+| A4.4 | A4 | Aporta pesos a Balanz, compra MEP adentro y retira USD 1.000 a Galicia USD | Incómodo (inversión, monedas) | Ocasional | SOPORTADO | §2 "Una cuenta de inversión por moneda" y "Una cuenta se da de alta en cualquier momento" | — | — |
 | A4.8 | A4 | Registró el aporte desde Mercado Pago cuando salió de Galicia | Error (cuenta) | Ocasional | SOPORTADO | §15 | — | — |
 | A4.9 | A4 | "¿Qué banco paga más por un plazo fijo?" | Educación (información) | Ocasional | SOPORTADO | §18 "Información con nombre de entidad, solo si una fuente la publica" | — | — |
 | A5.3 | A5 | Heladera de $1.200.000 en 12 cuotas sin interés con la tarjeta de Sofía | Incómodo (cuotas) | Ocasional | SOPORTADO | §8 y §13 | — | — |
@@ -344,40 +343,57 @@ frecuente. A3 y A4 tienen más de seis casos porque incluyen los casos límite o
 | A6.5 | A6 | "¿Qué es un fondo común de inversión?" | Educación (concepto) | Ocasional | SOPORTADO | §18, clase educación | — | — |
 | A6.6 | A6 | "¿Cuánto paga hoy un plazo fijo?" | Educación (información) | Ocasional | SOPORTADO | §17 Indicadores; §18 | — | — |
 | A6.7 | A6 | "Si saco $1.000.000 en 12 cuotas de $140.000, ¿qué parte de mi jubilación es?" | Educación (decisión con datos) | Ocasional | SOPORTADO | §18, paso 3: los datos del usuario como cálculo, sin adjetivo | — | — |
+| A6.8 | A6 | La hija de Norma le pide al asistente crear la categoría "Salud" para la prepaga; "Salud" ya está en el catálogo base | Error (categoría duplicada) | Ocasional | SOPORTADO | §4 "Una categoría propia no repite un nombre del catálogo base"; `03-modelo-de-datos.md` CATEGORY (trigger) | — | — |
 
 ---
 
 ## 8. Detalle de los casos INCORRECTO y CONTRADICTORIO
 
-### A6.8 · Una categoría propia con el nombre de una base (CONTRADICTORIO)
+### A1.7 · La deuda de una tarjeta anterior a su alta (INCORRECTO)
 
-**Qué hace la usuaria.** La hija de Norma quiere separar la prepaga del resto de los gastos de
-salud y le escribe al asistente "creá la categoría Salud para la prepaga". "Salud" ya existe en
-el catálogo base.
+**Qué hace la usuaria.** El 27 de septiembre Lucía le escribe "agregá mi Visa del Santander,
+cierra el 25 y vence el 5". Esa tarjeta ya tiene:
 
-**Qué dice cada fuente.**
+- un celular de $1.080.000 comprado en junio en 12 cuotas de $90.000, del que quedan 9;
+- $64.000 en compras del 20 de septiembre, que entran en el resumen que cerró el 25 y vence el 5
+  de octubre.
 
-- **`03-modelo-de-datos.md` CATEGORY, restricciones:** "un usuario no tiene dos categorías con el
-  mismo nombre, sin distinguir mayúsculas: índice único sobre `(user_id, lower(name))`, más un
-  índice único parcial sobre `lower(name)` donde `user_id` es nulo para el catálogo base".
-- **Lo que esos índices imponen:** el primero compara solo categorías del mismo usuario; el
-  segundo, solo las del catálogo base entre sí. Una categoría propia "Salud", con `user_id` de
-  Norma, no choca con la base "Salud", con `user_id` nulo.
-- **`reglas-de-dominio.md` §4:** la categoría se resuelve contra el catálogo del usuario, que es
-  el base más las propias. §2 da el motivo de la unicidad para las cuentas: el asistente reconoce
-  por el nombre, y dos iguales harían imposible saber a cuál se refiere.
+**Recorrido en el diseño.**
 
-**Dónde falla.** La regla promete algo que el mecanismo no cumple. Norma queda con dos "Salud",
-y "gasté 12.000 en salud" no tiene una sola categoría candidata: el asistente tiene que elegir
-una, que es justo lo que la unicidad existe para evitar. Lo mismo pasa si la categoría se crea
-desde el dashboard.
+1. §2, "Una cuenta se da de alta en cualquier momento": el asistente confirma nombre, tipo,
+   moneda, saldo inicial, cierre y vencimiento. El saldo inicial es "el saldo de ese día".
+2. §13, "Saldo, deuda y comprometido": el saldo de una tarjeta cuenta "los gastos ya vencidos
+   menos los pagos". Lo facturado que no venció es deuda, y las cuotas futuras son comprometido.
+   Ninguno de los dos está en el saldo inicial, que para Lucía es $0.
+3. Lucía quiere cargar el celular y las compras del 20/09. §2, "Nada antes del alta de la
+   cuenta": el asistente le explica que "la cuenta registra desde su alta y que ese gasto ya está
+   reflejado en el saldo inicial".
+4. Al conciliar el resumen del 5 de octubre, el banco pide $154.000 (la cuota más las compras) y
+   Platita tiene $0. El asistente pregunta si falta cargar alguna compra (§13); si Lucía nombra el
+   celular, la compra tiene fecha anterior al alta.
+5. Lo que queda sin explicar se registra como ajuste en "Intereses, impuestos y cargos", imputado
+   al período del vencimiento.
+
+**Dónde falla.**
+
+- **El mensaje de §2 es falso para una tarjeta:** la deuda anterior al alta no está en el saldo
+  inicial, porque el saldo de una tarjeta nunca incluye lo que no venció.
+- **Los números quedan mal durante meses:** $154.000 en octubre y $90.000 en cada uno de los 8
+  resúmenes siguientes pesan como cargos del banco, no como "Hogar" o "Salidas y ocio". Las
+  alertas de "Intereses, impuestos y cargos" saltan, y el comprometido de la tarjeta muestra $0
+  cuando Lucía debe $720.000 en cuotas.
+- **Le pasa a casi todo usuario con tarjeta,** también en el alta del usuario (§11): nadie da de
+  alta una tarjeta con el resumen vacío y sin cuotas.
+
+**Un detalle del modelo que ayuda.** La base no rechazaría estas compras: la fecha que se valida
+contra el alta es `transaction_date`, que en una ocurrencia de tarjeta es la del vencimiento (5 de
+octubre en adelante), no la de la compra. Lo que las bloquea es la regla conversacional de §2, no
+el esquema.
 
 ### A1.4 · Devolución de una compra en cuotas (INCORRECTO, limitación aceptada)
 
-Sin cambios desde la corrida anterior. La acreditación del banco llega como un ajuste sin
-vincular (§13 y §16), así que suma como ingreso del período y "Ropa" conserva lo gastado. La
-autora lo aceptó como limitación conocida, con la conciliación cuadrando el total
-(`hoja-de-ruta.md`). No se propone cambio.
+Sin cambios. La acreditación del banco llega como un ajuste sin vincular (§13 y §16). La autora lo
+aceptó como limitación conocida (`hoja-de-ruta.md`). No se propone cambio.
 
 ---
 
@@ -386,7 +402,7 @@ autora lo aceptó como limitación conocida, con la conciliación cuadrando el t
 | Caso | Tipo (información/educación/decisión) | Respuesta prevista | ¿Enseña a razonar sin dar veredicto? | Fuente y actualización de datos |
 |---|---|---|---|---|
 | **A6.5** · "¿Qué es un FCI?" | Educación | Conceptos, riesgos y costos (§18) | Sí | Base curada (`ADVICE_DOCUMENT`), revisión manual con `last_reviewed_at` |
-| **A6.6** · "¿Cuánto paga hoy un plazo fijo?" | Información | Tasa promedio del BCRA con su fecha, por la función Indicadores; cuenta como consulta (§12, §17, §18) | No aplica: es un dato | `INDICATOR_VALUE`, con antigüedad máxima por fuente; pasado el plazo, dice la fecha en vez de usarlo |
+| **A6.6** · "¿Cuánto paga hoy un plazo fijo?" | Información | Tasa promedio del BCRA con su fecha, por la función Indicadores; cuenta como consulta (§12, §17, §18) | No aplica: es un dato | `INDICATOR_VALUE`, con antigüedad máxima por fuente |
 | **A5.6** · "¿A cuánto está el MEP?" | Información | Última cotización de la fuente, con su fecha (§17 Indicadores) | No aplica | `EXCHANGE_RATE` (ADR 0011), con antigüedad máxima por fuente |
 | **A4.9** · "¿Qué banco paga más?" | Información | Sin fuente con nombre de entidad en el MVP: ofrece el promedio. Con fuente, lista ordenada por nombre | No aplica; evita el orden de preferencia | Ninguna fuente por entidad en el MVP |
 | **A1.6** · "¿Me conviene un préstamo al 99%?" | Decisión | Conceptos, criterios, sus datos como cálculo y el cierre fijo (§18) | Sí | El usuario trae la tasa; el CFT tiene que informarse destacado (BCRA) |
@@ -398,58 +414,60 @@ autora lo aceptó como limitación conocida, con la conciliación cuadrando el t
 **Huecos del diseño en esta área**
 
 1. **La insistencia la detecta el modelo.** La forma de la respuesta es verificable; la detección
-   de "la misma pregunta", no. Es el mismo criterio que la clasificación del tipo de un
-   movimiento, y se acepta igual.
+   de "la misma pregunta", no. Se acepta igual que la clasificación del tipo de un movimiento.
 2. **No hay fuente de datos con nombre de entidad.** Hasta que se configure una, "¿qué banco paga
    más?" siempre responde con el promedio.
 3. **Los umbrales de antigüedad son ejemplos** en §18. Conviene fijarlos en la configuración de
    cada fuente al crearla.
+4. **A1.7 también afecta la educación:** mientras la deuda en cuotas de una tarjeta no esté
+   registrada, un consejo sobre deuda (§18, "Usa los datos del usuario") calcula con un
+   comprometido menor al real.
 
 ---
 
 ## 10. Decisiones pendientes (Fase 3)
 
-### D29 · Nombre de una categoría propia contra el catálogo base
+### D30 · Deuda anterior al alta de una tarjeta
 
-- **Contexto:** la unicidad de nombres de `CATEGORY` no cruza las categorías propias con las
-  base.
-- **Casos que la originan:** A6.8.
+- **Contexto:** §2 no deja registrar nada anterior al alta de una cuenta y lo justifica con el
+  saldo inicial, que en una tarjeta no incluye lo facturado sin vencer ni las cuotas en curso.
+- **Casos que la originan:** A1.7.
 - **Opciones:**
-  1. Al crear o renombrar una categoría propia, la aplicación rechaza un nombre igual, sin
-     distinguir mayúsculas, a uno del catálogo base, dentro de la misma transacción. El asistente
-     le dice al usuario que esa categoría ya existe y le ofrece usarla o elegir otro nombre, como
-     "Prepaga".
-  2. Un trigger en `CATEGORY` que haga el mismo rechazo en la base.
-  3. Permitirlo y que el asistente pregunte entre las dos cada vez.
+  1. Al dar de alta una tarjeta, sea en el alta del usuario o después, el asistente pregunta si
+     tiene cuotas en curso y compras en el resumen abierto. Cada cuota en curso se registra como
+     una compra con tarjeta por las cuotas que faltan, y cada compra del resumen abierto, como
+     una compra de un pago. Todo con su categoría y su presupuesto, confirmados como cualquier
+     compra. §2 aclara que la regla de "nada antes del alta" mira la fecha del movimiento, que en
+     una tarjeta es la del vencimiento, y que una compra anterior al alta se acepta si entra en un
+     resumen que todavía no venció.
+  2. Pedir solo el total de la deuda al alta, como un saldo inicial de deuda, sin categorías.
+  3. Dejar que la conciliación lo absorba y documentarlo como limitación.
 - **Consecuencias:**
-  1. Es el mismo criterio que el nombre único entre grupos (§10), que también valida la
-     aplicación porque un índice no puede expresarlo. No toca el esquema.
-  2. Lo impone la base aunque la aplicación falle, a costo de un trigger más, y el catálogo base
-     es fijo, así que el trigger no cambia nunca.
-  3. Una pregunta de más en cada gasto de esa categoría, para siempre.
-- **Recomendación:** opción 2. El catálogo base es fijo y chico, y `AGENTS.md` §8 pide los
-  `CHECK` en la base cuando se puede. Si se prefiere no sumar triggers, la opción 1.
-- **Dónde registrarla:** `03-modelo-de-datos.md` CATEGORY; `reglas-de-dominio.md` §4; criterio de
-  aceptación del Ticket 3.
+  1. Los rubros, el comprometido y los consejos sobre deuda quedan bien desde el primer día.
+     Alarga el alta de una tarjeta, pero con preguntas que el usuario puede contestar mirando su
+     resumen, y puede responder "nada" para saltearlas. No cambia el esquema.
+  2. El comprometido total queda bien, pero cada cuota pesa sin categoría y hace falta un concepto
+     nuevo de deuda inicial.
+  3. Meses de cargos del banco inflados para casi todo usuario con tarjeta.
+- **Recomendación:** opción 1.
+- **Dónde registrarla:** `reglas-de-dominio.md` §2 ("Nada antes del alta de la cuenta" y "Una
+  cuenta se da de alta en cualquier momento") y §13; §11 (el alta del usuario).
 
 ---
 
 ## 11. Patrones
 
-1. **Una restricción que se enuncia más fuerte que su mecanismo.**
-   - *Casos:* A6.8.
-   - *Causa en el diseño:* la frase de la restricción describe la intención ("un usuario no tiene
-     dos categorías con el mismo nombre") y los índices describen otra cosa, más débil. Pasó
-     desapercibido hasta que hubo nombres base reales. Conviene que cada restricción del modelo
-     se pueda leer como un criterio de aceptación del Ticket 3 que la base rechace; esta no
-     figura en ese criterio.
+1. **Una regla general justificada con un caso particular.**
+   - *Casos:* A1.7.
+   - *Causa en el diseño:* "nada antes del alta" se justificó con el saldo inicial, que es cierto
+     para una cuenta bancaria o una billetera: lo gastado antes ya bajó el saldo. En una tarjeta
+     el saldo es otra cosa (§13), y la justificación deja de valer. Las reglas de §2 se
+     escribieron antes que las de tarjetas y nunca se volvieron a leer contra ellas.
 2. **Los límites aceptados quedan documentados donde el usuario no los ve.**
    - *Casos:* A1.4, A3.8, A5.2.
-   - *Causa en el diseño:* las tres son decisiones de alcance razonables y están registradas —en
-     la hoja de ruta, en §1 y en este informe—. Ninguna llega al usuario: nada le dice que una
-     devolución va a verse como ingreso, ni cómo registrar la plata que le pasa a su pareja. Si
-     aparecen quejas, el lugar natural para decirlo son los mensajes del asistente o una ayuda en
-     el dashboard, no la especificación.
+   - *Causa en el diseño:* están registrados en la hoja de ruta, en §1 y en este informe, pero
+     ninguno llega al usuario. Si aparecen quejas, el lugar natural para explicarlos es una ayuda
+     en el dashboard o un mensaje del asistente.
 
 ---
 
@@ -459,10 +477,8 @@ Prioridad = frecuencia × impacto sobre la exactitud de los números.
 
 | # | Cambio | Documento | Decisión o caso |
 |---|---|---|---|
-| 1 | Rechazar una categoría propia con el nombre de una base, y sumarlo al criterio de aceptación | `03-modelo-de-datos.md` CATEGORY; `reglas-de-dominio.md` §4; `06-tickets.md` Ticket 3 | D29 |
-| 2 | Actualizar el conteo de casos | `README.md` | X9 |
-| 3 | Endpoint para dar de alta y editar cuentas desde el dashboard | `04-api.md` | 1.4 |
-| 4 | Decir que una categoría propia también se crea por pedido explícito, con la misma confirmación | `reglas-de-dominio.md` §4 | 1.4 |
+| 1 | Al dar de alta una tarjeta, registrar sus cuotas en curso y las compras del resumen abierto, y aclarar qué fecha mira "nada antes del alta" | `reglas-de-dominio.md` §2, §11 y §13 | D30 |
+| 2 | Actualizar el conteo de casos | `README.md` | X11 |
 
 ---
 
@@ -473,8 +489,8 @@ Prioridad = frecuencia × impacto sobre la exactitud de los números.
    mensajes de registro por día (§12), el detalle puede chocar con la cuota.
 3. Con una socia en la actividad, el grupo pasa a tener dos miembros y los consejos dejan de
    leerlo (§18). ¿Es lo esperado para una sociedad?
-4. ¿Las limitaciones aceptadas (devoluciones con tarjeta, gastos mixtos, plata entre miembros) se
-   le explican al usuario en algún lado, como una ayuda del dashboard?
+4. ¿Las limitaciones aceptadas se le explican al usuario en algún lado, como una ayuda del
+   dashboard?
 
 ---
 
@@ -491,12 +507,13 @@ búsquedas nuevas: el caso nuevo no depende de normativa ni de datos de mercado.
 - Blog del Contador, la percepción no se eliminó, 2026. <https://blogdelcontador.com.ar/news-45422-arca-percepcion-ganancias-operaciones-en-moneda-extranjera>
 - Infobae, banda cambiaria de octubre, 15/09/2026. <https://www.infobae.com/economia/2026/09/15/a-cuanto-puede-llegar-el-dolar-en-octubre-sin-que-intervenga-el-gobierno-segun-la-nueva-banda-cambiaria/>
 
-**Tasas y préstamos**
+**Tasas, préstamos y cuotas**
 
 - Ámbito, plazo fijo en pesos, septiembre de 2026: TNA de 16% a 24%. <https://www.ambito.com/economia/plazo-fijo-pesos-cuanto-se-gana-1-millon-y-que-tasas-ofrecen-los-bancos-septiembre-2026-n6324096>
 - El Cronista, tasas de billeteras, septiembre de 2026 (Mercado Pago 18,62%). <https://www.cronista.com/infotechnology/finanzas-digitales/billeteras-virtuales-en-septiembre-cuales-pagan-mejores-tasas-en-pesos/>
 - ADNSUR, préstamos personales, septiembre de 2026: BBVA 99% de TNA con CFTEA 207,94%. <https://www.adnsur.com.ar/economia/prestamos-personales-de--30-millones--que-bancos-los-dan--cuanto-cuestan-y-quienes-pueden-pedirlos_a6aa877983fae730a59107d40>
 - BCRA, texto ordenado "Protección de los usuarios de servicios financieros". <https://www.bcra.gob.ar/archivos/Pdfs/texord/t-pusf.pdf>
+- Infobae, 20 cuotas sin interés del BNA hasta el 31/01/2027, 30/03/2026. <https://www.infobae.com/economia/2026/03/30/vuelven-las-20-cuotas-sin-interes-que-se-puede-comprar-con-la-promocion-por-tiempo-limitado-que-anuncio-un-banco/>
 
 **Medios de pago, ingresos e inflación**
 
@@ -535,6 +552,7 @@ Los niveles son los de [2.6](02-arquitectura.md#26-tests).
 | A3.1 | "Creá una actividad que se llame Cocina de Carla" | Un `FAMILY_GROUP` con Carla como dueña y un período confirmado desde hoy hasta fin de mes. Un segundo grupo con el mismo nombre responde `409` | Integración |
 | A3.9 | "La harina de ayer era de Cocina de Carla", citando la confirmación | El gasto pasa al período de la actividad que cubre su fecha; el gastado individual baja $35.000 | Integración |
 | A5.7 | Sofía escribe el código de "Familia" de Nico estando ya en "Familia" de sus padres | No se crea membresía, el código sigue sin usar y Nico recibe el aviso con el motivo | Integración |
+| A6.8 | "Creá la categoría salud", con "Salud" en el catálogo base | La base rechaza la categoría y el asistente ofrece usar la existente o elegir otro nombre | Integración |
 | A2.3 | USD 2.450 salen de Payoneer y llegan USD 2.401 | `TRANSFER` de USD 2.401 y un gasto de USD 49 en "Comisiones" sobre Payoneer. Payoneer baja USD 2.450 | Integración |
 | A2.2 | "Me pagaron 2400 en Payoneer", con la cuenta en USD | La confirmación propone USD 2.400, sin conversión | Unitario |
 | A4.4 | Compra de USD 1.000 a $1.544,35 dentro de Balanz | `TRANSFER` de Balanz ARS a Balanz USD con `exchange_rate` 1.544,35. Ningún `TRANSACTION` sobre una cuenta de inversión | Integración |
@@ -549,5 +567,5 @@ Los niveles son los de [2.6](02-arquitectura.md#26-tests).
 
 | Caso | Propiedad a verificar | Decisión |
 |---|---|---|
-| A6.8 | Crear una categoría propia "salud" con "Salud" en el catálogo base se rechaza, y el asistente ofrece usar la existente | D29 |
+| A1.7 | Con la Visa dada de alta el 27/09, el celular queda como una regla de 9 cuotas de $90.000 y las compras del 20/09 en el resumen que vence el 5/10. La conciliación de ese resumen no registra ningún ajuste, y el comprometido es $720.000 | D30 |
 | A1.4 | Limitación aceptada: la prueba documenta que la devolución llega como un ingreso sin vincular | D18 |

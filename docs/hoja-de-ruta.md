@@ -62,6 +62,16 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   usuario borra la regla, y cada conciliación las compensa. Resolverlo exige que un reintegro pueda
   apuntar a una compra con tarjeta, que es una regla y no un movimiento. Caso A1.4 y decisión D18
   de la [validación por casos de uso](use-case-walkthrough.md).
+- **Deuda anterior al alta de una tarjeta: limitación conocida.** Quien da de alta una tarjeta con
+  el ciclo empezado no puede cargar sus cuotas en curso ni las compras del resumen abierto:
+  [reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado) no registra nada
+  anterior al alta y lo justifica con el saldo inicial, que en una tarjeta no incluye lo que no
+  venció (§ 13). Esas compras aparecen en cada conciliación como diferencia y se registran en
+  "Intereses, impuestos y cargos" hasta que terminan las cuotas, y el comprometido de la tarjeta
+  queda en menos de lo que el usuario debe. Resolverlo es preguntar, al dar de alta la tarjeta,
+  por las cuotas en curso y las compras del resumen abierto, y registrarlas como compras con
+  tarjeta. La base ya lo permite, porque valida la fecha del vencimiento y no la de la compra.
+  Caso A1.7 y decisión D30 de la [validación por casos de uso](use-case-walkthrough.md).
 - **Varios intervalos de membresía en un grupo: mejora.** Quien sale de un grupo y vuelve reabre
   su única fila de `USER_GROUP`, y pierde el intervalo anterior: si vuelve a salir, solo conserva
   la lectura de los períodos de su último intervalo
