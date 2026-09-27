@@ -1,6 +1,6 @@
 # 5. Historias de usuario
 
-> Seis historias de usuario: cinco **must-have**, que componen el flujo end-to-end comprometido para el MVP, y una **should-have**. El orden sigue la secuencia real de uso, salvo la HU6, que se sumó después y conserva su número para no renumerar las referencias existentes: en el uso real va primera, porque es el alta. Después configuro mis cuentas, después armo el presupuesto del período, ahí empiezo a registrar movimientos, los reviso en el dashboard, y el sistema me avisa si me estoy pasando.
+> Siete historias de usuario: seis **must-have**, que componen el flujo end-to-end comprometido para el MVP, y una **should-have**. El orden sigue la secuencia real de uso, salvo la HU6 y la HU7, que se sumaron después y conservan su número para no renumerar las referencias existentes: en el uso real, la HU6 va primera, porque es el alta, y la HU7 va antes de armar un presupuesto de grupo. Después configuro mis cuentas, después armo el presupuesto del período, ahí empiezo a registrar movimientos, los reviso en el dashboard, y el sistema me avisa si me estoy pasando.
 
 **Historia de Usuario 1** · *must-have*
 
@@ -128,3 +128,26 @@
 
 *Prioridad:* Alta
 *Estimación:* 8 puntos
+
+---
+
+**Historia de Usuario 7** · *must-have*
+
+**Como** usuario que comparte gastos con su familia o que tiene una actividad propia
+**Quiero** crear un grupo e invitar a quien corresponda
+**Para** llevar un presupuesto compartido, o el de mi actividad, separado del personal
+
+*Criterios de aceptación:*
+
+- Creo un grupo dándole un nombre, por WhatsApp o desde el dashboard, y quedo como su dueño. Una actividad es un grupo al que no invito a nadie.
+- Al crearlo ya tiene un presupuesto del mes en curso, sin topes, para que el primer movimiento tenga dónde imputarse.
+- No puedo tener dos grupos con el mismo nombre: el asistente reconoce cada presupuesto por el nombre de su grupo.
+- Para invitar a alguien, Platita me da un enlace de WhatsApp con un código, que le mando yo. Platita no le escribe a la persona invitada.
+- El código sirve para una sola persona, una sola vez, y vence a los 7 días. Veo las invitaciones abiertas y puedo revocarlas.
+- Al invitar se me advierte que quien entre va a ver todo el historial del grupo.
+- Quien recibe el enlace le escribe a Platita; si no es usuario, primero se da de alta. Antes de sumarse ve el nombre del grupo y el de su dueño, y confirma.
+- Un código vencido, usado o inexistente recibe siempre la misma respuesta.
+- Si acepté recibir avisos, me llega uno cuando alguien se suma.
+
+*Prioridad:* Alta
+*Estimación:* 5 puntos

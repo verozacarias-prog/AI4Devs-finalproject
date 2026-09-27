@@ -53,6 +53,12 @@ sus opciones y una recomendación. Las de esta lista son las que no salieron de 
   Sumarlo exige que una cuenta pueda ser de un usuario o de un grupo, que un aporte sea una
   transferencia entre la cuenta de un miembro y la del grupo, y cambiar esas claves foráneas.
   Con esas mismas restricciones, el cambio es explícito y no aparece por accidente.
+- **Varios intervalos de membresía en un grupo: mejora.** Quien sale de un grupo y vuelve reabre
+  su única fila de `USER_GROUP`, y pierde el intervalo anterior: si vuelve a salir, solo conserva
+  la lectura de los períodos de su último intervalo
+  ([reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad)).
+  Guardar cada intervalo exige que la membresía tenga su propio id, en vez de la clave
+  `(user_id, family_group_id)`, y que la regla de visibilidad recorra todos los intervalos.
 - **Qué pasa cuando un recurrente o una cuota no se pueden generar.** Los casos previstos, sin
   período confirmado o con una cotización por confirmar, quedan como pendiente
   ([reglas de dominio § 8](reglas-de-dominio.md#8-movimientos-recurrentes-la-excepción-a-la-confirmación)).

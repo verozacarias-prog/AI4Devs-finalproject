@@ -14,6 +14,7 @@ erDiagram
     APP_USER ||--o{ TRANSACTION : records
     APP_USER ||--o{ USER_GROUP : "belongs to"
     FAMILY_GROUP ||--o{ USER_GROUP : includes
+    FAMILY_GROUP ||--o{ GROUP_INVITATION : "is joined through"
     APP_USER ||--o{ BUDGET_PERIOD : "owns (individual)"
     FAMILY_GROUP ||--o{ BUDGET_PERIOD : "owns (family)"
     BUDGET_PERIOD ||--o{ BUDGET : groups
@@ -62,6 +63,7 @@ mercado que usan los consejos, y la tercera cuenta intentos por teléfono o IP, 
 erDiagram
     APP_USER ||--o{ USER_GROUP : "belongs to"
     FAMILY_GROUP ||--o{ USER_GROUP : includes
+    FAMILY_GROUP ||--o{ GROUP_INVITATION : "is joined through"
     APP_USER ||--o| FINANCIAL_PROFILE : "describes"
     APP_USER ||--o{ LOGIN_CODE : "requests"
     APP_USER ||--o{ SESSION : "opens"
@@ -99,6 +101,18 @@ erDiagram
         string role "NOT NULL, CHECK IN ('owner','member'), DEFAULT 'member'"
         timestamptz joined_at "NOT NULL, DEFAULT now()"
         timestamptz left_at "NULLABLE — set when the member leaves; the row is never deleted"
+    }
+
+    GROUP_INVITATION {
+        uuid id PK
+        uuid family_group_id FK "NOT NULL"
+        uuid created_by FK "NOT NULL — the owner who issued it"
+        string code_hash "NOT NULL, UNIQUE — HMAC-SHA256 with a server key, never the code itself"
+        timestamptz expires_at "NOT NULL — created_at + the configured validity, 7 days by default"
+        uuid used_by FK "NULLABLE — the user who joined with it"
+        timestamptz used_at "NULLABLE — set together with used_by"
+        timestamptz revoked_at "NULLABLE — set when the owner revokes it"
+        timestamptz created_at "DEFAULT now()"
     }
 
     FINANCIAL_PROFILE {
@@ -145,7 +159,7 @@ erDiagram
         uuid id PK
         string key_type "NOT NULL, CHECK IN ('phone','ip')"
         string key_hash "NOT NULL — HMAC-SHA256 of the E.164 phone or of the IP, with a server key"
-        string event "NOT NULL, CHECK IN ('code_request','token_failure')"
+        string event "NOT NULL, CHECK IN ('code_request','token_failure','invite_failure')"
         timestamptz created_at "NOT NULL, DEFAULT now() — purged after 24 hours"
     }
 
@@ -485,6 +499,16 @@ Un grupo es una familia o una actividad del usuario, como un consultorio, que es
 **Restricciones:**
 
 - En `USER_GROUP`, un grupo tiene como mucho un dueño vigente: índice único parcial sobre `family_group_id` donde `role = 'owner'` y `left_at` es nulo. `left_at`, si está, es posterior a `joined_at` (`CHECK`). La regla de salida y de visibilidad está en [reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad).
+- En `USER_GROUP`, la clave primaria `(user_id, family_group_id)` admite una sola fila por usuario y grupo, así que quien vuelve a un grupo del que salió reabre su fila en vez de crear otra: `left_at` vuelve a nulo y `joined_at` pasa al día de la vuelta ([reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad)).
+- Que un usuario no tenga dos grupos vigentes con el mismo nombre, sin distinguir mayúsculas, no se puede expresar con un índice, porque el nombre está en `FAMILY_GROUP` y la membresía en `USER_GROUP`: lo valida la aplicación dentro de la misma transacción que crea el grupo, lo renombra o suma un miembro ([reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad)).
+
+##### GROUP_INVITATION
+
+Invitación de un solo uso para sumarse a un grupo. El dueño la genera y comparte el código él mismo; Platita no le escribe al invitado. Se guarda el HMAC y no el código, igual que en `LOGIN_CODE`, para que una filtración de la tabla no permita entrar a un grupo. Se acepta solo por WhatsApp, que es lo que verifica el número del invitado ([reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad)).
+
+**Restricciones:**
+
+- En `GROUP_INVITATION`, `used_by` y `used_at` van los dos nulos o los dos informados, una invitación usada no puede estar revocada y `expires_at` es posterior a `created_at` (`CHECK`). `UNIQUE (code_hash)`. Usarla es fijar `used_by` y `used_at` en la misma transacción que crea la fila de `USER_GROUP`, con la condición de que siga sin usar, sin revocar y sin vencer, así dos aceptaciones simultáneas no suman dos miembros con el mismo código.
 
 ##### FINANCIAL_PROFILE
 
@@ -508,7 +532,7 @@ Sesión del dashboard, creada al canjear un código de login. El token viaja en 
 
 ##### AUTH_THROTTLE
 
-Registro de pedidos de código y canjes fallidos, del que salen los límites del login. Guarda un HMAC del teléfono o de la IP, nunca el valor, y no depende de que el número sea de un usuario: si dependiera, el límite delataría qué números usan Platita ([ADR 0017](adr/0017-limites-del-login-y-codigos-con-proposito.md)). Las filas se borran a las 24 horas.
+Registro de pedidos de código y canjes fallidos, del que salen los límites del login, y de los códigos de invitación fallidos (`invite_failure`), del que sale el límite para probarlos. Guarda un HMAC del teléfono o de la IP, nunca el valor, y no depende de que el número sea de un usuario: si dependiera, el límite delataría qué números usan Platita ([ADR 0017](adr/0017-limites-del-login-y-codigos-con-proposito.md)). Las filas se borran a las 24 horas.
 
 **Restricciones:**
 

@@ -151,9 +151,9 @@ La regla de negocio es que, para un período mensual, tiene que estar en `confir
 **El primer período nace en el alta.** Al completar la parte obligatoria del alta (§ 11), el
 sistema crea el primer período individual del usuario, ya confirmado: mensual, en su moneda
 primaria, con ingreso estimado 0 y sin topes, desde el día del alta hasta el último día de ese
-mes. Es la única excepción a que un período se confirme antes de arrancar, porque ya arrancó. Así
-el primer gasto, incluido el que el usuario escribió antes de darse de alta, tiene dónde
-imputarse. Un período sin topes registra el gastado igual, pero no dispara alertas. El mensaje
+mes. Es una de las dos excepciones a que un período se confirme antes de arrancar, porque ya
+arrancó; la otra es el primer período de un grupo, que nace igual al crearlo (§ 10). Así el
+primer gasto, incluido el que el usuario escribió antes de darse de alta, tiene dónde imputarse. Un período sin topes registra el gastado igual, pero no dispara alertas. El mensaje
 que cierra el alta le avisa que ese primer período existe y que puede ponerle ingreso y topes
 desde el dashboard.
 
@@ -184,9 +184,8 @@ inflación (could-have) reemplazará a la copia cuando exista, sin cambiar el re
   recordatorio incluye el enlace para hacerlo.
 - **Sin confirmar al empezar.** Si un período empieza sin confirmar, lo que caiga en él queda
   pendiente como siempre. La pregunta de ese pendiente ofrece confirmar el borrador en el mismo
-  mensaje, con su resumen, y una sola respuesta confirma las dos cosas. Si no hay borrador, como en
-  un grupo familiar que todavía no tiene ningún período, la pregunta manda al dashboard para
-  armarlo.
+  mensaje, con su resumen, y una sola respuesta confirma las dos cosas. Si no hay borrador, la pregunta
+  manda al dashboard para armarlo.
 
 **Alertas de presupuesto.** Cuando el gastado de una categoría con tope pasa el 80% y cuando pasa
 el 100% del tope, el asistente manda una alerta proactiva ([HU5](05-historias-de-usuario.md)).
@@ -470,6 +469,55 @@ vale igual para los dos. No hay un campo que diga de qué tipo es: el asistente 
 nombran cada presupuesto por el nombre del grupo, así que el usuario nunca ve la palabra
 "familiar" en un grupo que no lo es. En la base, la tabla sigue siendo `FAMILY_GROUP`.
 
+**Crear un grupo.** Cualquier usuario con el alta completa crea un grupo dándole un nombre, por
+WhatsApp ("creá una actividad que se llame Cocina de Carla") o desde el dashboard. Queda como su
+dueño y único miembro. Una actividad es un grupo al que nadie fue invitado: en la base no hay
+diferencia.
+
+**El primer período nace con el grupo.** Al crearlo, el sistema crea su primer período, ya
+confirmado, con la misma regla que el primer período del alta (§ 3): mensual, en la moneda
+primaria del dueño, con ingreso estimado 0 y sin topes, desde el día de creación hasta el último
+día de ese mes. Así la primera venta de una actividad o el primer gasto de una familia tienen
+dónde imputarse sin armar antes un presupuesto en el dashboard.
+
+**El nombre no se repite entre los grupos de un usuario.** El asistente reconoce un presupuesto
+por el nombre de su grupo, igual que una cuenta por su nombre (§ 2), así que dos grupos "Casa"
+serían ambiguos. Al crear un grupo o al sumarse a uno, su nombre no puede coincidir, sin
+distinguir mayúsculas, con el de otro grupo del que el usuario sea miembro vigente. Si coincide,
+el dueño lo renombra desde el dashboard, respetando la misma regla para todos sus miembros.
+
+**Invitar.** Solo el dueño vigente invita, desde el dashboard o por WhatsApp. Platita no le
+escribe a la persona invitada: le devuelve al dueño un enlace de WhatsApp con el texto ya escrito,
+como "Unirme a Casa: K7P2QX", y el dueño se lo manda por donde quiera. Así el primer mensaje
+siempre sale del invitado, Platita no escribe a un número que no dio su consentimiento (§ 11) y
+nadie puede saber por una invitación si un número usa Platita. Cada invitación es para una
+persona: un código de un solo uso que vence a los 7 días, un plazo que es configuración. Se guarda
+solo su HMAC, como los códigos de login, así que el dueño lo ve una sola vez. Desde el dashboard
+ve las invitaciones abiertas y puede revocarlas. Al invitar se le advierte que quien entre va a
+ver todo el historial del grupo, porque los miembros ven todos sus períodos (ver abajo).
+
+**Aceptar.** El invitado le escribe a Platita el mensaje con el código. Si todavía no es usuario,
+primero hace la parte obligatoria del alta, y el mensaje con el código se retoma al terminarla,
+como el primer gasto (§ 11). Antes de sumarlo, el asistente le muestra el nombre del grupo y el
+de su dueño y le pide que confirme, porque lo que impute al grupo lo van a ver los demás
+miembros. Confirmar crea su membresía con `role = 'member'` y consume el código, en la misma
+transacción. Si el dueño dio permiso para avisos, recibe un mensaje de que el invitado se sumó.
+Aceptar solo se hace por WhatsApp, porque es lo que verifica que el número es del invitado.
+
+**Volver a un grupo reabre la membresía.** Si quien acepta una invitación ya fue miembro de ese
+grupo y salió, no se crea una membresía nueva: se reabre la que tenía, con `left_at` en nulo,
+`joined_at` en el día en que vuelve y `role = 'member'`, aunque antes fuera el dueño. Mientras es
+miembro vigente ve todos los períodos del grupo, como cualquier miembro. Lo que se pierde es el
+intervalo anterior: si vuelve a salir, conserva la lectura solo de los períodos de su último
+intervalo. Guardar cada intervalo por separado queda como mejora
+([hoja de ruta](hoja-de-ruta.md#decisiones-abiertas)).
+
+**Un código que no sirve no dice por qué.** Un código vencido, usado, revocado o inexistente
+recibe la misma respuesta. Los intentos fallidos se cuentan por número, con el mismo mecanismo
+que los canjes fallidos del login
+([ADR 0017](adr/0017-limites-del-login-y-codigos-con-proposito.md)), para que nadie pueda probar
+códigos al azar.
+
 **El retiro del titular.** Si los cobros de una actividad van al presupuesto del grupo, el
 presupuesto individual se queda sin esos ingresos. Lo que la educación financiera llama
 "pagarse un sueldo" se registra como un retiro: dos movimientos por el mismo monto, en la misma
@@ -500,7 +548,7 @@ presupuesto del mismo usuario, ni los retiros ni los aportes se cuentan, porque 
 cambió de presupuesto y no salió ni entró.
 
 **Quién administra.** Cada grupo familiar tiene un dueño (`role = 'owner'` en `USER_GROUP`), que
-es quien administra sus miembros: agrega y saca usuarios del grupo. El resto de los miembros
+es quien administra sus miembros: invita y saca usuarios del grupo. El resto de los miembros
 tiene `role = 'member'`.
 
 **El dueño también puede salir.** Al hacerlo elige a otro miembro vigente del grupo como nuevo
@@ -591,7 +639,8 @@ primer período de presupuesto, ya confirmado (§ 3).
 
 **El primer mensaje no se pierde.** Si lo primero que escribió fue un gasto, queda guardado y,
 al terminar la parte obligatoria, se retoma como un pendiente normal (§ 5), sin pedirle que lo
-repita. El período que propone es ese primer período.
+repita. El período que propone es ese primer período. Lo mismo vale para un mensaje con el código
+de una invitación a un grupo: se retoma al terminar el alta (§ 10).
 
 **La configuración y el perfil son opcionales.** Al terminar la parte obligatoria, el asistente
 ofrece seguir, o dejarlo para otro día:
@@ -635,6 +684,7 @@ Las que hacen falta son:
 | Recurrente o cuota por confirmar | Utilidad | Cuando un recurrente o una cuota de tarjeta no encuentra período confirmado, necesita que el usuario confirme la cotización, o es de monto variable y su monto no está confirmado. Las ocurrencias variables de una tarjeta no usan esta plantilla: se preguntan en la conciliación |
 | Conciliación del resumen | Utilidad | Unos días después del cierre de un resumen de tarjeta: pide los montos de las suscripciones variables sin confirmar, en una tarjeta en otra moneda cómo se va a pagar y la cotización del resumen, y el total del banco. Antes del ajuste pregunta por compras sin cargar, y recomienda revisar los consumos |
 | Saldos del mes | Utilidad | Al terminar cada mes de presupuesto: muestra el saldo de cada cuenta y pregunta si coincide con el real |
+| Miembro nuevo | Utilidad | Cuando un invitado acepta sumarse a un grupo: le avisa al dueño |
 
 Ver también: [HU6](05-historias-de-usuario.md) · [APP_USER y FINANCIAL_PROFILE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [OUTBOUND_MESSAGE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
 

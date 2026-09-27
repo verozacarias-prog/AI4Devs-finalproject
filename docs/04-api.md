@@ -359,6 +359,61 @@ responses:
     description: No valid session
 ```
 
+### `GET /family-groups`, `POST /family-groups`, `POST /family-groups/{family_group_id}/invitations` y `DELETE /family-groups/{family_group_id}/invitations/{invitation_id}`
+
+Crear un grupo, sea una familia o una actividad, e invitar miembros. Aceptar una invitación no
+tiene endpoint: se hace solo por WhatsApp, porque es lo que verifica que el número es del
+invitado. La regla completa está en
+[reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad).
+
+- `GET /family-groups` lista los grupos de los que el usuario es miembro vigente, con su rol y,
+  para el dueño, las invitaciones abiertas, sin el código.
+- `POST /family-groups` crea el grupo con el usuario como dueño y su primer período, ya
+  confirmado. Un nombre igual, sin distinguir mayúsculas, al de otro grupo vigente del usuario
+  responde `409`.
+- `POST /family-groups/{family_group_id}/invitations` genera una invitación y devuelve el código
+  y el enlace de WhatsApp una sola vez: la base guarda solo su HMAC. Un miembro que no es el dueño
+  recibe `403`, porque el grupo existe para él.
+- `DELETE /family-groups/{family_group_id}/invitations/{invitation_id}` revoca una invitación
+  abierta y responde `204`. Revocar una ya usada responde `409`.
+
+Un grupo del que el usuario no es miembro vigente responde `404`.
+
+```yaml
+# POST /family-groups
+requestBody:
+  content:
+    application/json:
+      example:
+        name: "Cocina de Carla"
+responses:
+  201:
+    content:
+      application/json:
+        example:
+          id: "fg1..."
+          name: "Cocina de Carla"
+          role: "owner"
+          first_budget_period_id: "bp9..."   # confirmed, from today to the end of the month
+  409:
+    description: The user already belongs to a group with that name
+---
+# POST /family-groups/{family_group_id}/invitations
+responses:
+  201:
+    content:
+      application/json:
+        example:
+          id: "inv1..."
+          code: "K7P2QX"                  # shown only once; only its HMAC is stored
+          whatsapp_link: "https://wa.me/<platita-number>?text=Unirme%20a%20Casa%3A%20K7P2QX"
+          expires_at: "2026-10-04T15:00:00-03:00"
+  403:
+    description: The user is a member but not the owner of the group
+  404:
+    description: The user is not a current member of the group
+```
+
 ### `GET /family-groups/{family_group_id}/export`
 
 Descarga la exportación de un grupo familiar en Excel, con las hojas "Movimientos" y
