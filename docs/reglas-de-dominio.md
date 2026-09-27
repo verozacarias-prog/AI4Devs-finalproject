@@ -28,6 +28,11 @@ Del alcance técnico del Ticket 1:
 - Resolución de cuenta por nombre si se menciona — **sin fallback ni cuenta por defecto**: si no se menciona, se pregunta.
 - Mensaje de confirmación que lista también los valores resueltos por defecto (fecha, moneda, categoría) y acepta una corrección posterior sobre cualquiera de ellos.
 
+**Un movimiento, un presupuesto.** Todo gasto o ingreso se imputa entero a un solo período,
+aunque el usuario lo use para más de un fin, como un celular que sirve para la actividad y para lo
+personal. El asistente no lo divide ni propone dividirlo: el usuario elige a qué presupuesto va.
+Una regla recurrente sigue el mismo criterio, con un solo dueño de presupuesto (§ 8).
+
 **Gasto, ingreso o transferencia lo clasifica el modelo, y se ve en la confirmación.** Un mensaje
 como "le pasé 300 lucas a MP" puede ser una transferencia entre cuentas propias o un pago a otra
 persona, y "le pasé 30 a Juan", un préstamo (§ 16) o un pago. El modelo elige el tipo al
