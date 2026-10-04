@@ -28,6 +28,13 @@ Del alcance técnico del Ticket 1:
 - Resolución de cuenta por nombre si se menciona — **sin fallback ni cuenta por defecto**: si no se menciona, se pregunta.
 - Mensaje de confirmación que lista también los valores resueltos por defecto (fecha, moneda, categoría) y acepta una corrección posterior sobre cualquiera de ellos.
 
+**Hoy es el día en que el usuario escribió.** La fecha por defecto de un movimiento es el día en
+que el usuario mandó el mensaje, en su zona horaria, no el día en que Platita lo procesa. Al
+usuario no le importa cuándo se procesó. Si el mensaje se interpreta al día siguiente, porque
+superó una cuota (§ 12) o porque el modelo estuvo caído, la venta de las 22:40 del 31 de octubre
+queda con fecha 31 de octubre. Lo mismo vale para "ayer" o "el lunes": se cuentan desde el día
+en que se escribió.
+
 **La moneda sale de la cuenta nombrada.** "Me pagaron 2400 en Payoneer", con una cuenta Payoneer
 en dólares, son USD 2.400, no $2.400 convertidos a dólares. Si el mensaje nombra una cuenta y no
 una moneda, la moneda es la de esa cuenta; si no nombra ninguna cuenta, es la primaria del
@@ -586,7 +593,11 @@ nadie puede saber por una invitación si un número usa Platita. Cada invitació
 persona: un código de un solo uso que vence a los 7 días, un plazo que es configuración. Se guarda
 solo su HMAC, como los códigos de login, así que el dueño lo ve una sola vez. Desde el dashboard
 ve las invitaciones abiertas y puede revocarlas. Al invitar se le advierte que quien entre va a
-ver todo el historial del grupo, porque los miembros ven todos sus períodos (ver abajo).
+ver todo el historial del grupo, porque los miembros ven todos sus períodos (ver abajo). En ese
+mismo momento se le avisa que, si la persona todavía no usa Platita, su número tiene que estar
+habilitado (§ 11), y que tramitar esa habilitación con quien administra Platita le toca a él,
+el dueño. El aviso trae el contacto del administrador, que es configuración. Platita no pide
+ni guarda el número del invitado.
 
 **Aceptar.** El invitado le escribe a Platita el mensaje con el código. Si todavía no es usuario,
 primero hace la parte obligatoria del alta, y el mensaje con el código se retoma al terminarla,
@@ -719,8 +730,9 @@ Ver también: [FAMILY_GROUP / USER_GROUP en 3.2](03-modelo-de-datos.md#family_gr
 
 **Solo escriben los números habilitados.** Platita no le responde a cualquiera: quien opera
 Platita habilita antes cada número, con un comando de operación. Si escribe un número que no es
-de un usuario y no está habilitado, recibe un texto fijo que le dice que no está habilitado, sin
-procesar el mensaje con IA, y no empieza ningún alta. Ese texto sale como mucho una vez cada 24
+de un usuario y no está habilitado, recibe un texto fijo que le dice que no está habilitado y
+que, si alguien lo invitó, esa persona tiene que tramitar la habilitación, sin procesar el
+mensaje con IA, y no empieza ningún alta. Ese texto sale como mucho una vez cada 24
 horas por número, y el contenido de su mensaje se borra en cuanto se procesa. De cada número
 habilitado se guarda solo un HMAC, no el número, así no hay teléfonos guardados de personas que
 todavía no aceptaron los términos. Un invitado a un grupo también tiene que estar habilitado
@@ -842,7 +854,8 @@ sin desplegar.
   día siguiente. El asistente responde con un texto fijo, sin otra llamada al LLM, que avisa que
   lo va a procesar mañana. Perder un gasto que el usuario escribió sería peor que demorarlo. El
   mensaje demorado no traba a los que el usuario mande después: una consulta del mismo día se
-  responde igual. Los demorados se procesan al día siguiente en el orden en que llegaron.
+  responde igual. Los demorados se procesan al día siguiente en el orden en que llegaron, y cada
+  movimiento conserva la fecha del día en que se escribió (§ 1).
 - **Consultas y consejos:** el asistente responde con un texto fijo, sin otra llamada al LLM, que
   avisa que llegó al límite del día, y ofrece el enlace al dashboard. Registrar movimientos sigue
   funcionando.
@@ -916,7 +929,10 @@ tiene cuotas en curso o compras que todavía no pagó. Se puede responder "nada"
 - **Una compra en cuotas se carga diciendo en qué cuota va.** Con "el celular, cuota 5 de 12, de
   $90.000", Platita crea la compra como cualquier compra con tarjeta, pero arranca en la cuota
   5: genera de la 5 a la 12 y no registra las cuatro que ya se pagaron antes del alta. Los
-  mensajes siguen diciendo "cuota 5 de 12", y lo comprometido son las cuotas que quedan.
+  mensajes siguen diciendo "cuota 5 de 12", y lo comprometido son las cuotas que quedan. La
+  cuota que el usuario nombra es la del próximo vencimiento de la tarjeta, la primera que
+  todavía no pagó, y la confirmación la muestra con esa fecha, para que la corrija si quiso
+  decir otra.
 - **Una compra del resumen que todavía no venció** se carga como una compra en un pago, que
   entra en ese resumen. Al dar de alta la tarjeta se crea también ese resumen, aunque ya haya
   cerrado.
@@ -1254,11 +1270,28 @@ dashboard no cambia: muestra un período por vez.
 - **El usuario no es un parámetro.** Cada función filtra por el usuario del mensaje. Los períodos
   familiares que devuelve son los que ese usuario puede leer (§ 10).
 - **Nada escribe.** Registrar, corregir o borrar siguen por sus flujos, con confirmación.
-- **Las cifras salen de las funciones.** El modelo tiene la instrucción de no dar ningún número
-  que no le haya devuelto una función. Si la respuesta necesita una cuenta que ninguna función
-  hace, la función la tiene que hacer: el modelo no suma ni resta.
 - **Topes por pregunta.** Como mucho 5 llamadas a funciones y 20 movimientos por lista. Los dos
   son configuración.
+
+**Los datos salen de las funciones; las cuentas las hace el modelo.** El modelo tiene la
+instrucción, en su prompt de sistema, de no inventar ningún dato: un saldo, un total, un
+movimiento, un ingreso o una cotización salen siempre de una función. Lo que sí hace es calcular
+con esos datos y con los montos que el usuario escribió en su pregunta: una proporción, un
+promedio, una diferencia o una variación entre dos meses. Nada se lo impide, porque es la
+ventaja de que responda un modelo. Si para la cuenta le falta un dato del usuario, como cuánto
+cobra, lo pide a una función. Dos límites:
+
+- Un total que una función ya devuelve no lo arma el modelo sumando una lista de movimientos:
+  pide el total.
+- La respuesta muestra los datos de los que sale cada cuenta, como "$140.000 sobre $505.748,51
+  es el 27,7%", para que el usuario la pueda seguir.
+
+**Una cifra parcial se avisa.** Si el usuario tiene mensajes de registro demorados hasta el día
+siguiente (§ 12) o pendientes sin confirmar (§ 5), lo que escribió y todavía no se registró no
+está en ninguna cifra. Cuando una respuesta usa datos del usuario, el código le agrega al final
+una línea fija que lo dice, como "Tenés 3 mensajes que se procesan mañana y 1 movimiento sin
+confirmar, que no están en esta cifra". La arma el código, no el modelo, para que no dependa de
+que el modelo se acuerde. Una respuesta que solo da un dato de mercado no la lleva.
 
 **Lo que no se puede responder.** Si la pregunta no se puede armar con las funciones, o el
 resultado no entra en un mensaje, el asistente lo dice con un texto fijo y manda el enlace al
@@ -1306,8 +1339,9 @@ el tipo de un movimiento en la confirmación (§ 1).
 2. **Los criterios** con que se evalúa, como qué parte del ingreso se lleva la cuota, si el bien
    dura más que la deuda o si hay un fondo de emergencia.
 3. **Los datos del usuario aplicados a esos criterios, como cálculo:** "la cuota sería el 28% de
-   tu ingreso promedio de los últimos 6 meses". Las cifras salen de las funciones de § 17, como en
-   cualquier consulta, y van sin adjetivo: nada de "es mucho" ni "te alcanza". Con ingresos
+   tu ingreso promedio de los últimos 6 meses". Los datos salen de las funciones de § 17, como en
+   cualquier consulta, y la cuenta la hace el modelo. Las cifras van sin adjetivo: nada de "es
+   mucho" ni "te alcanza". Con ingresos
    irregulares, el promedio es de varios meses, no de uno.
 4. **Un cierre fijo:** la decisión es del usuario, y la respuesta es educación financiera, no una
    recomendación. Es lo mismo que dicen los [términos](terminos-y-privacidad.md).

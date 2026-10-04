@@ -54,7 +54,9 @@ prompts.
    rango de fechas o el saldo de una cuenta. El modelo decide cuáles llamar y con qué filtros, y
    el caso de uso las ejecuta por los repositorios. El usuario nunca es un parámetro: cada función
    filtra por el usuario del mensaje en el código, así que el modelo no puede pedir datos de otro.
-   Ninguna función escribe. Lo que el modelo ve de los datos del usuario es solo lo que devolvieron
+   Ninguna función escribe. Los datos salen siempre de una función: el modelo no inventa un
+   saldo ni un total. Las cuentas sobre esos datos, como una proporción o la variación entre dos
+   meses, las hace el modelo. Lo que el modelo ve de los datos del usuario es solo lo que devolvieron
    las funciones que pidió para esa pregunta, según el punto 1. Las funciones y sus topes están en
    las reglas de dominio, § 17.
 7. **La misma regla vale para el proveedor de embeddings.** Recibe el texto de la pregunta, sin
@@ -138,7 +140,7 @@ prompts.
   verificar. Queda como mejora: es agregar la comparación, sin rehacer nada.
 - **Mandar un resumen del mes del usuario como contexto de cada pregunta.** Es simple, pero envía
   más datos de los que la pregunta necesita, solo sabe lo que entra en el resumen, y deja que el
-  modelo haga las cuentas, que es donde más se equivoca.
+  modelo sume él mismo los movimientos, en vez de recibir el total ya calculado.
 
 ---
 

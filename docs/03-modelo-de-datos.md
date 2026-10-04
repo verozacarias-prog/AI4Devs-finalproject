@@ -459,7 +459,7 @@ erDiagram
         uuid quoted_outbound_message_id FK "NULLABLE — the outbound message the user quoted; FK (quoted_outbound_message_id, user_id) to OUTBOUND_MESSAGE (id, user_id)"
         jsonb payload "NULLABLE — message as received, never logged unmasked; null once purged"
         timestamptz purged_at "NULLABLE — when the content was removed after the retention period"
-        timestamptz sent_at "NOT NULL — provider timestamp, orders the messages of one sender; on web, when the server received it"
+        timestamptz sent_at "NOT NULL — provider timestamp, orders the messages of one sender and is the 'today' of the movement it registers; on web, when the server received it"
         string status "NOT NULL, CHECK IN ('pending','processing','processed','failed'), DEFAULT 'pending'"
         int attempts "NOT NULL, DEFAULT 0"
         timestamptz next_attempt_at "NOT NULL, DEFAULT now()"
