@@ -386,7 +386,7 @@ erDiagram
         int execution_day "NULLABLE — 1 to 7 (Monday to Sunday) when weekly, 1 to 31 when monthly, null when yearly"
         date next_execution "NOT NULL — date of the next occurrence; for yearly rules it is the only source of the date"
         int occurrences "NULLABLE, CHECK (occurrences >= 1) — total occurrences, e.g. the number of installments; null when it has no end"
-        int generated_occurrences "NOT NULL, DEFAULT 0 — advanced together with next_execution; never above occurrences"
+        int generated_occurrences "NOT NULL, DEFAULT 0 — advanced together with next_execution; never above occurrences; starts above 0 for a card purchase whose first installments were paid before the card was added"
         boolean active "DEFAULT TRUE — false pauses it"
         timestamptz created_at "DEFAULT now()"
         timestamptz updated_at "NULLABLE — last change; null while never modified; set by trigger"
@@ -717,7 +717,7 @@ Regla que el usuario configura una vez (ej. alquiler, una suscripción, el sueld
 
 - En `RECURRING_RULE`, exactamente uno de `budget_user_id` / `budget_family_group_id` debe ser no nulo (`CHECK`), por el mismo criterio que en `BUDGET_PERIOD`. `amount > 0` (`CHECK`), igual que en `TRANSACTION`: el monto de la regla se copia a cada movimiento que genera, así que una regla con monto cero o negativo no podría generar ninguno.
 - En `RECURRING_RULE`, `budget_user_id` es nulo o igual a `user_id` (`CHECK`): un presupuesto individual solo puede ser el propio.
-- En `RECURRING_RULE`, `generated_occurrences` va de 0 a `occurrences` cuando `occurrences` está informado (`CHECK`). El motor lo avanza en la misma transacción que genera la ocurrencia y avanza `next_execution`; al llegar a `occurrences`, la regla deja de generar. Una regla borrada o pausada tampoco genera.
+- En `RECURRING_RULE`, `generated_occurrences` va de 0 a `occurrences` cuando `occurrences` está informado (`CHECK`). El motor lo avanza en la misma transacción que genera la ocurrencia y avanza `next_execution`; al llegar a `occurrences`, la regla deja de generar. Una regla borrada o pausada tampoco genera. Una compra con tarjeta que ya tenía cuotas pagadas cuando se dio de alta la tarjeta nace con `generated_occurrences` en la cantidad de cuotas ya pagadas: "cuota 5 de 12" es `occurrences = 12` y `generated_occurrences = 4`. Esas cuotas no tienen movimiento en Platita ([reglas de dominio § 13](reglas-de-dominio.md#13-tarjetas-de-crédito-y-transferencias)).
 - En `RECURRING_RULE`, una regla con fin es de monto fijo: `amount_varies` solo puede ser verdadero si `occurrences` es nulo (`CHECK`). `amount_confirmed_until` solo puede estar informado si `amount_varies` es verdadero (`CHECK`).
 - En `RECURRING_RULE`, `execution_day` depende de `frequency` (`CHECK`): de 1 a 7 si es `weekly`, de 1 a 31 si es `monthly`, y nulo si es `yearly`, porque un día solo no define una fecha anual. En una regla anual, la fecha la da `next_execution`, que el motor avanza un año por vez. Qué pasa con los días 29 a 31 en meses más cortos está en [reglas de dominio § 8](reglas-de-dominio.md#8-movimientos-recurrentes-la-excepción-a-la-confirmación).
 

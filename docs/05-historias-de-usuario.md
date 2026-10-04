@@ -16,6 +16,7 @@
 - El dashboard lista mis cuentas con su saldo actual, agrupadas por moneda. Las cuentas de inversión van aparte, con lo aportado neto, que no suma en ningún total.
 - Tengo una cuenta de inversión por moneda. Comprar dólares adentro del broker lo registro como una transferencia entre las dos.
 - Un plazo fijo es una cuenta más: al vencer, su interés entra como rendimiento.
+- Al dar de alta una tarjeta, Platita me pregunta por las cuotas en curso y las compras que todavía no pagué. Las cargo diciendo en qué cuota voy, como "cuota 5 de 12", y solo se registran las que faltan.
 - Puedo editar los datos de una cuenta sin perder el historial de movimientos asociados.
 
 *Prioridad:* Alta

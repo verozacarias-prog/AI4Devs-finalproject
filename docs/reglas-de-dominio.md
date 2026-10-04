@@ -81,7 +81,9 @@ calcula igual, contando hasta ese día.
 dio de alta, en la zona horaria del usuario. Un movimiento o una transferencia no puede tener
 fecha anterior a ese día, y la base lo rechaza. Si el usuario carga un gasto anterior, el
 asistente le explica que la cuenta registra desde su alta y que ese gasto ya está reflejado en
-el saldo inicial.
+el saldo inicial. En una tarjeta de crédito la fecha que cuenta es la del vencimiento, no la de
+la compra: lo que se compró antes del alta y todavía no venció no está en el saldo inicial, y
+se carga como dice § 13, en "Lo que la tarjeta ya debía al darla de alta".
 
 **Una vez por mes, el saldo se contrasta con el real.** Por más cuidado que ponga el usuario, el
 saldo de Platita se separa del real: gastos que no cargó, comisiones, rendimientos, efectivo
@@ -158,7 +160,7 @@ solo recibe aportes y retiros (ver abajo).
 sumar cuentas cuando las necesite, por WhatsApp: "agregá mi Visa del Santander" o "abrí una cuenta
 en Balanz en dólares". El asistente confirma lo mismo que en el alta —nombre, tipo, moneda y saldo
 inicial, que es el saldo de ese día— y, en una tarjeta de crédito, el día de cierre y el de
-vencimiento (§ 13). Nada se registra en la cuenta hasta que el usuario lo confirma, y el nombre
+vencimiento, y pregunta por lo que la tarjeta ya debe (§ 13). Nada se registra en la cuenta hasta que el usuario lo confirma, y el nombre
 sigue la regla de abajo. Si el usuario nombra una cuenta que no existe al registrar un movimiento,
 el asistente no la crea sola: pregunta si quiere darla de alta, y el movimiento queda pendiente
 mientras tanto (§ 5).
@@ -739,7 +741,8 @@ versión de los términos.
    (por ejemplo, Brasil o México) se le pide que elija.
 3. Permiso para recibir avisos (ver abajo).
 4. Al menos una cuenta, con la opción de dar de alta varias en el mismo mensaje. Por cada una se
-   confirma tipo, moneda y saldo inicial, que es el saldo de ese día.
+   confirma tipo, moneda y saldo inicial, que es el saldo de ese día. Si es una tarjeta de
+   crédito, se pregunta además por sus cuotas en curso y sus compras sin pagar (§ 13).
 
 Hasta completarla, el usuario no puede registrar movimientos. Al completarla, el sistema crea su
 primer período de presupuesto, ya confirmado (§ 3).
@@ -904,6 +907,28 @@ y su monto no quedó confirmado al armar el presupuesto, la ocurrencia también 
 pero el cierre no avisa: se pregunta en la conciliación, donde el usuario tiene el resumen con el
 precio real. Una regla genera como mucho un movimiento, o un pendiente, por ocurrencia,
 y una regla borrada no genera más (§ 2).
+
+**Lo que la tarjeta ya debía al darla de alta.** Nadie da de alta una tarjeta vacía: casi
+siempre tiene cuotas en curso y compras en un resumen que todavía no venció. Al dar de alta una
+tarjeta, sea en el alta del usuario (§ 11) o después (§ 2), el asistente pregunta una vez si
+tiene cuotas en curso o compras que todavía no pagó. Se puede responder "nada".
+
+- **Una compra en cuotas se carga diciendo en qué cuota va.** Con "el celular, cuota 5 de 12, de
+  $90.000", Platita crea la compra como cualquier compra con tarjeta, pero arranca en la cuota
+  5: genera de la 5 a la 12 y no registra las cuatro que ya se pagaron antes del alta. Los
+  mensajes siguen diciendo "cuota 5 de 12", y lo comprometido son las cuotas que quedan.
+- **Una compra del resumen que todavía no venció** se carga como una compra en un pago, que
+  entra en ese resumen. Al dar de alta la tarjeta se crea también ese resumen, aunque ya haya
+  cerrado.
+- **Se confirma como cualquier compra:** la categoría, el monto de la cuota y a qué presupuesto
+  va. Lo que cambia es solo desde qué cuota se genera.
+- **Se puede cargar después.** Si el usuario respondió "nada" y más tarde se acuerda de una
+  compra, la carga igual, mientras le queden cuotas por vencer. Una cuota que ya venció antes
+  del alta no se registra: esa sí está en el saldo inicial, o ya se pagó.
+
+Sin esto, esas compras aparecerían en cada conciliación como una diferencia, terminarían en
+"Intereses, impuestos y cargos" durante meses, y lo comprometido de la tarjeta mostraría menos
+de lo que el usuario debe.
 
 **Resúmenes.** Las fechas de cierre y vencimiento de cada resumen se generan a partir de los días
 fijos de la tarjeta, y el usuario puede corregirlas para un resumen puntual, porque los bancos a
