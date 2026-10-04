@@ -12,10 +12,14 @@ distintos es la opción por defecto de la industria, pero implica operar dos bas
 
 ## Decisión
 
-PostgreSQL como único almacén, con la extensión pgvector para los embeddings de
-`ADVICE_DOCUMENT`. Es una decisión de arranque, no definitiva: el acceso a la base vectorial se
-aísla detrás de un puerto propio, de forma que el motor real sea un detalle de infraestructura
-reemplazable.
+PostgreSQL como único almacén, con la extensión pgvector para los embeddings de los fragmentos
+de la base de conocimiento (`ADVICE_CHUNK`). Es una decisión de arranque, no definitiva: el
+acceso a la base vectorial se aísla detrás de un puerto propio, de forma que el motor real sea
+un detalle de infraestructura reemplazable.
+
+La extensión se habilita en la primera migración. Las tablas de la base de conocimiento se crean
+después, cuando se elija el modelo de embeddings, porque la columna del vector necesita su
+dimensión ([ADR 0019](0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md)).
 
 ## Consecuencias
 

@@ -45,7 +45,101 @@ responses:
     description: Missing or invalid signature; nothing is stored
 ```
 
+Cuando el mensaje cita otro (`context.id`), el caso de uso que lo guarda busca el mensaje de salida con ese identificador de Meta y deja su id en `quoted_outbound_message_id`, solo si es del mismo usuario. Si no lo encuentra, la columna queda nula.
+
 La misma ruta atiende la verificación de la URL que Meta hace al configurar el webhook: `GET /webhook/whatsapp` con `hub.mode=subscribe`, `hub.verify_token` y `hub.challenge`. Si el token coincide con el configurado, responde `200` con el valor de `hub.challenge` como texto plano. Si no, `403`.
+
+### `POST /chat/messages` y `GET /chat/messages`
+
+El chat web de desarrollo y demostración ([ADR 0002](adr/0002-whatsapp-como-canal-principal.md)). No es un camino aparte: el mensaje entra a la misma tabla que uno de WhatsApp y lo procesa el mismo worker ([ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md)). Los dos endpoints existen solo con el chat web habilitado en la configuración; apagado, responden `404`.
+
+`POST /chat/messages` guarda el mensaje y responde enseguida, **sin procesarlo**. La respuesta de Platita no viene acá: aparece después en `GET /chat/messages`.
+
+- El usuario sale de la sesión. El mensaje se guarda con `provider = 'web'`, su `user_id` y su teléfono.
+- El header `Idempotency-Key` es obligatorio: un UUID que el navegador genera una vez por mensaje y reenvía igual si repite el pedido. El servidor lo guarda en `provider_message_id` con el usuario de la sesión adelante. Si ese usuario ya mandó esa clave, no guarda nada y responde `200` con el mensaje original. Sin el header, `422`.
+- `quoted_message_id` es opcional: el mensaje de Platita que el usuario cita con el botón de responder. Tiene que ser un mensaje de salida de ese usuario; si no, `404`.
+
+`GET /chat/messages` devuelve los mensajes web del usuario, entrantes y salientes, en orden. Con `after`, solo los posteriores a ese cursor: es lo que el dashboard consulta cada pocos segundos. No trae los mensajes cuyo contenido ya se purgó. **No cuenta como actividad de la sesión**: no renueva el plazo de inactividad ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
+
+```yaml
+# POST /chat/messages
+parameters:
+  - in: header
+    name: Idempotency-Key
+    required: true
+    example: "9d2b7c1e-5a4f-4c3b-8e21-7f6a5b4c3d2e"  # one UUID per message, reused on retries
+requestBody:
+  content:
+    application/json:
+      example:
+        text: "gasté 3500 en el super"
+        quoted_message_id: null        # optional: the outbound message being replied to
+responses:
+  202:
+    content:
+      application/json:
+        example:
+          id: "im1..."
+          status: "pending"            # the worker processes it later
+  200:
+    description: The Idempotency-Key was already used by this user; nothing is stored and the body is the message stored the first time
+  404:
+    description: The web chat is disabled, or quoted_message_id is not an outbound message of this user
+  422:
+    description: Empty text or missing Idempotency-Key
+
+# GET /chat/messages?after=<cursor>
+responses:
+  200:
+    content:
+      application/json:
+        example:
+          messages:
+            - id: "im1..."
+              direction: "inbound"
+              text: "gasté 3500 en el super"
+              quoted_message_id: null
+              created_at: "2026-10-04T15:00:00-03:00"
+            - id: "om1..."
+              direction: "outbound"
+              text: "Entendí $3.500 en Supermercado, hoy. ¿De qué cuenta salió y a qué presupuesto va?"
+              response_kind: "registration"
+              created_at: "2026-10-04T15:00:04-03:00"
+          next_cursor: "om1..."
+  404:
+    description: The web chat is disabled
+```
+
+### `GET /accounts`
+
+Lista las cuentas del usuario autenticado con su saldo calculado, para la pantalla de cuentas del dashboard. El saldo no se guarda: se calcula con los movimientos y las transferencias con fecha hasta hoy ([reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado)). Dar de alta o editar una cuenta no tiene endpoint: se hace conversando.
+
+- Devuelve solo las cuentas del usuario de la sesión.
+- En una cuenta de inversión, `balance` es lo aportado neto y `balance_kind` lo dice, para que la pantalla no lo sume a ningún total.
+- Las cuentas "Me deben" vienen marcadas por su `type`, para mostrarlas en su sección.
+
+```yaml
+responses:
+  200:
+    content:
+      application/json:
+        example:
+          accounts:
+            - id: "a1..."
+              name: "Galicia pesos"
+              type: "bank_account"
+              currency: "ARS"
+              balance: 241600.00
+              balance_kind: "balance"      # balance | net_contributed (broker accounts)
+            - id: "a2..."
+              name: "Balanz USD"
+              type: "broker"
+              currency: "USD"
+              balance: 1000.00
+              balance_kind: "net_contributed"
+  401:
+    description: No valid session
+```
 
 ### `GET /budgets/{budget_id}`
 
@@ -276,8 +370,8 @@ ante un pedido repetido.
   cotización es la que la pantalla sugirió y el usuario confirmó (reglas de dominio § 6).
 - `transfer_date` es opcional, hoy por defecto, y no puede ser anterior al alta de ninguna de las
   dos cuentas: `422`.
-- Pagar con pesos una tarjeta en otra moneda responde `422`: se registra por WhatsApp, porque
-  puede dejar un residuo que se confirma conversando (reglas de dominio § 13).
+- Pagar con pesos una tarjeta en otra moneda responde `422`: se registra conversando, no por
+  formulario, porque puede dejar un residuo que hay que confirmar (reglas de dominio § 13).
 
 ```yaml
 parameters:
@@ -312,7 +406,7 @@ responses:
 
 ### `POST /auth/code`, `POST /auth/token`, `POST /auth/logout` y `POST /auth/logout-all`
 
-El login del dashboard, sin contraseñas: el usuario pide un código, lo recibe por WhatsApp y lo canjea por una sesión. El fundamento está en el [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md), los límites en el [ADR 0017](adr/0017-limites-del-login-y-codigos-con-proposito.md), y las restricciones del código y de la sesión en [LOGIN_CODE, SESSION y AUTH_THROTTLE](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
+El login del dashboard, sin contraseñas: el usuario pide un código, lo recibe por WhatsApp y lo canjea por una sesión. Los dos endpoints del código se construyen junto con el adaptador de WhatsApp; hasta entonces el andamio entra por `POST /dev/session`, más abajo. El fundamento está en el [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md), los límites en el [ADR 0017](adr/0017-limites-del-login-y-codigos-con-proposito.md), y las restricciones del código y de la sesión en [LOGIN_CODE, SESSION y AUTH_THROTTLE](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
 
 **Cómo viaja la sesión.** En una cookie `__Host-sid` con `HttpOnly`, `Secure`, `SameSite=Strict` y `Path=/`, sin `Domain`. El dashboard se sirve desde el mismo origen que la API, bajo `/app`, y la API no habilita CORS. Un `POST`, `PUT`, `PATCH` o `DELETE` responde `403` si su `Origin` no es el de Platita o si su `Content-Type` no es `application/json`. `/webhook/whatsapp` está exceptuado, porque Meta lo llama sin cookie y firma cada pedido. Una request con una sesión inexistente, revocada o vencida responde `401`.
 
@@ -359,6 +453,30 @@ responses:
     description: Current session (logout) or every session of the user (logout-all) revoked; the cookie is cleared
   401:
     description: No valid session
+```
+
+### `GET /dev/users` y `POST /dev/session`
+
+La entrada de desarrollo: abre una sesión sin código, mientras no exista por dónde enviarlo. Existen solo con la entrada de desarrollo habilitada, en los entornos `local` y `demo`; con el entorno en `production` el servidor no arranca si está habilitada ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Apagada, las dos rutas responden `404`.
+
+- `GET /dev/users` lista los usuarios de los datos de prueba, con su nombre, para elegir uno. No pide sesión.
+- `POST /dev/session` crea una sesión para el usuario elegido y la devuelve en la misma cookie `__Host-sid` que el login real. Es la única ruta en la que el usuario sale del pedido y no de una sesión. Desde ahí, todo endpoint lo toma de la sesión.
+
+```yaml
+# POST /dev/session
+requestBody:
+  content:
+    application/json:
+      example:
+        user_id: "u-lucia..."
+responses:
+  204:
+    description: Session created for that seed user
+    headers:
+      Set-Cookie:
+        example: "__Host-sid=<random token>; HttpOnly; Secure; SameSite=Strict; Path=/"
+  404:
+    description: The development entry is disabled, or the user does not exist
 ```
 
 ### `GET /family-groups`, `POST /family-groups`, `POST /family-groups/{family_group_id}/invitations` y `DELETE /family-groups/{family_group_id}/invitations/{invitation_id}`

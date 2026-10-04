@@ -65,7 +65,7 @@
 - Si lo que escribí es plata que moví entre mis cuentas, el asistente lo registra como transferencia y me lo dice en la confirmación, aclarando que no cuenta como gasto. Si se equivocó de tipo, lo corrijo con una respuesta corta.
 - Si otro miembro del grupo ya cargó el mismo monto al mismo presupuesto ese día o el anterior, el asistente me pregunta si es el mismo gasto antes de registrarlo.
 - El movimiento queda marcado con `source = manual`.
-- Si prefiero la computadora, también puedo cargar gastos, ingresos y transferencias desde el dashboard, eligiendo yo la cuenta y el presupuesto. Las compras con tarjeta y los movimientos recurrentes los cargo por WhatsApp.
+- Si prefiero la computadora, también puedo cargar gastos, ingresos y transferencias desde el dashboard, eligiendo yo la cuenta y el presupuesto. Las compras con tarjeta y los movimientos recurrentes los cargo conversando, no por formulario.
 
 *Prioridad:* Alta
 *Estimación:* 13 puntos
@@ -121,6 +121,7 @@
 
 *Criterios de aceptación:*
 
+- Platita me responde porque mi número fue habilitado antes. Si no lo está, recibo un aviso de que no está habilitado y no empieza ningún alta.
 - Lo primero que recibo es el pedido de aceptar los términos y la política de privacidad. Si no acepto, no se guarda nada mío más allá del mensaje que mandé.
 - La parte obligatoria me pide nombre, país, confirmar mi moneda primaria, si quiero recibir avisos y al menos una cuenta. Puedo dar de alta varias cuentas en un solo mensaje.
 - Al terminar el alta ya tengo un presupuesto del mes en curso, sin topes, para que mi primer gasto tenga dónde imputarse. Le pongo ingreso y topes cuando quiera, desde el dashboard.

@@ -78,7 +78,8 @@ costo compra casi toda la operación.
 |---|---|---|---|
 | Local | Desarrollo y pruebas manuales del flujo por WhatsApp | Docker Compose con la imagen `pgvector/pgvector:pg16`, el número de prueba gratuito de Meta detrás de un túnel, y datos semilla que se niegan a correr contra producción | Pull request |
 | CI, efímero | Tests de integración y migraciones contra un PostgreSQL real | PostgreSQL como contenedor del job, sin secretos, con dobles de prueba para Meta, el LLM y las cotizaciones | Merge a la rama de despliegue con todos los checks en verde |
-| Producción | Usuarios | Render, con los secretos en un Environment Group y registros en nivel INFO | Despliegue automático de Render cuando pasan los checks |
+| Demostración | Mostrar el flujo conversacional por el chat web, sin WhatsApp | Entorno `demo`: datos inventados, chat web y entrada de desarrollo encendidos ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Dónde se despliega está sin decidir | A mano, mientras dure el andamio |
+| Producción | Usuarios | Entorno `production`: Render, con los secretos en un Environment Group y registros en nivel INFO. No arranca con el chat web ni la entrada de desarrollo encendidos | Despliegue automático de Render cuando pasan los checks |
 
 Staging no está al lanzamiento: duplicaría el costo, y el riesgo principal que cubriría, una
 migración que rompe, lo cubre la CI probando la migración desde el esquema de la versión

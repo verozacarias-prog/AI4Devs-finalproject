@@ -60,9 +60,10 @@ interpretar el mensaje, sin una pregunta previa. Lo que lo hace seguro no depend
 presupuesto no vienen preseleccionados: el usuario los elige, porque un campo ya elegido que se
 envía sin mirar sería un valor por defecto encubierto. La fecha, la moneda y la categoría pueden
 venir sugeridas y a la vista, igual que en la confirmación por WhatsApp. Enviar el formulario es
-la confirmación. Las compras con tarjeta y las reglas recurrentes se cargan solo por WhatsApp, y
-también un pago con pesos de una tarjeta en otra moneda, porque puede dejar un residuo que se
-confirma conversando (§ 13).
+la confirmación. Las compras con tarjeta y las reglas recurrentes se cargan solo conversando, no
+por formulario, y también un pago con pesos de una tarjeta en otra moneda, porque puede dejar un
+residuo que se confirma conversando (§ 13). Conversando es por WhatsApp o, donde está habilitado,
+por el chat web de desarrollo.
 
 Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-principales) · [HU3](05-historias-de-usuario.md) · [Ticket 1](06-tickets.md).
 
@@ -372,7 +373,8 @@ Cada pendiente pertenece a un lote (`PENDING_BATCH`), y un gasto suelto es un lo
   correcciones también pueden ir por número ("el 2 fueron 3800").
 - **Responder citando un mensaje manda.** Si el usuario responde citando la pregunta de un lote
   concreto, la respuesta va a ese lote aunque no sea el que está en conversación. Es lo que
-  permite contestar fuera de orden sin ambigüedad. Si el mensaje citado es la confirmación de un
+  permite contestar fuera de orden sin ambigüedad. En el chat web se cita con el botón de
+  responder de cada mensaje. Si el mensaje citado es la confirmación de un
   lote ya cerrado, la respuesta es un pedido de corrección, borrado o restauración de los
   movimientos de ese lote (§ 15). Si no es ninguna de las dos cosas —una alerta, la pregunta de
   un lote ya cerrado—, la respuesta se procesa como si no citara nada.
@@ -586,7 +588,8 @@ ver todo el historial del grupo, porque los miembros ven todos sus períodos (ve
 
 **Aceptar.** El invitado le escribe a Platita el mensaje con el código. Si todavía no es usuario,
 primero hace la parte obligatoria del alta, y el mensaje con el código se retoma al terminarla,
-como el primer gasto (§ 11). Antes de sumarlo, el asistente le muestra el nombre del grupo y el
+como el primer gasto (§ 11). Una invitación no habilita un número: si el del invitado no está
+habilitado, recibe el texto de número no habilitado y el código no se consume (§ 11). Antes de sumarlo, el asistente le muestra el nombre del grupo y el
 de su dueño y le pide que confirme, porque lo que impute al grupo lo van a ver los demás
 miembros. Confirmar crea su membresía con `role = 'member'` y consume el código, en la misma
 transacción. Si el dueño dio permiso para avisos, recibe un mensaje de que el invitado se sumó.
@@ -712,8 +715,18 @@ Ver también: [FAMILY_GROUP / USER_GROUP en 3.2](03-modelo-de-datos.md#family_gr
 
 ## 11. Alta de usuario, consentimiento y mensajes proactivos
 
-**Sin consentimiento no se guarda nada.** Cuando escribe un número que Platita no conoce, lo
-primero es pedirle que acepte los términos y la política de privacidad. Hasta que acepta, no se
+**Solo escriben los números habilitados.** Platita no le responde a cualquiera: quien opera
+Platita habilita antes cada número, con un comando de operación. Si escribe un número que no es
+de un usuario y no está habilitado, recibe un texto fijo que le dice que no está habilitado, sin
+procesar el mensaje con IA, y no empieza ningún alta. Ese texto sale como mucho una vez cada 24
+horas por número, y el contenido de su mensaje se borra en cuanto se procesa. De cada número
+habilitado se guarda solo un HMAC, no el número, así no hay teléfonos guardados de personas que
+todavía no aceptaron los términos. Un invitado a un grupo también tiene que estar habilitado
+(§ 10). Qué pasa con un usuario ya dado de alta cuyo número se deshabilita está sin decidir
+([hoja de ruta](hoja-de-ruta.md#decisiones-abiertas)).
+
+**Sin consentimiento no se guarda nada.** Cuando escribe un número habilitado que todavía no es
+usuario, lo primero es pedirle que acepte los términos y la política de privacidad. Hasta que acepta, no se
 guarda nada más que el mensaje recibido, y no se procesa con IA. Se registra cuándo aceptó y qué
 versión de los términos.
 
@@ -730,6 +743,11 @@ versión de los términos.
 
 Hasta completarla, el usuario no puede registrar movimientos. Al completarla, el sistema crea su
 primer período de presupuesto, ya confirmado (§ 3).
+
+**El alta corre por el chat.** Desde el segundo paso es la misma conversación por WhatsApp y por
+el chat web de desarrollo. El primero, el consentimiento, depende del canal: en WhatsApp es la
+respuesta al primer mensaje, y cómo llega al chat web una persona que todavía no es usuario está
+sin decidir ([hoja de ruta](hoja-de-ruta.md#decisiones-abiertas)).
 
 **El primer mensaje no se pierde.** Si lo primero que escribió fue un gasto, queda guardado y,
 al terminar la parte obligatoria, se retoma como un pendiente normal (§ 5), sin pedirle que lo
@@ -784,9 +802,21 @@ Ver también: [HU6](05-historias-de-usuario.md) · [APP_USER y FINANCIAL_PROFILE
 
 ## 12. Límites de uso del asistente
 
-Cada mensaje que el asistente interpreta o responde con IA tiene un costo, y Platita está
-abierta a cualquier persona. Sin límites, un uso abusivo, o un error que dispare mensajes en
+Cada mensaje que el asistente interpreta o responde con IA tiene un costo. Aunque solo escriben
+los números habilitados (§ 11), sin límites un uso abusivo, o un error que dispare mensajes en
 bucle, se traslada directo a la factura del proveedor de LLM.
+
+**Primero se clasifica, después se cobra.** Una llamada inicial al modelo dice de qué **clase de
+mensaje** se trata: registro, consulta o consejo. Recién ahí se sabe qué cuota mirar, y se cobra
+la de esa clase. El mecanismo está en el
+[ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md).
+
+**Un tope diario total, antes de clasificar.** Clasificar también cuesta, así que cada usuario
+tiene un tope de 100 mensajes clasificados por día, que es configuración. La clasificación no
+descuenta de ninguna de las tres cuotas. Las tres suman 80, así que quien usa todo lo permitido
+no llega al tope. Un mensaje que llega con el tope alcanzado no se clasifica: se guarda y se
+procesa al día siguiente, como un registro que superó su cuota, porque no se puede saber si era
+un gasto. El aviso de que llegó al límite del día sale una sola vez por día.
 
 **Tres cuotas diarias por usuario, separadas.**
 
@@ -806,11 +836,16 @@ sin desplegar.
 **Superar una cuota no pierde nada.**
 
 - **Registro:** el mensaje se guarda igual y queda sin procesar hasta que la cuota se renueva al
-  día siguiente. El asistente responde con un texto fijo, sin llamar al LLM, que avisa que lo va
-  a procesar mañana. Perder un gasto que el usuario escribió sería peor que demorarlo.
-- **Consultas y consejos:** el asistente responde con un texto fijo, sin llamar al LLM, que avisa
-  que llegó al límite del día, y ofrece el enlace al dashboard. Registrar movimientos sigue
+  día siguiente. El asistente responde con un texto fijo, sin otra llamada al LLM, que avisa que
+  lo va a procesar mañana. Perder un gasto que el usuario escribió sería peor que demorarlo. El
+  mensaje demorado no traba a los que el usuario mande después: una consulta del mismo día se
+  responde igual. Los demorados se procesan al día siguiente en el orden en que llegaron.
+- **Consultas y consejos:** el asistente responde con un texto fijo, sin otra llamada al LLM, que
+  avisa que llegó al límite del día, y ofrece el enlace al dashboard. Registrar movimientos sigue
   funcionando.
+
+**Un mensaje que no es de ninguna clase,** como un saludo o algo que el modelo no logra
+interpretar, recibe un texto fijo que pide una aclaración y no gasta ninguna cuota.
 
 **Un tope global mensual como corte de emergencia.** Además de las cuotas por usuario, la cuenta
 del proveedor de LLM tiene un límite de gasto mensual de 20 dólares, configurado en la consola
@@ -1011,9 +1046,10 @@ dashboard:
   ([ADR 0014](adr/0014-marca-de-edicion-en-movimientos.md)).
 - **Supresión:** el borrado de cuenta descrito arriba.
 
-**Datos que salen hacia el proveedor de LLM.** Nunca se envían identificadores (teléfono, nombre,
-email ni ids internos), solo lo necesario para la tarea. El detalle está en el
-[ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md).
+**Datos que salen hacia el proveedor de LLM y el de embeddings.** Nunca se envían
+identificadores (teléfono, nombre, email ni ids internos), solo lo necesario para la tarea, que
+en una consulta o un consejo incluye los últimos intercambios de la conversación. El detalle
+está en el [ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md).
 
 Ver también: [Términos y política de privacidad](terminos-y-privacidad.md) · [APP_USER, INBOUND_MESSAGE y OUTBOUND_MESSAGE en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
 
@@ -1226,13 +1262,15 @@ Platita enseña a evaluar una decisión y nunca la toma por el usuario, sea de i
 de consumo. En inversiones, además, recomendar a una persona en qué invertir según su situación
 está reservado en Argentina a agentes registrados en la CNV.
 
-**Tres clases de respuesta.** El asistente clasifica cada pregunta en una de tres clases, y cada
-clase tiene su forma de respuesta. Lo que hace segura la clasificación no es el modelo sino esa
-forma, que se puede verificar, igual que el tipo de un movimiento en la confirmación (§ 1).
+**Tres clases de respuesta.** Son otra cosa que las clases de mensaje de § 12: un mensaje que
+ya se clasificó como consejo se responde en una de tres **clases de respuesta**, y cada una
+tiene su forma. Se decide dentro de la rama de consejo, no en la clasificación inicial. Lo que
+hace segura la clasificación no es el modelo sino esa forma, que se puede verificar, igual que
+el tipo de un movimiento en la confirmación (§ 1).
 
-| Clase | Ejemplo | Qué responde |
+| Clase de respuesta | Ejemplo | Qué responde |
 |---|---|---|
-| Información | "¿Cuánto paga un plazo fijo?" | Datos objetivos, con fuente y fecha: tasas, cotizaciones, inflación, costos de un producto |
+| Información | "¿Qué costos tiene un fondo común de inversión?" | Datos objetivos que salen de la base de conocimiento, con fuente y fecha: costos y condiciones de un tipo de producto |
 | Educación | "¿Qué es un FCI?", "¿qué me cuesta pagar el mínimo de la tarjeta?" | Conceptos, riesgos y costos, y cómo funcionan |
 | Decisión | "¿Me conviene este préstamo?", "¿qué hago con lo que me sobró?" | La estructura fija de abajo, nunca un veredicto |
 
@@ -1255,8 +1293,16 @@ aplica como una indicación para el usuario.
 
 **Si el usuario insiste.** Cuando pide que decidan por él ("decime vos qué hago"), el asistente
 explica una vez por qué no lo hace y ofrece revisar juntos el criterio que más le cueste aplicar.
-Si vuelve a insistir sobre la misma pregunta, responde con un texto fijo que repite el límite, sin
-generar otra respuesta.
+Si vuelve a insistir, responde con un texto fijo que repite el límite, sin generar otra
+respuesta. Que un mensaje es una insistencia lo reconoce el modelo; la secuencia la garantiza el
+código, mirando el historial reciente de la conversación: si ahí ya está la explicación, sale el
+texto fijo. El historial son los últimos intercambios de los últimos 30 minutos
+([ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md)), así que una
+insistencia que llega más tarde recibe otra vez la explicación. Nunca recibe un veredicto.
+
+**La fuente se cita por nombre y fecha.** Un consejo que usa la base de conocimiento dice de
+dónde sale, sin enlace: las respuestas del asistente no llevan enlaces que no sean del dashboard
+([ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md)).
 
 **Los consejos son individuales.** Usan los datos del usuario que pregunta: su presupuesto
 individual, sus cuentas y su perfil. No usan un presupuesto de grupo ni el perfil de otro
@@ -1299,8 +1345,10 @@ desactualizado. Vale igual para las cotizaciones que se sugieren al registrar (�
 
 **Preguntar un dato de mercado es una consulta.** "¿A cuánto está el MEP?" o "¿cuánto paga un
 plazo fijo?" se responden con la función Indicadores (§ 17) y cuentan en la cuota de consultas,
-no en la de consejos (§ 12), porque devuelven un dato y no una explicación. Si la pregunta además
-pide entender algo, como qué conviene mirar de un plazo fijo, es un consejo.
+no en la de consejos (§ 12), porque devuelven un dato y no una explicación. La clasificación
+inicial las manda a la rama de consultas, así que no llegan a la clase de respuesta información,
+que queda para lo que sale de la base de conocimiento. Si la pregunta además pide entender algo,
+como qué conviene mirar de un plazo fijo, es un consejo.
 
 **Información con nombre de entidad, solo si una fuente la publica.** Mostrar la tasa o el costo
 de un producto de una entidad con nombre es información, no una recomendación, siempre que salga

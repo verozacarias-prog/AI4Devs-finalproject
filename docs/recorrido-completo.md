@@ -12,7 +12,7 @@ Hay dos formas de llamada y ninguna más:
 
 | Tipo de llamada | Entre quiénes | Cómo |
 |---|---|---|
-| **HTTPS** | Todo lo que cruza el borde de Platita: el navegador con la API, Meta con el webhook, el worker con Meta y con el proveedor de LLM, los procesos programados con las fuentes de cotización | Requests HTTP con TLS. Meta firma lo que envía y el navegador lleva la cookie de sesión |
+| **HTTPS** | Todo lo que cruza el borde de Platita: el navegador con la API, Meta con el webhook, el worker con Meta, con el proveedor de LLM y con el de embeddings, los procesos programados con las fuentes de cotización | Requests HTTP con TLS. Meta firma lo que envía y el navegador lleva la cookie de sesión |
 | **SQL** | Los tres procesos del backend con PostgreSQL | Siempre a través de un caso de uso y un repositorio. Ningún proceso del backend llama a otro por HTTP: se coordinan por tablas |
 
 Los tres procesos del backend son el servicio web (la API, que además sirve el dashboard), el
@@ -21,7 +21,9 @@ worker de mensajes y los procesos programados. La regla completa está en el
 
 Dos tablas hacen de cola entre procesos: `INBOUND_MESSAGE`, de la API al worker, y
 `OUTBOUND_MESSAGE`, de cualquier proceso al worker, que es el único que envía mensajes
-([ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md)).
+([ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md)). El chat web de desarrollo usa
+las mismas dos tablas: la API guarda lo que el usuario escribe y lee lo que el worker respondió
+([§ 5](#5-registro-de-un-movimiento-por-whatsapp)).
 
 ## 2. Vista general
 
@@ -46,7 +48,7 @@ flowchart TB
         USUARIO[("APP_USER · ACCOUNT<br/>CATEGORY · FINANCIAL_PROFILE")]
         PRESU[("BUDGET_PERIOD · BUDGET")]
         MOV[("PENDING_BATCH · PENDING_TRANSACTION<br/>TRANSACTION · TRANSFER<br/>RECURRING_RULE · CARD_STATEMENT")]
-        APOYO[("EXCHANGE_RATE · SENT_ALERT<br/>ADVICE_DOCUMENT · LLM_USAGE")]
+        APOYO[("EXCHANGE_RATE · SENT_ALERT<br/>ADVICE_DOCUMENT · ADVICE_CHUNK<br/>LLM_USAGE")]
         ACCESO[("LOGIN_CODE · SESSION<br/>AUTH_THROTTLE")]
     end
 
@@ -78,7 +80,7 @@ flowchart TB
 |---|---|---|---|---|
 | 1. Alta | WhatsApp | Worker | `APP_USER`, `ACCOUNT`, el primer `BUDGET_PERIOD`, `FINANCIAL_PROFILE` | [§ 3](#3-alta) |
 | 2. Presupuesto del período | Una hora del día, WhatsApp o dashboard | Procesos programados, worker o API | `BUDGET_PERIOD`, `BUDGET` | [§ 4](#4-presupuesto-del-período) |
-| 3. Registro diario | WhatsApp o dashboard | Worker o API | `PENDING_*`, luego `TRANSACTION`, `TRANSFER` o `RECURRING_RULE` | [§ 5](#5-registro-de-un-movimiento-por-whatsapp) |
+| 3. Registro diario | WhatsApp, chat web o dashboard | Worker o API | `PENDING_*`, luego `TRANSACTION`, `TRANSFER` o `RECURRING_RULE` | [§ 5](#5-registro-de-un-movimiento-por-whatsapp) |
 | 4. Lo que corre solo | Una hora del día | Procesos programados | `TRANSACTION` o `PENDING_TRANSACTION`, `CARD_STATEMENT`, `EXCHANGE_RATE` | [§ 6](#6-recurrentes-y-cuotas-de-tarjeta) y [§ 7](#7-cierre-y-conciliación-de-un-resumen) |
 | 5. Avisos y contrastes | Una hora del día | Procesos programados, y el worker para las respuestas | `SENT_ALERT`, `OUTBOUND_MESSAGE`, ajustes en `TRANSACTION` | [§ 8](#8-alertas-y-contraste-mensual-de-saldos) |
 | 6. Consulta y consejos | Navegador o WhatsApp | API o worker | `SESSION`, `LLM_USAGE` | [§ 9](#9-dashboard), [§ 10](#10-consejo-por-whatsapp) y [§ 12](#12-pregunta-sobre-los-propios-datos) |
@@ -86,8 +88,8 @@ flowchart TB
 
 ## 3. Alta
 
-El primer contacto de un número desconocido. Hasta que acepta los términos, solo existe su
-mensaje en `INBOUND_MESSAGE`, y no se procesa con IA
+El primer contacto de un número habilitado que todavía no es usuario. Hasta que acepta los
+términos, solo existe su mensaje en `INBOUND_MESSAGE`, y no se procesa con IA
 ([reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos)).
 
 ```mermaid
@@ -104,6 +106,8 @@ sequenceDiagram
     API->>DB: SQL INSERT INBOUND_MESSAGE, user_id nulo
     API-->>M: 200
     W->>DB: SQL toma el mensaje, sin usuario registrado
+    W->>DB: SQL busca el HMAC del número en ALLOWED_PHONE
+    Note over W,DB: Si no está habilitado: texto fijo, una vez cada 24 horas,<br/>y no empieza ningún alta
     W->>DB: SQL INSERT OUTBOUND_MESSAGE, pedido de términos
     W->>M: HTTPS envía el pedido
     M->>U: términos y política
@@ -188,12 +192,13 @@ sequenceDiagram
     API->>DB: SQL INSERT INBOUND_MESSAGE, único por wamid
     API-->>M: 200, sin procesar
     W->>DB: SQL claim corto: status processing,<br/>attempts + 1, locked_until
-    W->>DB: SQL lee LLM_USAGE, cuota de registro
-    W->>L: HTTPS interpreta, con nombres de cuentas<br/>y categorías y sin identificadores
-    L-->>W: monto, tipo, categoría candidata
+    W->>DB: SQL lee LLM_USAGE, tope diario total
+    W->>L: HTTPS clasifica e interpreta en una sola llamada,<br/>con nombres de cuentas y categorías y sin identificadores
+    L-->>W: clase registro: monto, tipo, categoría candidata
     rect rgb(240, 246, 252)
         Note over W,DB: Una sola transacción SQL
         W->>DB: UPDATE INBOUND_MESSAGE processed<br/>solo si attempts no cambió
+        W->>DB: lee LLM_USAGE, cuota de registro
         W->>DB: lee ACCOUNT, CATEGORY y BUDGET_PERIOD candidatos
         W->>DB: INSERT PENDING_BATCH y PENDING_TRANSACTION
         W->>DB: INSERT OUTBOUND_MESSAGE con la pregunta
@@ -205,7 +210,7 @@ sequenceDiagram
     U->>M: "Galicia, el familiar"
     M->>API: HTTPS POST /webhook/whatsapp
     API->>DB: SQL INSERT INBOUND_MESSAGE
-    W->>L: HTTPS interpreta la respuesta
+    W->>L: HTTPS clasifica e interpreta la respuesta,<br/>con el último intercambio y el pendiente abierto
     rect rgb(240, 246, 252)
         Note over W,DB: Una sola transacción SQL
         W->>DB: UPDATE INBOUND_MESSAGE processed, con el mismo fencing
@@ -217,11 +222,55 @@ sequenceDiagram
     M->>U: "Listo. $3.500 · Supermercado · Galicia · familiar"
 ```
 
-Desde el dashboard, el mismo movimiento entra por `POST /transactions` y el servicio web escribe
-`TRANSACTION` en una sola transacción SQL, sin pendiente, porque la pantalla ya pidió todos los
-datos ([la API](04-api.md)). Una transferencia entra igual por `POST /transfers`. Las compras con
-tarjeta y las reglas recurrentes se cargan solo por WhatsApp
+Si la cuota de registro está agotada, o el tope diario total alcanzado, no hay efectos: el
+mensaje vuelve a `pending` para el día siguiente, se encola el texto fijo y los mensajes
+posteriores del remitente se siguen procesando
+([reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente)).
+
+Desde el formulario del dashboard, el mismo movimiento entra por `POST /transactions` y el
+servicio web escribe `TRANSACTION` en una sola transacción SQL, sin pendiente, porque la pantalla
+ya pidió todos los datos ([la API](04-api.md)). Una transferencia entra igual por
+`POST /transfers`. Las compras con tarjeta y las reglas recurrentes se cargan solo conversando
 ([ADR 0002](adr/0002-whatsapp-como-canal-principal.md)).
+
+### Por el chat web
+
+El chat web de desarrollo recorre el mismo camino. Cambian solo los bordes: quién guarda el
+mensaje y cómo llega la respuesta. El worker, las tablas y las transacciones son los de arriba.
+
+```mermaid
+sequenceDiagram
+    actor U as Usuario
+    participant N as Navegador
+    participant API as Servicio web
+    participant DB as PostgreSQL
+    participant W as Worker
+    participant L as LLM
+
+    U->>N: escribe "gasté 3500 en el super"
+    N->>API: HTTPS POST /chat/messages, con la cookie<br/>y un Idempotency-Key
+    API->>DB: SQL INSERT INBOUND_MESSAGE provider web,<br/>con el usuario de la sesión
+    API-->>N: 202, sin procesar
+    W->>DB: SQL claim, tope diario total
+    W->>L: HTTPS clasifica e interpreta
+    rect rgb(240, 246, 252)
+        Note over W,DB: Una sola transacción SQL, la misma que en WhatsApp
+        W->>DB: INSERT PENDING_BATCH y PENDING_TRANSACTION
+        W->>DB: INSERT OUTBOUND_MESSAGE provider web,<br/>ya en sent: no se envía
+    end
+    loop Cada pocos segundos, sin contar como actividad
+        N->>API: HTTPS GET /chat/messages?after=cursor
+        API->>DB: SQL lee los mensajes nuevos del usuario
+        API-->>N: la pregunta de Platita
+    end
+    U->>N: responde con el botón de responder: "Galicia, el mío"
+    N->>API: HTTPS POST /chat/messages con quoted_message_id
+    API->>DB: SQL INSERT INBOUND_MESSAGE con el mensaje citado,<br/>validado contra el usuario
+    Note over W,DB: El worker promueve el pendiente a TRANSACTION<br/>y encola la confirmación, como arriba
+    N->>API: HTTPS GET /accounts
+    API->>DB: SQL calcula el saldo con ACCOUNT, TRANSACTION y TRANSFER
+    API-->>N: el saldo de Galicia, ya con el gasto
+```
 
 ## 6. Recurrentes y cuotas de tarjeta
 
@@ -340,7 +389,9 @@ sequenceDiagram
 
 El dashboard es una aplicación que el servicio web sirve bajo `/app`, en el mismo origen que la
 API. No tiene acceso a la base: todo lo que muestra lo pide por HTTPS
-([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
+([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). El diagrama muestra el login por
+código, que se construye junto con el adaptador de WhatsApp. Mientras tanto el andamio entra por
+`POST /dev/session`, que crea la misma `SESSION` eligiendo un usuario de prueba.
 
 ```mermaid
 sequenceDiagram
@@ -374,7 +425,7 @@ sequenceDiagram
 
 ## 10. Consejo por WhatsApp
 
-Una pregunta financiera usa la otra cuota diaria y la base de conocimiento
+Una pregunta financiera usa la cuota diaria de consejos y la base de conocimiento
 ([reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente)). El modelo nunca
 consulta la base: recibe solo lo que el caso de uso le envía
 ([ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md)).
@@ -387,29 +438,35 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant W as Worker
     participant L as LLM
+    participant E as Proveedor de embeddings
 
     U->>M: "¿qué me cuesta pagar el mínimo de la tarjeta?"
     M->>API: HTTPS POST /webhook/whatsapp
     API->>DB: SQL INSERT INBOUND_MESSAGE
-    W->>DB: SQL claim del mensaje y lectura de LLM_USAGE, cuota de consejos
-    W->>L: HTTPS genera el embedding de la pregunta
-    W->>DB: SQL busca en ADVICE_DOCUMENT por similitud, con pgvector
+    W->>DB: SQL claim del mensaje y lectura de LLM_USAGE, tope diario total
+    W->>L: HTTPS clasifica, con el último intercambio
+    L-->>W: clase consejo, y el tema si se reconoce
+    W->>DB: SQL lee LLM_USAGE, cuota de consejos
+    W->>E: HTTPS genera el embedding de la pregunta, sin identificadores
+    W->>DB: SQL busca en ADVICE_CHUNK los 4 fragmentos más cercanos,<br/>de documentos vigentes, con pgvector
     W->>DB: SQL lee datos agregados: deuda de la tarjeta,<br/>gastado del período, FINANCIAL_PROFILE
-    W->>L: HTTPS pregunta, fragmentos y agregados, sin identificadores
+    W->>DB: SQL lee los últimos intercambios de<br/>INBOUND_MESSAGE y OUTBOUND_MESSAGE
+    W->>L: HTTPS pregunta, fragmentos con su fuente, agregados<br/>e historial, delimitados y sin identificadores
     L-->>W: respuesta
+    Note over W: El código valida la salida: sin enlaces ajenos<br/>y con la estructura fija si es una decisión
     rect rgb(240, 246, 252)
         Note over W,DB: Una sola transacción SQL
         W->>DB: UPDATE INBOUND_MESSAGE processed, con fencing
         W->>DB: UPDATE LLM_USAGE
-        W->>DB: INSERT OUTBOUND_MESSAGE con la respuesta
+        W->>DB: INSERT OUTBOUND_MESSAGE con la respuesta<br/>y su response_kind
     end
     W->>M: HTTPS envía la respuesta
 ```
 
 ## 11. Corregir o borrar por WhatsApp
 
-Un movimiento confirmado se señala citando su confirmación o describiéndolo. Nunca por ser el
-último ([reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado)).
+Un movimiento confirmado se señala citando su confirmación o describiéndolo. Por el chat web es
+igual, y la cita se hace con el botón de responder. Nunca por ser el último ([reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado)).
 
 ```mermaid
 sequenceDiagram
@@ -423,7 +480,7 @@ sequenceDiagram
     alt Cita la confirmación
         U->>M: cita "Listo. $3.500 · Supermercado…" y escribe "eran 3.800"
         M->>API: HTTPS POST /webhook/whatsapp con context.id
-        API->>DB: SQL INSERT INBOUND_MESSAGE
+        API->>DB: SQL INSERT INBOUND_MESSAGE, con el mensaje citado<br/>ya resuelto en quoted_outbound_message_id
         W->>DB: SQL busca PENDING_BATCH por confirmation_message_id<br/>y el movimiento por la columna de resultado
         W->>L: HTTPS interpreta el cambio
         rect rgb(240, 246, 252)
@@ -458,8 +515,10 @@ sequenceDiagram
 ## 12. Pregunta sobre los propios datos
 
 El modelo no consulta la base: pide datos a funciones de solo lectura, que el caso de uso ejecuta
-filtrando por el usuario del mensaje
-([reglas de dominio § 17](reglas-de-dominio.md#17-preguntas-sobre-los-propios-datos)).
+filtrando por el usuario del mensaje. La misma llamada que clasifica el mensaje ya trae los
+primeros pedidos, así que una consulta son dos llamadas al modelo
+([ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md)). Las funciones están
+en [reglas de dominio § 17](reglas-de-dominio.md#17-preguntas-sobre-los-propios-datos).
 
 ```mermaid
 sequenceDiagram
@@ -473,11 +532,12 @@ sequenceDiagram
     U->>M: "¿gasté más en delivery que el mes pasado?"
     M->>API: HTTPS POST /webhook/whatsapp
     API->>DB: SQL INSERT INBOUND_MESSAGE
-    W->>DB: SQL claim del mensaje y lectura de LLM_USAGE, cuota de consultas
-    W->>L: HTTPS pregunta y lista de funciones disponibles
-    L-->>W: pide Gastado(Comida afuera y delivery, septiembre)<br/>y Gastado(Comida afuera y delivery, agosto)
+    W->>DB: SQL claim del mensaje y lectura de LLM_USAGE, tope diario total
+    W->>L: HTTPS clasifica, con la lista de funciones disponibles
+    L-->>W: clase consulta, y pide Gastado(Comida afuera y delivery, septiembre)<br/>y Gastado(Comida afuera y delivery, agosto)
+    W->>DB: SQL lee LLM_USAGE, cuota de consultas
     W->>DB: SQL las dos consultas, por repositorio,<br/>con el user_id del mensaje
-    W->>L: HTTPS resultados: $38.500 y $24.000
+    W->>L: HTTPS resultados delimitados: $38.500 y $24.000,<br/>con los últimos intercambios
     L-->>W: respuesta armada con esas cifras
     rect rgb(240, 246, 252)
         Note over W,DB: Una sola transacción SQL

@@ -68,6 +68,23 @@ para que la cookie de sesión funcione sin un dominio propio.
 7. **CSRF.** Además de `SameSite=Strict`, toda request que modifica algo exige que el header
    `Origin` sea el propio y que el cuerpo sea JSON. El webhook de WhatsApp queda fuera de esta
    regla: no usa cookie y se autentica con su firma.
+8. **La consulta periódica no cuenta como actividad.** El chat web pregunta cada pocos segundos
+   si hay mensajes nuevos ([ADR 0010](0010-webhook-asincrono-con-tabla-de-entrada.md)). Esa
+   lectura valida la sesión pero no actualiza `last_seen_at`. Si contara, una pestaña abierta
+   mantendría viva la sesión y el vencimiento por inactividad no ocurriría nunca. Cuenta lo que
+   hace el usuario: escribir un mensaje o navegar.
+9. **Tres entornos, y una entrada de desarrollo que no existe en producción.** La configuración
+   declara el entorno: `local`, `demo` o `production`. En los dos primeros se pueden habilitar
+   dos opciones: el chat web y la entrada de desarrollo. Con cualquiera de las dos encendida y
+   el entorno en `production`, ningún proceso arranca.
+
+   La entrada de desarrollo reemplaza al código mientras no exista el adaptador de WhatsApp: la
+   pantalla lista los usuarios de los datos de prueba, se elige uno y el servidor crea una
+   sesión real, con la misma tabla y la misma cookie. Desde ahí todo endpoint toma al usuario de
+   la sesión, como siempre. No se construye nada del código de un solo uso hasta que haya por
+   dónde enviarlo. Es una excepción deliberada a la regla de que el usuario nunca sale del
+   request, y vale solo en un entorno con datos inventados: quien abra esa pantalla entra como
+   cualquier usuario de prueba.
 
 ## Consecuencias
 
@@ -81,8 +98,15 @@ para que la cookie de sesión funcione sin un dominio propio.
 - Sin CORS no hay configuración de orígenes permitidos que pueda quedar mal escrita.
 - Un servicio menos para desplegar en Render.
 - Recargar la página no pide un código nuevo mientras la sesión esté vigente.
+- La sesión del andamio es la real. Cuando se sume el login por código, se agrega por delante y
+  la entrada de desarrollo se apaga, sin tocar ningún endpoint.
 
 ### Negativas y costos asumidos
+
+- Mientras dure el andamio, el login por código no se muestra ni se prueba de punta a punta.
+- Un entorno de demostración desplegado con la entrada de desarrollo no tiene control de acceso.
+  Solo puede tener datos inventados, y la seguridad de producción depende de que el arranque se
+  niegue con esas opciones encendidas.
 
 - Una consulta a la base por request autenticada. A este volumen, sobre una clave indexada, no
   se nota.
@@ -115,6 +139,12 @@ para que la cookie de sesión funcione sin un dominio propio.
 - **Dominio propio, con el dashboard y la API en dos subdominios suyos:** conserva el Static
   Site y la cookie funciona. Es el camino para cuando haya usuarios reales, pero hoy es un costo
   y una administración más sin nadie a quien proteger.
+- **Construir el login por código en el andamio y mostrar el código en la pantalla,** en vez de
+  enviarlo: ejercita el flujo completo, pero es trabajo en algo que no es el chat, y mostrar el
+  código delata qué números existen, que es lo que el
+  [ADR 0017](0017-limites-del-login-y-codigos-con-proposito.md) evita.
+- **Que el chat web mande el usuario en cada pedido, sin sesión:** menos piezas, pero todos los
+  endpoints nacerían tomando al usuario del request y habría que rehacerlos.
 - **Un proveedor de identidad gestionado:** ninguno ofrece de forma nativa el código por
   WhatsApp. Suma un costo y un tercero más con datos personales.
 

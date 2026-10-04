@@ -2,12 +2,14 @@
 # -*- coding: utf-8 -*-
 """Architecture rule checks for the Platita repository.
 
-Enforces the three structural rules of ADR 0001, declared in AGENTS.md:
+Enforces the structural rules of ADR 0001 and ADR 0020, declared in AGENTS.md:
 
   1. backend/app/domain/ must not depend on adapters or on infrastructure libraries.
   2. frontend/ must not import from backend/ nor reach the database directly.
   3. Inside backend/, database libraries are imported only by the postgres and pgvector
      outbound adapters, the migrations and the tests.
+  4. Inside backend/, no AI orchestration framework is imported. The only exception is the
+     text splitting package, and only in the text splitter outbound adapter and the tests.
 
 Tolerant by design: while backend/ or frontend/ do not exist yet, the matching
 checks are skipped instead of failing, so the net is in place before the first
@@ -35,6 +37,16 @@ DB_ACCESS_ALLOWED = [
 ]
 DB_LIBRARIES = {'sqlalchemy', 'psycopg', 'psycopg2', 'asyncpg', 'alembic', 'pgvector'}
 
+# ADR 0020 — sin framework de orquestación de IA. Cualquier módulo cuya raíz empiece con
+# "langchain" cuenta como framework, además de los de esta lista.
+AI_FRAMEWORKS = {'langgraph', 'langsmith', 'llama_index', 'haystack', 'semantic_kernel',
+                 'crewai', 'autogen', 'dspy'}
+AI_SPLITTER_PACKAGE = 'langchain_text_splitters'
+AI_SPLITTER_ALLOWED = [
+    os.path.join(BACKEND_DIR, 'app', 'adapters', 'outbound', 'text_splitter'),
+    os.path.join(BACKEND_DIR, 'tests'),
+]
+
 # AGENTS.md — imports prohibidos dentro de domain/
 FORBIDDEN_IN_DOMAIN = {
     'sqlalchemy': 'ORM: pertenece a adapters/outbound/postgres/',
@@ -50,6 +62,10 @@ FORBIDDEN_IN_DOMAIN = {
     'anthropic': 'cliente de LLM: pertenece a adapters/outbound/llm_client/',
     'openai': 'cliente de LLM: pertenece a adapters/outbound/llm_client/',
     'litellm': 'cliente de LLM: pertenece a adapters/outbound/llm_client/',
+    'voyageai': 'cliente de embeddings: pertenece a adapters/outbound/embedding_client/',
+    'cohere': 'cliente de IA: pertenece a un adaptador de salida',
+    'mistralai': 'cliente de IA: pertenece a un adaptador de salida',
+    'tiktoken': 'librería de IA: pertenece a un adaptador de salida',
     'boto3': 'infraestructura: pertenece a un adaptador de salida',
 }
 
@@ -226,6 +242,38 @@ def check_database_access():
     return checked
 
 
+def is_ai_framework(head):
+    return head.startswith('langchain') or head in AI_FRAMEWORKS
+
+
+def check_ai_frameworks():
+    """Regla 4 (ADR 0020): ningún framework de orquestación de IA en el backend. Se permite
+    sólo el paquete de particionado, y sólo en su adaptador y en los tests."""
+    if not os.path.isdir(BACKEND_DIR):
+        skipped.append('%s/ todavía no existe: frameworks de IA no evaluados' % BACKEND_DIR)
+        return
+    for path in walk(BACKEND_DIR, ('.py',)):
+        try:
+            tree = ast.parse(read(path), filename=path)
+        except SyntaxError:
+            continue  # ya lo reportan las reglas 1 y 3
+        splitter_allowed = any(inside(path, d) for d in AI_SPLITTER_ALLOWED)
+        for module, line in imported_modules(tree):
+            head = root_module(module)
+            if not is_ai_framework(head):
+                continue
+            if head == AI_SPLITTER_PACKAGE and splitter_allowed:
+                continue
+            if head == AI_SPLITTER_PACKAGE:
+                errors.append('%s:%d importa %s fuera del adaptador de particionado '
+                              '(adapters/outbound/text_splitter/) (ADR 0020)'
+                              % (path, line, head))
+            else:
+                errors.append('%s:%d importa %s — no se usa ningún framework de orquestación '
+                              'de IA; los adaptadores usan el SDK del proveedor (ADR 0020)'
+                              % (path, line, head))
+
+
 def check_frontend_isolation():
     """Regla 2: el frontend habla con el backend sólo por la API REST."""
     if not os.path.isdir(FRONTEND_DIR):
@@ -252,6 +300,7 @@ def main():
     domain_files = check_domain_imports()
     check_money_types()
     backend_files = check_database_access()
+    check_ai_frameworks()
     frontend_files = check_frontend_isolation()
 
     print('Verificación de arquitectura')
@@ -268,8 +317,9 @@ def main():
         print('  ERROR    %s' % e)
 
     if errors:
-        print('\n%d error(es). Las reglas están en AGENTS.md y en '
-              'docs/adr/0001-arquitectura-hexagonal.md.' % len(errors))
+        print('\n%d error(es). Las reglas están en AGENTS.md, en '
+              'docs/adr/0001-arquitectura-hexagonal.md y en '
+              'docs/adr/0020-sin-framework-de-orquestacion-de-ia.md.' % len(errors))
         return 1
     if skipped and not domain_files and not backend_files and not frontend_files:
         print('Todavía no hay código que revisar. La verificación queda lista para cuando lo haya.')

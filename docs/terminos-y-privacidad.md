@@ -14,9 +14,9 @@ así que bloquean abrir Platita a usuarios reales.
 
 | Tema | Qué tiene que decir | Dónde está la decisión |
 |---|---|---|
-| Qué datos se guardan | Teléfono, nombre, país, cuentas, movimientos, presupuestos, categorías, mensajes y, si el usuario lo completa, el perfil financiero | [3. Modelo de datos](03-modelo-de-datos.md) |
+| Qué datos se guardan | Teléfono, nombre, país, cuentas, movimientos, presupuestos, categorías, mensajes y, si el usuario lo completa, el perfil financiero. De un número habilitado que todavía no se dio de alta, solo un HMAC del teléfono | [3. Modelo de datos](03-modelo-de-datos.md) |
 | Datos sensibles | El perfil financiero (ingresos por rango, deudas, personas a cargo, objetivos) es opcional y se usa solo para los consejos | [Reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos) |
-| Procesamiento con IA | Los mensajes se interpretan con un proveedor externo de LLM, sin identificadores, y con un proveedor que por contrato no entrena con esos datos | [ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md) |
+| Procesamiento con IA | Los mensajes se interpretan con un proveedor externo de LLM, y las preguntas de consejo pasan además por un proveedor de embeddings, que puede ser otro. A los dos se les envía sin identificadores, y los dos tienen que comprometerse por contrato a no entrenar con esos datos. Una consulta o un consejo incluye los últimos intercambios de la conversación | [ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md) |
 | Otros terceros | WhatsApp (Meta) como canal, el proveedor de alojamiento y las fuentes de cotización | [2. Arquitectura](02-arquitectura.md) |
 | Dónde se alojan los datos | La región del proveedor de alojamiento, que puede estar fuera del país | [2.4. Infraestructura](02-arquitectura.md#24-infraestructura-y-despliegue) |
 | Grupos familiares | Lo que un miembro imputa a un presupuesto familiar lo ven los demás miembros, y sigue visible después de que sale | [Reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad) |

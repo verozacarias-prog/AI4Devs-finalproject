@@ -50,14 +50,18 @@ erDiagram
     APP_USER |o--o{ INBOUND_MESSAGE : sends
     APP_USER |o--o{ OUTBOUND_MESSAGE : receives
     INBOUND_MESSAGE |o--o{ OUTBOUND_MESSAGE : "is answered by"
+    OUTBOUND_MESSAGE |o--o{ INBOUND_MESSAGE : "is quoted by"
+    ADVICE_DOCUMENT ||--o{ ADVICE_CHUNK : "is split into"
 ```
 
 #### Usuarios, acceso y educación financiera
 
 Quién es el usuario, a qué grupo familiar pertenece, cómo entra al dashboard y cuánto consume
-del LLM. `ADVICE_DOCUMENT`, `INDICATOR_VALUE` y `AUTH_THROTTLE` no tienen relaciones: la
-primera es la base de conocimiento de la educación financiera, la segunda guarda los indicadores de
-mercado que usan los consejos, y la tercera cuenta intentos por teléfono o IP, no por usuario.
+del LLM. `ADVICE_DOCUMENT` y `ADVICE_CHUNK` son la base de conocimiento de la educación
+financiera, y no se relacionan con ningún usuario. `INDICATOR_VALUE`, `AUTH_THROTTLE` y
+`ALLOWED_PHONE` no tienen relaciones: la primera guarda los indicadores de mercado que usan los
+consejos, la segunda cuenta intentos por teléfono o IP, no por usuario, y la tercera guarda qué
+números están habilitados para escribirle a Platita.
 
 ```mermaid
 erDiagram
@@ -68,6 +72,7 @@ erDiagram
     APP_USER ||--o{ LOGIN_CODE : "requests"
     APP_USER ||--o{ SESSION : "opens"
     APP_USER ||--o{ LLM_USAGE : "consumes"
+    ADVICE_DOCUMENT ||--o{ ADVICE_CHUNK : "is split into"
 
     APP_USER {
         uuid id PK
@@ -128,7 +133,7 @@ erDiagram
     LLM_USAGE {
         uuid user_id FK "NOT NULL"
         date usage_date "NOT NULL — calendar day in the user's time_zone"
-        string quota "NOT NULL, CHECK IN ('registration','query','advice'), PK (user_id, usage_date, quota)"
+        string quota "NOT NULL, CHECK IN ('registration','query','advice','classification'), PK (user_id, usage_date, quota) — the three quotas, plus the counter of the daily total cap"
         int message_count "NOT NULL, DEFAULT 0, CHECK (message_count >= 0)"
         int input_tokens "NOT NULL, DEFAULT 0"
         int output_tokens "NOT NULL, DEFAULT 0"
@@ -159,19 +164,39 @@ erDiagram
         uuid id PK
         string key_type "NOT NULL, CHECK IN ('phone','ip')"
         string key_hash "NOT NULL — HMAC-SHA256 of the E.164 phone or of the IP, with a server key"
-        string event "NOT NULL, CHECK IN ('code_request','token_failure','invite_failure')"
+        string event "NOT NULL, CHECK IN ('code_request','token_failure','invite_failure','not_enabled_notice')"
         timestamptz created_at "NOT NULL, DEFAULT now() — purged after 24 hours"
+    }
+
+    ALLOWED_PHONE {
+        uuid id PK
+        string phone_hash "NOT NULL, UNIQUE — HMAC-SHA256 of the E.164 phone with a server key, never the number"
+        timestamptz enabled_at "NOT NULL, DEFAULT now()"
+        timestamptz disabled_at "NULLABLE — set when the operator disables the number; the row stays"
     }
 
     ADVICE_DOCUMENT {
         uuid id PK
-        text content "NOT NULL"
-        vector embedding "pgvector, NOT NULL"
+        string slug "NOT NULL, UNIQUE — the source file name; how the load command finds the document again"
+        string title "NOT NULL"
+        text content "NOT NULL — the full original text"
         string topic "NOT NULL, e.g. credit_card, emergency_fund, basic_investing"
-        string source "NULLABLE, source URL or reference"
+        string source "NULLABLE, source name, reference or URL — answers cite it by name and date, never as a link"
         date publication_date "NULLABLE"
         date last_reviewed_at "NOT NULL, DEFAULT now()"
-        string status "NOT NULL, CHECK IN ('current','needs_review','outdated'), DEFAULT 'current'"
+        string status "NOT NULL, CHECK IN ('current','needs_review','outdated'), DEFAULT 'current' — only current documents are retrieved"
+        timestamptz created_at "DEFAULT now()"
+        timestamptz updated_at "NULLABLE — last time the load command changed it"
+    }
+
+    ADVICE_CHUNK {
+        uuid id PK
+        uuid document_id FK "NOT NULL"
+        int position "NOT NULL, CHECK (position >= 1), UNIQUE (document_id, position) — order inside the document"
+        text content "NOT NULL — the chunk text"
+        vector embedding "pgvector, NOT NULL — the dimension is fixed when the embedding model is chosen"
+        string embedding_model "NOT NULL — the model that generated the embedding"
+        string content_hash "NOT NULL — hash of content; the load command regenerates only chunks whose hash changed"
         timestamptz created_at "DEFAULT now()"
     }
 
@@ -374,7 +399,7 @@ erDiagram
 #### Pendientes y mensajería
 
 Los movimientos que esperan datos del usuario, los lotes en que se le preguntan y los mensajes
-de WhatsApp entrantes y salientes.
+entrantes y salientes, de WhatsApp o del chat web de desarrollo.
 
 ```mermaid
 erDiagram
@@ -390,6 +415,7 @@ erDiagram
     APP_USER |o--o{ INBOUND_MESSAGE : sends
     APP_USER |o--o{ OUTBOUND_MESSAGE : receives
     INBOUND_MESSAGE |o--o{ OUTBOUND_MESSAGE : "is answered by"
+    OUTBOUND_MESSAGE |o--o{ INBOUND_MESSAGE : "is quoted by"
 
     PENDING_TRANSACTION {
         uuid id PK
@@ -426,13 +452,14 @@ erDiagram
 
     INBOUND_MESSAGE {
         uuid id PK
-        string provider "NOT NULL, CHECK IN ('meta','twilio')"
-        string provider_message_id "NOT NULL, UNIQUE (provider, provider_message_id) — Meta's wamid"
-        uuid user_id FK "NULLABLE — null while the sender is not a registered user"
-        string from_phone "NULLABLE — null once purged"
+        string provider "NOT NULL, CHECK IN ('meta','twilio','web') — web: the development chat of the dashboard"
+        string provider_message_id "NOT NULL, UNIQUE (provider, provider_message_id) — Meta's wamid; on web, the session user id followed by the browser's Idempotency-Key"
+        uuid user_id FK "NULLABLE — null while the sender is not a registered user; never null on web"
+        string from_phone "NULLABLE — null once purged; on web, the phone of the session user"
+        uuid quoted_outbound_message_id FK "NULLABLE — the outbound message the user quoted; FK (quoted_outbound_message_id, user_id) to OUTBOUND_MESSAGE (id, user_id)"
         jsonb payload "NULLABLE — message as received, never logged unmasked; null once purged"
         timestamptz purged_at "NULLABLE — when the content was removed after the retention period"
-        timestamptz sent_at "NOT NULL — provider timestamp, orders the messages of one sender"
+        timestamptz sent_at "NOT NULL — provider timestamp, orders the messages of one sender; on web, when the server received it"
         string status "NOT NULL, CHECK IN ('pending','processing','processed','failed'), DEFAULT 'pending'"
         int attempts "NOT NULL, DEFAULT 0"
         timestamptz next_attempt_at "NOT NULL, DEFAULT now()"
@@ -443,16 +470,16 @@ erDiagram
 
     OUTBOUND_MESSAGE {
         uuid id PK
-        string provider "NOT NULL, CHECK IN ('meta','twilio')"
-        uuid user_id FK "NULLABLE — null only when answering a sender who is not registered yet"
-        string to_phone "NULLABLE — null once purged"
+        string provider "NOT NULL, CHECK IN ('meta','twilio','web') — the channel of the message it answers; web messages are read by the dashboard, never sent"
+        uuid user_id FK "NULLABLE — null only when answering a sender who is not registered yet; UNIQUE (id, user_id)"
+        string to_phone "NULLABLE — null once purged; on web, the phone of the user"
         uuid inbound_message_id FK "NULLABLE — the message this one answers; null for alerts and reminders"
-        jsonb content "NULLABLE — free text or template name and parameters; null once purged"
+        jsonb content "NULLABLE — free text or template name and parameters, plus response_kind; null once purged"
         timestamptz purged_at "NULLABLE — when the content was removed after the retention period"
-        string status "NOT NULL, CHECK IN ('pending','sent','failed'), DEFAULT 'pending'"
+        string status "NOT NULL, CHECK IN ('pending','sent','failed'), DEFAULT 'pending' — a web message is born sent"
         int attempts "NOT NULL, DEFAULT 0"
         timestamptz next_attempt_at "NOT NULL, DEFAULT now()"
-        string provider_message_id "NULLABLE — set once the provider accepts it; UNIQUE (provider, provider_message_id)"
+        string provider_message_id "NULLABLE — set once the provider accepts it; always null on web; UNIQUE (provider, provider_message_id)"
         timestamptz sent_at "NULLABLE"
         timestamptz created_at "DEFAULT now()"
     }
@@ -532,7 +559,7 @@ Sesión del dashboard, creada al canjear un código de login. El token viaja en 
 
 ##### AUTH_THROTTLE
 
-Registro de pedidos de código y canjes fallidos, del que salen los límites del login, y de los códigos de invitación fallidos (`invite_failure`), del que sale el límite para probarlos. Guarda un HMAC del teléfono o de la IP, nunca el valor, y no depende de que el número sea de un usuario: si dependiera, el límite delataría qué números usan Platita ([ADR 0017](adr/0017-limites-del-login-y-codigos-con-proposito.md)). Las filas se borran a las 24 horas.
+Registro de pedidos de código y canjes fallidos, del que salen los límites del login, y de los códigos de invitación fallidos (`invite_failure`), del que sale el límite para probarlos. También registra cada aviso de número no habilitado (`not_enabled_notice`), para que ese texto salga como mucho una vez cada 24 horas por número ([reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos)). Guarda un HMAC del teléfono o de la IP, nunca el valor, y no depende de que el número sea de un usuario: si dependiera, el límite delataría qué números usan Platita ([ADR 0017](adr/0017-limites-del-login-y-codigos-con-proposito.md)). Las filas se borran a las 24 horas.
 
 **Restricciones:**
 
@@ -540,11 +567,32 @@ Registro de pedidos de código y canjes fallidos, del que salen los límites del
 
 ##### LLM_USAGE
 
-Consumo diario de cada usuario, por cuota. Se suma en la misma transacción que procesa el mensaje, y la cuota se consulta antes de llamar al LLM. Los tokens no deciden el límite, que es por cantidad de mensajes, pero permiten saber cuánto cuesta cada usuario y ajustar los límites con datos. La regla está en [reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente).
+Consumo diario de cada usuario, por cuota. Se suma en la misma transacción que procesa el mensaje. El orden es: primero se mira el contador `classification`, que es el tope diario total; si no se alcanzó, se clasifica el mensaje, y recién entonces se mira la cuota de su clase (`registration`, `query` o `advice`). `classification` no es una cuarta cuota: cuenta las llamadas de clasificación del día y guarda sus tokens. Los tokens no deciden ningún límite, que es por cantidad de mensajes, pero permiten saber cuánto cuesta cada usuario y ajustar los límites con datos. La regla está en [reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente) y el mecanismo en el [ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md).
+
+##### ALLOWED_PHONE
+
+Los números que quien opera Platita habilitó para escribirle. Guarda el HMAC del teléfono y no el número, con la misma clave del servidor que `AUTH_THROTTLE`, para no tener teléfonos de personas que todavía no aceptaron los términos. La escribe un comando de operación, no un endpoint. Un número que no es de un usuario y no tiene acá una fila vigente recibe el texto de número no habilitado ([reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos)).
+
+**Restricciones:**
+
+- En `ALLOWED_PHONE`, `UNIQUE (phone_hash)`: habilitar dos veces el mismo número no crea dos filas. Deshabilitar es fijar `disabled_at`, y volver a habilitar lo deja en nulo. `disabled_at`, si está, es posterior a `enabled_at` (`CHECK`). No tiene clave foránea a `APP_USER`, porque el número se habilita antes de que exista el usuario.
 
 ##### ADVICE_DOCUMENT
 
-Base de conocimiento de educación financiera curada por el equipo del producto (no por cada usuario final) — es contenido compartido que cualquier usuario puede consultar vía RAG, no datos personales. `topic` clasifica el fragmento (tarjeta de crédito, fondo de emergencia, inversión básica, etc.) para poder acotar la búsqueda además de la similitud semántica. `status` y `last_reviewed_at` existen para poder listar qué contenido lleva mucho sin revisarse y decidir si actualizarlo — no hay actualización automática en el MVP, es un chequeo periódico manual apoyado en esa marca.
+Base de conocimiento de educación financiera curada por el equipo del producto (no por cada usuario final) — es contenido compartido que cualquier usuario puede consultar vía RAG, no datos personales. Cada fila es un documento, con su texto original completo: la base de datos es la fuente del contenido, que no se versiona en el repositorio. `slug` es el nombre del archivo del que se cargó, y es como el comando de carga reconoce un documento que ya existe. `topic` clasifica el documento (tarjeta de crédito, fondo de emergencia, inversión básica, etc.) para poder acotar la búsqueda además de la similitud semántica. `status` y `last_reviewed_at` existen para poder listar qué contenido lleva mucho sin revisarse y decidir si actualizarlo — no hay actualización automática en el MVP, es un chequeo periódico manual apoyado en esa marca. Solo los documentos en `current` se recuperan. Cómo se carga, se parte y se recupera está en el [ADR 0019](adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md).
+
+**Restricciones:**
+
+- `ADVICE_DOCUMENT` y `ADVICE_CHUNK` no se crean en la migración inicial. Van en una migración posterior, cuando se elija el modelo de embeddings, porque la columna `embedding` necesita la dimensión de ese modelo. La extensión pgvector sí se habilita en la primera.
+- En `ADVICE_DOCUMENT`, `UNIQUE (slug)`: cargar dos veces el mismo archivo actualiza el documento en vez de duplicarlo.
+
+##### ADVICE_CHUNK
+
+Cada fragmento en que se parte un documento, con su vector. Es lo que busca la recuperación por similitud y lo que entra al prompt, junto con la fuente de su documento. `embedding_model` dice con qué modelo se generó el vector, para saber qué falta recalcular si el modelo cambia. `content_hash` permite que una carga nueva recalcule solo los fragmentos cuyo texto cambió.
+
+**Restricciones:**
+
+- En `ADVICE_CHUNK`, `UNIQUE (document_id, position)`: un documento no tiene dos fragmentos en la misma posición. Borrar un documento borra sus fragmentos (`ON DELETE CASCADE`). Todos los vectores de la tabla tienen la dimensión de la columna, así que un modelo con otra dimensión exige una migración.
 
 ##### INDICATOR_VALUE
 
@@ -701,19 +749,22 @@ Ver también, en otra tabla: [el índice sobre `question_message_id`, en OUTBOUN
 
 ##### INBOUND_MESSAGE
 
-Todo mensaje que llega por el webhook de WhatsApp, guardado antes de procesarlo. Es a la vez la cola de trabajo del worker y el registro de lo que entró por el canal. `status` recorre `pending` → `processing` → `processed`, o termina en `failed` tras agotar los reintentos, y en ese caso el usuario recibe un aviso. `sent_at` ordena los mensajes de un mismo remitente, que se procesan de a uno y en orden. `user_id` es nulo mientras el número no corresponde a un usuario registrado. Cómo se toma, se reintenta y se procesa está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
+Todo mensaje que llega por el webhook de WhatsApp o por el chat web de desarrollo, guardado antes de procesarlo. Es a la vez la cola de trabajo del worker y el registro de lo que entró por el canal. `quoted_outbound_message_id` es el mensaje de Platita que el usuario citó al responder: el chat web lo manda directo, y en WhatsApp se resuelve desde el identificador de Meta del mensaje citado al guardar el mensaje. Del historial de esta tabla y de `OUTBOUND_MESSAGE` sale también la memoria de conversación ([ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md)). `status` recorre `pending` → `processing` → `processed`, o termina en `failed` tras agotar los reintentos, y en ese caso el usuario recibe un aviso. `sent_at` ordena los mensajes de un mismo remitente, que se procesan de a uno y en orden. `user_id` es nulo mientras el número no corresponde a un usuario registrado. Cómo se toma, se reintenta y se procesa está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
 
 **Restricciones:**
 
 - En `INBOUND_MESSAGE` y `OUTBOUND_MESSAGE`, el contenido y el teléfono (`payload` y `from_phone` en la entrada, `content` y `to_phone` en la salida) son nulos si y solo si `purged_at` está informado (`CHECK`): la purga borra los dos a la vez, como pide [reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos). Solo se purgan mensajes ya procesados, así que el worker, que identifica al remitente por `from_phone` cuando no hay `user_id`, nunca encuentra un pendiente sin teléfono.
-- En `INBOUND_MESSAGE`, `UNIQUE (provider, provider_message_id)`: un mensaje del proveedor se guarda una sola vez, así un reintento del webhook no genera un segundo procesamiento. El fundamento está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
+- En `INBOUND_MESSAGE`, `UNIQUE (provider, provider_message_id)`: un mensaje del proveedor se guarda una sola vez, así un reintento del webhook no genera un segundo procesamiento. En un mensaje web el identificador es el usuario de la sesión seguido del código que generó el navegador: el servidor pone la parte del usuario, así la clave es única por usuario y un reenvío del navegador no duplica. El fundamento está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
+- En `INBOUND_MESSAGE`, un mensaje con `provider = 'web'` tiene `user_id` informado (`CHECK`), porque viene de una sesión. Su `from_phone` es el teléfono de ese usuario, así que la restricción de la purga no cambia.
+- El mensaje citado es del mismo usuario, y la base lo impone: `INBOUND_MESSAGE (quoted_outbound_message_id, user_id)` es una clave foránea compuesta contra `OUTBOUND_MESSAGE (id, user_id)`, apoyada en un `UNIQUE (id, user_id)`. Así nadie puede citar la confirmación de otro para corregir sus movimientos. Si el mensaje citado no se encuentra, la columna queda nula y el mensaje se procesa como si no citara nada ([reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)).
 
 ##### OUTBOUND_MESSAGE
 
-Todo mensaje que Platita manda por WhatsApp, ya sea una respuesta, una alerta o un recordatorio. Se escribe en la misma transacción que lo origina y el worker lo envía después, de modo que un cambio en la base y su aviso al usuario no pueden separarse. `content` distingue texto libre de plantilla, porque fuera de la ventana de conversación Meta solo acepta plantillas preaprobadas.
+Todo mensaje que Platita manda, ya sea una respuesta, una alerta o un recordatorio. Se escribe en la misma transacción que lo origina y el worker lo envía después por WhatsApp, de modo que un cambio en la base y su aviso al usuario no pueden separarse. Una respuesta sale por el canal del mensaje que contesta: si ese mensaje entró por el chat web, la respuesta tiene `provider = 'web'`, nace con `status = 'sent'` y no se envía a ningún lado; el dashboard la lee. `content` distingue texto libre de plantilla, porque fuera de la ventana de conversación Meta solo acepta plantillas preaprobadas. Guarda además `response_kind`, qué tipo de respuesta fue, que es lo que le permite al código aplicar la regla de insistencia de los consejos sin depender del modelo ([reglas de dominio § 18](reglas-de-dominio.md#18-alcance-de-los-consejos)).
 
 **Restricciones:**
 
-- En `OUTBOUND_MESSAGE`, `UNIQUE (provider, provider_message_id)`, y un índice sobre `PENDING_BATCH (question_message_id)` y otro sobre `PENDING_BATCH (confirmation_message_id)`. Una respuesta que cita un mensaje trae el identificador de WhatsApp del mensaje citado; con él se encuentra el mensaje enviado y, desde ese mensaje, el lote que preguntaba ([reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)). La columna es nula hasta que el mensaje se envía, y en un `UNIQUE` dos nulos no chocan.
+- En `OUTBOUND_MESSAGE`, `content`, cuando no es nulo, lleva un `response_kind` de un conjunto cerrado (`CHECK` sobre la clave del JSON): `registration`, `query`, `advice_information`, `advice_education`, `advice_decision`, `advice_limit_explained`, `advice_limit_fixed`, `fixed_text` y `proactive`. Los dos de límite son la explicación de por qué Platita no decide por el usuario y el texto fijo que la repite.
+- En `OUTBOUND_MESSAGE`, `UNIQUE (provider, provider_message_id)`, y un índice sobre `PENDING_BATCH (question_message_id)` y otro sobre `PENDING_BATCH (confirmation_message_id)`. Una respuesta de WhatsApp que cita un mensaje trae el identificador de WhatsApp del mensaje citado; con él se encuentra el mensaje enviado, que se guarda en `INBOUND_MESSAGE.quoted_outbound_message_id`, y desde ese mensaje, el lote que preguntaba ([reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)). La columna es nula hasta que el mensaje se envía, y en un `UNIQUE` dos nulos no chocan.
 
 Ver también, en otra tabla: [la purga del contenido y del teléfono, en INBOUND_MESSAGE](#inbound_message).

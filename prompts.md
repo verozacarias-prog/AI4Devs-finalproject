@@ -45,6 +45,7 @@ dejó, en síntesis:
 | Diseño de infraestructura y operación | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Diseñar en modo de solo lectura el despliegue, las copias de respaldo y la observabilidad, y registrarlo en `docs/` como propuesta sin decidir |
 | Revisión del modelo de datos | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Hacer legible el modelo de datos, revisar con la autora los montos de `TRANSACTION` y cambiar la regla de inmutabilidad de los ADR |
 | Validación del diseño por casos de uso | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Recorrer casos cotidianos de usuarios argentinos sobre la especificación, fijar quién accede a la base y dibujar el recorrido completo |
+| Validación contra el módulo de RAG y alcance de la entrega 2 | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Contrastar once definiciones de diseño contra la especificación en modo de solo lectura, resolver cada conflicto con la autora y escribir el resultado en `docs/`, en tres ADR nuevos y en el verificador de arquitectura |
 | Código, tests y despliegue | *(pendiente — Entrega 2)* | | |
 
 La auditoría de repos de referencia (ver §1, Prompt 2) recomendó configurar y versionar las rules antes de empezar a codear, porque **ninguno de los dos proyectos de ejemplo del curso lo había hecho**. Esa recomendación se siguió al cierre de la Entrega 1. La configuración resultante —contratos, skill, commands, verificadores y hook— está descrita en [`docs/flujo-de-trabajo-con-ia.md`](docs/flujo-de-trabajo-con-ia.md) y no se repite acá.
@@ -461,6 +462,42 @@ y los incorrectos, con la propiedad que su prueba de regresión tiene que verifi
 
 ---
 
+**Prompt 3** — *Claude Code · validar diez definiciones de diseño contra la especificación, y fijar el alcance de la entrega 2*
+
+> "# Tarea: validar y aplicar diez definiciones de diseño en Platita [...] Antes de escribir el código de la entrega 2 revisé el diseño contra el módulo de RAG del curso y tomé diez definiciones. Salieron de un análisis hecho fuera de este repo, por alguien que no leyó toda la documentación línea por línea, así que pueden chocar con reglas que ya existen. Tu trabajo es primero comprobar si son válidas contra lo que el repo ya dice, y después aplicarlas. [...] WhatsApp sigue siendo el canal principal. El chat web es un andamio para desarrollar y mostrar, no un canal del producto. [...] Los consejos con RAG van sí o sí en el producto. [...] Fase 1: validar, sin modificar nada [...] Frená ahí y esperá mi respuesta. [...] Fase 2: aplicar, solo después de mi visto bueno [...] No agregues nada que no esté en estas definiciones."
+>
+> *(ante el informe de la fase 1, con quince conflictos y dudas agrupados)* "no me quedo claro cuales son las dudas y lo que yo tengo que definir, vamos una por una, por favor"
+>
+> *(sobre el alta)* "no me gusta que cualquiera le pueda escribir al nro de Platita, se supone, muy a futuro, que si es una funcionalidad paga, primero deberia haberlo dado de alta yo, como administrador, y ahi platita puede responder, y si yo no habilite ese nro para que le escriba a platita devuelve un mensaje que no esta habilitado"
+>
+> *(sobre mostrar el código de login en la pantalla)* "si dijimos que el chat web no tiene login, entonces el codigo queda inutil, o no?"
+>
+> *(sobre relajar una restricción de la base para los mensajes web)* "si el login por chat web, va a ser con un usuario de prueba, se define un telefono para el usuario de prueba y listo, no hace falta romper con la exigencia de la base"
+>
+> *(sobre las llamadas al modelo de una consulta)* "me parece que 3 llamadas al llm son innecesarias, el 1 y 2 se puede resolver en el mismo prompt"
+>
+> *(sobre el paquete de particionado)* "no tiene sentido no usar langchain solo porque contradice el titulo de un ADR, si es la mejor opcion se cambia el titulo del adr y listo"
+
+*(prompt completo: ~150 líneas con contexto, dos criterios generales, dos fases, las diez definiciones, lo que queda fuera de la tarea y el formato del resumen final)*
+
+*Qué devolvió y qué se decidió:* la fase 1 leyó toda la especificación sin tocar nada. Ninguna de las diez definiciones resultó inviable, pero siete chocaban con texto ya escrito. Los tres choques que más pesaron:
+
+- **La cuota no se podía cobrar antes de clasificar.** La especificación decía que la cuota se consulta antes de llamar al modelo, y sin interpretar el mensaje no se sabe a cuál de las tres pertenece. La definición nueva era la correcta, y dejaba a la vista otro hueco: un registro demorado por su cuota trababa los mensajes siguientes del mismo usuario hasta el otro día.
+- **El alta por chat web no tenía por dónde empezar.** Para abrir el chat hace falta una sesión, y una persona que todavía no es usuario no la tiene. Quedó como decisión abierta en la hoja de ruta.
+- **La consulta periódica del chat mantenía viva la sesión.** Cada pedido contaba como actividad, así que el vencimiento por inactividad no ocurría nunca.
+
+Las decisiones se tomaron de a una, y varias respuestas de la autora cambiaron sus propias definiciones:
+
+- **Sin login en el andamio.** En la entrega 2 se entra eligiendo un usuario de prueba, con una sesión real. El login por código se construye con WhatsApp, en la entrega final.
+- **Una definición más, la once.** Solo escriben los números que quien opera Platita habilitó, con un comando de operación. De paso acota el abuso del tope del proveedor, que estaba abierto.
+- **El alcance creció y quedó ordenado.** Gastos e ingresos con toda su conversación, más corregir, borrar y restaurar, y una pantalla de cuentas con el saldo. Está escrito en la [hoja de ruta](docs/hoja-de-ruta.md#alcance-de-la-entrega-2), con el orden en que se cae lo último si el tiempo no alcanza.
+
+Salieron tres ADR: el [0018](docs/adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md) (clasificación inicial y memoria de conversación), el [0019](docs/adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md) (embeddings, carga y recuperación de la base de conocimiento) y el [0020](docs/adr/0020-sin-framework-de-orquestacion-de-ia.md) (sin framework de orquestación de IA). Otros siete se corrigieron en su archivo, porque ninguno está en producción. El verificador de arquitectura sumó una regla, que ningún framework de IA se importe fuera del adaptador de particionado, y se probó contra un backend de mentira antes de darla por buena.
+
+La validación por casos de uso no se tocó: es un registro que se regenera, y su diagrama del worker queda atrás hasta la próxima corrida.
+
+---
+
 ## 7. Pull Requests
 
 *No aplica a esta entrega. Se completa en la Entrega final con 3 pull requests reales enlazados.*
@@ -512,6 +549,15 @@ y los incorrectos, con la propiedad que su prueba de regresión tiene que verifi
 | 39 | Dejar el informe de validación fuera de `docs/`, para que no pasara a ser especificación | La autora lo quería como backlog y como base de las pruebas. Entró como registro, con su estado declarado en `AGENTS.md` §10 |
 | 40 | Un recorrido que mostrara solo las etapas del usuario | La autora pidió ver también qué tabla se escribe y si cada llamada es HTTPS o SQL. Con ese nivel de detalle apareció un hueco nuevo: no hay canal para confirmar un período |
 
+| 41 | Entregar la validación de las definiciones como un informe con quince conflictos y dudas agrupados y numerados | La autora no pudo ver qué tenía que decidir. Se pasó a una pregunta por mensaje, con la situación de uso concreta en vez del nombre de la restricción |
+| 42 | Un endpoint aparte para mostrar el código de login en la pantalla del andamio | La autora notó que sin login en el chat web el código sobraba. Quedó una entrada de desarrollo con sesión real, y el login por código para la entrega final |
+| 43 | Relajar una restricción de la base para dejar vacío el teléfono en los mensajes del chat web | Todo usuario tiene teléfono: el mensaje web copia el del usuario de la sesión y la restricción queda como estaba |
+| 44 | Rechazar un identificador de mensaje que ya hubiera usado otro usuario | La autora propuso que el identificador incluya al usuario. El servidor lo antepone desde la sesión, queda único por usuario y el caso desaparece |
+| 45 | Tres llamadas al modelo para responder una consulta: clasificar, elegir los datos y redactar | La primera llamada clasifica y ya pide los datos. Quedaron dos, con el costo anotado en el ADR 0018 |
+| 46 | Descartar `langchain-text-splitters` porque contradecía el título del ADR «Sin LangChain» | Argumento de forma. Lo que importaba era si rompía la razón de fondo, y no la rompía. Se cambió el título y se permitió el paquete en un solo adaptador |
+| 47 | Contar el tope diario de mensajes sobre la tabla de mensajes, sin ningún contador nuevo | La IA lo detectó al escribir la regla: no acotaba el costo, porque los registros demorados ya estaban clasificados y no se contaban. Quedó un contador propio en `LLM_USAGE` |
+| 48 | Una especificación en la que cualquier número podía empezar un alta, con el abuso del proveedor como decisión abierta | La autora pidió que solo escriban los números que ella habilita. La IA propuso un comando de operación en vez de una pantalla, que exigía un rol de administrador que no existe |
+
 El patrón que se repite: la IA tiende a **resolver la ambigüedad por su cuenta** eligiendo un valor por defecto razonable, y a **justificar decisiones técnicas por el esfuerzo** que ahorran en vez de por sus propiedades de diseño. Las dos cosas hay que detectarlas leyendo, porque el resultado siempre suena defendible.
 
 En la fase de reestructuración aparece un patrón distinto, propio de trabajar con la IA sobre archivos en vez de sobre texto en un chat: los errores dejan de ser de criterio y pasan a ser **mecánicos y silenciosos** —un bloque de código sin cerrar, una palabra que se come el shell—. No se detectan leyendo el resultado, porque el archivo sigue pareciendo correcto. Se detectan ejecutando una verificación. De ahí que la lista de comprobaciones vaya dentro del prompt y no después.
@@ -525,6 +571,13 @@ mecanismo no está escrito**. La frase suena a decisión tomada, y por eso nadie
 pregunta que la desarma es cómo se cumple en el peor caso. Recorrer casos concretos, con montos
 reales y de punta a punta, encuentra en un día lo que leer documento por documento no encontró:
 cada documento es coherente por dentro, y los huecos están entre ellos.
+
+Al contrastar definiciones tomadas afuera contra la especificación aparece otro: la IA **entrega
+el análisis en la forma en que lo hizo, no en la forma en que se decide**. El informe era
+correcto y estaba completo, pero mezclaba ajustes técnicos sin alternativa con decisiones de
+producto, y nombraba cada problema por su tabla o su restricción. De a una, y con la escena de
+uso, la autora no solo decidió: en cinco de las diecisiete encontró una solución más simple que
+la propuesta.
 
 ---
 

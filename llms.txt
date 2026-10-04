@@ -62,6 +62,9 @@ nombres de archivo de código están en inglés.
 - [0015 — Borrar un movimiento es marcarlo como borrado, no eliminar la fila](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0015-borrado-logico-de-movimientos/)
 - [0016 — Sesión de servidor revocable en una cookie, con el dashboard servido desde la API](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0016-sesion-de-servidor-en-el-mismo-origen/)
 - [0017 — Límites del login que no dependen de que el número exista, y códigos atados a su propósito](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0017-limites-del-login-y-codigos-con-proposito/)
+- [0018 — Una llamada inicial que clasifica el mensaje, y memoria de conversación leída de las tablas de mensajes](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0018-clasificacion-inicial-y-memoria-de-conversacion/)
+- [0019 — Base de conocimiento: embeddings por API en un puerto propio, carga desde archivos y recuperación por similitud](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion/)
+- [0020 — Sin framework de orquestación de IA](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0020-sin-framework-de-orquestacion-de-ia/)
 
 ## Contrato para asistentes de IA
 

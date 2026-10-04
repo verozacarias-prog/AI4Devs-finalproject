@@ -22,12 +22,17 @@ la API: son los tres procesos que comparten el código del dominio.
 1. **Desde afuera, solo por HTTP.** El dashboard, una futura app móvil y Meta (por el webhook)
    entran únicamente por la API. Ningún cliente externo recibe credenciales de la base ni se
    conecta a ella.
-2. **Adentro, tres puntos de entrada y un solo camino.** La API (`adapters/inbound/api/` y
+2. **Adentro, cuatro puntos de entrada y un solo camino.** La API (`adapters/inbound/api/` y
    `adapters/inbound/whatsapp_webhook/`), el worker de mensajes
-   (`adapters/inbound/message_worker/`) y los procesos programados
-   (`adapters/inbound/scheduler/`) son adaptadores de entrada: traducen su disparador (un
-   request, un mensaje guardado, una hora) a llamadas a casos de uso, y los casos de uso usan
-   los repositorios a través de puertos. Ninguno escribe SQL propio.
+   (`adapters/inbound/message_worker/`), los procesos programados
+   (`adapters/inbound/scheduler/`) y los comandos de operación (`adapters/inbound/cli/`) son
+   adaptadores de entrada: traducen su disparador (un request, un mensaje guardado, una hora,
+   un comando que corre quien opera Platita) a llamadas a casos de uso, y los casos de uso usan
+   los repositorios a través de puertos. Ninguno escribe SQL propio. Los comandos de operación
+   son la carga de la base de conocimiento
+   ([ADR 0019](0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md)) y la
+   habilitación de números. No son un proceso desplegado aparte: corren a pedido, en el entorno
+   de uno de los tres procesos del backend.
 3. **Ningún proceso llama a otro por HTTP.** El worker y los procesos programados no llaman a la
    API: usan los mismos casos de uso en su propio proceso. Una llamada HTTP interna partiría en
    dos lo que tiene que ser una sola transacción, y sumaría una credencial de servicio que hoy no
@@ -68,8 +73,9 @@ la API: son los tres procesos que comparten el código del dominio.
   sin tocar lógica de negocio.
 - Es el mismo patrón que ya se usa en otros proyectos propios en Go, así que la disciplina de
   diseño ya es conocida, solo cambia el lenguaje.
-- Una regla de negocio se implementa una sola vez: la API, el worker y los procesos programados
-  la ejecutan por el mismo caso de uso, en vez de repetirla en un script con SQL propio.
+- Una regla de negocio se implementa una sola vez: la API, el worker, los procesos programados
+  y los comandos de operación la ejecutan por el mismo caso de uso, en vez de repetirla en un
+  script con SQL propio.
 - Que el SQL viva en un solo lugar es verificable: un script falla el commit si una librería de
   acceso a la base aparece fuera de los directorios permitidos.
 

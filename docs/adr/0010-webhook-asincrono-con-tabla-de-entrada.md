@@ -73,7 +73,12 @@ El webhook solo recibe y confirma; el procesamiento ocurre después, en un proce
    como `failed` y el usuario recibe un aviso de que su mensaje no se pudo procesar. Un mensaje
    nunca se descarta en silencio. Mientras se reintenta, los mensajes siguientes del mismo
    remitente esperan detrás, para respetar el orden; una vez en `failed` deja de bloquearlos, y
-   el siguiente se procesa normalmente.
+   el siguiente se procesa normalmente. Un mensaje **demorado** por un límite de uso, sea la
+   cuota de registro o el tope diario total
+   ([ADR 0018](0018-clasificacion-inicial-y-memoria-de-conversacion.md)), tampoco bloquea:
+   vuelve a `pending` con `next_attempt_at` en el inicio del día siguiente del usuario, y los
+   mensajes posteriores del mismo remitente se procesan mientras tanto. No es un fallo: no
+   cuenta para el máximo de reintentos ni dispara el aviso de error.
 5. **Salida.** Las respuestas al usuario se escriben en la tabla `OUTBOUND_MESSAGE` dentro de la
    misma transacción que las origina, y el worker las envía después. Los procesos programados
    (alertas, recordatorios) usan la misma tabla para mandar sus mensajes. Una respuesta nunca se
@@ -82,6 +87,25 @@ El webhook solo recibe y confirma; el procesamiento ocurre después, en un proce
 6. **Proveedor.** Las tablas guardan `provider` y el identificador del proveedor, y el puerto de
    WhatsApp no expone conceptos de Meta. Pasar a Twilio es escribir otro adaptador de entrada y
    de salida, sin migrar datos.
+7. **El chat web entra por el mismo camino.** El chat de desarrollo del dashboard
+   ([ADR 0002](0002-whatsapp-como-canal-principal.md)) no tiene un camino síncrono propio. Un
+   endpoint de la API guarda el mensaje en `INBOUND_MESSAGE` con `provider = 'web'` y responde
+   enseguida; el worker lo procesa igual que uno de WhatsApp y escribe la respuesta en
+   `OUTBOUND_MESSAGE`; el dashboard consulta cada pocos segundos si hay mensajes nuevos. Lo que
+   cambia respecto de WhatsApp:
+   - El usuario sale de la sesión, y el mensaje guarda su `user_id` y su teléfono.
+   - El identificador del mensaje lo genera el navegador, para que un reenvío no duplique, y el
+     servidor lo guarda con el usuario de la sesión adelante, así es único por usuario.
+   - `sent_at` es el momento en que el servidor lo recibió, no el reloj del navegador.
+   - Un mensaje de salida web no se envía a ningún proveedor: nace como enviado y queda
+     disponible para que el dashboard lo lea.
+8. **La respuesta sale por el canal del mensaje que contesta.** Un mensaje que no responde a
+   ninguno, como una alerta o un recordatorio, sale por WhatsApp.
+9. **El mensaje citado se guarda resuelto.** `INBOUND_MESSAGE` tiene una columna con el mensaje
+   de salida que el usuario citó. El chat web manda ese identificador directo. En WhatsApp, el
+   caso de uso que guarda el mensaje lo resuelve desde el identificador de Meta del mensaje
+   citado. En los dos casos se valida que el mensaje citado sea del mismo usuario; si no se
+   encuentra, la columna queda nula y el mensaje se procesa como si no citara nada.
 
 Los procesos programados (gastos recurrentes, alertas de presupuesto, expiración de pendientes)
 siguen siendo cron jobs separados. Esta decisión no los cambia, salvo que envían por la tabla de
@@ -99,6 +123,8 @@ salida.
 - El orden por usuario hace que la continuación de un pendiente sea determinista.
 - La tabla de entrada deja un registro auditable de todo lo que llegó por el canal, procesado o
   no.
+- El chat web ejercita el mismo worker, las mismas tablas y las mismas transacciones que
+  WhatsApp. Sumar el adaptador de WhatsApp después no cambia el procesamiento.
 
 ### Negativas y costos asumidos
 
@@ -113,6 +139,9 @@ salida.
   fencing deja completar solo a un worker.
 - La tabla de entrada guarda el texto y el teléfono del usuario. Hace falta una política de
   retención, que queda por definir, y nunca se loggea su contenido sin enmascarar.
+- En el chat web la respuesta no llega sola: el navegador tiene que preguntar por ella cada
+  pocos segundos, y se ve con esa demora además de la del worker.
+- Con mensajes demorados, los de un remitente dejan de procesarse en orden estricto.
 - A partir de cientos de mensajes por minuto, una tabla como cola empieza a competir con el resto
   de la carga de la base. Ahí conviene una cola dedicada, y el puerto de entrada permite
   cambiarla sin tocar el dominio.
@@ -126,6 +155,9 @@ salida.
 - **Tarea en segundo plano dentro del proceso web** (`BackgroundTasks` de FastAPI): responde
   rápido sin un servicio más, pero la tarea vive en memoria. Un reinicio o un despliegue la pierde
   sin dejar rastro. Descartado porque un mensaje perdido es un movimiento perdido.
+- **Un endpoint síncrono para el chat web,** que interpreta y responde en el mismo request: el
+  chat se vería más rápido, pero habría dos caminos de procesamiento, y el asíncrono, que es el
+  del producto, quedaría sin ejercitar hasta sumar WhatsApp.
 - **Una cola dedicada (Redis, SQS o similar):** reintentos y visibilidad resueltos por la
   herramienta, a cambio de operar un segundo sistema y de perder la atomicidad entre marcar el
   mensaje y aplicar sus efectos, que hoy es una sola transacción de PostgreSQL. Descartado a este
