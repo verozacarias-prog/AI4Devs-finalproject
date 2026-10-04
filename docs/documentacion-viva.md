@@ -50,12 +50,14 @@ Cada cambio pasa por tres controles, de más cerca a más lejos de quien escribe
 | Cuándo | Qué corre | Se saltea |
 |---|---|---|
 | Antes de cada commit | Los dos verificadores propios, vía `.githooks/pre-commit` | Sí, con `--no-verify` |
-| En cada pull request | Los dos verificadores, `markdownlint-cli2`, `lychee` y la construcción del portal | No |
+| En cada pull request | Los dos verificadores, `markdownlint-cli2`, `lychee`, la construcción del portal y `gitleaks`, que busca secretos | No |
 | Todos los lunes | `lychee`, porque un enlace externo se rompe sin que nadie toque nada | No |
 
 El detalle de qué valida cada herramienta está en
 [8.7](08-convenciones-de-documentacion.md#87-verificación-automática), y por qué son esas y no
-otras, en el [ADR 0009](adr/0009-validacion-de-documentacion-en-ci.md).
+otras, en el [ADR 0009](adr/0009-validacion-de-documentacion-en-ci.md). Los controles del
+código, que se suman con el primer commit de código, están en el
+[ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md).
 
 ## 4. Qué hace la IA y qué no
 

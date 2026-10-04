@@ -21,6 +21,16 @@ Para cambios de dashboard, una por estado de pantalla.
 Ver el checklist completo en
 [7. Pull requests](../../07-pull-requests.md#definition-of-done).
 
+## Revisión con el agente
+
+- [ ] Corrí el agente `pr-reviewer` sobre la última versión de este cambio.
+
+Informe del revisor:
+
+```text
+Pegar acá el informe completo.
+```
+
 ## Decisiones tomadas
 
 Si hubo una decisión de arquitectura, enlazar el ADR. Si no hubo, decir "ninguna".

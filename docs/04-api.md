@@ -591,3 +591,27 @@ responses:
   409:
     description: The user owns a family group and must transfer the role first
 ```
+
+### `GET /healthz`, `GET /readyz` y `GET /queuez`
+
+Las tres rutas de salud ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)). No piden sesión, no devuelven datos de nadie y no cuentan para ningún límite. El cuerpo solo dice el estado.
+
+- `GET /healthz` responde `200` si el proceso está vivo. No toca la base. Es el chequeo de salud de la imagen.
+- `GET /readyz` responde `200` si la API llega a la base, y `503` si no. Es la que mira el despliegue antes de pasar el tráfico a una versión nueva, y la que vigila el monitor externo para la alerta de servicio caído.
+- `GET /queuez` responde `503` si hay algún mensaje en `INBOUND_MESSAGE` con `status = 'pending'` cuyo `next_attempt_at` pasó hace más de 10 minutos, y `200` si no hay ninguno. Los 10 minutos son configuración. Un mensaje demorado hasta el día siguiente o a la espera de un reintento tiene su `next_attempt_at` en el futuro, así que no cuenta. Es la que vigila el monitor externo para la alerta de mensajes sin procesar: el worker puede estar colgado con la API sana.
+
+```yaml
+# GET /healthz · GET /readyz · GET /queuez
+responses:
+  200:
+    content:
+      application/json:
+        example:
+          status: "ok"
+  503:
+    description: Only /readyz and /queuez. The database is unreachable, or a message has been waiting longer than the threshold
+    content:
+      application/json:
+        example:
+          status: "unavailable"
+```

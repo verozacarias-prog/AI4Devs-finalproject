@@ -52,8 +52,9 @@ https://github.com/verozacarias-prog/AI4Devs-finalproject
 | [Términos y privacidad](docs/terminos-y-privacidad.md) | Qué tienen que cubrir los términos y la política de privacidad, antes de redactarlos. |
 | [Validación por casos de uso](docs/use-case-walkthrough.md) | Registro, no especificación: 51 casos cotidianos de usuarios argentinos recorridos sobre el diseño, las decisiones pendientes que dejan y los escenarios para las pruebas. |
 | [Hoja de ruta](docs/hoja-de-ruta.md) | Qué queda para la entrega 2 y para la app móvil, y por qué. |
-| [Operación](docs/operacion.md) | Propuesta sin decidir: entornos, pipeline, despliegue, copias de respaldo y observabilidad. |
-| [Flujo de trabajo con IA](docs/flujo-de-trabajo-con-ia.md) | Contratos, skill, commands, verificadores y hooks. |
+| [Operación](docs/operacion.md) | Entornos, pipeline, despliegue, copias de respaldo y observabilidad, con lo decidido separado de lo que sigue como propuesta. |
+| [Seguridad de la capa de IA](docs/seguridad-llm.md) | Platita contra el OWASP Top 10 para aplicaciones LLM: qué cubre cada riesgo y qué falta. |
+| [Flujo de trabajo con IA](docs/flujo-de-trabajo-con-ia.md) | Contratos, skill, commands, agente revisor, verificadores y hooks. |
 | [Documentación viva](docs/documentacion-viva.md) | Cómo se mantiene sincronizada la documentación: fuente única, portal, `llms.txt` y las tres barreras de validación. |
 
 La documentación también se publica como sitio navegable en

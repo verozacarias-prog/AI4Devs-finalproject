@@ -1,0 +1,18 @@
+# Actualización semanal de dependencias (ADR 0021).
+# Dependabot abre los pull requests contra la rama por defecto del repositorio,
+# que en este fork es la rama de la entrega en curso. En un fork hay que
+# habilitarlo a mano, en Settings → Code security.
+#
+# Cuando exista el código se suman acá backend/ (pip) y frontend/ (npm).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+  - package-ecosystem: npm
+    directory: /site
+    schedule:
+      interval: weekly
+      day: monday

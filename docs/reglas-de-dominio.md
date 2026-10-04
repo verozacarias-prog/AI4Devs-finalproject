@@ -391,6 +391,13 @@ Cada pendiente pertenece a un lote (`PENDING_BATCH`), y un gasto suelto es un lo
   multiplica las chances de una interpretación errónea. Si el usuario manda más, el asistente
   toma los primeros 10 y le avisa que siga con el resto.
 
+**Qué cuenta como corrección, para medir la interpretación.** Cada pendiente cuenta cuántos
+campos que el modelo había interpretado cambió el usuario antes de confirmar: el monto, el tipo,
+la fecha, la moneda, la categoría o la cuenta que el mensaje nombraba. Suma uno por cada campo
+que una respuesta cambia. No cuenta completar un dato que faltaba ni elegir el presupuesto, que
+se pregunta siempre. El contador no cambia nada de lo que ve el usuario: lo lee solo la métrica
+de calidad ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
+
 Ver también: [PENDING_TRANSACTION y PENDING_BATCH en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [HU3](05-historias-de-usuario.md).
 
 ## 6. Multimoneda y cotización
@@ -1078,6 +1085,12 @@ dashboard:
    porque los nombres son únicos por usuario. La descripción de cada movimiento se conserva tal como la escribió,
    porque es parte de lo que el grupo ve, así que puede seguir nombrando personas o lugares.
 
+**El registro de las llamadas al modelo no tiene contenido, y no vence.** Por cada llamada al
+proveedor queda una fila con su duración, sus tokens, su costo y su resultado, sin texto, montos
+ni nombres. No se borra por plazo. Cuando se borra una cuenta, sus mensajes se borran y esas
+filas dejan de apuntar a ellos: lo que queda no se puede vincular con nadie
+([LLM_CALL en 3.2](03-modelo-de-datos.md#llm_call)).
+
 **Derechos del usuario.**
 
 - **Acceso:** puede descargar en cualquier momento todos sus datos en Excel desde el dashboard.
@@ -1285,6 +1298,22 @@ cobra, lo pide a una función. Dos límites:
   pide el total.
 - La respuesta muestra los datos de los que sale cada cuenta, como "$140.000 sobre $505.748,51
   es el 27,7%", para que el usuario la pueda seguir.
+
+**El código comprueba cada cifra antes de enviar la respuesta.** Que el modelo no invente no
+queda librado a su prompt. Junto al texto, el modelo entrega la lista de las cifras que usó,
+cada una marcada de una de dos formas:
+
+- **Dato:** de qué función salió. El código comprueba que esa función haya devuelto ese valor.
+  Un monto que el usuario escribió en su pregunta también es un dato, y se comprueba contra el
+  mensaje.
+- **Cuenta:** qué operación es y con qué datos se hizo. El código la rehace, con las mismas
+  reglas de redondeo que el resto del producto, y compara el resultado.
+
+Si un dato no coincide, una cuenta no da lo mismo, o el texto trae una cifra que no está en la
+lista, la respuesta no sale: el usuario recibe el texto fijo de lo que no se puede responder. En
+el ejemplo, $140.000 y $505.748,51 son datos, y el 27,7% es una cuenta: una división entre los
+dos. Las fechas y las cantidades de movimientos no son cifras para esta regla. El mecanismo está
+en el [ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md).
 
 **Una cifra parcial se avisa.** Si el usuario tiene mensajes de registro demorados hasta el día
 siguiente (§ 12) o pendientes sin confirmar (§ 5), lo que escribió y todavía no se registró no

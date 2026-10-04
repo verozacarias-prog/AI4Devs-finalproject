@@ -37,9 +37,10 @@ nombres de archivo de código están en inglés.
 - [Contrato de UI — FEAT-XXX · <pantalla>](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/template/ui_contract/)
 - [Flujo de trabajo con IA](https://verozacarias-prog.github.io/AI4Devs-finalproject/flujo-de-trabajo-con-ia/)
 - [Hoja de ruta](https://verozacarias-prog.github.io/AI4Devs-finalproject/hoja-de-ruta/)
-- [Operación (propuesta sin decidir)](https://verozacarias-prog.github.io/AI4Devs-finalproject/operacion/)
+- [Operación](https://verozacarias-prog.github.io/AI4Devs-finalproject/operacion/)
 - [Recorrido completo](https://verozacarias-prog.github.io/AI4Devs-finalproject/recorrido-completo/)
 - [Reglas de dominio](https://verozacarias-prog.github.io/AI4Devs-finalproject/reglas-de-dominio/)
+- [Seguridad de la capa de IA](https://verozacarias-prog.github.io/AI4Devs-finalproject/seguridad-llm/)
 - [Términos y política de privacidad: qué tienen que cubrir](https://verozacarias-prog.github.io/AI4Devs-finalproject/terminos-y-privacidad/)
 - [Platita — Validación de diseño por casos de uso](https://verozacarias-prog.github.io/AI4Devs-finalproject/use-case-walkthrough/)
 
@@ -65,6 +66,9 @@ nombres de archivo de código están en inglés.
 - [0018 — Una llamada inicial que clasifica el mensaje, y memoria de conversación leída de las tablas de mensajes](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0018-clasificacion-inicial-y-memoria-de-conversacion/)
 - [0019 — Base de conocimiento: embeddings por API en un puerto propio, carga desde archivos y recuperación por similitud](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion/)
 - [0020 — Sin framework de orquestación de IA](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0020-sin-framework-de-orquestacion-de-ia/)
+- [0021 — Una imagen, Docker Compose para levantar todo y un pipeline de cinco controles](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion/)
+- [0022 — Cada pull request lo revisa un agente definido en el repositorio, a mano](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio/)
+- [0023 — Una fila por llamada al LLM, registros en JSON y eventos de seguridad en el mismo registro](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad/)
 
 ## Contrato para asistentes de IA
 

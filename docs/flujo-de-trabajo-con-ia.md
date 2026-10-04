@@ -23,7 +23,7 @@ persona se acuerde de invocarla derrota el propósito.
 
 ## Commands
 
-Dos comandos versionados en `.claude/commands/`, que se invocan escribiendo `/nombre`. Son
+Tres comandos versionados en `.claude/commands/`, que se invocan escribiendo `/nombre`. Son
 verificaciones, y una verificación se corre cuando la persona decide, no cuando el modelo lo
 infiere.
 
@@ -31,6 +31,7 @@ infiere.
 |---|---|---|
 | `/ui-states` | Al cerrar el corte vertical 2 | Verifica que la pantalla implemente y testee los cuatro estados, con foco en que *vacío* no esté resuelto como *error* |
 | `/spec-drift` | Antes del último commit de un corte, y antes de cada entrega | Compara la especificación contra el código y reporta las diferencias **sin resolverlas** |
+| `/security-audit` | Antes de cada entrega, no en cada pull request | Audita todo el backend contra el OWASP Top 10 web y el de aplicaciones LLM, de a un hallazgo por vez y por criticidad. No modifica nada. El cruce de diseño está en [seguridad de la capa de IA](seguridad-llm.md) |
 
 ## Verificación automática
 
@@ -53,10 +54,21 @@ que atraviesan backend y frontend, y toda pantalla implementa
 [cuatro estados](convenciones-de-desarrollo.md#2-los-cuatro-estados-de-una-pantalla).
 Cada corte se cierra contra el [Definition of Done](07-pull-requests.md#definition-of-done).
 
-## Hooks y subagentes
+## Agente revisor
+
+Un subagente, versionado en `.claude/agents/`. Es un agente y no un command porque tiene que
+partir de cero: corre en un contexto propio, sin la conversación en la que se escribió el
+cambio ([ADR 0022](adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md)).
+
+| Agente | Cuándo | Qué hace |
+|---|---|---|
+| [`pr-reviewer`](../.claude/agents/pr-reviewer.md) | A mano, antes de pedir el merge de cada pull request | Revisa la regla hexagonal más allá del verificador, las reglas de dominio, que nada identificatorio llegue al proveedor ni a un registro, los tests, la documentación y la tabla de seguridad de la capa de IA. Entrega un informe para pegar en el pull request |
+
+El revisor solo lee e informa. El merge lo hace siempre una persona, y un asistente hace commit
+solo cuando una persona se lo pide.
+
+## Hooks
 
 El único hook es el de pre-commit, en [`.githooks/`](../.githooks/). Se activa con
-`git config core.hooksPath .githooks`, una vez por clon.
-
-No hay subagentes definidos todavía. Queda como decisión abierta en la
-[hoja de ruta](hoja-de-ruta.md).
+`git config core.hooksPath .githooks`, una vez por clon. El revisor no corre en un hook, por lo
+que explica el [ADR 0022](adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md).

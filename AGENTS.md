@@ -73,6 +73,7 @@ de pre-commit. No son una recomendación: rompen el commit.
 - `backend/app/adapters/outbound/llm_client/` — cliente de LLM: clasificación, interpretación y respuestas, con el SDK del proveedor.
 - `backend/app/adapters/outbound/embedding_client/` — cliente del proveedor de embeddings.
 - `backend/app/adapters/outbound/text_splitter/` — particionado de documentos; el único lugar que importa `langchain-text-splitters`.
+- `backend/app/adapters/outbound/observability/` — envoltorios de los puertos de LLM y de embeddings, que registran cada llamada sin su contenido.
 - `backend/tests/` — tests unitarios, de integración y end-to-end.
 - `backend/migrations/` — migraciones de Alembic.
 - `frontend/` — dashboard web.
@@ -111,6 +112,14 @@ completo antes de escribir código.
   ([ADR 0016](docs/adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 - Todo dato que entra a un prompt va delimitado como información, y la salida del modelo se valida
   en código antes de enviarla ([ADR 0013](docs/adr/0013-datos-minimos-al-proveedor-de-llm.md)).
+- El prompt de sistema no lleva secretos ni datos de ningún usuario: se escribe como si fuera
+  público. El chat web muestra la respuesta del modelo como texto, nunca como HTML.
+- Toda llamada al LLM o al proveedor de embeddings pasa por el envoltorio que la registra, sin
+  texto, montos ni nombres. No se envía nada a una plataforma externa de observabilidad de LLM
+  ([ADR 0023](docs/adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
+- El cruce contra el OWASP Top 10 para aplicaciones LLM está en
+  [`docs/seguridad-llm.md`](docs/seguridad-llm.md). Si un cambio toca el uso del modelo, esa
+  tabla se actualiza en el mismo cambio.
 
 ## 8. Base de datos
 
@@ -163,7 +172,15 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
 - Los dos tienen que pasar sin errores antes de commitear; el hook de pre-commit los corre solo,
   y el flujo `.github/workflows/docs-quality.yml` los repite en cada pull request junto con
   `markdownlint-cli2` y `lychee`.
-- Tests y linters: se completa en la entrega 2.
+- Tests y linters: se completa en la entrega 2. Los cinco controles que van a correr desde el
+  primer commit de código están en el
+  [ADR 0021](docs/adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md). El flujo
+  ya busca secretos con `gitleaks`; una excepción se anota en `.gitleaksignore`, nunca se
+  desactiva el control.
+- Antes de pedir el merge de un pull request se corre a mano el agente `pr-reviewer`, y su
+  informe se pega en el pull request
+  ([ADR 0022](docs/adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md)).
+- Antes de cada entrega se corre `/security-audit`.
 
 ## 12. Qué leer antes de qué
 
@@ -172,6 +189,7 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
 - Pantalla nueva → [`docs/convenciones-de-desarrollo.md`](docs/convenciones-de-desarrollo.md).
 - Decisión de arquitectura → [`docs/adr/`](docs/adr/).
 - Qué entra en la entrega 2 y qué no → [`docs/hoja-de-ruta.md`](docs/hoja-de-ruta.md#alcance-de-la-entrega-2).
+- Docker, pipeline, registros, métricas del modelo o rutas de salud → los ADR [0021](docs/adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) y [0023](docs/adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md), y [`docs/operacion.md`](docs/operacion.md), que separa lo decidido de lo propuesto.
 - Clasificación, memoria, base de conocimiento o prompts → los ADR [0013](docs/adr/0013-datos-minimos-al-proveedor-de-llm.md), [0018](docs/adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), [0019](docs/adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md) y [0020](docs/adr/0020-sin-framework-de-orquestacion-de-ia.md).
 
 ## 13. Método de trabajo
@@ -182,5 +200,8 @@ o al mensaje de WhatsApp, queda funcionando de punta a punta y termina en su pro
 Lo contrario, cortar por capa, deja la interfaz para el final y es como se llega a una entrega
 sin nada que mostrar.
 Toda pantalla implementa y testea los cuatro estados: cargando, con contenido, vacío y error.
+
+Un asistente hace commit solo cuando una persona se lo pide, y nunca hace merge: la aprobación
+final de un pull request es de una persona.
 
 Vacío y error no son el mismo estado. Detalle y gates en [`docs/convenciones-de-desarrollo.md`](docs/convenciones-de-desarrollo.md).

@@ -51,6 +51,7 @@ erDiagram
     APP_USER |o--o{ OUTBOUND_MESSAGE : receives
     INBOUND_MESSAGE |o--o{ OUTBOUND_MESSAGE : "is answered by"
     OUTBOUND_MESSAGE |o--o{ INBOUND_MESSAGE : "is quoted by"
+    INBOUND_MESSAGE |o--o{ LLM_CALL : "triggers"
     ADVICE_DOCUMENT ||--o{ ADVICE_CHUNK : "is split into"
 ```
 
@@ -416,6 +417,7 @@ erDiagram
     APP_USER |o--o{ OUTBOUND_MESSAGE : receives
     INBOUND_MESSAGE |o--o{ OUTBOUND_MESSAGE : "is answered by"
     OUTBOUND_MESSAGE |o--o{ INBOUND_MESSAGE : "is quoted by"
+    INBOUND_MESSAGE |o--o{ LLM_CALL : "triggers"
 
     PENDING_TRANSACTION {
         uuid id PK
@@ -435,6 +437,7 @@ erDiagram
         string status "NOT NULL, CHECK IN ('open','promoted','rejected','expired'), DEFAULT 'open'"
         uuid resolved_by FK "NULLABLE — user who promoted or rejected it; differs from user_id only when a family group owner resolved it"
         timestamptz expires_at "NULLABLE — discarded if never completed; null only for pendings of a recurring rule, which never expire"
+        int corrected_fields_count "NOT NULL, DEFAULT 0, CHECK (corrected_fields_count >= 0) — fields interpreted by the model that the user changed before confirming; read only by the quality metric"
         timestamptz created_at "DEFAULT now()"
     }
 
@@ -482,6 +485,22 @@ erDiagram
         string provider_message_id "NULLABLE — set once the provider accepts it; always null on web; UNIQUE (provider, provider_message_id)"
         timestamptz sent_at "NULLABLE"
         timestamptz created_at "DEFAULT now()"
+    }
+
+    LLM_CALL {
+        uuid id PK
+        uuid inbound_message_id FK "NULLABLE, ON DELETE SET NULL — the message that triggered the call; null when no message did, and once the account is deleted"
+        string purpose "NOT NULL, CHECK IN ('classification','interpretation','query','advice','embedding')"
+        string provider "NOT NULL"
+        string model "NOT NULL"
+        string prompt_version "NULLABLE — null for embeddings, which have no prompt"
+        int input_tokens "NULLABLE — null when the provider did not answer"
+        int output_tokens "NULLABLE — null for embeddings and when the provider did not answer"
+        int duration_ms "NOT NULL, CHECK (duration_ms >= 0)"
+        numeric estimated_cost_usd "NULLABLE, NUMERIC(12,6), CHECK (estimated_cost_usd >= 0) — computed when the row is written, from the configured prices per model; always US dollars"
+        string outcome "NOT NULL, CHECK IN ('ok','invalid_output','blocked','provider_error','timeout')"
+        jsonb retrieval "NULLABLE — reserved for advice: the chunks retrieved and their similarity; empty until advice exists"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 ```
 
@@ -727,7 +746,7 @@ Ver también, en otra tabla: [la categoría del mismo tipo, la cuenta del mismo 
 
 ##### PENDING_TRANSACTION
 
-Movimiento a medio completar, todavía no registrado. Puede terminar siendo un gasto o ingreso, una transferencia o una regla recurrente, como una compra con tarjeta en cuotas, según `intent`, y al promoverse queda enlazado a la fila que generó por la columna de resultado de ese tipo. Con `intent = 'change'` no es un movimiento nuevo sino un cambio pendiente sobre uno ya confirmado: `parsed_data` guarda el movimiento o los candidatos y el cambio pedido, y al promoverse se aplica sobre ese movimiento, cuya pertenencia al usuario se valida en la misma transacción ([reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado)). Cuándo se crea y cuándo no, cómo continúa la conversación, cómo se promueve y cómo expira está en [reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración). Será también el estado natural de lo que detecte el parser de emails cuando se implemente: un mail de aviso trae monto, fecha y normalmente la cuenta, pero nunca a qué presupuesto imputarlo, así que esperará acá la confirmación. Guarda lo interpretado (`parsed_data`), la lista de `missing_fields`, y el asistente pregunta por WhatsApp. Tener una tabla aparte, en vez de un `status` dentro de `TRANSACTION` con columnas nullables, es lo que permite que `TRANSACTION` mantenga sus `NOT NULL` reales: los datos incompletos no contaminan la tabla de la que salen saldos y presupuestos.
+Movimiento a medio completar, todavía no registrado. Puede terminar siendo un gasto o ingreso, una transferencia o una regla recurrente, como una compra con tarjeta en cuotas, según `intent`, y al promoverse queda enlazado a la fila que generó por la columna de resultado de ese tipo. Con `intent = 'change'` no es un movimiento nuevo sino un cambio pendiente sobre uno ya confirmado: `parsed_data` guarda el movimiento o los candidatos y el cambio pedido, y al promoverse se aplica sobre ese movimiento, cuya pertenencia al usuario se valida en la misma transacción ([reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado)). Cuándo se crea y cuándo no, cómo continúa la conversación, cómo se promueve y cómo expira está en [reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración). Será también el estado natural de lo que detecte el parser de emails cuando se implemente: un mail de aviso trae monto, fecha y normalmente la cuenta, pero nunca a qué presupuesto imputarlo, así que esperará acá la confirmación. Guarda lo interpretado (`parsed_data`), la lista de `missing_fields`, y el asistente pregunta por WhatsApp. `corrected_fields_count` cuenta los campos interpretados por el modelo que el usuario cambió antes de confirmar; ninguna regla de negocio lo lee, solo la métrica de calidad del [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md). Tener una tabla aparte, en vez de un `status` dentro de `TRANSACTION` con columnas nullables, es lo que permite que `TRANSACTION` mantenga sus `NOT NULL` reales: los datos incompletos no contaminan la tabla de la que salen saldos y presupuestos.
 
 **Restricciones:**
 
@@ -768,3 +787,19 @@ Todo mensaje que Platita manda, ya sea una respuesta, una alerta o un recordator
 - En `OUTBOUND_MESSAGE`, `UNIQUE (provider, provider_message_id)`, y un índice sobre `PENDING_BATCH (question_message_id)` y otro sobre `PENDING_BATCH (confirmation_message_id)`. Una respuesta de WhatsApp que cita un mensaje trae el identificador de WhatsApp del mensaje citado; con él se encuentra el mensaje enviado, que se guarda en `INBOUND_MESSAGE.quoted_outbound_message_id`, y desde ese mensaje, el lote que preguntaba ([reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)). La columna es nula hasta que el mensaje se envía, y en un `UNIQUE` dos nulos no chocan.
 
 Ver también, en otra tabla: [la purga del contenido y del teléfono, en INBOUND_MESSAGE](#inbound_message).
+
+##### LLM_CALL
+
+Una fila por cada llamada al proveedor de LLM o al de embeddings, sin ningún contenido: ni el texto enviado, ni la respuesta, ni montos, ni nombres. Sirve para medir latencia, costo, calidad y respuestas bloqueadas, con consultas SQL que no son parte de la aplicación. La escribe el envoltorio de los dos puertos, en una transacción corta propia, así que una llamada queda registrada aunque la transacción que procesa el mensaje se deshaga. No reemplaza a [`LLM_USAGE`](#llm_usage), que cuenta por usuario y por día para aplicar las cuotas. El fundamento está en el [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md).
+
+- `inbound_message_id` es también el identificador con que se sigue un mensaje en los registros.
+- `purpose` sale del método del puerto que se llamó. `interpretation` es la llamada que interpreta la respuesta a una pregunta de un pendiente; la llamada inicial, que clasifica y además adelanta el trabajo, es `classification`.
+- `outcome` nace como `ok`, `invalid_output`, `provider_error` o `timeout`. Pasa a `blocked` después, cuando la validación de salida rechaza la respuesta.
+- `estimated_cost_usd` es un costo de operación de Platita, no plata de un usuario: por eso lleva la moneda en el nombre y no una columna de moneda.
+- `retrieval` guarda, para un consejo, una lista con el identificador de cada fragmento recuperado y su similitud. No tiene clave foránea a `ADVICE_CHUNK`, que todavía no existe.
+
+**Restricciones:**
+
+- En `LLM_CALL`, `purpose` y `outcome` tienen un `CHECK` con su conjunto cerrado, y `duration_ms` y `estimated_cost_usd` no pueden ser negativos.
+- En `LLM_CALL`, un índice sobre `(created_at, purpose)`, que es por donde agrupan las métricas.
+- Las filas no se borran por plazo. Al borrarse una cuenta se borran sus mensajes, y `inbound_message_id` queda nulo ([reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos)).

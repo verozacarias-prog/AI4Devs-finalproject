@@ -183,6 +183,7 @@ El recorrido de un usuario de punta a punta, con el tipo de llamada y las tablas
         - llm_port.py
         - embedding_port.py
         - text_splitter_port.py
+        - llm_call_log_port.py
     /adapters
       /inbound
         /api               # FastAPI routers — translate HTTP into use case calls
@@ -199,6 +200,7 @@ El recorrido de un usuario de punta a punta, con el tipo de llamada y las tablas
         /llm_client              # LLM client: classification, interpretation and answers, provider SDK only
         /embedding_client         # embeddings provider client
         /text_splitter             # the only place that imports langchain-text-splitters
+      /observability              # wrappers of the LLM and embedding ports that record each call
   /tests
   /migrations          # Alembic
 /frontend
@@ -276,18 +278,24 @@ flowchart TB
 
 **Proceso de despliegue previsto:** push a `main` dispara el build y deploy automático del servicio web, que incluye el build del dashboard. Las migraciones de Alembic corren una sola vez por despliegue, en el paso previo al despliegue que ofrece la plataforma y antes de que arranque cualquier contenedor nuevo; ni el servicio web, ni el worker, ni los cron jobs migran al arrancar. Si migraran los tres, arrancarían a la vez y competirían por aplicar la misma migración. Como el código anterior sigue corriendo unos instantes contra el esquema nuevo, cada migración tiene que ser compatible con la versión anterior del código: primero se agrega lo nuevo, y lo viejo se quita en un despliegue posterior. Los secretos (credenciales de WhatsApp, LLM y base de datos) se configuran como variables de entorno en la plataforma, nunca versionados. Los mensajes de WhatsApp se procesan en un worker aparte del servicio web: el webhook solo verifica la firma, guarda el mensaje y responde, y el worker lo interpreta y contesta. Así un reintento del proveedor no duplica movimientos y una caída del LLM demora la respuesta sin perder el mensaje ([ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md)). Todo mensaje saliente, incluidas las alertas, pasa por la tabla de salida que envía ese worker. Los procesos programados corren como cron jobs separados del servicio web, de modo que un fallo en el motor de recurrentes o de alertas no afecte la disponibilidad del webhook — es la mitigación concreta del riesgo de acoplamiento señalado en [2.1](#21-diagrama-de-arquitectura).
 
-Cómo se operaría —entornos, pipeline de la aplicación, vuelta atrás de un despliegue, copias de respaldo y observabilidad— está en [Operación](operacion.md), también como propuesta sin decidir.
+**En local, todo se levanta con un comando.** Docker Compose arranca la base, las migraciones, la API y el worker, con una sola imagen para los tres últimos; el orden repite el del despliegue: primero migra un proceso, después arranca el resto ([ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md)).
+
+Cómo se opera —entornos, pipeline de la aplicación, vuelta atrás de un despliegue, copias de respaldo y observabilidad— está en [Operación](operacion.md), que separa lo ya decidido de lo que sigue como propuesta.
 
 ### **2.5. Seguridad**
 
 - **Login sin contraseñas**: código de un solo uso por WhatsApp intercambiado por una sesión guardada en la base, que viaja en una cookie que ningún script puede leer y que se puede revocar, con límites por número y por IP que no revelan si el número está registrado ([ADR 0017](adr/0017-limites-del-login-y-codigos-con-proposito.md)). El dashboard se sirve desde el mismo origen que la API, así que la API no habilita CORS. El contrato y los límites concretos están en [la API](04-api.md). El fundamento de la decisión está en el [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md), que reemplaza al [ADR 0003](adr/0003-login-por-codigo-unico.md).
 - **Consentimiento explícito y revocable** para el acceso a la casilla de email (configuración de usuario, no un permiso obligatorio del sistema).
 - **Verificación de firma del webhook de WhatsApp** en cada request entrante, para descartar mensajes falsificados.
-- **Nunca loggear en crudo** número de teléfono, montos ni texto de usuario sin enmascarar.
+- **Nunca loggear en crudo** número de teléfono, montos ni texto de usuario sin enmascarar. Los registros salen en JSON, pasan por un filtro que quita los datos personales, y los eventos de seguridad son eventos de ese mismo registro ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
+- **Cada llamada al modelo queda registrada sin contenido**: propósito, modelo, tokens, duración, costo y resultado, nunca el texto. No se usa una plataforma externa de observabilidad de LLM, porque recibiría los prompts y las respuestas ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
 - **Retención limitada**: el texto de los mensajes se borra pasado un plazo configurable, y al proveedor de LLM nunca se le envían identificadores ([reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos), [ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md)).
-- **Configuración en YAML versionado**: el plazo de retención de mensajes (`message_retention_days`, 60 por defecto), el plazo de gracia del borrado de cuenta (`account_deletion_grace_days`, 7 por defecto), las cuotas de uso del asistente y el tope diario total, los dos valores de la memoria de conversación (3 intercambios y 30 minutos), los parámetros de partición y de recuperación de la base de conocimiento, los umbrales de las alertas de presupuesto y las fuentes de cotización viven en archivos YAML del repositorio, no en el código ni en la base.
+- **Configuración en YAML versionado**: el plazo de retención de mensajes (`message_retention_days`, 60 por defecto), el plazo de gracia del borrado de cuenta (`account_deletion_grace_days`, 7 por defecto), las cuotas de uso del asistente y el tope diario total, los dos valores de la memoria de conversación (3 intercambios y 30 minutos), los parámetros de partición y de recuperación de la base de conocimiento, los precios por modelo con que se estima el costo de cada llamada, los umbrales de las alertas de presupuesto y las fuentes de cotización viven en archivos YAML del repositorio, no en el código ni en la base.
 - **Entorno declarado y andamios que no arrancan en producción**: la configuración dice si el entorno es `local`, `demo` o `production`. El chat web y la entrada de desarrollo, que abre una sesión sin código, se habilitan solo en los dos primeros; con alguno encendido en `production`, ningún proceso arranca ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 - **Inyección de prompts**: la defensa principal es que el modelo no puede escribir ni pedir datos de otro usuario. Además, todo dato que entra al prompt va delimitado, y la salida se valida en código antes de enviarla ([ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md)).
+- **El prompt de sistema se escribe como si fuera público**: no lleva secretos ni datos de ningún usuario ([ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md)).
+- **La respuesta del modelo se muestra como texto**: el chat web nunca la interpreta como HTML ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
+- **Los diez riesgos de una aplicación con LLM**, uno por uno, con lo que los cubre y lo que falta, están en [seguridad de la capa de IA](seguridad-llm.md).
 - **Números habilitados**: Platita solo le responde a los números que quien la opera habilitó antes ([reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos)).
 - **Secretos fuera del código**: credenciales de WhatsApp, LLM y base de datos vía variables de entorno, nunca hardcodeadas ni versionadas.
 - **HTTPS** en toda comunicación externa.

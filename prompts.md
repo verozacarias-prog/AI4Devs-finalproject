@@ -46,6 +46,7 @@ dejó, en síntesis:
 | Revisión del modelo de datos | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Hacer legible el modelo de datos, revisar con la autora los montos de `TRANSACTION` y cambiar la regla de inmutabilidad de los ADR |
 | Validación del diseño por casos de uso | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Recorrer casos cotidianos de usuarios argentinos sobre la especificación, fijar quién accede a la base y dibujar el recorrido completo |
 | Validación contra el módulo de RAG y alcance de la entrega 2 | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Contrastar once definiciones de diseño contra la especificación en modo de solo lectura, resolver cada conflicto con la autora y escribir el resultado en `docs/`, en tres ADR nuevos y en el verificador de arquitectura |
+| Validación contra los módulos de DevSecOps y de observabilidad | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Contrastar seis definiciones de infraestructura, pipeline, revisión de código, seguridad de la capa de IA y observabilidad contra la especificación en modo de solo lectura, resolver los conflictos con la autora y escribir el resultado en `docs/`, en tres ADR nuevos, en un agente revisor y en un command |
 | Código, tests y despliegue | *(pendiente — Entrega 2)* | | |
 
 La auditoría de repos de referencia (ver §1, Prompt 2) recomendó configurar y versionar las rules antes de empezar a codear, porque **ninguno de los dos proyectos de ejemplo del curso lo había hecho**. Esa recomendación se siguió al cierre de la Entrega 1. La configuración resultante —contratos, skill, commands, verificadores y hook— está descrita en [`docs/flujo-de-trabajo-con-ia.md`](docs/flujo-de-trabajo-con-ia.md) y no se repite acá.
@@ -250,6 +251,33 @@ La corrección humana que vino después es la más valiosa: la primera lista de 
 *Qué devolvió y qué se decidió:* el inventario confirmó que no hay todavía contenedores, pipeline de la aplicación, infraestructura como código ni registros definidos, y la IA se detuvo con tres preguntas: destino, presupuesto y pérdida de datos tolerable. La respuesta de la autora fue un criterio y no una cifra, y la IA lo tradujo en supuestos marcados: Render en su plan pago más chico, por unos US$23 a 25 por mes, antes que un servidor propio de unos US$6, porque la diferencia compra casi toda la operación de una persona sola. El diseño suma una copia diaria cifrada fuera de Render, un guardia para que revertir un despliegue no se trabe con una migración que la versión anterior no conoce, y siete alertas, cada una con qué hacer. También encontró dos divergencias en la especificación: la rama de despliegue y quién genera las alertas proactivas.
 
 La autora no tomó la decisión. El diseño entró como [Operación](docs/operacion.md), con la misma marca de propuesta que ya usaba §2.4, y lo que falta decidir, incluidas las dos divergencias, pasó a las decisiones abiertas de la [hoja de ruta](docs/hoja-de-ruta.md). No se escribió ningún ADR, porque un ADR registra una decisión tomada.
+
+---
+
+**Prompt 2** — *Claude Code · seis definiciones de DevSecOps y observabilidad, validadas contra la especificación y después aplicadas*
+
+> "# Tarea: validar y aplicar seis definiciones de DevSecOps y observabilidad en Platita [...] Revisé Platita contra dos módulos del curso: el de infraestructura, CI/CD y revisión de código, y el de seguridad por diseño y observabilidad. `docs/operacion.md` ya propone casi todo lo que esos módulos piden, pero está como propuesta sin decidir y es más de lo necesario para arrancar. Estas seis definiciones eligen el subconjunto mínimo y dicen cuándo entra cada cosa. Salieron de un análisis hecho fuera del repo, así que pueden chocar con algo que ya esté escrito. Tu trabajo es primero comprobar si son válidas y después aplicarlas. [...] Lo mínimo que más rinde. No agregues herramientas ni etapas que no estén acá. [...] Fase 1: validar, sin modificar nada [...] Frená ahí y esperá mi respuesta. [...] Fase 2: aplicar, solo después de mi visto bueno [...] No hagas commit ni push: dejá los cambios en el árbol de trabajo para que los revise."
+>
+> *(ante el pedido de la IA de que pegara el prompt de auditoría del módulo)* "que prompt de auditoria del modulo?"
+>
+> *(sobre ese prompt)* "redactalo vos desde la descripción"
+>
+> *(después de responder la primera decisión, y ante la segunda)* "todo lo recomendado"
+
+*(prompt completo: ~190 líneas con contexto, tres criterios generales, las dos fases, las seis definiciones y el formato del resumen final)*
+
+*Qué devolvió y qué se decidió:* la fase 1 no modificó nada. Encontró que las seis definiciones eran aplicables, con seis decisiones para la autora y ocho ajustes donde mandaba lo ya escrito. Los que cambiaron las definiciones:
+
+- **La regla "una cifra que ninguna función devolvió no sale" contradecía las reglas de dominio § 17,** que dejan las cuentas al modelo. Quedó que el modelo declara cada cifra como dato o como cuenta, y el código comprueba los datos y rehace las cuentas.
+- **La alerta de mensajes sin procesar no se podía disparar** con las herramientas elegidas: un monitor externo solo ve la API. Se sumó una tercera ruta de salud, que mira la cola, en vez de un proveedor más.
+- **El adaptador que muestra el código de acceso en pantalla no existía:** se había descartado en el ADR 0016. El aviso al arrancar pasó a ser por el chat web y la entrada de desarrollo.
+- **"Bloquean el merge" no se cumple solo en un fork,** donde los flujos corren por push. Quedó escrito que depende de proteger la rama, a mano.
+- **`pip-audit` no filtra por severidad.** La IA lo verificó en la documentación de la herramienta antes de escribir la regla.
+- **"La IA no hace commit ni merge" contradecía el historial del repositorio.** Quedó que el revisor nunca edita ni integra, que un asistente hace commit solo a pedido y que el merge es siempre de una persona.
+
+La lista de OWASP para aplicaciones LLM se verificó en su sitio: la vigente es la edición 2025. Salieron tres ADR: el [0021](docs/adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md), con la imagen, Docker Compose y los cinco controles del pipeline; el [0022](docs/adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md), con el agente revisor, que cierra la decisión abierta sobre subagentes; y el [0023](docs/adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md), con la tabla de llamadas al modelo, los registros y los eventos de seguridad. [Operación](docs/operacion.md) dejó de ser toda propuesta: separa lo decidido de lo que sigue sin decidir. El cruce contra OWASP quedó en [seguridad de la capa de IA](docs/seguridad-llm.md).
+
+Se aplicó ahora lo que no depende del código: el agente `pr-reviewer`, el command `/security-audit`, el control de secretos con `gitleaks`, las acciones fijadas por hash y Dependabot. El resto quedó especificado hasta que exista el código. No se pudo leer el módulo original: el acceso a Drive fue denegado, y el command de auditoría se redactó desde la descripción de la autora.
 
 ---
 
@@ -557,6 +585,8 @@ La validación por casos de uso no se tocó: es un registro que se regenera, y s
 | 46 | Descartar `langchain-text-splitters` porque contradecía el título del ADR «Sin LangChain» | Argumento de forma. Lo que importaba era si rompía la razón de fondo, y no la rompía. Se cambió el título y se permitió el paquete en un solo adaptador |
 | 47 | Contar el tope diario de mensajes sobre la tabla de mensajes, sin ningún contador nuevo | La IA lo detectó al escribir la regla: no acotaba el costo, porque los registros demorados ya estaban clasificados y no se contaban. Quedó un contador propio en `LLM_USAGE` |
 | 48 | Una especificación en la que cualquier número podía empezar un alta, con el abuso del proveedor como decisión abierta | La autora pidió que solo escriban los números que ella habilita. La IA propuso un comando de operación en vez de una pantalla, que exigía un rol de administrador que no existe |
+| 49 | Pedirle a la autora "el prompt de auditoría del módulo", como si fuera un texto que ella tenía | La autora no supo de qué se le hablaba: la frase venía de su propia tarea y describía un comportamiento, no un texto. La IA explicó de dónde la había sacado y lo redactó desde la descripción |
+| 50 | Otra vez un informe con todo junto: seis decisiones y ocho ajustes, aunque esta vez separados y con una recomendación cada uno | El informe lo pedía la tarea. La IA ofreció además ir de a una, con la escena de uso; la autora contestó una y aprobó el resto según lo recomendado |
 
 El patrón que se repite: la IA tiende a **resolver la ambigüedad por su cuenta** eligiendo un valor por defecto razonable, y a **justificar decisiones técnicas por el esfuerzo** que ahorran en vez de por sus propiedades de diseño. Las dos cosas hay que detectarlas leyendo, porque el resultado siempre suena defendible.
 
@@ -591,4 +621,4 @@ la propuesta.
 - Resolver las decisiones D1 a D12 de la [validación por casos de uso](docs/use-case-walkthrough.md), empezando por D1, que bloquea el primer gasto de cada usuario, y volver a correr el mismo prompt para comparar contra esta corrida.
 - Verificar la sincronización entre la documentación (`docs/02-arquitectura.md` §2.3, `docs/03-modelo-de-datos.md`, `docs/04-api.md`) y el código real antes de cada entrega, aplicando la regla de precedencia de `AGENTS.md` §10: la especificación manda, lo que se corrige es el código.
 
-Lo que depende de que exista código —el cliente generado desde el OpenAPI, el verificador del contrato de API, los tokens del Design System, los comandos de tests y linters, y los hooks y subagentes— está en la [hoja de ruta](docs/hoja-de-ruta.md).
+Lo que depende de que exista código —el cliente generado desde el OpenAPI, el verificador del contrato de API, los tokens del Design System, los comandos de tests y linters, el flujo con los controles de código y los archivos de Docker— está en la [hoja de ruta](docs/hoja-de-ruta.md).

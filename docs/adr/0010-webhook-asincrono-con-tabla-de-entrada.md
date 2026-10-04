@@ -68,6 +68,11 @@ El webhook solo recibe y confirma; el procesamiento ocurre después, en un proce
    El tiempo máximo de la llamada al LLM, reintentos incluidos, es menor que la duración del
    `locked_until`, y los dos son configuración. Así el fencing cubre un caso excepcional, como
    una pausa larga del proceso, y no un LLM lento de todos los días.
+
+   El registro de la llamada al LLM queda fuera de esa transacción final: se guarda apenas
+   responde el proveedor, en una transacción corta propia. Si el fencing deshace la
+   transacción final, la llamada igual quedó registrada con su costo
+   ([ADR 0023](0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
 4. **Reintentos.** Si el procesamiento falla (el LLM no responde, por ejemplo), el mensaje vuelve
    a quedar disponible con espera creciente entre intentos. Superado un máximo de intentos queda
    como `failed` y el usuario recibe un aviso de que su mensaje no se pudo procesar. Un mensaje

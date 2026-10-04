@@ -86,6 +86,13 @@ para que la cookie de sesión funcione sin un dominio propio.
    request, y vale solo en un entorno con datos inventados: quien abra esa pantalla entra como
    cualquier usuario de prueba.
 
+   Si alguna de las dos opciones está encendida, cada proceso lo avisa en su registro al
+   arrancar ([ADR 0023](0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
+10. **El chat web muestra la respuesta como texto, nunca como HTML.** Lo que escribe el modelo,
+    y también lo que escribió el usuario, se inserta en la página como texto plano. Si una
+    respuesta trae etiquetas, se ven como caracteres y no se interpretan. Un test lo prueba con
+    una respuesta que contiene un script.
+
 ## Consecuencias
 
 ### Positivas

@@ -28,6 +28,8 @@ se elige antes de la rama de consejos.
 | Pantalla de cuentas con el saldo calculado, donde se ve el efecto de cada movimiento | [Reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado), `GET /accounts` |
 | El paso de clasificación con las tres clases de mensaje, el tope diario total y las tres cuotas | [ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md) |
 | Desde la primera migración: la extensión pgvector y la columna del mensaje citado. Desde el primer commit del dominio: los puertos de LLM, de embeddings y de vector store | [ADR 0019](adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md), [3. Modelo de datos](03-modelo-de-datos.md) |
+| Docker Compose que levanta la base, las migraciones, la API y el worker con un comando, y el pipeline de cinco controles desde el primer commit de código | [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) |
+| La tabla de llamadas al modelo con su envoltorio y el script de métricas, los registros en JSON con su filtro y su test, los eventos de seguridad y las tres rutas de salud | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) |
 | Datos de prueba: usuarios con el alta completa, consentimiento registrado, cuentas, su primer período confirmado y perfil financiero, y al menos uno con un grupo | [Reglas de dominio § 3 y § 11](reglas-de-dominio.md) |
 
 | Queda para la entrega final | Por qué |
@@ -65,8 +67,12 @@ abierta sobre el proveedor y el plan.
 | Tokens del Design System, documentados aparte de los componentes | Haya diseño del dashboard | Para que la app móvil los reutilice en vez de reconstruirlos leyendo código |
 | Rellenar un [`ui_contract.md`](features/TEMPLATE/ui_contract.md) por pantalla | Haya pantallas | La plantilla ya está; el contenido sale al escribir cada especificación |
 | Completar `AGENTS.md` §11 con los comandos de tests y linters | Exista el scaffold | Hoy están los dos verificadores; faltan las herramientas de código |
+| El flujo de GitHub Actions con los controles de código, el Dockerfile, el archivo de Compose y `.env.example` | Exista el primer commit de código | Están decididos en el [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) y no se crean antes: un flujo sin nada que compilar ni testear fallaría |
+| Proteger la rama de la entrega, con los controles como obligatorios, y habilitar Dependabot en el fork | Exista la rama de la entrega 2 | Son configuración de GitHub, que se hace a mano. Sin eso, los controles avisan pero no impiden un merge |
+| `scripts/llm_metrics.sql` | Exista la tabla `LLM_CALL` | Las cuatro métricas del [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md). Sin la tabla no hay contra qué probar las consultas |
+| Sentry, el monitor externo y las dos alertas críticas | Haya un primer despliegue | Al sumar Sentry se verifican en su sitio el plan y la retención, y se completa la fila de [términos y privacidad](terminos-y-privacidad.md) |
+| Correr `/security-audit` | Exista el backend, y antes de cada entrega | Audita el código contra las dos listas de OWASP. El cruce de diseño ya está en [seguridad de la capa de IA](seguridad-llm.md) |
 | Los tres pull requests de [7. Pull requests](07-pull-requests.md) | Se implemente la primera funcionalidad | Salen solos de los tres [cortes verticales](convenciones-de-desarrollo.md#1-cortes-verticales), no hay que fabricarlos al cierre |
-| Definir subagentes, si hacen falta | Haya tareas que lo justifiquen | Ver la decisión abierta de abajo |
 | Publicar la referencia de la API en el portal | Corra FastAPI | El OpenAPI lo genera el framework; falta exponerlo como consola navegable y enlazarlo desde [`llms.txt`](../llms.txt), que hoy no puede describir endpoints que no existen |
 | Documentación del código, con docstrings y su generador | Exista el backend | Es la capa que falta de las cuatro de [documentación viva](documentacion-viva.md#1-las-cuatro-capas). El equivalente en Python de lo que el módulo 5 propone con TypeDoc |
 | Verificar las copias de respaldo del plan de base de datos: cuántos días retiene y si permite restaurar a un punto en el tiempo | Se contrate el plan de PostgreSQL en Render | Los datos de una cuenta borrada siguen en las copias hasta que vencen, y la política de privacidad tiene que decir cuánto tardan ([términos y privacidad](terminos-y-privacidad.md)). Restaurar a un punto en el tiempo es lo que permite volver atrás si una migración o un error rompen datos |
@@ -147,7 +153,8 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   posible sin pasar por quien opera Platita, porque solo escriben los números habilitados
   (§ 11), y cada usuario tiene además un tope diario total de mensajes clasificados. Falta
   decidir un tope de tokens por mensaje, cuotas menores para cuentas nuevas y una alerta de
-  gasto diario antes de llegar al tope.
+  gasto diario antes de llegar al tope. El costo por día ya se puede leer de la tabla de
+  llamadas al modelo ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
 - **Alta por el chat web: sin decidir.** El alta corre por el chat, igual en WhatsApp y en el
   chat web, desde el segundo paso. Pero para abrir el chat web hace falta una sesión, y una
   persona que todavía no es usuario no la tiene. Falta decidir cómo entra. La candidata es que el
@@ -171,18 +178,19 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   que solo cambian con un despliegue, y [reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente)
   pide poder ajustarlas sin desplegar. Importa ante un abuso, porque define cuánto tarda bajar una
   cuota. Hay que decidir cuál de los dos manda.
-- **Registro de eventos de seguridad: sin definir.** Sin él, una fuerza bruta sobre los códigos,
-  un abuso del LLM o una toma de cuenta pasan sin que nadie se entere. Falta definir qué eventos
-  se registran (pedidos y canjes de código, límites alcanzados, firmas inválidas del webhook,
-  exportaciones, pedidos de borrado, cambios de miembros, cuotas superadas), cómo se redactan
-  para no guardar teléfono, montos ni texto, y qué dispara una alerta a quien opera Platita.
+- **Registro de eventos de seguridad: definido en parte.** Dónde se registran, cómo se redactan
+  y cuáles son los primeros eventos está en el [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md): pedidos y fallos de código,
+  sesiones creadas, límites alcanzados, cuotas superadas y respuestas bloqueadas. Falta decidir
+  si se suman las exportaciones, los pedidos de borrado y los cambios de miembros, y qué evento
+  dispara una alerta a quien opera Platita. Se decide antes de abrir a usuarios reales.
 - **Obligaciones legales de los datos: sin validar.** Además de los términos, falta confirmar con
   alguien con conocimiento legal la inscripción de la base ante la autoridad de aplicación de la
   Ley 25.326, la transferencia de datos al proveedor de alojamiento y al de LLM fuera del país, y
   que el alcance de los consejos, educación financiera que no elige instrumentos
   ([reglas de dominio § 18](reglas-de-dominio.md#18-alcance-de-los-consejos)), no se encuadre como
   asesoramiento de inversiones regulado. Bloquea abrir a usuarios reales.
-- **Proveedor y plan de despliegue: sin decidir.** [Operación](operacion.md) propone Render en su
+- **Proveedor y plan de despliegue: sin decidir.** [Operación](operacion.md), en su parte
+  todavía propuesta, plantea Render en su
   plan pago más chico, por unos US$23 a 25 por mes, con una copia diaria cifrada fuera de Render.
   La alternativa es un servidor virtual único por unos US$6, que suma a quien opera parchear el
   sistema, administrar PostgreSQL y montar las copias. Hay que decidir cuánto vale no operar un
@@ -204,9 +212,3 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   habla de procesos programados separados del servicio web, sin decir cuántos.
   [Operación](operacion.md) propone uno solo que despacha las tareas vencidas, porque cada cron
   cuesta aparte; a cambio, una tarea que se cuelga demora a las demás hasta que vence su tiempo.
-- **Subagentes: sin decidir.** Un subagente corre en su propio contexto, así que hay que volver a
-  explicarle la tarea entera y devuelve un resumen en vez del trabajo. Eso se paga cuando hay algo
-  para paralelizar o una búsqueda grande que conviene mantener fuera del contexto. Ninguna de las
-  tareas actuales es así —el skill y los dos commands leen uno o dos archivos cada uno—, pero eso
-  puede cambiar cuando exista código. No se descarta: se deja pendiente hasta que aparezca una
-  tarea que lo justifique.

@@ -1,0 +1,13 @@
+# Hallazgos de gitleaks que no son secretos, uno por línea, por su huella.
+# Una excepción nueva se agrega acá con su motivo; el control no se desactiva.
+
+# Ejemplos de curl y de respuesta de la plantilla del repositorio del curso
+# (commit heredado del repositorio de origen, api.vetconnect.com).
+64a9d6a4d7ef460e0d2c34e64da7bf934d0b1199:prompts.md:curl-auth-header:1088
+64a9d6a4d7ef460e0d2c34e64da7bf934d0b1199:readme.md:curl-auth-header:4028
+64a9d6a4d7ef460e0d2c34e64da7bf934d0b1199:readme.md:curl-auth-header:4288
+64a9d6a4d7ef460e0d2c34e64da7bf934d0b1199:readme.md:curl-auth-header:4528
+64a9d6a4d7ef460e0d2c34e64da7bf934d0b1199:readme.md:generic-api-key:4592
+
+# Listado de archivos dentro de una conversación registrada, no una clave.
+fa2c1a1df50a51b0a4301d71f01b2a8953c1a093:docs/conversacion-reestructuracion-docs.md:generic-api-key:66

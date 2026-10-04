@@ -75,8 +75,20 @@ prompts.
     de las reglas de dominio, § 18. Una salida que no pasa la validación no se envía: sale un
     texto fijo. La validación no alcanza a los textos que arma el código, como el enlace de una
     invitación a un grupo.
+
+    En una respuesta con datos del usuario, el modelo entrega junto al texto cada cifra que
+    usa, marcada como dato, con la función que la devolvió, o como cuenta, con sus operandos y
+    su operación. El código comprueba que cada dato coincida con lo que devolvió esa función o
+    con un monto que el usuario escribió en su pregunta, y rehace cada cuenta. Una cifra que no
+    cierra, o que no está declarada, bloquea la respuesta. La regla está en las reglas de
+    dominio, § 17.
 11. **La evaluación de proveedores incluye casos de inyección:** una descripción de movimiento
     con una orden adentro, y un documento de prueba con otra.
+12. **El prompt de sistema no contiene secretos ni datos de ningún usuario.** Se escribe
+    asumiendo que puede filtrarse: lleva instrucciones, y nada más. Ni claves, ni direcciones
+    internas, ni nombres de cuentas o categorías, que viajan aparte y delimitados, según el
+    punto 9. Ninguna garantía depende de que el prompt siga oculto ni de que el modelo lo
+    obedezca. Un test falla si el prompt de sistema cambia con el usuario.
 
 ## Consecuencias
 
@@ -96,6 +108,8 @@ prompts.
   defensa no descansa ahí.
 - Un consejo no puede llevar al usuario a la página de su fuente con un enlace.
 - Validar la salida puede descartar una respuesta buena, y el usuario recibe el texto fijo.
+- Declarar cada cifra alarga la salida del modelo y suma una forma de fallar: una respuesta
+  correcta con una cifra mal declarada tampoco sale.
 
 - El texto de un mensaje puede contener datos identificatorios que el usuario escribió él mismo,
   como un nombre propio en "le pagué a Juan". Eso no se filtra: filtrarlo con fiabilidad es

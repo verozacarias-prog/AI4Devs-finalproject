@@ -42,6 +42,12 @@ la API: son los tres procesos que comparten el código del dominio.
    procesado y la respuesta encolada ([ADR 0010](0010-webhook-asincrono-con-tabla-de-entrada.md)),
    los pide a un puerto de unidad de trabajo. Lo implementa `adapters/outbound/postgres/`, así el
    dominio sigue sin importar SQLAlchemy.
+
+   Hay una escritura que no pasa por esa unidad de trabajo: el registro de cada llamada al
+   modelo. Lo escribe el envoltorio de los puertos de LLM y de embeddings, por un puerto
+   propio y en una transacción corta aparte, para que quede aunque la del caso de uso se
+   deshaga ([ADR 0023](0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
+   No es un dato del producto: ninguna regla de negocio lo lee.
 5. **El SQL vive en un solo lugar.** Las librerías de acceso a la base (`sqlalchemy`, `psycopg`,
    `asyncpg`) solo se importan en `adapters/outbound/postgres/`, `adapters/outbound/pgvector/`,
    `backend/migrations/` y `backend/tests/`. Ahí se crea también la conexión que los puntos de

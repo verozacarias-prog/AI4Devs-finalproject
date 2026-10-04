@@ -43,6 +43,8 @@ desde [`features/TEMPLATE/pr.md`](features/TEMPLATE/pr.md).
 - [ ] Ningún secreto quedó en el código ni en el historial.
 - [ ] Si toca el webhook, la firma se verifica antes de procesar.
 
+- [ ] Si el cambio toca el uso del modelo —un prompt, una función de lectura, la base de conocimiento o la validación de salida—, la tabla de [seguridad de la capa de IA](seguridad-llm.md) va actualizada en este mismo pull request.
+
 ### Base de datos
 
 - [ ] Todo cambio de esquema va en una migración de Alembic nueva.
@@ -57,6 +59,11 @@ desde [`features/TEMPLATE/pr.md`](features/TEMPLATE/pr.md).
 - [ ] Si el pull request cambia una regla de negocio, [`reglas-de-dominio.md`](reglas-de-dominio.md) va actualizado en este mismo pull request.
 - [ ] `/spec-drift` corrió antes del último commit del corte y no quedó ninguna divergencia sin reportar.
 - [ ] Si el comportamiento cambió respecto de lo documentado, la divergencia se resolvió según [`AGENTS.md`](../AGENTS.md) sección 10, no ajustando la documentación al código.
+
+### Revisión
+
+- [ ] El agente `pr-reviewer` corrió sobre la última versión del cambio, y su informe está pegado en el pull request ([ADR 0022](adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md)).
+- [ ] La aprobación y el merge los hace una persona.
 
 ## Los tres pull requests
 

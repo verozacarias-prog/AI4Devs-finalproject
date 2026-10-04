@@ -18,13 +18,14 @@ así que bloquean abrir Platita a usuarios reales.
 | Datos sensibles | El perfil financiero (ingresos por rango, deudas, personas a cargo, objetivos) es opcional y se usa solo para los consejos | [Reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos) |
 | Procesamiento con IA | Los mensajes se interpretan con un proveedor externo de LLM, y las preguntas de consejo pasan además por un proveedor de embeddings, que puede ser otro. A los dos se les envía sin identificadores, y los dos tienen que comprometerse por contrato a no entrenar con esos datos. Una consulta o un consejo incluye los últimos intercambios de la conversación | [ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md) |
 | Otros terceros | WhatsApp (Meta) como canal, el proveedor de alojamiento y las fuentes de cotización | [2. Arquitectura](02-arquitectura.md) |
+| Registro de errores | Desde el primer despliegue, los errores de la aplicación se envían a Sentry, sin teléfono, montos ni texto de los mensajes. Qué plan se usa y cuánto retiene se verifica en su sitio al contratarlo | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) |
 | Dónde se alojan los datos | La región del proveedor de alojamiento, que puede estar fuera del país | [2.4. Infraestructura](02-arquitectura.md#24-infraestructura-y-despliegue) |
 | Grupos familiares | Lo que un miembro imputa a un presupuesto familiar lo ven los demás miembros, y sigue visible después de que sale | [Reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad) |
 | Retención | Cuánto se guarda el texto de los mensajes y qué queda después | [Reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos) |
 | Borrado de cuenta | Qué se borra, qué se anonimiza y el plazo de gracia; que la descripción de los movimientos familiares se conserva tal como se escribió; y que los datos borrados siguen en las copias de respaldo de la base hasta que vencen | [Reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos) |
 | Derechos | Acceso, rectificación y supresión, y cómo ejercerlos | [Reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos) |
 | Avisos | Qué mensajes proactivos existen, que requieren permiso y cómo retirarlo | [Reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos) |
-| Registros técnicos | Que los logs no guardan teléfono, montos ni texto sin enmascarar | [2.5. Seguridad](02-arquitectura.md#25-seguridad) |
+| Registros técnicos | Que los logs no guardan teléfono, montos ni texto sin enmascarar, y que de cada llamada al modelo se guardan datos de medición, sin su contenido | [2.5. Seguridad](02-arquitectura.md#25-seguridad) · [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) |
 
 ## Términos de uso
 
