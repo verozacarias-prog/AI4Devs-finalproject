@@ -90,16 +90,18 @@ para que la cookie de sesión funcione sin un dominio propio.
      enlace propio, con un valor aleatorio de 256 bits, y solo ese enlace abre su cuenta. Así
      otra persona puede probar Platita siendo dueña de sus datos, sin ver los de nadie más.
 
-     Un comando de operación crea el enlace, con el nombre de quien va a probar, y lo
-     devuelve. Todavía no crea ningún usuario. La primera vez que la persona abre el enlace ve
-     un **aviso de prueba**: que es un entorno de prueba, que lo que escriba lo procesa un
-     proveedor de IA, y que sus datos se pueden borrar. Recién cuando lo acepta se crea su
-     usuario de prueba, con el alta completa, un teléfono inventado y la fecha y la versión del
-     aviso como consentimiento. Sin aceptar, no entra y no se guarda nada suyo. Es la misma
+     Un comando de operación crea el enlace, con una etiqueta única que elige quien opera, y
+     lo devuelve. Todavía no crea ningún usuario. La primera vez que la persona abre el enlace
+     ve un **aviso de prueba**: que es un entorno de prueba, que lo que escriba lo procesa un
+     proveedor de IA, y que sus datos pueden borrarse sin aviso. Recién cuando lo acepta se
+     crea su usuario de prueba, con la etiqueta como nombre, un teléfono inventado, la fecha y
+     la versión del aviso como consentimiento, y la misma plantilla que usa el script de datos
+     de prueba: país, moneda, cuentas con saldo, un primer período confirmado y un perfil,
+     todos inventados. Sin aceptar, no entra y no se guarda nada que haya escrito. Es la misma
      regla del alta real: sin consentimiento no hay usuario
      ([reglas de dominio § 11](../reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos)).
 
-     Otro comando regenera el enlace: el anterior deja de servir y se revocan las sesiones
+     Otro comando regenera el enlace, que se identifica por su etiqueta: el anterior deja de servir y se revocan las sesiones
      abiertas de ese usuario. Los dos comandos se niegan a correr con el entorno en
      `production`, igual que el script de datos de prueba. La base guarda solo un HMAC del
      valor, con la clave del servidor. El valor viaja en el fragmento de la dirección, que el
@@ -144,6 +146,10 @@ para que la cookie de sesión funcione sin un dominio propio.
   La tabla la crea la misma migración en todos los entornos; en producción queda vacía, porque
   ni las rutas ni los comandos existen ahí.
 - Rotar la clave del servidor invalida todos los enlaces personales, y hay que regenerarlos.
+- Un usuario de prueba no se puede borrar solo: el borrado de cuenta pide un código por
+  WhatsApp, que el andamio no tiene. Los datos de `demo` se borran reiniciando su base, y eso
+  es lo que el aviso de prueba advierte.
+- Quien prueba no ejercita el alta: recibe cuentas y un período inventados.
 
 - Una consulta a la base por request autenticada. A este volumen, sobre una clave indexada, no
   se nota.

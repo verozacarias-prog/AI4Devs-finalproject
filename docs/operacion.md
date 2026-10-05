@@ -303,7 +303,7 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
 - **Lo que no se registra nunca:** el teléfono, ni entero ni en parte; el nombre; el texto de los
   mensajes, las descripciones y lo que se envía o recibe del LLM; montos y saldos; los nombres de
   cuentas y categorías, que pueden identificar a la persona o a su banco; códigos de login,
-  cookies y tokens de sesión; firmas del webhook, claves de API y la URL de la base; el contenido
+  cookies, tokens de sesión y el valor de un enlace personal; firmas del webhook, claves de API y la URL de la base; el contenido
   de los emails; y la IP completa, que se trunca si hace falta para los límites de uso.
 - **Cómo se hace cumplir:** un filtro de logging que redacta por nombre de campo; Sentry sin datos
   personales por defecto y con un filtro que quita cuerpo, cookies y headers; y un test que corre
