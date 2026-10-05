@@ -1,0 +1,20 @@
+# Verificación de enlaces externos. scripts/verify_docs.py valida los relativos y
+# saltea explícitamente http/https: este archivo cubre justo ese hueco.
+
+# Los registros citan URLs de conversaciones pasadas, o fuentes periodísticas fechadas, que
+# pueden haber caducado.
+exclude_path = ["prompts.md", "docs/conversacion-reestructuracion-docs.md", "docs/use-case-walkthrough.md", "node_modules", "site/node_modules"]
+
+exclude = [
+  "^http://localhost",
+  "^https://127\\.0\\.0\\.1",
+  # Anclas de línea de GitHub: el fragmento no existe como ancla HTML.
+  "^https://github\\.com/.*#L[0-9]+",
+]
+
+exclude_loopback = true
+
+timeout = 30
+max_retries = 3
+# 429 es límite de tasa del servidor, no un enlace roto.
+accept = ["200..=299", "429"]

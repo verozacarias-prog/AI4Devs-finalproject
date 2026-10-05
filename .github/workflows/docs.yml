@@ -1,0 +1,60 @@
+# Construye el portal de documentación y lo publica en GitHub Pages.
+# El contenido se genera desde docs/, que es la única fuente.
+name: Documentación — despliegue
+
+on:
+  # Ver la nota de docs-quality.yml: el trabajo vive en una rama, no en main,
+  # porque main es el espejo del repositorio del curso.
+  #
+  # El entorno github-pages solo acepta despliegues desde la rama por defecto
+  # del repositorio. La rama de trabajo de la entrega en curso tiene que estar
+  # configurada como rama por defecto de este fork, o el despliegue se rechaza
+  # aunque el workflow corra entero.
+  push:
+    branches: [main, 'feature/**']
+    paths:
+      - 'docs/**'
+      - 'site/**'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un despliegue a la vez; no se cancela el que esté en curso.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci
+        working-directory: site
+      - run: npm run build
+        working-directory: site
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

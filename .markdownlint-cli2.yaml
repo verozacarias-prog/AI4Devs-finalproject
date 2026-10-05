@@ -1,0 +1,52 @@
+# Formato Markdown. Complementa a scripts/verify_docs.py, que valida las convenciones
+# propias de docs/08-convenciones-de-documentacion.md. Este archivo solo mira la forma.
+
+globs:
+  - "docs/**/*.md"
+  - "README.md"
+  - "AGENTS.md"
+
+# Los registros citan texto ajeno por definición y no siguen el estilo del proyecto.
+# Es el mismo criterio que is_record() en scripts/verify_docs.py.
+ignores:
+  - "prompts.md"
+  - "docs/conversacion-*.md"
+  - "docs/use-case-walkthrough.md"
+  - "node_modules"
+  - "site"
+
+config:
+  default: true
+
+  # MD013 line-length: la documentación usa tablas anchas y bloques largos.
+  MD013: false
+
+  # MD033 no-inline-html: se usan etiquetas sueltas dentro de tablas.
+  MD033: false
+
+  # MD060 table-column-style: las tablas usan estilo compacto (|---|) de forma
+  # consistente en todo el repositorio. La regla es cosmética y produce 103 avisos.
+  MD060: false
+
+  # MD026 no-trailing-punctuation: la ficha del proyecto en el README sigue la
+  # plantilla oficial del curso, cuyos títulos terminan en dos puntos. No se toca.
+  MD026: false
+
+  # MD034 no-bare-urls: la ficha oficial pide la URL del repositorio como texto plano.
+  MD034: false
+
+  # MD001 heading-increment: las secciones 1 a 7 siguen la plantilla oficial del curso,
+  # que salta de "# 1. Título" a "### **1.1. Subtítulo:**". No se altera la plantilla.
+  MD001: false
+
+  # MD036 no-emphasis-as-heading: los tickets de docs/06-tickets.md usan etiquetas en
+  # negrita por la misma plantilla. Convertirlos en títulos cambiaría la estructura.
+  MD036: false
+
+  # MD024 no-duplicate-heading: los ADR repiten subtítulos bajo secciones distintas.
+  MD024:
+    siblings_only: true
+
+  # MD007 unordered-list-indent: dos espacios, como está escrita la documentación.
+  MD007:
+    indent: 2
