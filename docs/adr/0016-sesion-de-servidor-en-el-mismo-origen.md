@@ -86,14 +86,26 @@ para que la cookie de sesión funcione sin un dominio propio.
    - **En `local`, una lista.** La pantalla lista los usuarios de los datos de prueba y se elige
      uno. Es una excepción deliberada a la regla de que el usuario nunca sale del request, y
      vale solo en la máquina de quien desarrolla.
-   - **En `demo`, un enlace personal.** La lista no existe. Cada usuario de prueba tiene un
+   - **En `demo`, un enlace personal.** La lista no existe. Cada persona que prueba tiene un
      enlace propio, con un valor aleatorio de 256 bits, y solo ese enlace abre su cuenta. Así
-     otra persona puede probar Platita siendo dueña de sus datos, sin ver los de nadie más. Un
-     comando de operación crea el usuario de prueba, con el alta completa, y devuelve su
-     enlace; otro lo regenera, y el anterior deja de servir. La base guarda solo un HMAC del
+     otra persona puede probar Platita siendo dueña de sus datos, sin ver los de nadie más.
+
+     Un comando de operación crea el enlace, con el nombre de quien va a probar, y lo
+     devuelve. Todavía no crea ningún usuario. La primera vez que la persona abre el enlace ve
+     un **aviso de prueba**: que es un entorno de prueba, que lo que escriba lo procesa un
+     proveedor de IA, y que sus datos se pueden borrar. Recién cuando lo acepta se crea su
+     usuario de prueba, con el alta completa, un teléfono inventado y la fecha y la versión del
+     aviso como consentimiento. Sin aceptar, no entra y no se guarda nada suyo. Es la misma
+     regla del alta real: sin consentimiento no hay usuario
+     ([reglas de dominio § 11](../reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos)).
+
+     Otro comando regenera el enlace: el anterior deja de servir y se revocan las sesiones
+     abiertas de ese usuario. Los dos comandos se niegan a correr con el entorno en
+     `production`, igual que el script de datos de prueba. La base guarda solo un HMAC del
      valor, con la clave del servidor. El valor viaja en el fragmento de la dirección, que el
-     navegador no envía al servidor, y la página lo manda en el cuerpo del pedido: no queda en
-     ningún registro.
+     navegador no envía al servidor, y la página lo manda en el cuerpo del pedido. El filtro de
+     los registros lo quita como a cualquier credencial, y su test lo comprueba
+     ([ADR 0023](0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
 
    El enlace no es el login del producto. Quien lo tiene entra como esa persona, y nada
    verifica que el teléfono sea suyo.
@@ -125,10 +137,13 @@ para que la cookie de sesión funcione sin un dominio propio.
 - Mientras dure el andamio, el login por código no se muestra ni se prueba de punta a punta.
 - En el entorno de demostración, el control de acceso es el enlace personal: quien lo recibe
   reenviado entra como esa persona, hasta que se regenera. Sigue siendo un entorno de prueba:
-  nadie aceptó términos ahí y sus datos se pueden borrar, así que no es lugar para la
-  contabilidad real de nadie. La seguridad de producción depende de que el arranque se niegue
+  lo que se acepta ahí es un aviso de prueba y no los términos del producto, y sus datos se
+  pueden borrar, así que no es lugar para la contabilidad real de nadie. La seguridad de producción depende de que el arranque se niegue
   con esas opciones encendidas.
 - Una tabla y dos comandos de operación que existen solo para el andamio, y se quitan con él.
+  La tabla la crea la misma migración en todos los entornos; en producción queda vacía, porque
+  ni las rutas ni los comandos existen ahí.
+- Rotar la clave del servidor invalida todos los enlaces personales, y hay que regenerarlos.
 
 - Una consulta a la base por request autenticada. A este volumen, sobre una clave indexada, no
   se nota.
@@ -165,6 +180,9 @@ para que la cookie de sesión funcione sin un dominio propio.
   enviarlo: ejercita el flujo completo, pero es trabajo en algo que no es el chat, y mostrar el
   código delata qué números existen, que es lo que el
   [ADR 0017](0017-limites-del-login-y-codigos-con-proposito.md) evita.
+- **Que el comando registre el consentimiento al crear el usuario de prueba:** no hace falta la
+  pantalla del aviso, pero queda anotada una aceptación que nadie dio, de alguien cuyo texto
+  va a un proveedor externo.
 - **Una contraseña compartida para todo el entorno de demostración:** deja afuera a quien no la
   tiene, pero adentro todos pueden entrar como cualquiera. No hace a cada persona dueña de sus
   datos.

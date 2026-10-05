@@ -751,6 +751,14 @@ usuario, lo primero es pedirle que acepte los términos y la política de privac
 guarda nada más que el mensaje recibido, y no se procesa con IA. Se registra cuándo aceptó y qué
 versión de los términos.
 
+**En el entorno de pruebas, el consentimiento es un aviso de prueba.** Quien prueba Platita por
+el chat web, con un enlace personal, no pasa por el alta conversacional. La primera vez que abre
+su enlace ve un aviso: que es un entorno de prueba, que lo que escriba lo procesa un proveedor de
+IA y que sus datos se pueden borrar. Hasta que lo acepta no existe su usuario ni se guarda nada
+suyo. Al aceptar se registran la fecha y la versión del aviso, en los mismos campos que el
+consentimiento real. El mecanismo está en el
+[ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md).
+
 **El alta tiene una parte obligatoria y corta.** Es lo mínimo para registrar el primer gasto:
 
 1. Consentimiento de términos y política de privacidad.

@@ -64,7 +64,7 @@ de pre-commit. No son una recomendación: rompen el commit.
 - `backend/app/adapters/inbound/whatsapp_webhook/` — traduce payloads de WhatsApp a llamadas a casos de uso.
 - `backend/app/adapters/inbound/message_worker/` — punto de entrada del worker: toma los mensajes guardados y los pasa a casos de uso.
 - `backend/app/adapters/inbound/scheduler/` — punto de entrada de los procesos programados: recurrentes, cierres de resumen, alertas, vencimientos, cotizaciones y borrado de cuentas, siempre por casos de uso.
-- `backend/app/adapters/inbound/cli/` — comandos de operación: carga de la base de conocimiento, habilitación de números, y usuarios de prueba del entorno `demo` con su enlace personal, siempre por casos de uso.
+- `backend/app/adapters/inbound/cli/` — comandos de operación: carga de la base de conocimiento, habilitación de números, y enlaces personales del entorno `demo`, siempre por casos de uso.
 - `backend/app/adapters/outbound/postgres/` — repositorios SQLAlchemy que implementan los puertos `*_repository`, la unidad de trabajo y la creación de la conexión.
 - `backend/app/adapters/outbound/pgvector/` — implementación de `VectorStorePort`.
 - `backend/app/adapters/outbound/whatsapp_client/` — envío de mensajes salientes de WhatsApp.

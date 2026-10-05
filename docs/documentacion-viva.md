@@ -92,7 +92,7 @@ npm run build        # construye, y regenera llms.txt
 ```
 
 El portal se publica solo, con `.github/workflows/docs.yml`, en cada integración a la rama de la
-entrega en curso.
+entrega en curso, y otra vez al cerrarla, cuando esa rama llega a `main`.
 
 ## 7. El modelo de ramas
 
@@ -131,6 +131,10 @@ GitHub condicionan el modelo y no son evidentes:
   Al abrir una entrega hay que poner su rama como rama por defecto del fork, en
   `Settings → Branches`, y revisar que esté autorizada en `Settings → Environments →
   github-pages`.
+
+**Abrir una entrega** son tres pasos: la rama nueva desde `main`, ponerla como rama por defecto
+y protegerla. **Cerrarla** es correr `/security-audit` y `/spec-drift` sobre todo el proyecto,
+dejar al día `prompts.md` e integrar la rama a `main` por pull request.
 
 Que los controles impidan un merge depende, además, de proteger la rama de la entrega con esos
 controles como obligatorios ([ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md)).

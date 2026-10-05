@@ -59,7 +59,7 @@ https://github.com/verozacarias-prog/AI4Devs-finalproject
 
 La documentación también se publica como sitio navegable en
 **<https://verozacarias-prog.github.io/AI4Devs-finalproject/>**, generado desde `docs/` en cada
-integración a la rama de la entrega en curso.
+integración a la rama de la entrega en curso y a `main`.
 
 Las decisiones de arquitectura, una por archivo y en formato Michael Nygard, viven en [`docs/adr/`](docs/adr/).
 
@@ -114,8 +114,8 @@ cd site && npm install                # solo para ver o regenerar el portal
    [Verificación](#verificación). Si cambió `docs/`, además `cd site && npm run build`, que
    regenera `llms.txt`. Un documento nuevo se suma a la tabla de arriba y a la barra lateral de
    `site/astro.config.mjs`.
-6. **Hacer el commit,** con un mensaje `tipo(alcance): qué cambia`, en español. Los tipos son
-   `feat`, `fix`, `docs`, `test` y `chore`.
+6. **Hacer el commit,** con el [formato de mensaje](docs/convenciones-de-desarrollo.md#1-cortes-verticales)
+   `tipo(alcance): qué cambia`, en español.
 7. **Cerrar el corte** con `/spec-drift`, y con `/ui-states` si tiene pantalla.
 8. **Abrir el pull request contra la rama de la entrega,** con el cuerpo de
    [`pr.md`](docs/features/TEMPLATE/pr.md) y el [Definition of Done](docs/07-pull-requests.md#definition-of-done).

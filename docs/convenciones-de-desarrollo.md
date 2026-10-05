@@ -34,6 +34,10 @@ tres cortes verticales, y cada uno termina en un commit propio.
 | 2 | Estados vacío y de error, reintento, y lo que exija confirmación del usuario | `feat(xxx): agregar manejo de errores y estado vacío` |
 | 3 | Enmascarado de logs, multimoneda, accesibilidad y observabilidad | `feat(xxx): agregar observabilidad y accesibilidad` |
 
+**Formato del mensaje de commit.** `tipo(alcance): qué cambia`, en español. Los tipos son
+`feat`, `fix`, `docs`, `test` y `chore`. El alcance es la funcionalidad, y se puede omitir
+cuando el cambio no es de una sola, como `docs: guía para colaborar`.
+
 Los tres commits de una funcionalidad son los tres pull requests que pide
 [7. Pull requests](07-pull-requests.md).
 

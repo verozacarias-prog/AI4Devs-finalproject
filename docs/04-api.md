@@ -461,7 +461,8 @@ La entrada de desarrollo: abre una sesión sin código, mientras no exista por d
 
 - `GET /dev/users` lista los usuarios de los datos de prueba, con su nombre, para elegir uno. No pide sesión. **Existe solo en `local`**; en `demo` responde `404`.
 - `POST /dev/session` crea una sesión y la devuelve en la misma cookie `__Host-sid` que el login real. Desde ahí, todo endpoint toma al usuario de la sesión. Acepta una de dos cosas:
-  - `access_token`: el valor del enlace personal de un usuario de prueba. Es la única forma de entrar en `demo`. La página lo lee del fragmento de la dirección, lo manda en el cuerpo y lo borra de la barra del navegador.
+  - `access_token`: el valor de un enlace personal. Es la única forma de entrar en `demo`. La página lo lee del fragmento de la dirección, lo manda en el cuerpo y lo borra de la barra del navegador.
+  - `accept_test_notice`: opcional. La primera vez, el enlace todavía no tiene usuario: sin este campo la respuesta es `409` con la versión del aviso de prueba, y la página lo muestra. Cuando la persona lo acepta, la página repite el pedido con `accept_test_notice` y esa versión; ahí se crea el usuario de prueba, con la fecha y la versión del aviso como consentimiento, y se abre la sesión. Las veces siguientes el campo no hace falta.
   - `user_id`: el usuario elegido de la lista. **Solo en `local`**; en `demo` se ignora y la respuesta es `404`. Es el único caso en que el usuario sale del pedido y no de una sesión.
 
 Un enlace que no existe o que ya se regeneró responde el mismo `404` que la entrada apagada.
@@ -475,6 +476,10 @@ requestBody:
         demo:
           value:
             access_token: "<random value from the personal link>"
+        demo_first_time:
+          value:
+            access_token: "<random value from the personal link>"
+            accept_test_notice: "demo-1"   # the notice version the person accepted
         local:
           value:
             user_id: "u-lucia..."
@@ -484,6 +489,13 @@ responses:
     headers:
       Set-Cookie:
         example: "__Host-sid=<random token>; HttpOnly; Secure; SameSite=Strict; Path=/"
+  409:
+    description: The link has no user yet and the test notice was not accepted, or the accepted version is not the current one
+    content:
+      application/json:
+        example:
+          error: "test_notice_required"
+          notice_version: "demo-1"
   404:
     description: The development entry is disabled, the link is unknown or was regenerated, or user_id was sent outside local
 ```

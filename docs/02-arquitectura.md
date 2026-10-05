@@ -94,7 +94,7 @@ flowchart TB
     subgraph WORKERBOX["Adaptadores de entrada — worker, procesos programados y comandos de operación"]
         MSGWK["Worker de mensajes<br/><i>procesa lo guardado</i>"]
         SCHED["Procesos programados<br/><i>recurrentes, resúmenes,<br/>alertas, vencimientos</i>"]
-        CLI["Comandos de operación<br/><i>carga de la base de conocimiento,<br/>habilitar números, usuarios de prueba</i>"]
+        CLI["Comandos de operación<br/><i>carga de la base de conocimiento,<br/>habilitar números, enlaces de prueba</i>"]
     end
 
     subgraph DOMAIN["Dominio — núcleo hexagonal"]
@@ -190,7 +190,7 @@ El recorrido de un usuario de punta a punta, con el tipo de llamada y las tablas
         /whatsapp_webhook   # translate WhatsApp payloads into use case calls
         /message_worker     # worker entry point: takes stored messages, calls use cases
         /scheduler          # scheduled jobs entry point: calls use cases, never raw SQL
-        /cli                # operator commands: knowledge base load, enabling phone numbers, demo users and their links
+        /cli                # operator commands: knowledge base load, enabling phone numbers, personal links for the demo
       /outbound
         /postgres           # SQLAlchemy repositories, unit of work and connection setup
         /pgvector            # VectorStorePort implementation
@@ -293,7 +293,7 @@ Cómo se opera —entornos, pipeline de la aplicación, vuelta atrás de un desp
 - **Cada llamada al modelo queda registrada sin contenido**: propósito, modelo, tokens, duración, costo y resultado, nunca el texto. No se usa una plataforma externa de observabilidad de LLM, porque recibiría los prompts y las respuestas ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
 - **Retención limitada**: el texto de los mensajes se borra pasado un plazo configurable, y al proveedor de LLM nunca se le envían identificadores ([reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos), [ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md)).
 - **Configuración en YAML versionado**: el plazo de retención de mensajes (`message_retention_days`, 60 por defecto), el plazo de gracia del borrado de cuenta (`account_deletion_grace_days`, 7 por defecto), las cuotas de uso del asistente y el tope diario total, los dos valores de la memoria de conversación (3 intercambios y 30 minutos), los parámetros de partición y de recuperación de la base de conocimiento, los precios por modelo con que se estima el costo de cada llamada, los umbrales de las alertas de presupuesto y las fuentes de cotización viven en archivos YAML del repositorio, no en el código ni en la base.
-- **Entorno declarado y andamios que no arrancan en producción**: la configuración dice si el entorno es `local`, `demo` o `production`. El chat web y la entrada de desarrollo, que abre una sesión sin código, se habilitan solo en los dos primeros; con alguno encendido en `production`, ningún proceso arranca. En `demo` se entra solo con un enlace personal, uno por usuario de prueba, así que cada persona que prueba ve únicamente sus datos ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
+- **Entorno declarado y andamios que no arrancan en producción**: la configuración dice si el entorno es `local`, `demo` o `production`. El chat web y la entrada de desarrollo, que abre una sesión sin código, se habilitan solo en los dos primeros; con alguno encendido en `production`, ningún proceso arranca. En `demo` se entra solo con un enlace personal, y la primera vez hay que aceptar un aviso de prueba; cada persona que prueba ve únicamente sus datos ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 - **Inyección de prompts**: la defensa principal es que el modelo no puede escribir ni pedir datos de otro usuario. Además, todo dato que entra al prompt va delimitado, y la salida se valida en código antes de enviarla ([ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md)).
 - **El prompt de sistema se escribe como si fuera público**: no lleva secretos ni datos de ningún usuario ([ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md)).
 - **La respuesta del modelo se muestra como texto**: el chat web nunca la interpreta como HTML ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).

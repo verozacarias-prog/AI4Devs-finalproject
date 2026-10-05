@@ -101,10 +101,13 @@ se despliegan demostración y producción sigue como propuesta.
 |---|---|---|---|
 | Local | Desarrollo y pruebas manuales del flujo por WhatsApp | Docker Compose con la imagen `pgvector/pgvector:pg16`, el número de prueba gratuito de Meta detrás de un túnel, y datos semilla que se niegan a correr contra producción | Pull request |
 | CI, efímero | Tests de integración y migraciones contra un PostgreSQL real | PostgreSQL como contenedor del job, sin secretos, con dobles de prueba para Meta, el LLM, los embeddings y las cotizaciones | Merge a la rama de despliegue con todos los checks en verde |
-| Demostración y pruebas | Mostrar el flujo conversacional por el chat web, sin WhatsApp, y que lo pruebe otra persona | Entorno `demo`: usuarios de prueba, chat web encendido y entrada por un enlace personal, uno por persona ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Tiene su propia base. Dónde se aloja está sin decidir | Con cada integración a la rama de la entrega |
+| Demostración y pruebas | Mostrar el flujo conversacional por el chat web, sin WhatsApp, y que lo pruebe otra persona | Entorno `demo`: usuarios de prueba, chat web encendido y entrada por un enlace personal, uno por persona, con un aviso de prueba que se acepta la primera vez ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Tiene su propia base. Dónde se aloja está sin decidir | Con cada integración a la rama de la entrega |
 | Producción | Usuarios | Entorno `production`: Render, con los secretos en un Environment Group y registros en nivel INFO. No arranca con el chat web ni la entrada de desarrollo encendidos | Despliegue automático de Render cuando pasan los checks |
 
-Staging no está al lanzamiento: duplicaría el costo, y el riesgo principal que cubriría, una
+El entorno `demo` no figura en los costos de [1](#1-qué-se-suma-a-la-arquitectura): es una
+segunda instancia con su base, y cuánto cuesta depende del proveedor que se elija.
+
+Un staging igual a producción no está al lanzamiento: duplicaría el costo, y el riesgo principal que cubriría, una
 migración que rompe, lo cubre la CI probando la migración desde el esquema de la versión
 anterior. Cuándo agregarlo está en [7](#7-cuándo-crecer).
 

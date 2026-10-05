@@ -73,7 +73,8 @@ la mano, no lo frena.
 - Adivinar un código deja de ser una estrategia práctica, incluso con paciencia.
 - Una filtración de la base no expone ni teléfonos en los límites ni códigos vigentes.
 - Rotar la clave del servidor cuesta poco: invalida códigos que vencen en 5 minutos y límites
-  que se borran a las 24 horas.
+  que se borran a las 24 horas. En el entorno de pruebas invalida además los enlaces personales
+  ([ADR 0016](0016-sesion-de-servidor-en-el-mismo-origen.md)).
 - La especificación deja de prometer una protección que el diseño no da.
 
 ### Negativas y costos asumidos
