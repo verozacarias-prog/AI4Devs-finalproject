@@ -59,7 +59,7 @@ https://github.com/verozacarias-prog/AI4Devs-finalproject
 
 La documentación también se publica como sitio navegable en
 **<https://verozacarias-prog.github.io/AI4Devs-finalproject/>**, generado desde `docs/` en cada
-integración a `main`.
+integración a la rama de la entrega en curso.
 
 Las decisiones de arquitectura, una por archivo y en formato Michael Nygard, viven en [`docs/adr/`](docs/adr/).
 
@@ -72,8 +72,69 @@ El registro de uso de IA durante el proyecto está en [`prompts.md`](prompts.md)
 ## Flujo de trabajo con IA
 
 El proyecto se desarrolla con asistentes de IA y la configuración está versionada en el
-repositorio: un skill, dos commands, dos verificadores y un hook de pre-commit.
+repositorio: un skill, tres commands, un agente revisor, dos verificadores y un hook de pre-commit.
 Todo está descrito en el [flujo de trabajo con IA](docs/flujo-de-trabajo-con-ia.md).
+
+## Cómo colaborar
+
+Los pasos para incluir un cambio, en orden. El detalle de cada uno está en el documento enlazado.
+
+**Ramas.** Cada entrega tiene su rama, `feature/entrega-N-VNZ`, que sale de `main` y vuelve a
+`main` cuando la entrega se cierra. El trabajo no se hace ahí: cada cambio va en una rama corta
+que sale de la rama de la entrega y vuelve a ella por pull request. La rama de la entrega
+despliega el entorno de pruebas, y `main`, producción. El porqué está en
+[documentación viva](docs/documentacion-viva.md#7-el-modelo-de-ramas).
+
+| Rama | Sale de | Nombre | Ejemplo |
+|---|---|---|---|
+| De entrega | `main` | `feature/entrega-<N>-VNZ` | `feature/entrega-2-VNZ` |
+| De un corte de una historia | La rama de la entrega | `hu<N>-c<corte>-<tema>` | `hu3-c1-registro-de-gasto` |
+| De lo que no es una historia | La rama de la entrega | `tarea-<tema>` | `tarea-scaffold-y-docker` |
+
+**Una vez por clon.**
+
+```sh
+git config core.hooksPath .githooks   # activa el hook de pre-commit
+cd site && npm install                # solo para ver o regenerar el portal
+```
+
+**Para incluir un cambio.**
+
+1. **Crear la rama** desde la rama de la entrega, con el nombre de la tabla. Una historia son
+   tres ramas, una por [corte vertical](docs/convenciones-de-desarrollo.md#1-cortes-verticales).
+2. **Leer antes de escribir.** [`AGENTS.md`](AGENTS.md) es el contrato, y su sección 12 dice qué
+   leer según el cambio. Si toca movimientos, cuentas, presupuestos o categorías, el skill
+   `domain-rules` se activa solo y dice qué reglas aplican.
+3. **Especificar.** Copiar [`docs/features/TEMPLATE/`](docs/features/TEMPLATE/) a
+   `docs/features/FEAT-XXX/` y completar `spec.md`, y `ui_contract.md` si hay pantalla.
+4. **Implementar el corte,** con sus tests. La documentación que el cambio afecta —API, modelo
+   de datos, reglas de dominio— va en el mismo commit. Una decisión de arquitectura lleva su
+   [ADR](docs/adr/).
+5. **Verificar antes del commit.** El hook corre solo los dos verificadores de
+   [Verificación](#verificación). Si cambió `docs/`, además `cd site && npm run build`, que
+   regenera `llms.txt`. Un documento nuevo se suma a la tabla de arriba y a la barra lateral de
+   `site/astro.config.mjs`.
+6. **Hacer el commit,** con un mensaje `tipo(alcance): qué cambia`, en español. Los tipos son
+   `feat`, `fix`, `docs`, `test` y `chore`.
+7. **Cerrar el corte** con `/spec-drift`, y con `/ui-states` si tiene pantalla.
+8. **Abrir el pull request contra la rama de la entrega,** con el cuerpo de
+   [`pr.md`](docs/features/TEMPLATE/pr.md) y el [Definition of Done](docs/07-pull-requests.md#definition-of-done).
+   Correr el agente `pr-reviewer` y pegar su informe.
+9. **Integrar** cuando todos los controles pasan. La aprobación y el merge son de una persona;
+   un asistente hace commit solo si se lo piden, y nunca hace merge.
+
+**Para abrir y cerrar una entrega.**
+
+- **Abrir:** crear `feature/entrega-<N>-VNZ` desde `main`; ponerla como rama por defecto del
+  repositorio, porque de ahí se publica el portal y ahí abre Dependabot sus pull requests; y
+  protegerla, con los controles como obligatorios.
+- **Cerrar:** correr `/security-audit` y `/spec-drift` sobre todo el proyecto, registrar los
+  prompts en [`prompts.md`](prompts.md) y abrir el pull request de la rama de la entrega a
+  `main`.
+- **Cada lunes:** revisar los pull requests de Dependabot.
+
+Los commands, el skill y el agente están descritos en el
+[flujo de trabajo con IA](docs/flujo-de-trabajo-con-ia.md).
 
 ## Verificación
 

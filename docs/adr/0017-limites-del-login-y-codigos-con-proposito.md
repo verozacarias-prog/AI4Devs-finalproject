@@ -59,9 +59,11 @@ la mano, no lo frena.
    exige escribir el código tal cual, así que ninguna frase mal interpretada lo dispara. Contra
    quien tiene el teléfono en la mano, la única defensa es el plazo de gracia.
 7. **Nada de esto rige en la entrada de desarrollo.** Mientras no exista el adaptador de
-   WhatsApp, el andamio entra sin código, eligiendo un usuario de prueba
-   ([ADR 0016](0016-sesion-de-servidor-en-el-mismo-origen.md)). Esa entrada no pide ni canjea
-   códigos, así que no pasa por estos límites, y no existe en producción.
+   WhatsApp, el andamio entra sin código: eligiendo un usuario de prueba en `local`, o con un
+   enlace personal en `demo` ([ADR 0016](0016-sesion-de-servidor-en-el-mismo-origen.md)). Esa
+   entrada no pide ni canjea códigos, así que no pasa por estos límites, y no existe en
+   producción. El enlace no los necesita: su valor es aleatorio y de 256 bits, y no se puede
+   adivinar probando.
 
 ## Consecuencias
 

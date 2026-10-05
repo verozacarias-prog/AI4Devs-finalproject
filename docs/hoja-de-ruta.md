@@ -22,7 +22,7 @@ se elige antes de la rama de consejos.
 | Entra en la entrega 2 | Dónde está la regla |
 |---|---|
 | Chat web dentro del dashboard, por el mismo camino asíncrono que WhatsApp | [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md), [la API](04-api.md) |
-| Entrada de desarrollo: se elige un usuario de prueba y se abre una sesión real, sin código | [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md) |
+| Entrada de desarrollo, que abre una sesión real sin código: en `local` se elige un usuario de prueba, y en `demo` se entra con un enlace personal, para que otra persona pueda probar siendo dueña de sus datos | [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md) |
 | Registro de gastos e ingresos con toda su conversación: lo que se resuelve solo a la vista, preguntar lo que falta, el pendiente y su continuación, varios en un mensaje con respuestas por número, categoría nueva con confirmación, y elegir entre el presupuesto individual y el de un grupo | [Reglas de dominio § 1, § 4 y § 5](reglas-de-dominio.md) |
 | Corregir, borrar y restaurar un movimiento confirmado, con el botón de responder un mensaje | [Reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado) |
 | Pantalla de cuentas con el saldo calculado, donde se ve el efecto de cada movimiento | [Reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado), `GET /accounts` |
@@ -54,8 +54,9 @@ tabla, el asistente no llama al modelo otra vez ni cobra cuota:
 un gasto y de un ingreso con la pantalla de cuentas; los pendientes y la categoría nueva; varios
 movimientos en un mensaje; el presupuesto de un grupo; y corregir, borrar y restaurar.
 
-El entorno de demostración se despliega con datos inventados. Dónde, depende de la decisión
-abierta sobre el proveedor y el plan.
+El entorno `demo` se despliega desde la rama de la entrega y hace de entorno de pruebas: cada
+persona que prueba tiene su usuario y su enlace. Dónde se aloja depende de la decisión abierta
+sobre el proveedor y el plan.
 
 ## Entrega 2
 
@@ -77,12 +78,13 @@ abierta sobre el proveedor y el plan.
 | Documentación del código, con docstrings y su generador | Exista el backend | Es la capa que falta de las cuatro de [documentación viva](documentacion-viva.md#1-las-cuatro-capas). El equivalente en Python de lo que el módulo 5 propone con TypeDoc |
 | Verificar las copias de respaldo del plan de base de datos: cuántos días retiene y si permite restaurar a un punto en el tiempo | Se contrate el plan de PostgreSQL en Render | Los datos de una cuenta borrada siguen en las copias hasta que vencen, y la política de privacidad tiene que decir cuánto tardan ([términos y privacidad](terminos-y-privacidad.md)). Restaurar a un punto en el tiempo es lo que permite volver atrás si una migración o un error rompen datos |
 | Revisar los índices del [Ticket 3](06-tickets.md) contra las consultas reales | Haya datos y consultas medibles | `pending_transaction (batch_id)` sobra, porque lo cubre `UNIQUE (batch_id, position)`; los índices de saldo y de presupuesto conviene hacerlos parciales o que cubran las columnas que suman, contemplando `duplicate_of` y `deleted_at`; y el de duplicados sirve a una función que todavía no existe. Con pocos usuarios no se nota |
+| Los dos comandos de operación del entorno `demo`: crear un usuario de prueba con su enlace personal, y regenerar un enlace | Exista el scaffold | Es lo que deja probar a alguien más sin que vea los datos de otro ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Sin ellos, `demo` no tiene por dónde entrar |
 | Seed de datos falsos para desarrollo, que se niegue a correr contra producción | Exista el scaffold | Monedas y categorías base ya van en una migración; esto es solo el script de datos de prueba. En la entrega 2 es además de donde salen los usuarios, con lo que lista el [alcance](#alcance-de-la-entrega-2). Sin la protección, correrlo contra la base de producción mezcla datos inventados con reales |
 | Sumar al verificador de arquitectura los nombres de los SDK de los proveedores elegidos | Se elijan los proveedores | El dominio no conoce ninguna librería de IA ([ADR 0020](adr/0020-sin-framework-de-orquestacion-de-ia.md)), y el verificador solo frena las que tiene en su lista |
 | Revisar las dependencias que trae `langchain-text-splitters` y que ninguna envíe datos por su cuenta | Se instale, con la carga de la base de conocimiento | Lo pide el [ADR 0020](adr/0020-sin-framework-de-orquestacion-de-ia.md). Es para la entrega final |
 | Política de acceso central y tests de aislamiento entre usuarios | Exista el scaffold | La regla ya está en la [API](04-api.md): el usuario sale de la sesión y un recurso ajeno responde `404`. Lo que falta es aplicarla en un solo lugar del dominio, incluida la visibilidad por intervalos de membresía de los grupos familiares y las respuestas por WhatsApp que citan un lote, y probarla en cada endpoint y en el worker. Implementada caso por caso, alguno se escapa |
 | `UNIQUE` sobre `resulting_transaction_id`, `resulting_transfer_id` y `resulting_recurring_rule_id` de `pending_transaction` | Exista la migración inicial | Impide que dos pendientes queden enlazados al mismo movimiento. No duplica plata, pero deja datos inconsistentes |
-| Cambiar la rama por defecto del fork al abrir la rama de la entrega 2 | Exista esa rama | El entorno `github-pages` solo despliega desde la rama por defecto. Detalle en [documentación viva](documentacion-viva.md#7-el-modelo-de-ramas-condiciona-el-despliegue) |
+| Cambiar la rama por defecto del fork al abrir la rama de la entrega 2 | Exista esa rama | El entorno `github-pages` solo despliega desde la rama por defecto. Detalle en [documentación viva](documentacion-viva.md#7-el-modelo-de-ramas) |
 
 ## Más adelante — aplicación móvil
 
@@ -198,11 +200,6 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
 - **Pérdida de datos y tiempo de recuperación aceptados: sin decidir.** La propuesta pierde
   minutos ante un error y hasta 24 horas si se pierde la cuenta del proveedor, y se recupera en
   una a cuatro horas. Define la frecuencia de las copias y si alcanza el plan de base más chico.
-- **Rama desde la que se despliega la aplicación: divergencia.**
-  [2.4](02-arquitectura.md#24-infraestructura-y-despliegue) dice que el despliegue sale de un push
-  a `main`, pero en este fork `main` es el espejo del repositorio del curso y el trabajo vive en
-  ramas `feature/**` ([documentación viva](documentacion-viva.md#7-el-modelo-de-ramas-condiciona-el-despliegue)).
-  Hay que decidir cuál es la rama de despliegue antes de conectar Render.
 - **Quién genera las alertas proactivas: divergencia.** Las alertas usan el motor RAG, pero en el
   diagrama de [2.4](02-arquitectura.md#24-infraestructura-y-despliegue) los procesos programados
   no llegan al LLM, y solo el worker lo hace. O las genera el worker, o al diagrama le falta esa

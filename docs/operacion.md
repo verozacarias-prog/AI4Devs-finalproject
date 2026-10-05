@@ -8,6 +8,7 @@ decidida y el resto sigue como propuesta, escrita para que esté a mano cuando s
 | Qué | Dónde está en este documento | Decisión | Desde cuándo |
 |---|---|---|---|
 | Una imagen y Docker Compose en local | [2](#2-entornos) | [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) | Entrega 2 |
+| Qué rama despliega cada entorno: la de la entrega, `demo`; `main`, `production` | [2](#2-entornos) | [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) | El primer despliegue |
 | Los cinco controles del pipeline | [3](#3-pipeline-de-la-aplicación) | [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) | El primer commit de código. El control de secretos y las acciones fijadas, desde ahora |
 | Métricas de las llamadas al modelo | [6.2](#62-métricas) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | Entrega 2 |
 | Registros en JSON, filtro de datos personales y eventos de seguridad | [6.3](#63-registros) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | El primer commit de código |
@@ -90,7 +91,8 @@ costo compra casi toda la operación.
 
 ## 2. Entornos
 
-El entorno local y el de CI están decididos ([ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md)). El local levanta cuatro servicios
+El entorno local y el de CI están decididos, y también qué rama despliega cada entorno: la rama
+de la entrega despliega `demo`, y `main`, `production` ([ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md)). El local levanta cuatro servicios
 con un comando: la base, las migraciones, la API y el worker, los tres últimos con la misma
 imagen. Las pruebas manuales usan el modelo real, con la clave en un `.env` sin versionar. Dónde
 se despliegan demostración y producción sigue como propuesta.
@@ -99,7 +101,7 @@ se despliegan demostración y producción sigue como propuesta.
 |---|---|---|---|
 | Local | Desarrollo y pruebas manuales del flujo por WhatsApp | Docker Compose con la imagen `pgvector/pgvector:pg16`, el número de prueba gratuito de Meta detrás de un túnel, y datos semilla que se niegan a correr contra producción | Pull request |
 | CI, efímero | Tests de integración y migraciones contra un PostgreSQL real | PostgreSQL como contenedor del job, sin secretos, con dobles de prueba para Meta, el LLM, los embeddings y las cotizaciones | Merge a la rama de despliegue con todos los checks en verde |
-| Demostración | Mostrar el flujo conversacional por el chat web, sin WhatsApp | Entorno `demo`: datos inventados, chat web y entrada de desarrollo encendidos ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Dónde se despliega está sin decidir | A mano, mientras dure el andamio |
+| Demostración y pruebas | Mostrar el flujo conversacional por el chat web, sin WhatsApp, y que lo pruebe otra persona | Entorno `demo`: usuarios de prueba, chat web encendido y entrada por un enlace personal, uno por persona ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Tiene su propia base. Dónde se aloja está sin decidir | Con cada integración a la rama de la entrega |
 | Producción | Usuarios | Entorno `production`: Render, con los secretos en un Environment Group y registros en nivel INFO. No arranca con el chat web ni la entrada de desarrollo encendidos | Despliegue automático de Render cuando pasan los checks |
 
 Staging no está al lanzamiento: duplicaría el costo, y el riesgo principal que cubriría, una
@@ -283,7 +285,7 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   |---|---|---|
   | `auth.code_requested` | Se pidió un código de acceso | El login por código |
   | `auth.code_failed` | Un canje de código falló | El login por código |
-  | `auth.session_created` | Se abrió una sesión, por código o por la entrada de desarrollo | El primer commit de código |
+  | `auth.session_created` | Se abrió una sesión, por código, por la lista de `local` o por un enlace personal | El primer commit de código |
   | `auth.throttled` | Se alcanzó un límite de intentos | El login por código |
   | `usage.quota_exceeded` | Un usuario superó una cuota o el tope diario total | El primer commit de código |
   | `llm.output_blocked` | La validación de salida frenó una respuesta | Las consultas y los consejos |
@@ -346,7 +348,7 @@ está también lo que falta de los eventos de seguridad: cuál de ellos dispara 
 ## 8. Qué hace falta para que el resto deje de ser propuesta
 
 Las decisiones que lo bloquean están en las [decisiones abiertas de la hoja de ruta](hoja-de-ruta.md#decisiones-abiertas):
-el proveedor y el plan, la pérdida de datos y el tiempo de recuperación aceptados, la rama desde
-la que se despliega, quién genera las alertas proactivas, y si los procesos programados corren
+el proveedor y el plan, la pérdida de datos y el tiempo de recuperación aceptados, quién genera
+las alertas proactivas, y si los procesos programados corren
 en un solo cron o en uno por tarea. Cuando se tomen, cada una se escribe en un ADR, y su parte
 de este documento pasa a la tabla de lo decidido.

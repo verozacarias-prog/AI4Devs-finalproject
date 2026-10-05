@@ -78,13 +78,25 @@ para que la cookie de sesión funcione sin un dominio propio.
    dos opciones: el chat web y la entrada de desarrollo. Con cualquiera de las dos encendida y
    el entorno en `production`, ningún proceso arranca.
 
-   La entrada de desarrollo reemplaza al código mientras no exista el adaptador de WhatsApp: la
-   pantalla lista los usuarios de los datos de prueba, se elige uno y el servidor crea una
-   sesión real, con la misma tabla y la misma cookie. Desde ahí todo endpoint toma al usuario de
-   la sesión, como siempre. No se construye nada del código de un solo uso hasta que haya por
-   dónde enviarlo. Es una excepción deliberada a la regla de que el usuario nunca sale del
-   request, y vale solo en un entorno con datos inventados: quien abra esa pantalla entra como
-   cualquier usuario de prueba.
+   La entrada de desarrollo reemplaza al código mientras no exista el adaptador de WhatsApp, y
+   crea una sesión real, con la misma tabla y la misma cookie. Desde ahí todo endpoint toma al
+   usuario de la sesión, como siempre. No se construye nada del código de un solo uso hasta que
+   haya por dónde enviarlo. Tiene dos formas, según el entorno:
+
+   - **En `local`, una lista.** La pantalla lista los usuarios de los datos de prueba y se elige
+     uno. Es una excepción deliberada a la regla de que el usuario nunca sale del request, y
+     vale solo en la máquina de quien desarrolla.
+   - **En `demo`, un enlace personal.** La lista no existe. Cada usuario de prueba tiene un
+     enlace propio, con un valor aleatorio de 256 bits, y solo ese enlace abre su cuenta. Así
+     otra persona puede probar Platita siendo dueña de sus datos, sin ver los de nadie más. Un
+     comando de operación crea el usuario de prueba, con el alta completa, y devuelve su
+     enlace; otro lo regenera, y el anterior deja de servir. La base guarda solo un HMAC del
+     valor, con la clave del servidor. El valor viaja en el fragmento de la dirección, que el
+     navegador no envía al servidor, y la página lo manda en el cuerpo del pedido: no queda en
+     ningún registro.
+
+   El enlace no es el login del producto. Quien lo tiene entra como esa persona, y nada
+   verifica que el teléfono sea suyo.
 
    Si alguna de las dos opciones está encendida, cada proceso lo avisa en su registro al
    arrancar ([ADR 0023](0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
@@ -111,9 +123,12 @@ para que la cookie de sesión funcione sin un dominio propio.
 ### Negativas y costos asumidos
 
 - Mientras dure el andamio, el login por código no se muestra ni se prueba de punta a punta.
-- Un entorno de demostración desplegado con la entrada de desarrollo no tiene control de acceso.
-  Solo puede tener datos inventados, y la seguridad de producción depende de que el arranque se
-  niegue con esas opciones encendidas.
+- En el entorno de demostración, el control de acceso es el enlace personal: quien lo recibe
+  reenviado entra como esa persona, hasta que se regenera. Sigue siendo un entorno de prueba:
+  nadie aceptó términos ahí y sus datos se pueden borrar, así que no es lugar para la
+  contabilidad real de nadie. La seguridad de producción depende de que el arranque se niegue
+  con esas opciones encendidas.
+- Una tabla y dos comandos de operación que existen solo para el andamio, y se quitan con él.
 
 - Una consulta a la base por request autenticada. A este volumen, sobre una clave indexada, no
   se nota.
@@ -150,6 +165,9 @@ para que la cookie de sesión funcione sin un dominio propio.
   enviarlo: ejercita el flujo completo, pero es trabajo en algo que no es el chat, y mostrar el
   código delata qué números existen, que es lo que el
   [ADR 0017](0017-limites-del-login-y-codigos-con-proposito.md) evita.
+- **Una contraseña compartida para todo el entorno de demostración:** deja afuera a quien no la
+  tiene, pero adentro todos pueden entrar como cualquiera. No hace a cada persona dueña de sus
+  datos.
 - **Que el chat web mande el usuario en cada pedido, sin sesión:** menos piezas, pero todos los
   endpoints nacerían tomando al usuario del request y habría que rehacerlos.
 - **Un proveedor de identidad gestionado:** ninguno ofrece de forma nativa el código por

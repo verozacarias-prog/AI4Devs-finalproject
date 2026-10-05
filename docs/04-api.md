@@ -457,26 +457,35 @@ responses:
 
 ### `GET /dev/users` y `POST /dev/session`
 
-La entrada de desarrollo: abre una sesión sin código, mientras no exista por dónde enviarlo. Existen solo con la entrada de desarrollo habilitada, en los entornos `local` y `demo`; con el entorno en `production` el servidor no arranca si está habilitada ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Apagada, las dos rutas responden `404`.
+La entrada de desarrollo: abre una sesión sin código, mientras no exista por dónde enviarlo. Existe solo con la entrada de desarrollo habilitada, en los entornos `local` y `demo`; con el entorno en `production` el servidor no arranca si está habilitada ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Apagada, las dos rutas responden `404`.
 
-- `GET /dev/users` lista los usuarios de los datos de prueba, con su nombre, para elegir uno. No pide sesión.
-- `POST /dev/session` crea una sesión para el usuario elegido y la devuelve en la misma cookie `__Host-sid` que el login real. Es la única ruta en la que el usuario sale del pedido y no de una sesión. Desde ahí, todo endpoint lo toma de la sesión.
+- `GET /dev/users` lista los usuarios de los datos de prueba, con su nombre, para elegir uno. No pide sesión. **Existe solo en `local`**; en `demo` responde `404`.
+- `POST /dev/session` crea una sesión y la devuelve en la misma cookie `__Host-sid` que el login real. Desde ahí, todo endpoint toma al usuario de la sesión. Acepta una de dos cosas:
+  - `access_token`: el valor del enlace personal de un usuario de prueba. Es la única forma de entrar en `demo`. La página lo lee del fragmento de la dirección, lo manda en el cuerpo y lo borra de la barra del navegador.
+  - `user_id`: el usuario elegido de la lista. **Solo en `local`**; en `demo` se ignora y la respuesta es `404`. Es el único caso en que el usuario sale del pedido y no de una sesión.
+
+Un enlace que no existe o que ya se regeneró responde el mismo `404` que la entrada apagada.
 
 ```yaml
 # POST /dev/session
 requestBody:
   content:
     application/json:
-      example:
-        user_id: "u-lucia..."
+      examples:
+        demo:
+          value:
+            access_token: "<random value from the personal link>"
+        local:
+          value:
+            user_id: "u-lucia..."
 responses:
   204:
-    description: Session created for that seed user
+    description: Session created for that test user
     headers:
       Set-Cookie:
         example: "__Host-sid=<random token>; HttpOnly; Secure; SameSite=Strict; Path=/"
   404:
-    description: The development entry is disabled, or the user does not exist
+    description: The development entry is disabled, the link is unknown or was regenerated, or user_id was sent outside local
 ```
 
 ### `GET /family-groups`, `POST /family-groups`, `POST /family-groups/{family_group_id}/invitations` y `DELETE /family-groups/{family_group_id}/invitations/{invitation_id}`
