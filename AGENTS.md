@@ -64,7 +64,7 @@ de pre-commit. No son una recomendación: rompen el commit.
 - `backend/app/adapters/inbound/whatsapp_webhook/` — traduce payloads de WhatsApp a llamadas a casos de uso.
 - `backend/app/adapters/inbound/message_worker/` — punto de entrada del worker: toma los mensajes guardados y los pasa a casos de uso.
 - `backend/app/adapters/inbound/scheduler/` — punto de entrada de los procesos programados: recurrentes, cierres de resumen, alertas, vencimientos, cotizaciones y borrado de cuentas, siempre por casos de uso.
-- `backend/app/adapters/inbound/cli/` — comandos de operación: carga de la base de conocimiento y habilitación de números, siempre por casos de uso.
+- `backend/app/adapters/inbound/cli/` — comandos de operación: carga de la base de conocimiento, habilitación de números, y enlaces personales del entorno `demo`, siempre por casos de uso.
 - `backend/app/adapters/outbound/postgres/` — repositorios SQLAlchemy que implementan los puertos `*_repository`, la unidad de trabajo y la creación de la conexión.
 - `backend/app/adapters/outbound/pgvector/` — implementación de `VectorStorePort`.
 - `backend/app/adapters/outbound/whatsapp_client/` — envío de mensajes salientes de WhatsApp.
@@ -108,7 +108,8 @@ completo antes de escribir código.
 - Todo acceso a datos se limita al usuario autenticado, que sale de la sesión y nunca del request. Un
   recurso de otro usuario responde `404`, y cada endpoint tiene un test que lo prueba.
 - El chat web y la entrada de desarrollo, que abre una sesión sin código, existen solo en los
-  entornos `local` y `demo`. Con alguno encendido en `production`, ningún proceso arranca
+  entornos `local` y `demo`. Con alguno encendido en `production`, ningún proceso arranca. En
+  `demo` no hay lista de usuarios: se entra solo con el enlace personal de cada usuario de prueba
   ([ADR 0016](docs/adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 - Todo dato que entra a un prompt va delimitado como información, y la salida del modelo se valida
   en código antes de enviarla ([ADR 0013](docs/adr/0013-datos-minimos-al-proveedor-de-llm.md)).
@@ -200,6 +201,10 @@ o al mensaje de WhatsApp, queda funcionando de punta a punta y termina en su pro
 Lo contrario, cortar por capa, deja la interfaz para el final y es como se llega a una entrega
 sin nada que mostrar.
 Toda pantalla implementa y testea los cuatro estados: cargando, con contenido, vacío y error.
+
+Nadie escribe directo en la rama de la entrega, `feature/entrega-N-VNZ`. Las ramas de trabajo
+se llaman `hu<N>-c<corte>-<tema>` para un corte de una historia y `tarea-<tema>` para el resto,
+y entran por pull request. Los pasos están en el [README](README.md#cómo-colaborar).
 
 Un asistente hace commit solo cuando una persona se lo pide, y nunca hace merge: la aprobación
 final de un pull request es de una persona.

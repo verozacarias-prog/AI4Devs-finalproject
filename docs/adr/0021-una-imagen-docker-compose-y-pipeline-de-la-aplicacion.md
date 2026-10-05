@@ -19,9 +19,9 @@ Tres decisiones anteriores acotan la respuesta:
 - Las migraciones corren una sola vez, antes de que arranque cualquier proceso, y ningún proceso
   migra al arrancar ([2.4](../02-arquitectura.md#24-infraestructura-y-despliegue)).
 
-El repositorio es un fork del repositorio del curso: los flujos se disparan con push a
-`feature/**`, y un pull request contra el repositorio de origen ejecuta los flujos de allá
-([documentación viva](../documentacion-viva.md#7-el-modelo-de-ramas-condiciona-el-despliegue)).
+El repositorio es un fork del repositorio del curso: el trabajo entra a la rama de la entrega
+por pull requests dentro del fork, porque un pull request contra el repositorio de origen
+ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el-modelo-de-ramas)).
 
 ## Decisión
 
@@ -61,14 +61,19 @@ El repositorio es un fork del repositorio del curso: los flujos se disparan con 
    desplegar.
 8. **El pipeline no guarda secretos.** Ningún control necesita una credencial. Es la regla de
    [Operación](../operacion.md#3-pipeline-de-la-aplicación), y no cambia.
-9. **Qué bloquea el merge.** Los controles corren en cada push a la rama de trabajo y en cada
-   pull request. Para que además impidan un merge, la rama de la entrega tiene que estar
+9. **Qué bloquea el merge.** Los controles corren en cada pull request y en cada push a `main` y
+   a la rama de la entrega. Para que además impidan un merge, la rama de la entrega tiene que estar
    protegida en este repositorio, con esos controles como obligatorios. Es una configuración de
    GitHub, que se hace a mano.
 10. **Se aplica ahora lo que no depende del código:** el control de secretos, las acciones
     fijadas por hash y Dependabot para las acciones y para `site/`. El resto se crea con el
     primer commit de código, no antes: un flujo sin nada que compilar ni testear fallaría.
-11. **Quedan para la entrega final:** el escaneo de la imagen, la prueba de la migración desde
+11. **Qué rama despliega qué.** La rama de la entrega despliega el entorno `demo`, que hace de
+    entorno de pruebas: ahí prueba a mano quien desarrolla y quien reciba un enlace personal
+    ([ADR 0016](0016-sesion-de-servidor-en-el-mismo-origen.md)). `main`, que recibe solo
+    entregas cerradas, despliega `production` cuando exista. Cada entorno tiene su propia base.
+    Dónde se aloja cada uno sigue sin decidir.
+12. **Quedan para la entrega final:** el escaneo de la imagen, la prueba de la migración desde
     el esquema de la versión anterior y el inventario de componentes de la imagen.
 
 ## Consecuencias
@@ -95,6 +100,8 @@ El repositorio es un fork del repositorio del curso: los flujos se disparan con 
 - `gitleaks` marca ejemplos que no son secretos. Los seis que encontró en el historial, cinco
   heredados del repositorio del curso, están exceptuados uno por uno en `.gitleaksignore`.
 - Hasta la entrega final nadie revisa las vulnerabilidades de la imagen base.
+- El entorno de pruebas cambia con cada integración a la rama de la entrega: quien prueba puede
+  encontrar una historia a medio camino entre dos cortes.
 
 ## Alternativas descartadas
 

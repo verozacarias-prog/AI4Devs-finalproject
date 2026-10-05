@@ -457,26 +457,47 @@ responses:
 
 ### `GET /dev/users` y `POST /dev/session`
 
-La entrada de desarrollo: abre una sesión sin código, mientras no exista por dónde enviarlo. Existen solo con la entrada de desarrollo habilitada, en los entornos `local` y `demo`; con el entorno en `production` el servidor no arranca si está habilitada ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Apagada, las dos rutas responden `404`.
+La entrada de desarrollo: abre una sesión sin código, mientras no exista por dónde enviarlo. Existe solo con la entrada de desarrollo habilitada, en los entornos `local` y `demo`; con el entorno en `production` el servidor no arranca si está habilitada ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Apagada, las dos rutas responden `404`.
 
-- `GET /dev/users` lista los usuarios de los datos de prueba, con su nombre, para elegir uno. No pide sesión.
-- `POST /dev/session` crea una sesión para el usuario elegido y la devuelve en la misma cookie `__Host-sid` que el login real. Es la única ruta en la que el usuario sale del pedido y no de una sesión. Desde ahí, todo endpoint lo toma de la sesión.
+- `GET /dev/users` lista los usuarios de los datos de prueba, con su nombre, para elegir uno. No pide sesión. **Existe solo en `local`**; en `demo` responde `404`.
+- `POST /dev/session` crea una sesión y la devuelve en la misma cookie `__Host-sid` que el login real. Desde ahí, todo endpoint toma al usuario de la sesión. Se entra de una de dos formas, con `access_token` o con `user_id`:
+  - `access_token`: el valor de un enlace personal. Es la única forma de entrar en `demo`. La página lo lee del fragmento de la dirección, lo manda en el cuerpo y lo borra de la barra del navegador.
+  - `accept_test_notice`: opcional. La primera vez, el enlace todavía no tiene usuario: sin este campo la respuesta es `409` con la versión del aviso de prueba, y la página lo muestra. Cuando la persona lo acepta, la página repite el pedido con `accept_test_notice` y esa versión; ahí se crea el usuario de prueba, con la plantilla de los datos de prueba y con la fecha y la versión del aviso como consentimiento, y se abre la sesión. Las veces siguientes el campo no hace falta.
+  - `user_id`: el usuario elegido de la lista. **Solo en `local`**; en `demo` un pedido que lo trae responde `404`, venga o no con un `access_token`. Es el único caso en que el usuario sale del pedido y no de una sesión.
+
+Un enlace que no existe o que ya se regeneró responde el mismo `404` que la entrada apagada.
 
 ```yaml
 # POST /dev/session
 requestBody:
   content:
     application/json:
-      example:
-        user_id: "u-lucia..."
+      examples:
+        demo:
+          value:
+            access_token: "<random value from the personal link>"
+        demo_first_time:
+          value:
+            access_token: "<random value from the personal link>"
+            accept_test_notice: "demo-1"   # the notice version the person accepted
+        local:
+          value:
+            user_id: "u-lucia..."
 responses:
   204:
-    description: Session created for that seed user
+    description: Session created for that test user
     headers:
       Set-Cookie:
         example: "__Host-sid=<random token>; HttpOnly; Secure; SameSite=Strict; Path=/"
+  409:
+    description: The link has no user yet and the test notice was not accepted, or the accepted version is not the current one
+    content:
+      application/json:
+        example:
+          error: "test_notice_required"
+          notice_version: "demo-1"
   404:
-    description: The development entry is disabled, or the user does not exist
+    description: The development entry is disabled, the link is unknown or was regenerated, or user_id was sent outside local
 ```
 
 ### `GET /family-groups`, `POST /family-groups`, `POST /family-groups/{family_group_id}/invitations` y `DELETE /family-groups/{family_group_id}/invitations/{invitation_id}`

@@ -7,12 +7,12 @@
 name: Documentación — calidad
 
 on:
-  # El repositorio es un fork del repo del curso y la entrega va como pull
-  # request al upstream. En un pull request contra otro repositorio, GitHub
-  # ejecuta los workflows del repositorio base, no los de este, así que el
-  # disparador que de verdad sirve acá es el push a la rama de trabajo.
+  # El trabajo entra a la rama de la entrega por pull requests dentro del
+  # fork, desde ramas cortas (hu<N>-c<corte>-<tema> o tarea-<tema>): ahí
+  # corre pull_request. El push cubre main y la rama de la entrega, que es
+  # donde queda lo integrado. Ver docs/documentacion-viva.md, sección 7.
   push:
-    branches: [main, 'feature/**']
+    branches: [main, 'feature/entrega-*']
   pull_request:
   schedule:
     # Los enlaces externos se rompen sin que nadie toque la documentación.

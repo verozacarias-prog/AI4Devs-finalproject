@@ -751,6 +751,19 @@ usuario, lo primero es pedirle que acepte los términos y la política de privac
 guarda nada más que el mensaje recibido, y no se procesa con IA. Se registra cuándo aceptó y qué
 versión de los términos.
 
+**En el entorno de pruebas, el consentimiento es un aviso de prueba.** Quien prueba Platita por
+el chat web, con un enlace personal, no hace el alta: recibe una cuenta de prueba ya armada. La
+primera vez que abre su enlace ve un aviso: que es un entorno de prueba, que lo que escriba lo
+procesa un proveedor de IA y que sus datos pueden borrarse sin aviso. Hasta que lo acepta no
+existe su usuario ni se guarda nada que haya escrito. Lo único que hay antes es el enlace, con
+una etiqueta que eligió quien opera Platita, igual que de un número habilitado se guarda su HMAC.
+Al aceptar se registran la fecha y la versión del aviso, en los mismos campos que el
+consentimiento real, y se crea su usuario con la plantilla de los datos de prueba: país, moneda,
+cuentas con saldo, un primer período confirmado y un perfil, todos inventados. No son valores
+por defecto de un registro: son datos de prueba, y la persona los ve y los usa como punto de
+partida. El mecanismo está en el
+[ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md).
+
 **El alta tiene una parte obligatoria y corta.** Es lo mínimo para registrar el primer gasto:
 
 1. Consentimiento de términos y política de privacidad.
@@ -768,8 +781,9 @@ primer período de presupuesto, ya confirmado (§ 3).
 
 **El alta corre por el chat.** Desde el segundo paso es la misma conversación por WhatsApp y por
 el chat web de desarrollo. El primero, el consentimiento, depende del canal: en WhatsApp es la
-respuesta al primer mensaje, y cómo llega al chat web una persona que todavía no es usuario está
-sin decidir ([hoja de ruta](hoja-de-ruta.md#decisiones-abiertas)).
+respuesta al primer mensaje. Cómo hace el alta por el chat web una persona que todavía no es
+usuaria está sin decidir ([hoja de ruta](hoja-de-ruta.md#decisiones-abiertas)): en el entorno de
+pruebas no la hace, porque su cuenta de prueba ya viene armada.
 
 **El primer mensaje no se pierde.** Si lo primero que escribió fue un gasto, queda guardado y,
 al terminar la parte obligatoria, se retoma como un pendiente normal (§ 5), sin pedirle que lo
