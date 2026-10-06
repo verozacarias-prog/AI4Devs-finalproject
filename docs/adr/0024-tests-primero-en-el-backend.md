@@ -25,10 +25,9 @@ integración y al menos uno de punta a punta.
    de uso y los adaptadores, incluidas las restricciones de la base. Primero el test, se lo ve
    fallar, y recién después se escribe lo mínimo para que pase. Se refactoriza solo con todo en
    verde.
-2. **En las pantallas, los tests son obligatorios pero pueden ir después.** Los tests de los
-   cuatro estados se escriben dentro del mismo corte, antes o después de armar la pantalla. Sus
-   casos se aprueban igual, pero al armar la pantalla y no antes de empezar el corte. Las
-   reglas de orden de los puntos 7 y 8 no les aplican.
+2. **En las pantallas, los tests son obligatorios y van después.** Primero se arma la pantalla;
+   con ella a la vista se aprueban los casos de sus cuatro estados, y después se escriben sus
+   tests, dentro del mismo corte. Las reglas de orden de los puntos 1 y 7 no les aplican.
 3. **Los tests de punta a punta se escriben con la pantalla ya construida,** en la entrega
    final. Uno es fijo: el flujo principal de
    [2.6](../02-arquitectura.md#26-tests). Si se suman otros, se eligen por riesgo.

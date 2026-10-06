@@ -36,7 +36,10 @@ rama de la entrega con `git diff` y `git log`. Usá Bash solo para leer: `git di
    implementación (miralo con `git log`), que los casos del corte figuren aprobados en
    `qa_plan.md` —o, en una rama `tarea-…`, en la descripción del pull request—, que cada test diga de qué criterio de aceptación sale, y que ningún test se
    haya modificado, deshabilitado o borrado después de su commit sin que el pull request diga
-   quién lo aprobó (ADR 0024). Cualquiera de estas faltas es bloqueante.
+   quién lo aprobó (ADR 0024). Cualquiera de estas faltas es bloqueante. La descripción del
+   pull request no está en git: si no te la pasaron, pedila o decí que no pudiste comprobar los
+   casos de la tarea. Una tarea que declara "sin lógica que probar" es válida si el cambio de
+   verdad no tiene lógica.
 5. **Tests.** Que el cambio traiga los suyos. Un endpoint o un caso de uso que toca datos de un
    usuario tiene un test en el que otro usuario recibe `404`. Una pantalla tiene los cuatro
    estados testeados.

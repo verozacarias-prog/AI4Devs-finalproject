@@ -82,7 +82,7 @@ Qué va primero según la capa:
 |---|---|---|
 | Dominio y casos de uso | Unitario, con dobles de los puertos | Antes que el código |
 | Adaptadores y restricciones de la base | De integración, contra PostgreSQL real | Antes que el código |
-| Pantallas | De componente, uno por cada uno de los cuatro estados | En el mismo corte, antes o después de armar la pantalla |
+| Pantallas | De componente, uno por cada uno de los cuatro estados | En el mismo corte, después de armar la pantalla y de aprobar sus casos |
 | Flujo completo | De punta a punta | En la entrega final, con la pantalla ya construida |
 
 No se exige un porcentaje de cobertura. Se exige que cada criterio de aceptación y cada
