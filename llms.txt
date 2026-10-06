@@ -69,6 +69,7 @@ nombres de archivo de código están en inglés.
 - [0021 — Una imagen, Docker Compose para levantar todo y un pipeline de cinco controles](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion/)
 - [0022 — Cada pull request lo revisa un agente definido en el repositorio, a mano](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio/)
 - [0023 — Una fila por llamada al LLM, registros en JSON y eventos de seguridad en el mismo registro](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad/)
+- [0024 — Tests primero en el backend, con los casos aprobados por una persona](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0024-tests-primero-en-el-backend/)
 
 ## Contrato para asistentes de IA
 

@@ -17,9 +17,11 @@ funcionalidad. No copiar su texto: enlazar.
 
 ## Criterios de aceptación
 
-En formato Given/When/Then, uno por comportamiento verificable.
+En formato Given/When/Then, uno por comportamiento verificable, con un solo "cuando" cada uno.
+Cada criterio lleva un identificador, `CA-1`, `CA-2`…, que no se reutiliza ni se renumera: los
+casos de prueba y los tests lo citan.
 
-- **Dado** … **cuando** … **entonces** …
+- **CA-1.** **Dado** … **cuando** … **entonces** …
 
 ## Estados de pantalla
 

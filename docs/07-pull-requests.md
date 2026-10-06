@@ -34,6 +34,9 @@ desde [`features/TEMPLATE/pr.md`](features/TEMPLATE/pr.md).
 
 - [ ] Tipado completo, sin `Any`.
 - [ ] Tests nuevos para el comportamiento agregado, y pasan.
+- [ ] Los casos del corte están aprobados en `qa_plan.md`, y cada criterio de aceptación tiene al menos un caso.
+- [ ] En el backend, el commit de los tests es anterior al de la implementación ([ADR 0024](adr/0024-tests-primero-en-el-backend.md)).
+- [ ] Ningún test se modificó, se deshabilitó ni se borró sin aprobación.
 - [ ] Ningún texto visible al usuario escrito en el código.
 
 ### Seguridad

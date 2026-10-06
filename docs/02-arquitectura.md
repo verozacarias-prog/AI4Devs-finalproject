@@ -305,6 +305,15 @@ Cómo se opera —entornos, pipeline de la aplicación, vuelta atrás de un desp
 
 ### **2.6. Tests**
 
-`Se define con detalle en la Entrega final. Estrategia prevista: tests unitarios sobre los casos de uso del dominio (conversión de moneda, cálculo de saldo por cuenta, categorización, presupuesto ajustado por inflación) usando dobles de prueba en lugar de los adaptadores reales — la ventaja directa de tener puertos —, tests de integración sobre los adaptadores (Postgres, pgvector) y los endpoints principales, y al menos un test end-to-end del flujo principal (registrar un gasto por WhatsApp → verlo reflejado en el saldo de la cuenta y en el presupuesto del dashboard).`
+Cuatro niveles, cada uno con su momento ([ADR 0024](adr/0024-tests-primero-en-el-backend.md)):
+
+| Nivel | Qué prueba | Contra qué | Cuándo se escribe |
+|---|---|---|---|
+| Unitario | El dominio y los casos de uso: conversión de moneda, saldo por cuenta, categorización, pendientes, presupuesto | Dobles de los puertos, incluido el del LLM. Es la ventaja directa de tener puertos | Antes que el código |
+| De integración | Los adaptadores, las restricciones de la base y los endpoints | PostgreSQL real con pgvector, con las migraciones aplicadas desde cero | Antes que el código |
+| De componente | Los cuatro estados de cada pantalla | El dashboard, con la API simulada | En el mismo corte que la pantalla |
+| De punta a punta | El flujo principal: registrar un gasto por el chat y verlo en el saldo de la cuenta | El sistema levantado completo | En la entrega final, con la pantalla ya construida |
+
+El método, con quién aprueba los casos y cómo queda a la vista el orden, está en las [convenciones de desarrollo](convenciones-de-desarrollo.md#1-cortes-verticales).
 
 Los escenarios de los recorridos de usuario, con sus montos y resultados esperados, están en la [validación por casos de uso](use-case-walkthrough.md#anexo-a-uso-de-los-casos-en-las-pruebas).

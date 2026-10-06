@@ -26,27 +26,63 @@ ninguna pantalla. Un corte vertical incompleto siempre es mejor que una capa per
 porque se puede mostrar y se puede probar.
 
 **Los tres cortes.** Una funcionalidad no se implementa de una sola vez ni por capas. Se parte en
-tres cortes verticales, y cada uno termina en un commit propio.
+tres cortes verticales, y cada uno termina en dos commits: primero el de sus tests y después el
+de su implementación.
 
-| Corte | Qué entra | Commit |
-|---|---|---|
-| 1 | Camino feliz completo y estado de carga | `feat(xxx): implementar camino feliz` |
-| 2 | Estados vacío y de error, reintento, y lo que exija confirmación del usuario | `feat(xxx): agregar manejo de errores y estado vacío` |
-| 3 | Enmascarado de logs, multimoneda, accesibilidad y observabilidad | `feat(xxx): agregar observabilidad y accesibilidad` |
+| Corte | Qué entra | Commit de los tests | Commit de la implementación |
+|---|---|---|---|
+| 1 | Camino feliz completo y estado de carga | `test(xxx): casos del camino feliz` | `feat(xxx): implementar camino feliz` |
+| 2 | Estados vacío y de error, reintento, y lo que exija confirmación del usuario | `test(xxx): casos de error y estado vacío` | `feat(xxx): agregar manejo de errores y estado vacío` |
+| 3 | Enmascarado de logs, multimoneda, accesibilidad y observabilidad | `test(xxx): casos de observabilidad y accesibilidad` | `feat(xxx): agregar observabilidad y accesibilidad` |
 
 **Formato del mensaje de commit.** `tipo(alcance): qué cambia`, en español. Los tipos son
 `feat`, `fix`, `docs`, `test` y `chore`. El alcance es la funcionalidad, y se puede omitir
 cuando el cambio no es de una sola, como `docs: guía para colaborar`.
 
-Los tres commits de una funcionalidad son los tres pull requests que pide
+Los tres cortes de una funcionalidad son los tres pull requests que pide
 [7. Pull requests](07-pull-requests.md).
+
+**Tests primero.** En el backend el test se escribe antes que el código ([ADR 0024](adr/0024-tests-primero-en-el-backend.md)).
+Cada corte sigue este orden:
+
+1. **Casos.** Antes de empezar el corte, `qa_plan.md` lista sus casos de prueba: de qué criterio
+   de aceptación sale cada uno, la entrada y el resultado esperado. Un asistente puede
+   proponerlos. Una persona los aprueba, y sin eso no se escribe ningún test.
+2. **Rojo.** Se escriben los tests del backend tal como quedaron aprobados, se corren y se los
+   ve fallar. Ese es el commit de los tests.
+3. **Verde.** Se implementa lo mínimo para que pasen, de a un caso, empezando por el más simple.
+4. **Refactor.** Se ordena el código con todos los tests en verde. Ese es el commit de la
+   implementación.
+
+Tres reglas acompañan ese orden:
+
+- **Un test no se modifica, no se deshabilita y no se borra sin la aprobación de una persona.**
+  Si al implementar un test resulta estar mal, el asistente frena y lo muestra; no lo ajusta
+  para que pase.
+- **Un caso nuevo vuelve al plan.** Si aparece mientras se implementa, se suma a `qa_plan.md`, se
+  aprueba, y su test se escribe antes que su código.
+- **El pull request se abre con el corte en verde.** El commit de los tests deja la rama de
+  trabajo en rojo a propósito; la rama de la entrega no lo ve nunca así.
+
+Qué va primero según la capa:
+
+| Capa | Tipo de test | Cuándo se escribe |
+|---|---|---|
+| Dominio y casos de uso | Unitario, con dobles de los puertos | Antes que el código |
+| Adaptadores y restricciones de la base | De integración, contra PostgreSQL real | Antes que el código |
+| Pantallas | De componente, uno por cada uno de los cuatro estados | En el mismo corte, antes o después de armar la pantalla |
+| Flujo completo | De punta a punta | En la entrega final, con la pantalla ya construida |
+
+No se exige un porcentaje de cobertura. Se exige que cada criterio de aceptación y cada
+invariante en riesgo tengan su test, y que cada test diga de qué criterio sale.
 
 **Por qué el corte 2 existe por separado.** En Platita el camino no feliz *es* el producto. La
 [HU3](05-historias-de-usuario.md) es casi enteramente eso: falta la cuenta, falta confirmar el
 presupuesto, el movimiento queda como `PENDING_TRANSACTION`, el asistente pregunta, recuerda y
-expira. Si entra junto con el camino feliz, se recorta. Con su propio commit, no.
+expira. Si entra junto con el camino feliz, se recorta. Con sus propios commits, no.
 
-**Gate para cerrar un corte:** compila, los tests pasan, el linter pasa, no hay strings visibles
+**Gate para cerrar un corte:** compila, el commit de los tests está antes que el de la
+implementación, los tests pasan, el linter pasa, no hay strings visibles
 al usuario escritos en el código, ninguna invariante de [`AGENTS.md`](../AGENTS.md) quedó
 violada, y `/spec-drift` no reporta diferencias sobre lo que tocaste. Todo eso **antes** del
 último commit del corte, no después.
@@ -82,9 +118,9 @@ Cada funcionalidad tiene su carpeta en `docs/features/FEAT-XXX/`, creada copiand
 
 | Archivo | Cuándo se escribe | Para qué |
 |---|---|---|
-| `spec.md` | Antes del corte 1 | Alcance, criterios de aceptación, reglas de dominio que aplican y los cuatro estados |
+| `spec.md` | Antes del corte 1 | Alcance, criterios de aceptación numerados, reglas de dominio que aplican y los cuatro estados |
 | `ui_contract.md` | Antes del corte 1, si hay pantalla | Componentes, tokens del Design System, máquina de estados y accesibilidad |
-| `qa_plan.md` | Antes del corte 2 | Camino feliz, casos límite, errores, y un test por invariante en riesgo |
+| `qa_plan.md` | Antes de cada corte, los casos de ese corte | Los casos de prueba con su criterio, su entrada y su resultado esperado, y un test por invariante en riesgo. Se aprueba antes de escribir tests |
 | `pr.md` | Al cerrar cada corte | Cuerpo del pull request, con el Definition of Done |
 
 Son cuatro y no siete a propósito. Se dejó afuera el registro de riesgos, que para un proyecto
