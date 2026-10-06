@@ -64,7 +64,7 @@ cambio ([ADR 0022](adr/0022-revision-de-pull-requests-con-un-agente-del-reposito
 
 | Agente | Cuándo | Qué hace |
 |---|---|---|
-| [`pr-reviewer`](../.claude/agents/pr-reviewer.md) | A mano, antes de pedir el merge de cada pull request | Revisa la regla hexagonal más allá del verificador, las reglas de dominio, que nada identificatorio llegue al proveedor ni a un registro, los tests, la documentación y la tabla de seguridad de la capa de IA. Entrega un informe para pegar en el pull request |
+| [`pr-reviewer`](../.claude/agents/pr-reviewer.md) | A mano, antes de pedir el merge de cada pull request | Revisa la regla hexagonal más allá del verificador, las reglas de dominio, que nada identificatorio llegue al proveedor ni a un registro, los tests y que en el backend hayan ido antes que el código, la documentación y la tabla de seguridad de la capa de IA. Entrega un informe para pegar en el pull request |
 
 El revisor solo lee e informa. El merge lo hace siempre una persona, y un asistente hace commit
 solo cuando una persona se lo pide.

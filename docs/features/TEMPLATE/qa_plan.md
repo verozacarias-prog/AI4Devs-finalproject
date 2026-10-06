@@ -7,6 +7,10 @@ aprueba una persona: hasta entonces no se escribe ningún test
 Cada caso sale de un criterio de aceptación de [spec.md](spec.md) o de una regla de dominio, y
 se escribe en castellano, sin código. Un test no se modifica ni se borra sin aprobación.
 
+La línea "Aprobado por" la completa la persona que aprueba, nunca un asistente. Los casos de
+componente, los de los cuatro estados de una pantalla, se suman y se aprueban cuando la pantalla
+está armada; los demás, antes de empezar el corte.
+
 ## Casos del corte 1 — camino feliz
 
 - **Aprobado por:** <nombre>, AAAA-MM-DD | pendiente

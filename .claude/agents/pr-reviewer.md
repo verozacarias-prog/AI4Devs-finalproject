@@ -34,7 +34,7 @@ rama de la entrega con `git diff` y `git log`. Usá Bash solo para leer: `git di
    usuario (ADR 0013 y ADR 0023).
 4. **Tests primero.** En el backend, que el commit de los tests esté antes que el de la
    implementación (miralo con `git log`), que los casos del corte figuren aprobados en
-   `qa_plan.md`, que cada test diga de qué criterio de aceptación sale, y que ningún test se
+   `qa_plan.md` —o, en una rama `tarea-…`, en la descripción del pull request—, que cada test diga de qué criterio de aceptación sale, y que ningún test se
    haya modificado, deshabilitado o borrado después de su commit sin que el pull request diga
    quién lo aprobó (ADR 0024). Cualquiera de estas faltas es bloqueante.
 5. **Tests.** Que el cambio traiga los suyos. Un endpoint o un caso de uso que toca datos de un

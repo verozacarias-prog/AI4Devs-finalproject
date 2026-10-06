@@ -29,7 +29,8 @@ para otras tareas es un costo, acá es lo que se busca.
    - que el cambio no contradiga las [reglas de dominio](../reglas-de-dominio.md);
    - que nada identificatorio viaje al proveedor ni termine en un registro
      ([ADR 0013](0013-datos-minimos-al-proveedor-de-llm.md));
-   - que el cambio traiga sus tests;
+   - que el cambio traiga sus tests y que, en el backend, se hayan escrito antes que el
+     código ([ADR 0024](0024-tests-primero-en-el-backend.md));
    - que la documentación refleje lo que cambió;
    - y, si el cambio toca el uso del modelo, que la tabla de
      [seguridad de la capa de IA](../seguridad-llm.md) esté actualizada.

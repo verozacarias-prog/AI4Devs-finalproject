@@ -26,20 +26,32 @@ integración y al menos uno de punta a punta.
    fallar, y recién después se escribe lo mínimo para que pase. Se refactoriza solo con todo en
    verde.
 2. **En las pantallas, los tests son obligatorios pero pueden ir después.** Los tests de los
-   cuatro estados se escriben dentro del mismo corte, antes o después de armar la pantalla.
+   cuatro estados se escriben dentro del mismo corte, antes o después de armar la pantalla. Sus
+   casos se aprueban igual, pero al armar la pantalla y no antes de empezar el corte. Las
+   reglas de orden de los puntos 7 y 8 no les aplican.
 3. **Los tests de punta a punta se escriben con la pantalla ya construida,** en la entrega
-   final. Antes se decide qué camino merece uno, por riesgo.
+   final. Uno es fijo: el flujo principal de
+   [2.6](../02-arquitectura.md#26-tests). Si se suman otros, se eligen por riesgo.
 4. **Los casos de prueba los aprueba una persona.** Antes de cada corte, `qa_plan.md` lista los
    casos de ese corte: de qué criterio de aceptación sale cada uno, con qué entrada y qué
    resultado esperado. El asistente puede proponerlos; no escribe ningún test hasta que una
-   persona los aprueba, y los escribe tal como quedaron aprobados.
+   persona los aprueba, y los escribe tal como quedaron aprobados. La línea de aprobación la
+   escribe la persona: el asistente no la completa nunca.
+
+   Una tarea que no es de una historia, como el scaffold o un arreglo, no tiene carpeta de
+   funcionalidad. Sigue la misma regla con un lugar más liviano: el asistente propone los
+   casos, la persona los aprueba antes de que se escriba ningún test, y quedan en la
+   descripción del pull request, en la misma tabla. Lo que no tiene lógica que probar, como un
+   Dockerfile o un archivo de configuración, no lleva casos, y el pull request lo dice.
 5. **Cada criterio de aceptación tiene un identificador,** y cada caso y cada test dicen de cuál
    salen.
 6. **Un test no se modifica, no se deshabilita y no se borra sin la aprobación de una persona.**
    Si al implementar un test resulta estar mal, el asistente frena y lo muestra.
-7. **El orden queda en el historial.** Cada corte tiene dos commits: primero el de los tests,
-   hecho con esos tests fallando, y después el de la implementación. El agente revisor
-   comprueba que el commit de implementación tenga antes el de sus tests.
+7. **El orden queda en el historial.** Cada corte que toca el backend tiene dos commits:
+   primero el de los tests, hecho con esos tests fallando, y después el de la implementación.
+   El agente revisor comprueba que el commit de implementación tenga antes el de sus tests. Un
+   corte que no toca el backend tiene un solo commit. Los pull requests se integran con un
+   commit de merge, no aplastados en uno, para que ese orden no se pierda.
 8. **Un hook corre los tests unitarios después de cada edición del asistente** en `backend/`, e
    informa el resultado. No bloquea: en la fase en rojo los tests fallan a propósito. Se
    configura cuando exista el código.
@@ -77,6 +89,11 @@ integración y al menos uno de punta a punta.
   lento: son decenas de tests en código por historia. Revisar los casos cubre lo que importa.
 - **Que el asistente proponga y escriba los tests, y se vean en el pull request:** es lo que la
   decisión busca evitar.
+- **Exceptuar de la regla a las tareas que no son de una historia:** más rápido, pero las
+  migraciones, con sus restricciones, entran por una tarea y son lo que más conviene probar
+  antes.
+- **Exigir una carpeta de funcionalidad para todo código de backend:** una sola regla, a
+  cambio de escribir una especificación para un scaffold o para un arreglo de una línea.
 - **Dejar el orden librado a una regla escrita,** sin commits separados: no deja evidencia.
 - **Exigir un porcentaje de cobertura:** empuja a escribir tests que ejecutan código sin
   comprobar nada.

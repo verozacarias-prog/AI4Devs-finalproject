@@ -110,7 +110,8 @@ cd site && npm install                # solo para ver o regenerar el portal
    `docs/features/FEAT-XXX/` y completar `spec.md`, con los criterios de aceptación numerados, y
    `ui_contract.md` si hay pantalla.
 4. **Aprobar los casos de prueba** del corte en `qa_plan.md`. El asistente los propone; sin la
-   aprobación de una persona no se escribe ningún test.
+   aprobación de una persona no se escribe ningún test. En una rama `tarea-…` no hay carpeta:
+   los casos aprobados van en la descripción del pull request.
 5. **Escribir los tests del backend y verlos fallar.** Es el primer commit del corte,
    `test(alcance): …`. Desde ahí, un test no se modifica ni se borra sin aprobación.
 6. **Implementar lo mínimo para que pasen,** y refactorizar en verde. Es el segundo commit,
@@ -127,8 +128,9 @@ cd site && npm install                # solo para ver o regenerar el portal
 10. **Abrir el pull request contra la rama de la entrega,** con el corte en verde y el cuerpo de
    [`pr.md`](docs/features/TEMPLATE/pr.md) y el [Definition of Done](docs/07-pull-requests.md#definition-of-done).
    Correr el agente `pr-reviewer` y pegar su informe.
-11. **Integrar** cuando todos los controles pasan. La aprobación y el merge son de una persona;
-   un asistente hace commit solo si se lo piden, y nunca hace merge.
+11. **Integrar** cuando todos los controles pasan, con un commit de merge y sin aplastar los
+    commits, para que se vea que los tests fueron primero. La aprobación y el merge son de una
+    persona; un asistente hace commit solo si se lo piden, y nunca hace merge.
 
 **Para abrir y cerrar una entrega.**
 

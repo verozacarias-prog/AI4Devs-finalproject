@@ -27,7 +27,8 @@ porque se puede mostrar y se puede probar.
 
 **Los tres cortes.** Una funcionalidad no se implementa de una sola vez ni por capas. Se parte en
 tres cortes verticales, y cada uno termina en dos commits: primero el de sus tests y después el
-de su implementación.
+de su implementación. Un corte que no toca el backend, como uno que solo ajusta la accesibilidad
+de una pantalla, tiene un solo commit.
 
 | Corte | Qué entra | Commit de los tests | Commit de la implementación |
 |---|---|---|---|
@@ -45,9 +46,10 @@ Los tres cortes de una funcionalidad son los tres pull requests que pide
 **Tests primero.** En el backend el test se escribe antes que el código ([ADR 0024](adr/0024-tests-primero-en-el-backend.md)).
 Cada corte sigue este orden:
 
-1. **Casos.** Antes de empezar el corte, `qa_plan.md` lista sus casos de prueba: de qué criterio
-   de aceptación sale cada uno, la entrada y el resultado esperado. Un asistente puede
-   proponerlos. Una persona los aprueba, y sin eso no se escribe ningún test.
+1. **Casos.** Antes de empezar el corte, `qa_plan.md` lista los casos de prueba del backend: de
+   qué criterio de aceptación sale cada uno, la entrada y el resultado esperado. Un asistente
+   puede proponerlos. Una persona los aprueba, y sin eso no se escribe ningún test. La
+   aprobación la anota la persona, nunca el asistente.
 2. **Rojo.** Se escriben los tests del backend tal como quedaron aprobados, se corren y se los
    ve fallar. Ese es el commit de los tests.
 3. **Verde.** Se implementa lo mínimo para que pasen, de a un caso, empezando por el más simple.
@@ -60,7 +62,17 @@ Tres reglas acompañan ese orden:
   Si al implementar un test resulta estar mal, el asistente frena y lo muestra; no lo ajusta
   para que pase.
 - **Un caso nuevo vuelve al plan.** Si aparece mientras se implementa, se suma a `qa_plan.md`, se
-  aprueba, y su test se escribe antes que su código.
+  aprueba, y en el backend su test se escribe antes que su código.
+- **Las pantallas tienen su propio momento.** Los casos de los cuatro estados se suman a
+  `qa_plan.md` y se aprueban cuando la pantalla está armada, antes de escribir sus tests. Esos
+  tests van en el commit de la implementación o en uno posterior del mismo corte.
+- **Una tarea sigue la misma regla, sin carpeta.** El trabajo que no es de una historia, como el
+  scaffold o un arreglo, no tiene `qa_plan.md`. El asistente propone los casos, la persona los
+  aprueba antes de que exista un test, y se pegan en la descripción del pull request, con la
+  misma tabla. Lo que no tiene lógica que probar, como un Dockerfile, no lleva casos, y el pull
+  request lo dice. El orden de los dos commits vale igual.
+- **Se integra con un commit de merge.** Aplastar los commits del pull request en uno borraría
+  el orden entre tests e implementación.
 - **El pull request se abre con el corte en verde.** El commit de los tests deja la rama de
   trabajo en rojo a propósito; la rama de la entrega no lo ve nunca así.
 

@@ -312,7 +312,7 @@ Cuatro niveles, cada uno con su momento ([ADR 0024](adr/0024-tests-primero-en-el
 | Unitario | El dominio y los casos de uso: conversión de moneda, saldo por cuenta, categorización, pendientes, presupuesto | Dobles de los puertos, incluido el del LLM. Es la ventaja directa de tener puertos | Antes que el código |
 | De integración | Los adaptadores, las restricciones de la base y los endpoints | PostgreSQL real con pgvector, con las migraciones aplicadas desde cero | Antes que el código |
 | De componente | Los cuatro estados de cada pantalla | El dashboard, con la API simulada | En el mismo corte que la pantalla |
-| De punta a punta | El flujo principal: registrar un gasto por el chat y verlo en el saldo de la cuenta | El sistema levantado completo | En la entrega final, con la pantalla ya construida |
+| De punta a punta | Al menos el flujo principal: registrar un gasto por WhatsApp y verlo reflejado en el saldo de la cuenta y en el presupuesto del dashboard | El sistema levantado completo | En la entrega final, con la pantalla ya construida |
 
 El método, con quién aprueba los casos y cómo queda a la vista el orden, está en las [convenciones de desarrollo](convenciones-de-desarrollo.md#1-cortes-verticales).
 

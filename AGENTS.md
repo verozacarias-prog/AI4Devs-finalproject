@@ -197,8 +197,8 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
 
 Toda funcionalidad se parte en tres cortes verticales —camino feliz, errores y estado vacío,
 observabilidad—. Un corte vertical atraviesa todas las capas, de la base de datos a la pantalla
-o al mensaje de WhatsApp, queda funcionando de punta a punta y termina en dos commits, el de
-sus tests y el de su implementación.
+o al mensaje de WhatsApp, queda funcionando de punta a punta y, si toca el backend, termina en
+dos commits, el de sus tests y el de su implementación.
 Lo contrario, cortar por capa, deja la interfaz para el final y es como se llega a una entrega
 sin nada que mostrar.
 Toda pantalla implementa y testea los cuatro estados: cargando, con contenido, vacío y error.
@@ -207,7 +207,10 @@ En el backend el test va antes que el código
 ([ADR 0024](docs/adr/0024-tests-primero-en-el-backend.md)):
 
 - No escribas ningún test hasta que una persona haya aprobado los casos del corte en
-  `qa_plan.md`. Escribilos tal como están ahí, sin sumar ni cambiar casos.
+  `qa_plan.md`. Escribilos tal como están ahí, sin sumar ni cambiar casos. La línea de
+  aprobación la completa la persona: no la escribas vos.
+- En una tarea que no es de una historia no hay `qa_plan.md`: proponé los casos, esperá la
+  aprobación, y dejalos listos para la descripción del pull request.
 - Corré los tests y confirmá que fallan antes de implementar. El commit de los tests va antes
   que el de la implementación.
 - Implementá lo mínimo para que pasen. Refactorizá solo con todo en verde.
