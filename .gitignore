@@ -24,3 +24,6 @@ venv/
 
 # Sistema operativo y editores
 .DS_Store
+
+# Salidas de la evaluación del proveedor de LLM: se regeneran en cada corrida.
+scripts/llm_eval/results/

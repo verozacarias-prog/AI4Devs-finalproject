@@ -193,7 +193,7 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
 - Decisión de arquitectura → [`docs/adr/`](docs/adr/).
 - Qué entra en la entrega 2 y qué no → [`docs/hoja-de-ruta.md`](docs/hoja-de-ruta.md#alcance-de-la-entrega-2).
 - Docker, pipeline, registros, métricas del modelo o rutas de salud → los ADR [0021](docs/adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) y [0023](docs/adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md), y [`docs/operacion.md`](docs/operacion.md), que separa lo decidido de lo propuesto.
-- Clasificación, memoria, base de conocimiento o prompts → los ADR [0013](docs/adr/0013-datos-minimos-al-proveedor-de-llm.md), [0018](docs/adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), [0019](docs/adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md) y [0020](docs/adr/0020-sin-framework-de-orquestacion-de-ia.md).
+- Clasificación, memoria, base de conocimiento o prompts → los ADR [0013](docs/adr/0013-datos-minimos-al-proveedor-de-llm.md), [0018](docs/adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), [0019](docs/adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md), [0020](docs/adr/0020-sin-framework-de-orquestacion-de-ia.md) y [0025](docs/adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md).
 
 ## 13. Método de trabajo
 
