@@ -11,8 +11,8 @@ decidida y el resto sigue como propuesta, escrita para que esté a mano cuando s
 | Qué rama despliega cada entorno: la de la entrega, `demo`; `main`, `production` | [2](#2-entornos) | [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) | El primer despliegue |
 | Los cinco controles del pipeline | [3](#3-pipeline-de-la-aplicación) | [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) | El primer commit de código. El control de secretos y las acciones fijadas, desde ahora |
 | Métricas de las llamadas al modelo | [6.2](#62-métricas) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | Entrega 2 |
-| Registros en JSON, filtro de datos personales y eventos de seguridad | [6.3](#63-registros) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | El primer commit de código |
-| Las tres rutas de salud | [6.4](#64-alertas) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | El primer commit de código |
+| Registros en JSON, filtro de datos personales y eventos de seguridad | [6.3](#63-registros) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | Los registros y el filtro, el primer commit de código. Cada evento, la funcionalidad que lo produce |
+| Las tres rutas de salud | [6.4](#64-alertas) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | `/healthz` y `/readyz`, el primer commit de código. `/queuez`, la tabla de mensajes entrantes |
 | Sentry, el monitor externo y las dos alertas críticas | [6.4](#64-alertas) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | El primer despliegue |
 
 **Qué sigue como propuesta.** Todo lo demás: el proveedor y el plan, los costos, el despliegue y
@@ -94,7 +94,7 @@ costo compra casi toda la operación.
 El entorno local y el de CI están decididos, y también qué rama despliega cada entorno: la rama
 de la entrega despliega `demo`, y `main`, `production` ([ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md)). El local levanta cuatro servicios
 con un comando: la base, las migraciones, la API y el worker, los tres últimos con la misma
-imagen. Las pruebas manuales usan el modelo real, con la clave en un `.env` sin versionar. Dónde
+imagen. El worker se suma cuando exista la tabla de mensajes entrantes. Las pruebas manuales usan el modelo real, con la clave en un `.env` sin versionar. Dónde
 se despliegan demostración y producción sigue como propuesta.
 
 | Entorno | Para qué | En qué se diferencia | Cómo se promueve |
@@ -288,11 +288,11 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   |---|---|---|
   | `auth.code_requested` | Se pidió un código de acceso | El login por código |
   | `auth.code_failed` | Un canje de código falló | El login por código |
-  | `auth.session_created` | Se abrió una sesión, por código, por la lista de `local` o por un enlace personal | El primer commit de código |
+  | `auth.session_created` | Se abrió una sesión, por código, por la lista de `local` o por un enlace personal | La entrada de desarrollo |
   | `auth.throttled` | Se alcanzó un límite de intentos | El login por código |
-  | `usage.quota_exceeded` | Un usuario superó una cuota o el tope diario total | El primer commit de código |
+  | `usage.quota_exceeded` | Un usuario superó una cuota o el tope diario total | Las cuotas, con el registro de gastos |
   | `llm.output_blocked` | La validación de salida frenó una respuesta | Las consultas y los consejos |
-  | `dev.scaffold_enabled` | Al arrancar, el chat web o la entrada de desarrollo están encendidos | El primer commit de código |
+  | `dev.scaffold_enabled` | Al arrancar, el chat web o la entrada de desarrollo están encendidos | El chat web y la entrada de desarrollo |
 
   Un evento sobre un número que todavía no es de un usuario lleva el mismo HMAC del teléfono
   que guarda `AUTH_THROTTLE`, nunca el número. Los eventos propios de WhatsApp, como una firma
@@ -306,7 +306,12 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   cookies, tokens de sesión y el valor de un enlace personal; firmas del webhook, claves de API y la URL de la base; el contenido
   de los emails; y la IP completa, que se trunca si hace falta para los límites de uso.
 - **Cómo se hace cumplir:** un filtro de logging que redacta por nombre de campo, y que deja
-  pasar solo los campos permitidos, así que un campo nuevo sale redactado hasta que se lo suma; Sentry sin datos
+  pasar solo lo que se sabe seguro. De los campos, solo los permitidos, y con un número o un
+  valor corto sin espacios: un campo nuevo, o un texto libre, sale redactado. Del mensaje, solo
+  un nombre fijo de evento, como `http.request`: un texto armado con datos sale redactado. De un
+  error, solo su clase. Todo lo que el proceso registra pasa por ese filtro, incluidos el
+  servidor web, cuyo registro de accesos está apagado porque imprime la IP, y las librerías,
+  que registran desde el nivel de advertencia; Sentry sin datos
   personales por defecto y con un filtro que quita cuerpo, cookies y headers; y un test que corre
   el registro de un gasto con datos de ejemplo y falla si algún registro contiene el teléfono, el
   monto o el texto.
@@ -315,7 +320,8 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
 
 Pocas, por síntoma, y cada una con qué hacer.
 
-**Decidido** ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)): tres rutas de salud desde el primer commit de código, y con el
+**Decidido** ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)): tres rutas de salud, dos desde el primer commit de código y la de la cola con la tabla de
+mensajes entrantes, y con el
 primer despliegue Sentry en su plan gratuito, un monitor externo y las dos alertas críticas.
 `GET /healthz` dice si el proceso vive, `GET /readyz` si llega a la base, y `GET /queuez` falla
 cuando un mensaje espera hace más de 10 minutos ([la API](04-api.md#get-healthz-get-readyz-y-get-queuez)).

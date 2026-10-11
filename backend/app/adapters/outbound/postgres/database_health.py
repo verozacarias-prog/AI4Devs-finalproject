@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import logging
+
 from sqlalchemy import Engine, text
-from sqlalchemy.exc import SQLAlchemyError
+
+from app.adapters.outbound.observability.logs import LOGGER_NAME
+
+logger = logging.getLogger(f"{LOGGER_NAME}.postgres")
 
 
 class PostgresDatabaseHealth:
@@ -14,6 +19,8 @@ class PostgresDatabaseHealth:
         try:
             with self._engine.connect() as connection:
                 connection.execute(text("SELECT 1"))
-        except SQLAlchemyError:
+        except Exception as error:  # the port promises never to raise
+            # Only the class: the message of a connection error carries the database URL.
+            logger.warning("database.unreachable", extra={"error_type": type(error).__name__})
             return False
         return True

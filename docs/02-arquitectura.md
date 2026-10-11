@@ -166,7 +166,7 @@ El recorrido de un usuario de punta a punta, con el tipo de llamada y las tablas
 
 ### **2.3. Descripción de alto nivel del proyecto y estructura de ficheros**
 
-`Se completa en la Entrega 2 junto con el scaffold real. Estructura prevista (arquitectura hexagonal dentro del backend, nombres de carpetas y ficheros en inglés):`
+Arquitectura hexagonal dentro del backend, con los nombres de carpetas y ficheros en inglés:
 
 ```text
 /backend
