@@ -29,7 +29,7 @@ Tres cosas obligan a decidirlo antes de escribir código:
    ([ADR 0013](0013-datos-minimos-al-proveedor-de-llm.md)).
 3. **El proveedor se elige con una evaluación, no ahora.** Unos 20 casos de la validación por
    casos de uso contra dos candidatos, midiendo calidad en español rioplatense, costo y
-   latencia, con el filtro de privacidad del ADR 0013 y casos de inyección de prompts. Son dos
+   latencia, con los criterios de privacidad del ADR 0013 y casos de inyección de prompts. Son dos
    evaluaciones, porque son dos elecciones con momentos distintos:
    - la del LLM, antes de escribir el código de la entrega 2, que ya necesita interpretar un
      gasto;

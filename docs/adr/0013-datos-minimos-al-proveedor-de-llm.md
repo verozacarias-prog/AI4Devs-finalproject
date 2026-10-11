@@ -63,7 +63,7 @@ prompts.
    las funciones que pidió para esa pregunta, según el punto 1. Las funciones y sus topes están en
    las reglas de dominio, § 17.
 7. **La misma regla vale para el proveedor de embeddings.** Recibe el texto de la pregunta, sin
-   identificadores, y tiene que cumplir el criterio del punto 4. En la carga de la base de
+   identificadores, y tiene que cumplir los dos criterios del punto 4. En la carga de la base de
    conocimiento recibe contenido curado, que no es de ningún usuario.
 8. **Contra la inyección de prompts, la defensa principal son los puntos 5 y 6.** Aunque un
    texto logre engañar al modelo, el modelo no puede escribir ni pedir datos de otro usuario,
