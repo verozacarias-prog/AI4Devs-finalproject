@@ -1,4 +1,5 @@
 """Casos 1 a 5: las rutas de salud (contrato en docs/04-api.md)."""
+
 from __future__ import annotations
 
 import pytest

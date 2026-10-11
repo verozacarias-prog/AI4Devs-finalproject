@@ -3,6 +3,7 @@
 Integration tests need a real PostgreSQL with pgvector (ADR 0021). The URL comes from
 TEST_DATABASE_URL; by default it points at the database started by `docker compose up db`.
 """
+
 from __future__ import annotations
 
 import os

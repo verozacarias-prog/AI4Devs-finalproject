@@ -2,6 +2,7 @@
 
 Only allowed fields pass; everything else is redacted (docs/operacion.md, 6.3).
 """
+
 from __future__ import annotations
 
 import io

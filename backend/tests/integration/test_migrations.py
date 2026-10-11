@@ -1,4 +1,5 @@
 """Case 6: migrations run cleanly from an empty database."""
+
 from __future__ import annotations
 
 import uuid

@@ -1,4 +1,5 @@
 """Cases 8 and 9: logs are JSON lines and every request carries its own identifier."""
+
 from __future__ import annotations
 
 import io

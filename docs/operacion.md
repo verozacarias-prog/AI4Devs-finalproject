@@ -305,7 +305,8 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   cuentas y categorías, que pueden identificar a la persona o a su banco; códigos de login,
   cookies, tokens de sesión y el valor de un enlace personal; firmas del webhook, claves de API y la URL de la base; el contenido
   de los emails; y la IP completa, que se trunca si hace falta para los límites de uso.
-- **Cómo se hace cumplir:** un filtro de logging que redacta por nombre de campo; Sentry sin datos
+- **Cómo se hace cumplir:** un filtro de logging que redacta por nombre de campo, y que deja
+  pasar solo los campos permitidos, así que un campo nuevo sale redactado hasta que se lo suma; Sentry sin datos
   personales por defecto y con un filtro que quita cuerpo, cookies y headers; y un test que corre
   el registro de un gasto con datos de ejemplo y falla si algún registro contiene el teléfono, el
   monto o el texto.

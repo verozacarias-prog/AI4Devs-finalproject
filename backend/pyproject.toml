@@ -7,7 +7,7 @@ markers = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py313"
+target-version = "py314"
 extend-exclude = ["migrations/versions"]
 
 [tool.ruff.lint]
@@ -19,6 +19,7 @@ ignore = ["S101"]
 
 [tool.mypy]
 strict = true
-python_version = "3.13"
+python_version = "3.14"
 files = ["app", "tests", "migrations"]
 disallow_any_explicit = true
+plugins = ["pydantic.mypy"]
