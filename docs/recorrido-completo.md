@@ -391,7 +391,8 @@ El dashboard es una aplicación que el servicio web sirve bajo `/app`, en el mis
 API. No tiene acceso a la base: todo lo que muestra lo pide por HTTPS
 ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). El diagrama muestra el login por
 código, que se construye junto con el adaptador de WhatsApp. Mientras tanto el andamio entra por
-`POST /dev/session`, que crea la misma `SESSION` eligiendo un usuario de prueba.
+`POST /dev/session`, que crea la misma `SESSION`: eligiendo un usuario de prueba en `local`, o con
+un enlace personal en `demo`.
 
 ```mermaid
 sequenceDiagram

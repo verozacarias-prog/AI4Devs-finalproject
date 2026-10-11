@@ -29,6 +29,7 @@ erDiagram
     APP_USER ||--o| FINANCIAL_PROFILE : "describes"
     APP_USER ||--o{ LOGIN_CODE : "requests"
     APP_USER ||--o{ SESSION : "opens"
+    APP_USER ||--o| DEV_ACCESS_LINK : "enters the demo with"
     APP_USER ||--o{ LLM_USAGE : "consumes"
     ACCOUNT ||--o{ RECURRING_RULE : "is charged by"
     ACCOUNT ||--o{ CARD_STATEMENT : "closes (credit card)"
@@ -72,6 +73,7 @@ erDiagram
     APP_USER ||--o| FINANCIAL_PROFILE : "describes"
     APP_USER ||--o{ LOGIN_CODE : "requests"
     APP_USER ||--o{ SESSION : "opens"
+    APP_USER ||--o| DEV_ACCESS_LINK : "enters the demo with"
     APP_USER ||--o{ LLM_USAGE : "consumes"
     ADVICE_DOCUMENT ||--o{ ADVICE_CHUNK : "is split into"
 
@@ -159,6 +161,14 @@ erDiagram
         timestamptz last_seen_at "NOT NULL, DEFAULT now() — idle expiry counts from here"
         timestamptz expires_at "NOT NULL — created_at + 12 hours, absolute"
         timestamptz revoked_at "NULLABLE — set on logout, logout-all or account deletion request"
+    }
+
+    DEV_ACCESS_LINK {
+        uuid id PK
+        string label "NOT NULL, UNIQUE — tag chosen by the operator; identifies the link in the commands and becomes the name of the test user"
+        uuid user_id FK "NULLABLE, UNIQUE — null until the person accepts the test notice, which is when the test user is created"
+        string token_hash "NOT NULL, UNIQUE — HMAC-SHA256 of the random link value with a server key, never the value"
+        timestamptz created_at "NOT NULL, DEFAULT now() — reset when the link is regenerated"
     }
 
     AUTH_THROTTLE {
@@ -575,6 +585,15 @@ Sesión del dashboard, creada al canjear un código de login. El token viaja en 
 **Restricciones:**
 
 - En `SESSION`, `UNIQUE (token_hash)`, y `expires_at` posterior a `created_at` (`CHECK`). Una sesión vale mientras `revoked_at` sea nulo, no haya pasado `expires_at` y `last_seen_at` tenga menos de 30 minutos.
+
+##### DEV_ACCESS_LINK
+
+El enlace personal con que una persona entra a probar al entorno `demo`, mientras no exista el login por código ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). El comando que lo crea guarda solo una etiqueta que elige quien opera; no guarda nada que la persona haya escrito. `user_id` queda nulo hasta que la persona abre el enlace y acepta el aviso de prueba: recién ahí se crea su usuario, con la etiqueta como nombre, un teléfono inventado, el aviso como consentimiento y la plantilla de los datos de prueba, así que `APP_USER` sigue sin tener filas de nadie que no haya aceptado. Guarda un HMAC del valor del enlace, nunca el valor: quien lea la tabla no puede entrar como nadie. Regenerar el enlace reemplaza el HMAC, y el enlace anterior deja de servir. Regenerarlo revoca además las sesiones abiertas de ese usuario. Es parte del andamio: la tabla la crea la misma migración en todos los entornos, pero en `production` queda vacía, porque ahí no existen ni la ruta ni los comandos que la usan. Se quita junto con la entrada de desarrollo.
+
+**Restricciones:**
+
+- En `DEV_ACCESS_LINK`, `UNIQUE (user_id)` y `UNIQUE (token_hash)`: `UNIQUE (label)`: cada usuario de prueba tiene un solo enlace, un enlace abre una sola cuenta, y la etiqueta alcanza para decirle a un comando cuál regenerar. Los enlaces y sus usuarios se borran reiniciando la base de `demo`; no hay borrado por cuenta mientras no exista el código por WhatsApp.
+- En `APP_USER`, el usuario de prueba guarda en `terms_version` la versión del aviso de prueba, como `demo-1`, y no la de los términos del producto.
 
 ##### AUTH_THROTTLE
 

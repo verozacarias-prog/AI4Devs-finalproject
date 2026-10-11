@@ -30,8 +30,9 @@ la API: son los tres procesos que comparten el código del dominio.
    un comando que corre quien opera Platita) a llamadas a casos de uso, y los casos de uso usan
    los repositorios a través de puertos. Ninguno escribe SQL propio. Los comandos de operación
    son la carga de la base de conocimiento
-   ([ADR 0019](0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md)) y la
-   habilitación de números. No son un proceso desplegado aparte: corren a pedido, en el entorno
+   ([ADR 0019](0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md)), la
+   habilitación de números, y los dos del entorno de pruebas, que crean un enlace personal y
+   lo regeneran ([ADR 0016](0016-sesion-de-servidor-en-el-mismo-origen.md)). No son un proceso desplegado aparte: corren a pedido, en el entorno
    de uno de los tres procesos del backend.
 3. **Ningún proceso llama a otro por HTTP.** El worker y los procesos programados no llaman a la
    API: usan los mismos casos de uso en su propio proceso. Una llamada HTTP interna partiría en

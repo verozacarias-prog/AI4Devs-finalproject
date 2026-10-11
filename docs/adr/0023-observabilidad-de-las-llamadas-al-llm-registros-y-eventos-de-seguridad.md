@@ -88,7 +88,9 @@ Lo que ya está decidido acota la solución:
    nueva. Un pedido a la API que no es un mensaje lleva un identificador que se genera al
    recibirlo.
 2. **Un filtro quita los datos personales,** y un test lo prueba: registra un gasto de ejemplo y
-   falla si algún registro contiene el teléfono, el monto o el texto.
+   falla si algún registro contiene el teléfono, el monto o el texto. El mismo filtro quita las
+   credenciales: códigos, cookies, tokens de sesión y el valor de un enlace personal del entorno
+   de pruebas, y el test también entra con un enlace y falla si su valor aparece.
 3. **Los eventos de seguridad son eventos de ese mismo registro,** sin tabla ni herramienta
    nueva: código de acceso pedido y fallido, sesión creada, límite de intentos alcanzado, cuota
    o tope diario superado, y respuesta bloqueada por la validación. El teléfono va como el mismo

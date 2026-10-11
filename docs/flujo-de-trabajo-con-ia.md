@@ -52,7 +52,9 @@ el hook se saltea con `--no-verify` y depende de que cada clon lo active. Detall
 Toda funcionalidad se parte en tres [cortes verticales](convenciones-de-desarrollo.md#1-cortes-verticales)
 que atraviesan backend y frontend, y toda pantalla implementa
 [cuatro estados](convenciones-de-desarrollo.md#2-los-cuatro-estados-de-una-pantalla).
-Cada corte se cierra contra el [Definition of Done](07-pull-requests.md#definition-of-done).
+En el backend el test se escribe antes que el código, sobre casos que aprueba una persona
+([ADR 0024](adr/0024-tests-primero-en-el-backend.md)). Cada corte se cierra contra el
+[Definition of Done](07-pull-requests.md#definition-of-done).
 
 ## Agente revisor
 
@@ -62,7 +64,7 @@ cambio ([ADR 0022](adr/0022-revision-de-pull-requests-con-un-agente-del-reposito
 
 | Agente | Cuándo | Qué hace |
 |---|---|---|
-| [`pr-reviewer`](../.claude/agents/pr-reviewer.md) | A mano, antes de pedir el merge de cada pull request | Revisa la regla hexagonal más allá del verificador, las reglas de dominio, que nada identificatorio llegue al proveedor ni a un registro, los tests, la documentación y la tabla de seguridad de la capa de IA. Entrega un informe para pegar en el pull request |
+| [`pr-reviewer`](../.claude/agents/pr-reviewer.md) | A mano, antes de pedir el merge de cada pull request | Revisa la regla hexagonal más allá del verificador, las reglas de dominio, que nada identificatorio llegue al proveedor ni a un registro, los tests y que en el backend hayan ido antes que el código, la documentación y la tabla de seguridad de la capa de IA. Entrega un informe para pegar en el pull request |
 
 El revisor solo lee e informa. El merge lo hace siempre una persona, y un asistente hace commit
 solo cuando una persona se lo pide.
@@ -70,5 +72,7 @@ solo cuando una persona se lo pide.
 ## Hooks
 
 El único hook es el de pre-commit, en [`.githooks/`](../.githooks/). Se activa con
-`git config core.hooksPath .githooks`, una vez por clon. El revisor no corre en un hook, por lo
+`git config core.hooksPath .githooks`, una vez por clon. Cuando exista el código se suma un
+segundo hook, del asistente y no de git, que corre los tests unitarios después de cada edición
+en `backend/` ([ADR 0024](adr/0024-tests-primero-en-el-backend.md)). El revisor no corre en un hook, por lo
 que explica el [ADR 0022](adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md).
