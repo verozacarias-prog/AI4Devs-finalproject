@@ -11,3 +11,11 @@
 
 # Listado de archivos dentro de una conversación registrada, no una clave.
 fa2c1a1df50a51b0a4301d71f01b2a8953c1a093:docs/conversacion-reestructuracion-docs.md:generic-api-key:66
+
+# Clave de ejemplo del estándar de WebSocket (RFC 6455), usada en un test para simular el
+# intento de conexión. Es pública y no abre nada.
+fae3830cddccde10c37f88d9b7e4e70b9f2915f9:backend/tests/integration/test_server_logs.py:generic-api-key:24
+
+# Token inventado en el test del filtro de registros: comprueba que un campo "token" salga
+# redactado. No es una credencial.
+0f9a3f21b9ab23cb846ede02fe18808227967fc8:backend/tests/unit/test_log_redaction.py:generic-api-key:70

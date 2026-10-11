@@ -1,0 +1,96 @@
+# Application quality: the pipeline checks that need the code (ADR 0021). The other two
+# checks, the repository verifiers and the secret scan, run in docs-quality.yml.
+#
+# Each action is pinned to its commit hash, with the version in a comment. No check needs a
+# stored secret. The dashboard parts are added when the dashboard exists.
+name: Aplicación — calidad
+
+on:
+  push:
+    branches: [main, 'feature/entrega-*']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-estatico:
+    name: Backend — formato, lint y tipos
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # No job pushes or needs the token after the checkout.
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.14'
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy
+
+  backend-tests:
+    name: Backend — tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      # A real PostgreSQL with pgvector, empty on every run: the migrations test applies
+      # them from scratch. The credentials only exist inside this job.
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: platita
+          POSTGRES_PASSWORD: platita
+          POSTGRES_DB: platita
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U platita -d platita"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://platita:platita@127.0.0.1:5432/platita
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # No job pushes or needs the token after the checkout.
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.14'
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - run: pytest
+
+  backend-dependencias:
+    name: Backend — vulnerabilidades en dependencias
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # No job pushes or needs the token after the checkout.
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.14'
+      # The version is the one pinned in requirements-dev.txt, so there is a single place
+      # to update it.
+      - run: pip install "$(grep '^pip-audit==' requirements-dev.txt)"
+      # Blocks on any vulnerability that has a fix: the tool does not filter by severity.
+      - run: pip-audit -r requirements.txt

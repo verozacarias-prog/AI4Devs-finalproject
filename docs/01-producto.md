@@ -85,4 +85,4 @@ El mismo flujo visto por dentro, con los procesos y las tablas, y el resto del r
 
 ### **1.4. Instrucciones de instalación:**
 
-`Pendiente — se completa en la Entrega 2 con el proyecto ya scaffoldeado (backend FastAPI, frontend, base de datos y migraciones). El esquema previsto: entorno virtual + pip/uv para el backend, variables de entorno para credenciales (API de WhatsApp, LLM, base de datos), migraciones con Alembic, y un script de seed con datos de ejemplo.`
+Hace falta Docker. Los pasos para levantar la base, las migraciones y la API con un comando, y para correr los tests del backend, están en el [README](../README.md#cómo-ejecutar-localmente). El dashboard, el worker y los datos de ejemplo se suman a medida que se construyen.

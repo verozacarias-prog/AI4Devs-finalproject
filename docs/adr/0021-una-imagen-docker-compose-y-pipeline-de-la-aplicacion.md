@@ -28,22 +28,26 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
 1. **Una sola imagen para la API y el worker.** El Dockerfile tiene dos etapas: la primera
    compila el dashboard, y la final lleva el backend con ese build, que la API sirve bajo
    `/app`. La imagen corre con un usuario sin privilegios y declara un chequeo de salud contra
-   `GET /healthz`.
+   `GET /healthz`. La etapa que compila el dashboard se suma cuando exista el dashboard; hasta
+   entonces la imagen lleva solo el backend.
 2. **Docker Compose con cuatro servicios.** La base, con la imagen `pgvector/pgvector:pg16`;
    las migraciones, que corren `alembic upgrade head` una vez y terminan; la API; y el worker.
    La API y el worker esperan a que las migraciones terminen bien, y ninguno de los dos migra al
    arrancar. El worker no escucha HTTP, así que en su servicio el chequeo de salud de la imagen
-   queda desactivado.
+   queda desactivado. El servicio del worker se suma cuando exista la tabla de mensajes
+   entrantes; hasta entonces son tres.
 3. **Lo que todavía no entra usa la misma imagen.** Los procesos programados serán un quinto
    servicio cuando se construyan. El comando que carga la base de conocimiento
    ([ADR 0019](0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md)) corre con ella,
    a pedido.
 4. **Secretos fuera del repositorio.** Un `.env` sin versionar tiene los valores, y un
-   `.env.example` versionado lista los nombres de las variables.
+   `.env.example` versionado lista los nombres de las variables, con valores que sirven solo
+   para el entorno local.
 5. **Sin adaptador falso de LLM dentro de la aplicación.** Los dobles del LLM y de embeddings
    viven solo en los tests automáticos. Las pruebas manuales, en local y en demostración, usan
    el modelo real, así que necesitan la clave del proveedor.
-6. **Cinco controles en paralelo, desde el primer commit de código:**
+6. **Cinco controles en paralelo, desde el primer commit de código.** Lo que cada control
+   dice del dashboard se suma cuando exista el dashboard:
    1. Formato, lint y tipos. En el backend, `ruff` y `mypy` en modo estricto. En el dashboard,
       su linter, su verificación de tipos y la compilación.
    2. Tests unitarios y de integración, con `pytest` contra un PostgreSQL real con pgvector y
@@ -68,6 +72,7 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
 10. **Se aplica ahora lo que no depende del código:** el control de secretos, las acciones
     fijadas por hash y Dependabot para las acciones y para `site/`. El resto se crea con el
     primer commit de código, no antes: un flujo sin nada que compilar ni testear fallaría.
+    Con ese commit, Dependabot suma `backend/` y la imagen base.
 11. **Qué rama despliega qué.** La rama de la entrega despliega el entorno `demo`, que hace de
     entorno de pruebas: ahí prueba a mano quien desarrolla y quien reciba un enlace personal
     ([ADR 0016](0016-sesion-de-servidor-en-el-mismo-origen.md)). `main`, que recibe solo

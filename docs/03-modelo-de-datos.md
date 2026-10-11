@@ -621,7 +621,7 @@ Base de conocimiento de educación financiera curada por el equipo del producto 
 
 **Restricciones:**
 
-- `ADVICE_DOCUMENT` y `ADVICE_CHUNK` no se crean en la migración inicial. Van en una migración posterior, cuando se elija el modelo de embeddings, porque la columna `embedding` necesita la dimensión de ese modelo. La extensión pgvector sí se habilita en la primera.
+- `ADVICE_DOCUMENT` y `ADVICE_CHUNK` no se crean en la migración del esquema. Van en una migración posterior, cuando se elija el modelo de embeddings, porque la columna `embedding` necesita la dimensión de ese modelo. La extensión pgvector sí se habilita en la primera.
 - En `ADVICE_DOCUMENT`, `UNIQUE (slug)`: cargar dos veces el mismo archivo actualiza el documento en vez de duplicarlo.
 
 ##### ADVICE_CHUNK

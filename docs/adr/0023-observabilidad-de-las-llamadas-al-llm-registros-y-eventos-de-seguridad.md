@@ -103,7 +103,8 @@ Lo que ya está decidido acota la solución:
    ([ADR 0016](0016-sesion-de-servidor-en-el-mismo-origen.md)).
 6. **Tres rutas de salud:** una dice si el proceso vive, otra si llega a la base, y la tercera
    falla cuando hay un mensaje esperando hace más de 10 minutos. El contrato está en
-   [la API](../04-api.md#get-healthz-get-readyz-y-get-queuez).
+   [la API](../04-api.md#get-healthz-get-readyz-y-get-queuez). Las dos primeras llegan con el
+   primer commit de código, y la tercera con la tabla de mensajes entrantes, que es lo que lee.
 
 ### Con el primer despliegue
 

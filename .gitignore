@@ -11,13 +11,16 @@ site/src/content/docs/
 .lycheecache
 
 # Secretos: se configuran como variables de entorno, nunca versionados (AGENTS.md §7).
-# La plantilla sin valores sí se versiona.
+# La plantilla sí se versiona: sus valores sirven solo para el entorno local.
 .env
 .env.*
 !.env.example
 
 # Python
 __pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 *.py[cod]
 .venv/
 venv/

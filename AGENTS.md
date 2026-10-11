@@ -73,7 +73,7 @@ de pre-commit. No son una recomendación: rompen el commit.
 - `backend/app/adapters/outbound/llm_client/` — cliente de LLM: clasificación, interpretación y respuestas, con el SDK del proveedor.
 - `backend/app/adapters/outbound/embedding_client/` — cliente del proveedor de embeddings.
 - `backend/app/adapters/outbound/text_splitter/` — particionado de documentos; el único lugar que importa `langchain-text-splitters`.
-- `backend/app/adapters/outbound/observability/` — envoltorios de los puertos de LLM y de embeddings, que registran cada llamada sin su contenido.
+- `backend/app/adapters/outbound/observability/` — envoltorios de los puertos de LLM y de embeddings, que registran cada llamada sin su contenido, y el formato JSON de los registros con su filtro.
 - `backend/tests/` — tests unitarios, de integración y end-to-end.
 - `backend/migrations/` — migraciones de Alembic.
 - `frontend/` — dashboard web.
@@ -175,11 +175,14 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
 - Los dos tienen que pasar sin errores antes de commitear; el hook de pre-commit los corre solo,
   y el flujo `.github/workflows/docs-quality.yml` los repite en cada pull request junto con
   `markdownlint-cli2` y `lychee`.
-- Tests y linters: se completa en la entrega 2. Los cinco controles que van a correr desde el
-  primer commit de código están en el
-  [ADR 0021](docs/adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md). El flujo
-  ya busca secretos con `gitleaks`; una excepción se anota en `.gitleaksignore`, nunca se
-  desactiva el control.
+- Backend, desde `backend/` y con su entorno activado: `pytest` corre los tests, `ruff check .`
+  y `ruff format --check .` el lint y el formato, `mypy` los tipos en modo estricto, y
+  `pip-audit -r requirements.txt` las vulnerabilidades. Los tests de integración necesitan la
+  base de `docker compose up db`. Los cinco controles del pipeline están en el
+  [ADR 0021](docs/adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md); el flujo
+  `.github/workflows/app-quality.yml` corre los del backend, y la parte del dashboard se suma
+  cuando exista. El otro flujo ya busca secretos con `gitleaks`; una excepción se anota en
+  `.gitleaksignore`, nunca se desactiva el control.
 - Antes de pedir el merge de un pull request se corre a mano el agente `pr-reviewer`, y su
   informe se pega en el pull request
   ([ADR 0022](docs/adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md)).

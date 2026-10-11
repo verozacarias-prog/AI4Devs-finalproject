@@ -166,7 +166,7 @@ El recorrido de un usuario de punta a punta, con el tipo de llamada y las tablas
 
 ### **2.3. Descripción de alto nivel del proyecto y estructura de ficheros**
 
-`Se completa en la Entrega 2 junto con el scaffold real. Estructura prevista (arquitectura hexagonal dentro del backend, nombres de carpetas y ficheros en inglés):`
+Arquitectura hexagonal dentro del backend, con los nombres de carpetas y ficheros en inglés:
 
 ```text
 /backend
@@ -184,6 +184,7 @@ El recorrido de un usuario de punta a punta, con el tipo de llamada y las tablas
         - embedding_port.py
         - text_splitter_port.py
         - llm_call_log_port.py
+        - database_health_port.py
     /adapters
       /inbound
         /api               # FastAPI routers — translate HTTP into use case calls
@@ -200,7 +201,9 @@ El recorrido de un usuario de punta a punta, con el tipo de llamada y las tablas
         /llm_client              # LLM client: classification, interpretation and answers, provider SDK only
         /embedding_client         # embeddings provider client
         /text_splitter             # the only place that imports langchain-text-splitters
-      /observability              # wrappers of the LLM and embedding ports that record each call
+      /observability              # wrappers of the LLM and embedding ports that record each call, and the JSON log format with its redaction filter
+    settings.py          # process configuration, read from environment variables
+    main.py              # entry point of the API process
   /tests
   /migrations          # Alembic
 /frontend
@@ -224,7 +227,7 @@ prompts.md
 llms.txt                    # descripción del proyecto para agentes de IA
 ```
 
-`/backend` y `/frontend` son la estructura prevista para la Entrega 2; el resto es la estructura real del repositorio hoy.
+`/backend` existe desde el scaffold, con las carpetas que ya tienen código; las demás se crean con lo primero que va en ellas. `/frontend` es la estructura prevista para la Entrega 2.
 
 ### **2.4. Infraestructura y despliegue**
 

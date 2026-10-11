@@ -159,4 +159,20 @@ está en [documentación viva](docs/documentacion-viva.md).
 
 ## Cómo ejecutar localmente
 
-Se completa en la entrega 2.
+Hace falta Docker. Levanta la base, las migraciones y la API:
+
+```sh
+cp .env.example .env
+docker compose up --build
+curl http://127.0.0.1:8000/readyz         # {"status":"ok"} si la API llega a la base
+```
+
+Para correr los tests del backend, con la base de Compose levantada:
+
+```sh
+cd backend
+python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+.venv/bin/pytest
+```
+
+El dashboard y el worker se suman a medida que se construyen.

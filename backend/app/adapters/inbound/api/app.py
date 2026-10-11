@@ -1,0 +1,26 @@
+"""Builds the FastAPI application: the place where adapters are wired to use cases."""
+
+from __future__ import annotations
+
+import sys
+from typing import TextIO
+
+from fastapi import FastAPI
+
+from app.adapters.inbound.api.health import build_health_router
+from app.adapters.inbound.api.request_logging import log_request
+from app.adapters.outbound.observability.logs import configure_logging
+from app.adapters.outbound.postgres.connection import create_db_engine
+from app.adapters.outbound.postgres.database_health import PostgresDatabaseHealth
+from app.domain.use_cases.check_readiness import CheckReadiness
+from app.settings import Settings
+
+
+def create_app(settings: Settings, log_stream: TextIO | None = None) -> FastAPI:
+    configure_logging(log_stream or sys.stdout, settings.version)
+    engine = create_db_engine(settings.database_url)
+
+    app = FastAPI(title="Platita", version=settings.version)
+    app.middleware("http")(log_request)
+    app.include_router(build_health_router(CheckReadiness(PostgresDatabaseHealth(engine))))
+    return app
