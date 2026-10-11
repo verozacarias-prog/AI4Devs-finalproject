@@ -28,7 +28,7 @@ antes de la rama de consejos, con la evaluación del
 | Corregir, borrar y restaurar un movimiento confirmado, con el botón de responder un mensaje | [Reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado) |
 | Pantalla de cuentas con el saldo calculado, donde se ve el efecto de cada movimiento | [Reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado), `GET /accounts` |
 | El paso de clasificación con las tres clases de mensaje, el tope diario total y las tres cuotas | [ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md) |
-| Desde la primera migración: la extensión pgvector y la columna del mensaje citado. Desde el primer caso de uso que los usa: los puertos de LLM, de embeddings y de vector store | [ADR 0019](adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md), [3. Modelo de datos](03-modelo-de-datos.md) |
+| Desde la primera migración: la extensión pgvector y la columna del mensaje citado. El puerto de LLM, desde el primer caso de uso que lo usa; los de embeddings y de vector store, con la rama de consejos | [ADR 0019](adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md), [3. Modelo de datos](03-modelo-de-datos.md) |
 | Docker Compose que levanta la base, las migraciones, la API y el worker con un comando, y el pipeline de cinco controles desde el primer commit de código | [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) |
 | La tabla de llamadas al modelo con su envoltorio y el script de métricas, los registros en JSON con su filtro y su test, los eventos de seguridad y las tres rutas de salud | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) |
 | Datos de prueba: una plantilla de usuario con el alta completa, cuentas, su primer período confirmado y perfil financiero. En `local` el script de datos de prueba crea varios usuarios con ella, con el consentimiento registrado y al menos uno con un grupo; en `demo` se crea uno por persona, cuando acepta el aviso de prueba | [Reglas de dominio § 3 y § 11](reglas-de-dominio.md) |
@@ -71,7 +71,7 @@ sobre el proveedor y el plan.
 | La parte del dashboard en el flujo de GitHub Actions: su linter, sus tipos, su compilación, sus tests y `npm audit` | Exista el dashboard | El flujo ya corre los controles del backend ([ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md)) |
 | La etapa del Dockerfile que compila el dashboard | Exista el dashboard | El [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) pide una imagen de dos etapas. Hoy la imagen lleva solo el backend |
 | `GET /queuez` y el servicio del worker en Docker Compose | Exista el esquema, con la tabla de mensajes entrantes | Los dos leen esa tabla. Hasta entonces Compose levanta tres servicios y la API tiene dos de las tres rutas de salud |
-| Los puertos de LLM, de embeddings y de vector store | Se escriba el primer caso de uso que los usa | El scaffold no los trae: su forma depende de los casos de uso, y declararlos antes sería adivinarla ([ADR 0019](adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md)) |
+| El puerto de LLM, y después los de embeddings y de vector store | Se escriba el primer caso de uso que usa cada uno: el registro de un gasto y la rama de consejos | El scaffold no los trae: su forma depende de los casos de uso, y declararlos antes sería adivinarla ([ADR 0019](adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md)) |
 | Proteger la rama de la entrega, con los controles como obligatorios, y habilitar Dependabot en el fork | Exista la rama de la entrega 2 | Son configuración de GitHub, que se hace a mano. Sin eso, los controles avisan pero no impiden un merge |
 | `scripts/llm_metrics.sql` | Exista la tabla `LLM_CALL` | Las cuatro métricas del [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md). Sin la tabla no hay contra qué probar las consultas |
 | Sentry, el monitor externo y las dos alertas críticas | Haya un primer despliegue | Al sumar Sentry se verifican en su sitio el plan y la retención, y se completa la fila de [términos y privacidad](terminos-y-privacidad.md) |
@@ -141,6 +141,11 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   ([ADR 0025](adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)). Falta decidir si se trata
   como un modelo caído, y el mensaje se procesa después, o si sale un texto fijo. Se decide al
   escribir el adaptador del LLM.
+- **La documentación automática de la API: sin decidir.** El framework publica `/docs` y
+  `/openapi.json` sin pedir sesión, en todos los entornos. Hoy solo describen las rutas de
+  salud. Falta decidir si en `production` se apagan o piden sesión, antes de que describan los
+  endpoints del producto. La referencia pública de la API tiene su propio punto en la lista de
+  arriba.
 - **Metadatos de los mensajes: sin plazo de borrado.** Pasado el plazo de retención se borran el
   texto y el teléfono de cada mensaje ([reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos)),
   pero la fila con sus metadatos queda para siempre. Con pocos usuarios no pesa; se revisa cuando

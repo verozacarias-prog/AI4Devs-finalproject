@@ -180,8 +180,9 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   `pip-audit -r requirements.txt` las vulnerabilidades. Los tests de integración necesitan la
   base de `docker compose up db`. Los cinco controles del pipeline están en el
   [ADR 0021](docs/adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md); el flujo
-  que los corre llega con el dashboard. El flujo ya busca secretos con `gitleaks`; una
-  excepción se anota en `.gitleaksignore`, nunca se desactiva el control.
+  `.github/workflows/app-quality.yml` corre los del backend, y la parte del dashboard se suma
+  cuando exista. El otro flujo ya busca secretos con `gitleaks`; una excepción se anota en
+  `.gitleaksignore`, nunca se desactiva el control.
 - Antes de pedir el merge de un pull request se corre a mano el agente `pr-reviewer`, y su
   informe se pega en el pull request
   ([ADR 0022](docs/adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md)).

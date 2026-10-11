@@ -306,12 +306,16 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   cookies, tokens de sesión y el valor de un enlace personal; firmas del webhook, claves de API y la URL de la base; el contenido
   de los emails; y la IP completa, que se trunca si hace falta para los límites de uso.
 - **Cómo se hace cumplir:** un filtro de logging que redacta por nombre de campo, y que deja
-  pasar solo lo que se sabe seguro. De los campos, solo los permitidos, y con un número o un
-  valor corto sin espacios: un campo nuevo, o un texto libre, sale redactado. Del mensaje, solo
+  pasar solo lo que se sabe seguro. De los campos, solo los permitidos, y cada uno con su
+  forma: una duración entera, la clase de un error, un código numérico o una palabra corta
+  como resultado, y un identificador hexadecimal o UUID. Un campo nuevo, un texto libre o un
+  valor con otra forma sale redactado. Del mensaje, solo
   un nombre fijo de evento, como `http.request`: un texto armado con datos sale redactado. De un
   error, solo su clase. Todo lo que el proceso registra pasa por ese filtro, incluidos el
-  servidor web, cuyo registro de accesos está apagado porque imprime la IP, y las librerías,
-  que registran desde el nivel de advertencia; Sentry sin datos
+  servidor web, cuyo registro de accesos está apagado porque imprime la IP, las librerías,
+  que registran desde el nivel de advertencia, y las advertencias de Python. Un registro mal
+  armado no vuelca sus datos a la salida de errores. Queda un límite: un dato que tenga la
+  forma de su campo pasa, así que en un campo de identificador va solo un identificador real; Sentry sin datos
   personales por defecto y con un filtro que quita cuerpo, cookies y headers; y un test que corre
   el registro de un gasto con datos de ejemplo y falla si algún registro contiene el teléfono, el
   monto o el texto.

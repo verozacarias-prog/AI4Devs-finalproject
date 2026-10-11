@@ -23,6 +23,9 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # No job pushes or needs the token after the checkout.
+          persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.14'
@@ -60,6 +63,9 @@ jobs:
       TEST_DATABASE_URL: postgresql+psycopg://platita:platita@127.0.0.1:5432/platita
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # No job pushes or needs the token after the checkout.
+          persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.14'
@@ -77,9 +83,14 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # No job pushes or needs the token after the checkout.
+          persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.14'
-      - run: pip install pip-audit==2.10.1
+      # The version is the one pinned in requirements-dev.txt, so there is a single place
+      # to update it.
+      - run: pip install "$(grep '^pip-audit==' requirements-dev.txt)"
       # Blocks on any vulnerability that has a fix: the tool does not filter by severity.
       - run: pip-audit -r requirements.txt

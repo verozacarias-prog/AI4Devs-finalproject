@@ -21,3 +21,9 @@ updates:
     schedule:
       interval: weekly
       day: monday
+  # La imagen base del Dockerfile.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
