@@ -15,8 +15,8 @@ chat web, que es un andamio ([ADR 0002](adr/0002-whatsapp-como-canal-principal.m
 con RAG son parte del producto y llegan en la entrega final; por eso algunas de sus piezas
 quedan puestas desde ahora.
 
-El proveedor de LLM ya está elegido: Claude Haiku 5.5, de Anthropic
-([ADR 0025](adr/0025-claude-haiku-5-5-como-modelo-de-lenguaje.md)). El de embeddings se elige
+El proveedor de LLM ya está elegido: GPT-5.4 mini, de OpenAI
+([ADR 0025](adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)). El de embeddings se elige
 antes de la rama de consejos, con la evaluación del
 [ADR 0019](adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md).
 
@@ -81,7 +81,7 @@ sobre el proveedor y el plan.
 | Revisar los índices del [Ticket 3](06-tickets.md) contra las consultas reales | Haya datos y consultas medibles | `pending_transaction (batch_id)` sobra, porque lo cubre `UNIQUE (batch_id, position)`; los índices de saldo y de presupuesto conviene hacerlos parciales o que cubran las columnas que suman, contemplando `duplicate_of` y `deleted_at`; y el de duplicados sirve a una función que todavía no existe. Con pocos usuarios no se nota |
 | Los dos comandos de operación del entorno `demo`, que crean y regeneran un enlace personal, y la pantalla del aviso de prueba, con su texto versionado | Exista el scaffold | Es lo que deja probar a alguien más sin que vea los datos de otro, y con su consentimiento registrado ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Sin ellos, `demo` no tiene por dónde entrar |
 | Seed de datos falsos para desarrollo, que se niegue a correr contra producción | Exista el scaffold | Monedas y categorías base ya van en una migración; esto es solo el script de datos de prueba. En la entrega 2 es además de donde salen los usuarios de `local`, con lo que lista el [alcance](#alcance-de-la-entrega-2); en `demo` no corre, y los usuarios nacen de los enlaces personales. Sin la protección, correrlo contra la base de producción mezcla datos inventados con reales |
-| Sumar al verificador de arquitectura el nombre del SDK del proveedor de embeddings | Se elija ese proveedor | El dominio no conoce ninguna librería de IA ([ADR 0020](adr/0020-sin-framework-de-orquestacion-de-ia.md)), y el verificador solo frena las que tiene en su lista. El del LLM, `anthropic`, ya está |
+| Sumar al verificador de arquitectura el nombre del SDK del proveedor de embeddings | Se elija ese proveedor | El dominio no conoce ninguna librería de IA ([ADR 0020](adr/0020-sin-framework-de-orquestacion-de-ia.md)), y el verificador solo frena las que tiene en su lista. El del LLM, `openai`, ya está |
 | Revisar las dependencias que trae `langchain-text-splitters` y que ninguna envíe datos por su cuenta | Se instale, con la carga de la base de conocimiento | Lo pide el [ADR 0020](adr/0020-sin-framework-de-orquestacion-de-ia.md). Es para la entrega final |
 | Política de acceso central y tests de aislamiento entre usuarios | Exista el scaffold | La regla ya está en la [API](04-api.md): el usuario sale de la sesión y un recurso ajeno responde `404`. Lo que falta es aplicarla en un solo lugar del dominio, incluida la visibilidad por intervalos de membresía de los grupos familiares y las respuestas por WhatsApp que citan un lote, y probarla en cada endpoint y en el worker. Implementada caso por caso, alguno se escapa |
 | `UNIQUE` sobre `resulting_transaction_id`, `resulting_transfer_id` y `resulting_recurring_rule_id` de `pending_transaction` | Exista la migración inicial | Impide que dos pendientes queden enlazados al mismo movimiento. No duplica plata, pero deja datos inconsistentes |
@@ -134,9 +134,9 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   Falta definir qué pasa ante un error inesperado, por ejemplo una restricción de la base que
   rechaza el movimiento o una caída a mitad del proceso: si el proceso reintenta, si la regla se
   pausa, y qué se le avisa al usuario. Sin eso, el alquiler de un mes puede no registrarse sin que nadie se entere.
-- **Qué recibe el usuario si el modelo se niega a responder: sin decidir.** El modelo elegido
-  puede cortar una respuesta con una negativa, y no tiene respaldo del lado del proveedor
-  ([ADR 0025](adr/0025-claude-haiku-5-5-como-modelo-de-lenguaje.md)). Falta decidir si se trata
+- **Qué recibe el usuario si el modelo se niega a responder: sin decidir.** El modelo puede
+  negarse, o el proveedor puede cortar una respuesta
+  ([ADR 0025](adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)). Falta decidir si se trata
   como un modelo caído, y el mensaje se procesa después, o si sale un texto fijo. Se decide al
   escribir el adaptador del LLM.
 - **Metadatos de los mensajes: sin plazo de borrado.** Pasado el plazo de retención se borran el

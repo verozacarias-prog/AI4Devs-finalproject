@@ -17,7 +17,8 @@ Enviar un mensaje al proveedor es transferir esos datos a un tercero, fuera del 
 Platita y, en general, fuera del país. Qué se envía y qué hace el proveedor con eso son parte de
 lo que la política de privacidad tiene que poder explicar.
 
-Todavía no se eligió ningún proveedor, ni el del LLM ni el de embeddings.
+Cuando se tomó esta decisión no había ningún proveedor elegido. El del LLM se eligió después
+([ADR 0025](0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)); el de embeddings sigue sin elegir.
 
 Además, parte de lo que entra al prompt no lo escribió Platita: la descripción de un movimiento
 la escribió el usuario, un fragmento de la base de conocimiento salió de un documento, y el
