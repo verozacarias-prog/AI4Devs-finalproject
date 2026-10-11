@@ -134,11 +134,13 @@ Antes de proponer una librería nueva, justificar por qué no alcanza lo instala
 
 ## 10. Especificación contra código
 
-**Qué es la especificación.** Los archivos versionados de `docs/`, y nada más:
+**Qué es la especificación.** Los archivos versionados de `docs/`, salvo los registros que se
+nombran más abajo, y nada más. Entre ellos:
 
 - [`docs/reglas-de-dominio.md`](docs/reglas-de-dominio.md) — las reglas de negocio. Autoridad sobre qué debe hacer el sistema.
 - `docs/01-producto.md` a `docs/07-pull-requests.md` — alcance, arquitectura, modelo de datos, contrato de la API, historias de usuario y tickets.
 - [`docs/adr/`](docs/adr/) — las decisiones de arquitectura. Autoridad sobre por qué el sistema es como es. Un ADR con Estado `Aceptada` sigue vigente; uno `Reemplazada por NNNN` no. Un ADR sin la marca `En producción desde` todavía se corrige en su archivo; con la marca, es inmutable.
+- El resto de `docs/` — las convenciones, la hoja de ruta, operación, la seguridad de la capa de IA y la carpeta `docs/features/` de cada funcionalidad. De [`docs/operacion.md`](docs/operacion.md), lo que sigue como propuesta no se implementa hasta que exista su ADR.
 
 **Qué no es la especificación**, aunque lo parezca: los comentarios y docstrings del código, los
 mensajes de commit, las descripciones de los pull requests, los tests, este archivo, `README.md`,
