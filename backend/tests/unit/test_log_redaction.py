@@ -1,4 +1,4 @@
-"""Cases 10 to 13, 15, 16 and 20 to 24: what the log filter lets through.
+"""Cases 10 to 13, 15, 16 and 20 to 27: what the log filter lets through.
 
 Only allowed fields pass, and only a fixed event name passes as the message; everything else
 is redacted (docs/operacion.md, 6.3).
@@ -253,3 +253,80 @@ def test_a_value_that_is_neither_text_nor_number_is_redacted(
     raw, line = only_line(stream)
     assert line["result"] == REDACTED
     assert "58400" not in raw
+
+
+@pytest.mark.parametrize("message", ["user.5491155551234", "paid.58400", "ip.190_12_33_7"])
+def test_data_shaped_like_an_event_name_is_redacted(
+    logger: logging.Logger, stream: io.StringIO, message: str
+) -> None:
+    """Case 25."""
+    logger.info(message)
+
+    raw, line = only_line(stream)
+    assert line["event"] == REDACTED
+    assert message not in raw
+
+
+def test_an_event_name_longer_than_the_limit_is_redacted(
+    logger: logging.Logger, stream: io.StringIO
+) -> None:
+    """Case 25."""
+    logger.info("a." + "b" * 80)
+
+    _, line = only_line(stream)
+    assert line["event"] == REDACTED
+
+
+class _FailsAsText:
+    def __str__(self) -> str:
+        raise RuntimeError("58400")
+
+
+def test_a_record_with_a_missing_format_key_still_leaves_a_line(
+    logger: logging.Logger, stream: io.StringIO, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Case 26."""
+    logger.info("paid %(amount)s", {"total": "58400"})
+
+    raw, line = only_line(stream)
+    assert line["event"] == REDACTED
+    assert "58400" not in raw
+    assert "58400" not in capsys.readouterr().err
+
+
+def test_a_value_that_fails_as_text_still_leaves_a_line(
+    logger: logging.Logger, stream: io.StringIO, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Case 26."""
+    logger.info("paid %s", _FailsAsText())
+
+    raw, line = only_line(stream)
+    assert line["event"] == REDACTED
+    assert "58400" not in raw
+    assert "58400" not in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(("field", "value"), [("result", 5491155551234), ("duration_ms", -987654)])
+def test_a_number_out_of_range_is_redacted(
+    logger: logging.Logger, stream: io.StringIO, field: str, value: int
+) -> None:
+    """Case 27."""
+    logger.info("some.event", extra={field: value})
+
+    raw, line = only_line(stream)
+    assert line[field] == REDACTED
+    assert str(value) not in raw
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("result", 100), ("result", 599), ("duration_ms", 0), ("duration_ms", 3_600_000)],
+)
+def test_a_number_in_range_passes(
+    logger: logging.Logger, stream: io.StringIO, field: str, value: int
+) -> None:
+    """Case 27."""
+    logger.info("some.event", extra={field: value})
+
+    _, line = only_line(stream)
+    assert line[field] == value
