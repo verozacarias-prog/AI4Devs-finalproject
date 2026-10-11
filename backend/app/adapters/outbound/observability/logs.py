@@ -3,19 +3,24 @@
 Rules (ADR 0023, docs/operacion.md 6.3):
 
 - The message of a log record is its event name. Only a fixed name such as "http.request"
-  passes; any other text, including text built from data, is redacted.
-- Only the fields in FIELD_RULES pass, and each one only with its own shape: an integer
-  duration, an error class name, a numeric code or a short lowercase word as result, and a
-  hexadecimal or UUID identifier. Any other field or value is redacted, so a new field cannot
-  leak by omission.
+  passes: dotted lowercase words, each starting with a letter, up to MAX_EVENT_LENGTH
+  characters. Any other text, including text built from data, is redacted.
+- Only the fields in FIELD_RULES pass, and each one only with its own shape: a duration
+  between zero and an hour, an error class name, a code between 100 and 599 or a short
+  lowercase word as result, and a hexadecimal or UUID identifier. Any other field or value
+  is redacted, so a new field cannot leak by omission.
 - Of an exception, only the class name is logged: its message and traceback can carry data.
 
 Every logger of the process goes through the same handler, including the web server, the
 libraries and Python warnings, because the handler is installed on the root logger. Nothing
 below INFO is ever emitted.
 
-Known limit: a value that has the shape of its field passes. An identifier field would let a
-32-digit hexadecimal string through whatever it means, so identifiers must be real ids.
+A record is never lost in silence: if its message cannot be built, the line is still written,
+with the event redacted.
+
+Known limit: a value that has the shape of its place passes. An identifier field lets through
+any 32-digit hexadecimal string, and a message made of lowercase words passes as an event
+name, so identifiers must be real ids and event names must be constants in the code.
 """
 
 from __future__ import annotations
@@ -37,7 +42,10 @@ LogValue = str | int | float | bool | None
 # it arrives; the worker will set the message id the same way.
 request_id_var: ContextVar[str | None] = ContextVar("request_id", default=None)
 
-_EVENT_NAME = re.compile(r"[a-z][a-z0-9_]*(\.[a-z0-9_]+)+")
+MAX_EVENT_LENGTH = 64
+MAX_DURATION_MS = 3_600_000
+
+_EVENT_NAME = re.compile(r"[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+")
 _IDENTIFIER = re.compile(r"[0-9a-f]{32}|[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}")
 _CLASS_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,63}")
 _SHORT_WORD = re.compile(r"[a-z][a-z_]{0,31}")
@@ -52,8 +60,11 @@ def _extra_fields(record: logging.LogRecord) -> list[str]:
     return [name for name in record.__dict__ if name not in _RECORD_ATTRIBUTES]
 
 
-def _is_integer(value: object) -> bool:
-    return isinstance(value, int) and not isinstance(value, bool)
+def _is_integer_between(low: int, high: int) -> Callable[[object], bool]:
+    def check(value: object) -> bool:
+        return isinstance(value, int) and not isinstance(value, bool) and low <= value <= high
+
+    return check
 
 
 def _matches(pattern: re.Pattern[str]) -> Callable[[object], bool]:
@@ -61,7 +72,7 @@ def _matches(pattern: re.Pattern[str]) -> Callable[[object], bool]:
 
 
 def _is_result(value: object) -> bool:
-    return _is_integer(value) or _matches(_SHORT_WORD)(value)
+    return _is_integer_between(100, 599)(value) or _matches(_SHORT_WORD)(value)
 
 
 # The fields that may appear in a log line, each with the only shape it accepts.
@@ -69,7 +80,7 @@ FIELD_RULES: dict[str, Callable[[object], bool]] = {
     "message_id": _matches(_IDENTIFIER),
     "request_id": _matches(_IDENTIFIER),
     "user_id": _matches(_IDENTIFIER),
-    "duration_ms": _is_integer,
+    "duration_ms": _is_integer_between(0, MAX_DURATION_MS),
     "result": _is_result,
     "error_type": _matches(_CLASS_NAME),
 }
@@ -96,9 +107,11 @@ class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         try:
             event = record.getMessage()
-        except TypeError, ValueError:
-            # A malformed call, such as one with extra arguments. Raising here would make
-            # logging dump the message and its arguments to stderr, unfiltered.
+        except Exception:
+            # A malformed call, or a value that fails when turned into text. Raising here
+            # would lose the record, or make logging dump it to stderr unfiltered.
+            event = REDACTED
+        if len(event) > MAX_EVENT_LENGTH or not _EVENT_NAME.fullmatch(event):
             event = REDACTED
         line: dict[str, LogValue] = {
             "ts": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
@@ -106,7 +119,7 @@ class JsonFormatter(logging.Formatter):
             "process": self._process,
             "version": self._version,
             "logger": record.name,
-            "event": event if _EVENT_NAME.fullmatch(event) else REDACTED,
+            "event": event,
             "request_id": request_id_var.get(),
         }
         for name in _extra_fields(record):

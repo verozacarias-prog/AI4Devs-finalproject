@@ -123,16 +123,16 @@ obligatorios.
 
 | Etapa | Herramienta | ¿Bloquea? | Estado |
 |---|---|---|---|
-| Formato y lint | ruff | El merge | Decidido, control 1 |
-| Tipos | mypy en modo estricto, que hace cumplir la prohibición de `Any` | El merge | Decidido, control 1 |
+| Formato y lint | ruff | El merge | Decidido, control 1. Ya corre |
+| Tipos | mypy en modo estricto, que hace cumplir la prohibición de `Any` | El merge | Decidido, control 1. Ya corre |
 | Frontend | lint, tipos y build | El merge | Decidido, control 1 |
-| Tests unitarios | pytest, y los tests de los cuatro estados del dashboard | El merge | Decidido, control 2 |
-| Tests de integración, incluido el aislamiento entre usuarios | pytest contra PostgreSQL con pgvector, con dobles para el LLM y los embeddings | El merge | Decidido, control 2 |
-| Migraciones desde una base vacía | `alembic upgrade head` en cada corrida de los tests | El merge | Decidido, control 2 |
+| Tests unitarios | pytest, y los tests de los cuatro estados del dashboard | El merge | Decidido, control 2. Los del backend ya corren |
+| Tests de integración, incluido el aislamiento entre usuarios | pytest contra PostgreSQL con pgvector, con dobles para el LLM y los embeddings | El merge | Decidido, control 2. Ya corre |
+| Migraciones desde una base vacía | `alembic upgrade head` en cada corrida de los tests | El merge | Decidido, control 2. Ya corre |
 | Regla hexagonal y documentación | Los dos verificadores que ya existen | El merge | Decidido, control 3 |
 | Secretos en el código | gitleaks | El merge | Decidido, control 4. Ya corre |
 | Vulnerabilidades en dependencias | pip-audit y `npm audit` | El merge. En Python, ante cualquiera que tenga arreglo; en el dashboard, desde severidad alta | Decidido, control 5 |
-| Actualización de dependencias | Dependabot, una vez por semana | No: abre un pull request | Decidido, control 5. Ya corre para las acciones y el portal |
+| Actualización de dependencias | Dependabot, una vez por semana | No: abre un pull request | Decidido, control 5. Ya corre para las acciones, el portal, el backend y la imagen |
 | Migraciones desde el esquema de la versión anterior | `alembic upgrade head` sobre el esquema anterior, más `alembic check` | El merge | Entrega final |
 | Imagen | build de Docker, escaneo e inventario de componentes | El merge, si hay críticas con arreglo | Entrega final |
 | Migración en producción | `preDeployCommand` de Render | El despliegue | Propuesto |
@@ -307,15 +307,19 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   de los emails; y la IP completa, que se trunca si hace falta para los límites de uso.
 - **Cómo se hace cumplir:** un filtro de logging que redacta por nombre de campo, y que deja
   pasar solo lo que se sabe seguro. De los campos, solo los permitidos, y cada uno con su
-  forma: una duración entera, la clase de un error, un código numérico o una palabra corta
-  como resultado, y un identificador hexadecimal o UUID. Un campo nuevo, un texto libre o un
+  forma: una duración entre cero y una hora, la clase de un error, un código entre 100 y 599 o
+  una palabra corta como resultado, y un identificador hexadecimal o UUID. Un campo nuevo, un texto libre o un
   valor con otra forma sale redactado. Del mensaje, solo
-  un nombre fijo de evento, como `http.request`: un texto armado con datos sale redactado. De un
+  un nombre fijo de evento, como `http.request`, hecho de palabras en minúscula que empiezan
+  con letra y de largo acotado: un texto armado con datos sale redactado. De un
   error, solo su clase. Todo lo que el proceso registra pasa por ese filtro, incluidos el
   servidor web, cuyo registro de accesos está apagado porque imprime la IP, las librerías,
   que registran desde el nivel de advertencia, y las advertencias de Python. Un registro mal
-  armado no vuelca sus datos a la salida de errores. Queda un límite: un dato que tenga la
-  forma de su campo pasa, así que en un campo de identificador va solo un identificador real; Sentry sin datos
+  armado no vuelca sus datos a la salida de errores ni se pierde: deja su línea con el evento
+  redactado. Queda un límite: un dato que tenga la forma de su lugar pasa, así que en un campo
+  de identificador va solo un identificador real, y el nombre de un evento es siempre una
+  constante del código. La conexión a la base nunca se abre con el eco de consultas encendido,
+  porque esa opción escribe las consultas con sus datos por fuera del filtro; Sentry sin datos
   personales por defecto y con un filtro que quita cuerpo, cookies y headers; y un test que corre
   el registro de un gasto con datos de ejemplo y falla si algún registro contiene el teléfono, el
   monto o el texto.

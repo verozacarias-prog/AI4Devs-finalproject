@@ -72,6 +72,7 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
 10. **Se aplica ahora lo que no depende del código:** el control de secretos, las acciones
     fijadas por hash y Dependabot para las acciones y para `site/`. El resto se crea con el
     primer commit de código, no antes: un flujo sin nada que compilar ni testear fallaría.
+    Con ese commit, Dependabot suma `backend/` y la imagen base.
 11. **Qué rama despliega qué.** La rama de la entrega despliega el entorno `demo`, que hace de
     entorno de pruebas: ahí prueba a mano quien desarrolla y quien reciba un enlace personal
     ([ADR 0016](0016-sesion-de-servidor-en-el-mismo-origen.md)). `main`, que recibe solo
