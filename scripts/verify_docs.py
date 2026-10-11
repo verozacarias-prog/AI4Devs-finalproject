@@ -49,6 +49,10 @@ def read(path):
     return io.open(path, encoding='utf-8').read()
 
 
+def _agent_files():
+    return sorted(glob.glob(os.path.join(AGENTS_DIR, '**', '*.md'), recursive=True))
+
+
 def markdown_files():
     out = [README]
     for name in ('CLAUDE.md', 'AGENTS.md', 'prompts.md'):
@@ -66,7 +70,7 @@ def markdown_files():
                 out.append(os.path.join(COMMANDS_DIR, n))
     for p in sorted(glob.glob(os.path.join(SKILLS_DIR, '*', 'SKILL.md'))):
         out.append(p)
-    for p in sorted(glob.glob(os.path.join(AGENTS_DIR, '*.md'))):
+    for p in _agent_files():
         out.append(p)
     return out
 
@@ -318,27 +322,41 @@ def _check_frontmatter(path, label, required):
         fail('%s %s no tiene instrucciones debajo del frontmatter' % (label, n))
 
 
+def _declared_name(path):
+    """El `name` del frontmatter, sin comillas. Un `name:` en el cuerpo no cuenta."""
+    lines = read(path).split('\n')
+    if not lines or lines[0].strip() != '---':
+        return None
+    for line in lines[1:]:
+        if line.strip() == '---':
+            return None
+        m = re.match(r'name:\s*(\S.*)', line)
+        if m:
+            return m.group(1).strip().strip('"\'')
+    return None
+
+
 def check_skills():
     found = sorted(glob.glob(os.path.join(SKILLS_DIR, '*', 'SKILL.md')))
     for p in found:
         _check_frontmatter(p, 'el skill', ('name', 'description'))
-        declared = re.search(r'^name:\s*(\S+)', read(p), re.M)
+        declared = _declared_name(p)
         folder = os.path.basename(os.path.dirname(p))
-        if declared and declared.group(1).strip() != folder:
+        if declared and declared != folder:
             fail('el skill %s declara name "%s" pero vive en el directorio "%s"'
-                 % (os.path.relpath(p), declared.group(1).strip(), folder))
+                 % (os.path.relpath(p), declared, folder))
     return found
 
 
 def check_agents():
-    found = sorted(glob.glob(os.path.join(AGENTS_DIR, '*.md')))
+    found = _agent_files()
     for p in found:
         _check_frontmatter(p, 'el agente', ('name', 'description'))
-        declared = re.search(r'^name:\s*(\S+)', read(p), re.M)
+        declared = _declared_name(p)
         stem = os.path.splitext(os.path.basename(p))[0]
-        if declared and declared.group(1).strip() != stem:
+        if declared and declared != stem:
             fail('el agente %s declara name "%s" pero el archivo se llama "%s.md"'
-                 % (os.path.relpath(p), declared.group(1).strip(), stem))
+                 % (os.path.relpath(p), declared, stem))
     return found
 
 
