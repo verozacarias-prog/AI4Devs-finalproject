@@ -247,7 +247,7 @@ def check_fences(files):
 # --- 5. nombres de archivo sin acentos, ñ ni espacios ---------------------------
 def check_names():
     for root, dirs, names in os.walk('.'):
-        if any(p in root for p in ('/.git', 'node_modules', '__pycache__')):
+        if any(p in root for p in ('/.git', 'node_modules', '__pycache__', '.venv')):
             continue
         for n in names + dirs:
             if n.startswith('.'):
