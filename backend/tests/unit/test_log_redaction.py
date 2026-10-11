@@ -1,4 +1,4 @@
-"""Cases 10 to 13, 15 and 16: what the log filter lets through.
+"""Cases 10 to 13, 15, 16 and 20 to 24: what the log filter lets through.
 
 Only allowed fields pass, and only a fixed event name passes as the message; everything else
 is redacted (docs/operacion.md, 6.3).
@@ -9,6 +9,10 @@ from __future__ import annotations
 import io
 import json
 import logging
+import uuid
+import warnings
+from collections.abc import Iterator
+from decimal import Decimal
 
 import pytest
 
@@ -140,4 +144,112 @@ def test_other_libraries_go_through_the_same_filter(stream: io.StringIO) -> None
     assert line["event"] == REDACTED
     assert line["logger"] == "sqlalchemy.engine"
     assert "5491155551234" not in raw
+    assert "58400" not in raw
+
+
+@pytest.fixture
+def process_logging(stream: io.StringIO) -> Iterator[None]:
+    """The logging of the whole process, as the API configures it, undone afterwards."""
+    root = logging.getLogger()
+    previous_handlers, previous_level = list(root.handlers), root.level
+    try:
+        configure_logging(stream, version="test")
+        yield
+    finally:
+        logging.captureWarnings(False)
+        root.handlers = previous_handlers
+        root.setLevel(previous_level)
+
+
+def test_a_malformed_log_call_does_not_dump_its_arguments(
+    logger: logging.Logger, stream: io.StringIO, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Case 20."""
+    logger.info("paid %s", "58400", "+5491155551234")
+
+    raw, line = only_line(stream)
+    assert line["event"] == REDACTED
+    for output in (raw, capsys.readouterr().err):
+        assert "58400" not in output
+        assert "5491155551234" not in output
+
+
+@pytest.mark.usefixtures("process_logging")
+def test_python_warnings_go_through_the_filter(
+    stream: io.StringIO, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Case 21."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("always")
+        warnings.warn("slow query for user +5491155551234", stacklevel=1)
+
+    raw, line = only_line(stream)
+    assert line["event"] == REDACTED
+    assert line["logger"] == "py.warnings"
+    assert "5491155551234" not in raw
+    assert "5491155551234" not in capsys.readouterr().err
+
+
+@pytest.mark.usefixtures("process_logging")
+def test_debug_is_never_emitted(stream: io.StringIO) -> None:
+    """Case 22."""
+    library = logging.getLogger("some_library")
+    library.setLevel(logging.DEBUG)
+    try:
+        library.debug("payload.dumped")
+    finally:
+        library.setLevel(logging.NOTSET)
+
+    assert stream.getvalue() == ""
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("duration_ms", 58400.5),
+        ("error_type", "190.12.33.7"),
+        ("result", "58400.00"),
+        ("user_id", "Galicia"),
+    ],
+)
+def test_an_allowed_field_with_the_wrong_shape_is_redacted(
+    logger: logging.Logger, stream: io.StringIO, field: str, value: str | float
+) -> None:
+    """Case 23."""
+    logger.info("some.event", extra={field: value})
+
+    raw, line = only_line(stream)
+    assert line[field] == REDACTED
+    assert str(value) not in raw
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("duration_ms", 12),
+        ("error_type", "OperationalError"),
+        ("result", 200),
+        ("result", "ok"),
+        ("request_id", uuid.UUID(int=7).hex),
+        ("message_id", str(uuid.UUID(int=7))),
+    ],
+)
+def test_an_allowed_field_with_its_own_shape_passes(
+    logger: logging.Logger, stream: io.StringIO, field: str, value: str | int
+) -> None:
+    """Case 23."""
+    logger.info("some.event", extra={field: value})
+
+    _, line = only_line(stream)
+    assert line[field] == value
+
+
+def test_a_value_that_is_neither_text_nor_number_is_redacted(
+    logger: logging.Logger, stream: io.StringIO
+) -> None:
+    """Case 24."""
+    logger.info("some.event", extra={"result": Decimal("58400.00")})
+
+    raw, line = only_line(stream)
+    assert line["result"] == REDACTED
     assert "58400" not in raw
