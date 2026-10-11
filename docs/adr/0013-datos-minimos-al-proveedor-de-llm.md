@@ -42,10 +42,12 @@ prompts.
 3. **El adaptador de salida es el único lugar que arma lo que se envía.** El dominio le pasa al
    puerto los datos de la tarea, y el adaptador no agrega nada por su cuenta. Así la regla se
    verifica en un solo lugar, con un test que falla si aparece un identificador en el pedido.
-4. **Criterio obligatorio para elegir el proveedor:** que por contrato no use los datos enviados
-   por la API para entrenar modelos, y que los retenga el menor tiempo posible. Las condiciones se
-   verifican al elegirlo, se dejan registradas en la política de privacidad, y se vuelven a
-   revisar si el proveedor cambia sus términos.
+4. **Criterios de privacidad para elegir el proveedor.** Uno es obligatorio: que por contrato
+   no use los datos enviados por la API para entrenar modelos. El otro se pesa junto con la
+   calidad y el costo: cuánto tiempo retiene el contenido. A igual resultado se prefiere el que
+   retiene menos, y ninguno puede retenerlo más de 30 días. Las condiciones se verifican al
+   elegirlo, se dejan registradas en la política de privacidad, y se vuelven a revisar si el
+   proveedor cambia sus términos.
 5. **El LLM no accede a la base y nunca escribe.** No genera SQL que Platita ejecute ni recibe
    herramientas que escriban. Para registrar, devuelve una salida estructurada, como los campos
    de un movimiento, que el adaptador valida, y el caso de uso escribe por los repositorios

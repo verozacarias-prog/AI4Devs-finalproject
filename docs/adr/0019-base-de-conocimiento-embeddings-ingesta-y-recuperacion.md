@@ -36,7 +36,8 @@ Tres cosas obligan a decidirlo antes de escribir código:
    - la de embeddings, antes de escribir la rama de consejos, con los documentos de ejemplo
      cargados, porque sin contenido no se puede medir si la búsqueda trae el fragmento correcto.
 
-   El resultado de cada una se registra en un ADR cuando se haga.
+   El resultado de cada una se registra en un ADR cuando se haga. La del LLM ya se hizo, con
+   tres candidatos ([ADR 0025](0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)).
 4. **Las tablas se crean cuando se elija el modelo de embeddings.** La extensión pgvector se
    habilita en la primera migración; las dos tablas de la base de conocimiento van en una
    migración posterior, con la dimensión del modelo elegido.
