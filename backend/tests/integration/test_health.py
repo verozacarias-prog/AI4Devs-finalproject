@@ -1,4 +1,4 @@
-"""Casos 1 a 5: las rutas de salud (contrato en docs/04-api.md)."""
+"""Cases 1 to 5: the health routes (contract in docs/04-api.md)."""
 
 from __future__ import annotations
 
@@ -52,4 +52,5 @@ def test_health_routes_do_not_ask_for_a_session(database_url: str, path: str) ->
     response = client.get(path)
 
     assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
     assert "set-cookie" not in response.headers

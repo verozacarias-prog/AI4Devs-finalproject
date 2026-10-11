@@ -1,6 +1,7 @@
-"""Cases 10, 11 and 12: the log filter redacts by field name.
+"""Cases 10 to 13, 15 and 16: what the log filter lets through.
 
-Only allowed fields pass; everything else is redacted (docs/operacion.md, 6.3).
+Only allowed fields pass, and only a fixed event name passes as the message; everything else
+is redacted (docs/operacion.md, 6.3).
 """
 
 from __future__ import annotations
@@ -11,7 +12,7 @@ import logging
 
 import pytest
 
-from app.adapters.outbound.observability.logs import REDACTED, build_handler
+from app.adapters.outbound.observability.logs import REDACTED, build_handler, configure_logging
 
 JsonLine = dict[str, str | int | float | bool | None]
 
@@ -86,3 +87,57 @@ def test_an_unknown_field_is_redacted_too(logger: logging.Logger, stream: io.Str
     raw, line = only_line(stream)
     assert line["brand_new_field"] == REDACTED
     assert "value-nobody-listed" not in raw
+
+
+def test_a_message_built_from_data_is_redacted(logger: logging.Logger, stream: io.StringIO) -> None:
+    """Case 13."""
+    logger.info("paid %s from %s", "58400", "Galicia")
+
+    raw, line = only_line(stream)
+    assert line["event"] == REDACTED
+    assert "58400" not in raw
+    assert "Galicia" not in raw
+
+
+def test_free_text_in_an_allowed_field_is_redacted(
+    logger: logging.Logger, stream: io.StringIO
+) -> None:
+    """Case 15."""
+    logger.info("transaction.registered", extra={"result": "Gasté 58.400 en el super"})
+
+    raw, line = only_line(stream)
+    assert line["result"] == REDACTED
+    assert "58.400" not in raw
+
+
+@pytest.mark.parametrize("value", ["ok", 200])
+def test_a_short_value_in_an_allowed_field_passes(
+    logger: logging.Logger, stream: io.StringIO, value: str | int
+) -> None:
+    """Case 15."""
+    logger.info("transaction.registered", extra={"result": value})
+
+    _, line = only_line(stream)
+    assert line["result"] == value
+
+
+def test_other_libraries_go_through_the_same_filter(stream: io.StringIO) -> None:
+    """Case 16."""
+    root = logging.getLogger()
+    previous = list(root.handlers)
+    try:
+        configure_logging(stream, version="test")
+        logging.getLogger("sqlalchemy.engine").warning(
+            "INSERT INTO app_user (phone, amount) VALUES (%s, %s) [parameters: %s]",
+            "phone",
+            "amount",
+            ("+5491155551234", "58400.00"),
+        )
+    finally:
+        root.handlers = previous
+
+    raw, line = only_line(stream)
+    assert line["event"] == REDACTED
+    assert line["logger"] == "sqlalchemy.engine"
+    assert "5491155551234" not in raw
+    assert "58400" not in raw

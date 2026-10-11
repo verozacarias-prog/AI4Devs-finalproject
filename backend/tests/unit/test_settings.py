@@ -16,3 +16,13 @@ def test_missing_database_url_stops_startup_and_names_the_variable() -> None:
     message = str(error.value)
     assert "DATABASE_URL" in message
     assert "s3cr3t-value" not in message
+
+
+def test_an_unknown_environment_stops_startup_and_names_the_variable() -> None:
+    """Case 18."""
+    environ = {"DATABASE_URL": "postgresql+psycopg://u:p@db/platita", "APP_ENV": "staging"}
+
+    with pytest.raises(SettingsError) as error:
+        load_settings(environ)
+
+    assert "APP_ENV" in str(error.value)
