@@ -96,8 +96,8 @@ Chequea que los enlaces relativos resuelvan a un archivo y a un ancla que existe
 documento de `docs/` quede sin enlazar desde el `README.md`, que no haya texto duplicado entre
 archivos, que los bloques de código y de Mermaid estén completos, que los nombres de archivo no
 tengan acentos ni espacios, que la serie numerada no tenga huecos, que los ADR conserven su
-plantilla, y que los commands de `.claude/commands/` y los skills de `.claude/skills/` abran y
-cierren su frontmatter y declaren sus campos obligatorios. Un frontmatter roto no avisa: el
+plantilla, y que los commands de `.claude/commands/`, los skills de `.claude/skills/` y los
+agentes de `.claude/agents/` abran y cierren su frontmatter y declaren sus campos obligatorios. Un frontmatter roto no avisa: el
 command no se carga y el skill pierde todos sus campos, cayendo al nombre del directorio y a la
 primera línea del cuerpo. Los avisos no frenan nada; los errores sí.
 

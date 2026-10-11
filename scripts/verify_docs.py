@@ -24,6 +24,7 @@ DOCS_DIR = 'docs'
 ADR_DIR = os.path.join(DOCS_DIR, 'adr')
 COMMANDS_DIR = os.path.join('.claude', 'commands')
 SKILLS_DIR = os.path.join('.claude', 'skills')
+AGENTS_DIR = os.path.join('.claude', 'agents')
 CANONICAL = {'README.md', 'CLAUDE.md', 'AGENTS.md', 'LICENSE', 'prompts.md'}
 
 README_SOFT_LIMIT = 95        # ficha (0.1-0.5) + una línea por documento + enlaces
@@ -64,6 +65,8 @@ def markdown_files():
             if n.endswith('.md'):
                 out.append(os.path.join(COMMANDS_DIR, n))
     for p in sorted(glob.glob(os.path.join(SKILLS_DIR, '*', 'SKILL.md'))):
+        out.append(p)
+    for p in sorted(glob.glob(os.path.join(AGENTS_DIR, '*.md'))):
         out.append(p)
     return out
 
@@ -292,7 +295,7 @@ def check_adrs():
     return found
 
 
-# --- 9. commands y skills tienen frontmatter válido -------------------------------
+# --- 9. commands, skills y agentes tienen frontmatter válido -------------------------------
 def _check_frontmatter(path, label, required):
     """Un frontmatter roto no avisa: el command no se carga y el skill pierde todos
     sus campos, cayendo al nombre del directorio y a la primera línea del cuerpo."""
@@ -324,6 +327,18 @@ def check_skills():
         if declared and declared.group(1).strip() != folder:
             fail('el skill %s declara name "%s" pero vive en el directorio "%s"'
                  % (os.path.relpath(p), declared.group(1).strip(), folder))
+    return found
+
+
+def check_agents():
+    found = sorted(glob.glob(os.path.join(AGENTS_DIR, '*.md')))
+    for p in found:
+        _check_frontmatter(p, 'el agente', ('name', 'description'))
+        declared = re.search(r'^name:\s*(\S+)', read(p), re.M)
+        stem = os.path.splitext(os.path.basename(p))[0]
+        if declared and declared.group(1).strip() != stem:
+            fail('el agente %s declara name "%s" pero el archivo se llama "%s.md"'
+                 % (os.path.relpath(p), declared.group(1).strip(), stem))
     return found
 
 
@@ -367,6 +382,7 @@ def main():
     adrs = check_adrs()
     commands = check_commands()
     skills = check_skills()
+    agents = check_agents()
 
     print('Verificación de documentación')
     print('  archivos markdown revisados : %d' % len(files))
@@ -375,6 +391,7 @@ def main():
     print('  ADR                         : %d' % len(adrs))
     print('  commands                    : %d' % len(commands))
     print('  skills                      : %d' % len(skills))
+    print('  agentes                     : %d' % len(agents))
     print('  %s                   : %d líneas' % (README, readme_lines))
     print('')
 

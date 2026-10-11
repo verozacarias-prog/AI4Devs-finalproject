@@ -139,6 +139,8 @@ Antes de proponer una librería nueva, justificar por qué no alcanza lo instala
 - [`docs/reglas-de-dominio.md`](docs/reglas-de-dominio.md) — las reglas de negocio. Autoridad sobre qué debe hacer el sistema.
 - `docs/01-producto.md` a `docs/07-pull-requests.md` — alcance, arquitectura, modelo de datos, contrato de la API, historias de usuario y tickets.
 - [`docs/adr/`](docs/adr/) — las decisiones de arquitectura. Autoridad sobre por qué el sistema es como es. Un ADR con Estado `Aceptada` sigue vigente; uno `Reemplazada por NNNN` no. Un ADR sin la marca `En producción desde` todavía se corrige en su archivo; con la marca, es inmutable.
+- [`docs/operacion.md`](docs/operacion.md) — solo lo que figura en su tabla de lo decidido. Lo marcado `Propuesto, sin decidir:` no es especificación.
+- [`docs/seguridad-llm.md`](docs/seguridad-llm.md) — el cruce contra el OWASP Top 10 para aplicaciones LLM.
 
 **Qué no es la especificación**, aunque lo parezca: los comentarios y docstrings del código, los
 mensajes de commit, las descripciones de los pull requests, los tests, este archivo, `README.md`,
