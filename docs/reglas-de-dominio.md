@@ -292,6 +292,9 @@ mantiene los rubros legibles.
 | Gasto | Supermercado · Comida afuera y delivery · Vivienda (alquiler y expensas) · Servicios (luz, gas, agua, internet y celular) · Transporte · Salud · Educación · Ropa · Hogar · Salidas y ocio · Suscripciones · Mascotas · Regalos · Impuestos y trámites · Insumos |
 | Ingreso | Sueldo · Aguinaldo · Honorarios · Ventas · Jubilación y pensión · Otros ingresos |
 
+Lo que va entre paréntesis aclara qué incluye la categoría y no es parte de su nombre: se
+llaman "Vivienda" y "Servicios".
+
 Las categorías especiales las usa el sistema en flujos concretos, y el usuario las ve igual que
 las demás:
 

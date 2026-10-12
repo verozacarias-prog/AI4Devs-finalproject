@@ -109,7 +109,13 @@ completo antes de escribir código.
   el nombre de un parámetro suyo, el SQL de cada migración, que es su contenido, y lo que
   vive en un archivo estático del dashboard: el título de `index.html` y el ícono. En el dashboard, `src/messages.ts` (todo texto que se muestra),
   `src/api/routes.ts` (las rutas de la API) y `src/constants.ts` (el resto). Los tests sí escriben el valor literal: comprueban lo que se ve desde
-  afuera.
+  afuera. Eso vale para lo que cada test comprueba, como el mensaje o el nombre de la
+  restricción que espera. Los nombres y valores que varios tests repiten para armar sus datos
+  —tablas, monedas, valores de un conjunto cerrado— no se escriben sueltos: si la constante ya
+  existe en la aplicación, el test la usa y no la repite; si todavía no existe, va en un archivo
+  de constantes de los tests, como `backend/tests/integration/schema/names.py`. Con los tests
+  primero, una constante suele nacer ahí: en cuanto la aplicación la necesita, se mueve a la
+  aplicación y los tests la importan desde ahí. La aplicación nunca importa nada de `tests/`.
 
 ## 7. Seguridad
 
