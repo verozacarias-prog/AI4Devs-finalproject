@@ -582,6 +582,9 @@ CREATE_TABLES: tuple[str, ...] = (
             CHECK (status IN ('pending', 'processing', 'processed', 'failed')),
         CONSTRAINT ck_inbound_message_web_user
             CHECK (provider <> 'web' OR user_id IS NOT NULL),
+        -- The quoted reply belongs to the same user, and that needs a user to compare with.
+        CONSTRAINT ck_inbound_message_quote_needs_user
+            CHECK (quoted_outbound_message_id IS NULL OR user_id IS NOT NULL),
         CONSTRAINT ck_inbound_message_purge CHECK (
             (purged_at IS NULL AND payload IS NOT NULL AND from_phone IS NOT NULL)
             OR (purged_at IS NOT NULL AND payload IS NULL AND from_phone IS NULL)
@@ -955,7 +958,9 @@ CREATE_FUNCTIONS: tuple[str, ...] = (
     DECLARE
         other transaction;
         own_is_group BOOLEAN;
+        own_period_user UUID;
         other_is_group BOOLEAN;
+        other_period_user UUID;
     BEGIN
         SELECT * INTO other
           FROM transaction t
@@ -989,15 +994,22 @@ CREATE_FUNCTIONS: tuple[str, ...] = (
                       CONSTRAINT = 'tg_transaction_pair_mismatch';
         END IF;
 
-        SELECT p.family_group_id IS NOT NULL INTO own_is_group
+        SELECT p.family_group_id IS NOT NULL, p.user_id INTO own_is_group, own_period_user
           FROM budget_period p WHERE p.id = NEW.budget_period_id;
-        SELECT p.family_group_id IS NOT NULL INTO other_is_group
+        SELECT p.family_group_id IS NOT NULL, p.user_id INTO other_is_group, other_period_user
           FROM budget_period p WHERE p.id = other.budget_period_id;
         IF own_is_group = other_is_group THEN
             RAISE EXCEPTION 'a pair has one half in a group period and one in the individual'
                 USING ERRCODE = 'check_violation',
                       TABLE = 'transaction',
                       CONSTRAINT = 'tg_transaction_pair_periods';
+        END IF;
+        -- Only the individual period has a user, so this is the one of that half.
+        IF COALESCE(own_period_user, other_period_user) <> NEW.user_id THEN
+            RAISE EXCEPTION 'the individual half of a pair is in a period of its own user'
+                USING ERRCODE = 'check_violation',
+                      TABLE = 'transaction',
+                      CONSTRAINT = 'tg_transaction_pair_individual_owner';
         END IF;
         RETURN NULL;
     END;
