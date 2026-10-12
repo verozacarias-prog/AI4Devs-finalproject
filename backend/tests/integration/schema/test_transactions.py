@@ -1,4 +1,4 @@
-"""TRANSACTION: cases 39 to 62, and cases 134, 136, 138 and 139."""
+"""TRANSACTION: cases 39 to 62, and cases 134, 136, 138, 139 and 146."""
 
 from __future__ import annotations
 
@@ -73,6 +73,19 @@ def test_a_movement_is_not_charged_to_a_draft_period(rows: Rows) -> None:
 
     with rows.rejected_by("tg_transaction_period_confirmed"):
         rows.transaction(home, budget_period_id=draft)
+
+
+def test_a_movement_is_not_charged_to_the_individual_period_of_another_user(rows: Rows) -> None:
+    # Case 146. Whether the user belongs to the group of a group period is for the application.
+    home = rows.home()
+    rows.transaction(home)
+    group = rows.group()
+    rows.membership(home.user, group, role=OWNER)
+    rows.transaction(home, budget_period_id=rows.period(group=group))
+    foreign_period = rows.home().period
+
+    with rows.rejected_by("tg_transaction_period_owner"):
+        rows.transaction(home, budget_period_id=foreign_period)
 
 
 def test_a_movement_does_not_use_the_account_of_another_user(rows: Rows) -> None:

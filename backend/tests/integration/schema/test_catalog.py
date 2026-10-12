@@ -151,6 +151,9 @@ def test_currency_holds_the_iso_4217_catalog(connection: Connection) -> None:
 
     assert {PESOS, DOLLARS, EUROS, "BRL", "UYU", "CLP", "PYG", "GBP", "JPY", "CHF"} <= codes
     assert len(codes) >= 150
+    # National currencies in use: both codes of Venezuela, and no funds or metals.
+    assert "VED" in codes
+    assert not codes & {"XAU", "XDR"}
     assert all(re.fullmatch(r"[A-Z]{3}", code) for code in codes)
 
 
