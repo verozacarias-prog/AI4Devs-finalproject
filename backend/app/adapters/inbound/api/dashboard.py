@@ -14,7 +14,11 @@ from starlette.staticfiles import StaticFiles
 from starlette.types import Scope
 
 from app.adapters.inbound.api.routes import DASHBOARD_MOUNT_NAME, DASHBOARD_PREFIX
-from app.constants import DASHBOARD_ASSETS_FOLDER, DASHBOARD_INDEX_FILE
+from app.constants import (
+    DASHBOARD_ASSETS_FOLDER,
+    DASHBOARD_INDEX_FILE,
+    FILE_EXTENSION_SEPARATOR,
+)
 
 
 class DashboardFiles(StaticFiles):
@@ -36,7 +40,9 @@ class DashboardFiles(StaticFiles):
 
 def _names_a_file(path: str) -> bool:
     parts = PurePosixPath(path).parts
-    return bool(parts) and (parts[0] == DASHBOARD_ASSETS_FOLDER or "." in parts[-1])
+    return bool(parts) and (
+        parts[0] == DASHBOARD_ASSETS_FOLDER or FILE_EXTENSION_SEPARATOR in parts[-1]
+    )
 
 
 def mount_dashboard(app: FastAPI, directory: Path | None) -> None:

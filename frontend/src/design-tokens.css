@@ -30,6 +30,7 @@
   --space-8: 2rem;
 
   --radius-medium: 0.5rem;
+  --border-width: 1px;
   --content-width: 40rem;
   --focus-ring: 2px solid var(--color-brand);
 }

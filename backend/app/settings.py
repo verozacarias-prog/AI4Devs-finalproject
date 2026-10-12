@@ -7,7 +7,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app import messages
-from app.constants import DEFAULT_ENVIRONMENT, DEFAULT_VERSION, Environment, EnvVar
+from app.constants import (
+    DEFAULT_ENVIRONMENT,
+    DEFAULT_VERSION,
+    LIST_SEPARATOR,
+    Environment,
+    EnvVar,
+)
 
 
 class SettingsError(Exception):
@@ -34,7 +40,7 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
     try:
         environment = Environment(_read(environ, EnvVar.APP_ENV, DEFAULT_ENVIRONMENT))
     except ValueError:
-        allowed = ", ".join(Environment)
+        allowed = LIST_SEPARATOR.join(Environment)
         raise SettingsError(
             messages.INVALID_ENV_VAR.format(name=EnvVar.APP_ENV, allowed=allowed)
         ) from None

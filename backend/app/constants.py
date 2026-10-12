@@ -44,6 +44,14 @@ DASHBOARD_ASSETS_FOLDER = "assets"
 
 MILLISECONDS_PER_SECOND = 1000
 
+# A path whose last segment contains this names a file, not a route of the dashboard.
+FILE_EXTENSION_SEPARATOR = "."
+# How a list of allowed values is written inside a message.
+LIST_SEPARATOR = ", "
+# Layout of the exported API contract. Stable, so the pipeline can compare files.
+JSON_INDENT = 2
+LINE_END = "\n"
+
 # Where the API listens inside its container. Compose publishes it on localhost only.
 API_HOST = "0.0.0.0"  # noqa: S104
 API_PORT = 8000

@@ -31,3 +31,8 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    ignore:
+      # La herramienta que genera los tipos de la API todavía no admite TypeScript 6
+      # (ADR 0026). Se quita cuando la admita.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]

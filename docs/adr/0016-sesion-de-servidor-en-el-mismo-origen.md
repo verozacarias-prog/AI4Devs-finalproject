@@ -164,7 +164,8 @@ para que la cookie de sesión funcione sin un dominio propio.
   del servicio y los mismos archivos los sirve otro servidor, sin cambiar el dashboard.
 - Como el servicio sirve HTML, también le corresponde enviar los headers de seguridad de la
   página, incluida una política de contenido (CSP), que antes eran configuración del Static
-  Site.
+  Site. La política deja cargar solo lo que viene del propio origen, sin código en línea, y
+  prohíbe que otra página embeba el dashboard.
 - Una aplicación móvil nativa no puede usar la cookie tal cual: necesitará el mismo token en un
   header `Authorization`. Se decide cuando exista la aplicación, que es también el momento de
   revisar este registro.

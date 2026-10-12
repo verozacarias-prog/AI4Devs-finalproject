@@ -105,7 +105,8 @@ completo antes de escribir código.
   rutas de la API y los valores de sus respuestas), `adapters/outbound/observability/events.py`
   (eventos, campos, nombres y reglas de los registros) y `adapters/outbound/postgres/queries.py`
   (el SQL escrito a mano). Quedan en su lugar solo las palabras que define una librería, como
-  el nombre de un parámetro suyo, y el SQL de cada migración, que es su contenido. En el dashboard, `src/messages.ts` (todo texto que se muestra) y
+  el nombre de un parámetro suyo, el SQL de cada migración, que es su contenido, y lo que
+  vive en un archivo estático del dashboard: el título de `index.html` y el ícono. En el dashboard, `src/messages.ts` (todo texto que se muestra) y
   `src/api/routes.ts`. Los tests sí escriben el valor literal: comprueban lo que se ve desde
   afuera.
 
@@ -195,7 +196,7 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   linter, `npm run typecheck` los tipos, `npm run build` la compilación y
   `npm audit --audit-level=high` las vulnerabilidades.
 - Si cambia una ruta o una respuesta de la API, se regenera el contrato y sus tipos: desde
-  `backend/`, `python -m app.adapters.inbound.cli.export_openapi > ../frontend/src/api/openapi.json`,
+  `backend/`, `python -m app.adapters.inbound.api.export_openapi > ../frontend/src/api/openapi.json`,
   y desde `frontend/`, `npm run api:generate`. El pipeline falla si quedaron desactualizados.
 - Antes de pedir el merge de un pull request se corre a mano el agente `pr-reviewer`, y su
   informe se pega en el pull request
@@ -220,7 +221,7 @@ o al mensaje de WhatsApp, queda funcionando de punta a punta y, si toca el backe
 dos commits, el de sus tests y el de su implementación.
 Lo contrario, cortar por capa, deja la interfaz para el final y es como se llega a una entrega
 sin nada que mostrar.
-Toda pantalla implementa y testea los cuatro estados: cargando, con contenido, vacío y error.
+Toda pantalla implementa y testea los cuatro estados: cargando, con contenido, vacío y error. La única excepción está en las [convenciones de desarrollo](docs/convenciones-de-desarrollo.md#2-los-cuatro-estados-de-una-pantalla): una pantalla que no muestra datos del usuario no tiene estado vacío.
 
 En el backend el test va antes que el código
 ([ADR 0024](docs/adr/0024-tests-primero-en-el-backend.md)):

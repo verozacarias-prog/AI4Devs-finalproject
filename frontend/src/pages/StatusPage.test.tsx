@@ -1,9 +1,9 @@
 /**
- * Cases 35 to 39: the states of the status page. The API is simulated at the network level,
+ * Cases 35 to 39 and 45 to 48: the states of the status page. The API is simulated at the network level,
  * so the page and its API call are tested together.
  */
 import { cleanup, render, screen } from '@testing-library/react'
-import { http, HttpResponse } from 'msw'
+import { delay, http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { afterAll, afterEach, beforeAll, expect, test } from 'vitest'
 import { StatusPage } from './StatusPage'
@@ -96,4 +96,69 @@ test('case 39: retrying after an error asks again and ends connected', async () 
   expect(screen.queryByRole('alert')).toBeNull()
   answer()
   await screen.findByText('Todo conectado')
+})
+
+const apiFails = (status: number) => () => new HttpResponse(null, { status })
+const apiNeverAnswers = async () => {
+  await delay('infinite')
+  return ready()
+}
+
+test.each([500, 404])(
+  'case 45: when the API answers with an unexpected error (%i), it says so',
+  async (status) => {
+    api.use(http.get(READYZ, apiFails(status)))
+
+    render(<StatusPage />)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain('Sin conexión')
+    expect(alert.textContent).toContain('La API respondió con un error.')
+    screen.getByRole('button', { name: 'Reintentar' })
+  },
+)
+
+test('case 46: when the API does not answer in time, it is an error with a retry', async () => {
+  api.use(http.get(READYZ, apiNeverAnswers))
+
+  render(<StatusPage timeoutMs={50} />)
+
+  const alert = await screen.findByRole('alert')
+  expect(alert.textContent).toContain('Sin conexión')
+  expect(alert.textContent).toContain('La API no respondió a tiempo.')
+  screen.getByRole('button', { name: 'Reintentar' })
+})
+
+test('case 47: retrying moves the focus to the status line instead of losing it', async () => {
+  api.use(http.get(READYZ, apiNeverAnswers))
+  api.use(http.get(READYZ, apiDown, { once: true }))
+
+  render(<StatusPage />)
+  const retry = await screen.findByRole('button', { name: 'Reintentar' })
+  retry.focus()
+  expect(document.activeElement).toBe(retry)
+  retry.click()
+
+  await screen.findByText('Consultando el estado…')
+  expect(document.activeElement).toBe(screen.getByRole('status'))
+})
+
+test('case 48: the status line is one fixed element across every state', async () => {
+  let answer: () => void = () => {}
+  const pending = new Promise<void>((resolve) => {
+    answer = resolve
+  })
+  api.use(
+    http.get(READYZ, async () => {
+      await pending
+      return ready()
+    }),
+  )
+
+  render(<StatusPage />)
+  const whileLoading = screen.getByRole('status')
+  answer()
+  await screen.findByText('Todo conectado')
+
+  expect(screen.getByRole('status')).toBe(whileLoading)
 })

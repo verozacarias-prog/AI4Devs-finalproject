@@ -50,7 +50,9 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
       su linter, su verificación de tipos y la compilación.
    2. Tests unitarios y de integración, con `pytest` contra un PostgreSQL real con pgvector y
       con dobles para el LLM y los embeddings. Cada corrida aplica las migraciones desde una
-      base vacía. Incluye los tests del dashboard, con los cuatro estados de cada pantalla.
+      base vacía. Incluye los tests del dashboard, con los estados de cada pantalla: los cuatro, o tres en una
+      pantalla que no muestra datos del usuario
+      ([convenciones de desarrollo](../convenciones-de-desarrollo.md#2-los-cuatro-estados-de-una-pantalla)).
    3. Los dos verificadores del repositorio.
    4. Secretos en el código, con `gitleaks`.
    5. Vulnerabilidades en dependencias. En Python, `pip-audit`, que bloquea ante cualquier

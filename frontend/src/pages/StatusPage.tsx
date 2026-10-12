@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { checkReadiness, type Readiness } from '../api/health'
 import { MESSAGES } from '../messages'
 
@@ -14,17 +14,34 @@ const TEXT = MESSAGES.status
 
 const ERROR_MESSAGES: Record<ErrorCause, string> = {
   'database-unreachable': TEXT.databaseUnreachable,
+  'api-error': TEXT.apiError,
+  'api-timeout': TEXT.apiTimeout,
   'api-unreachable': TEXT.apiUnreachable,
 }
 
-export function StatusPage() {
+const STATUS_TEXT: Record<State['kind'], string> = {
+  loading: TEXT.loading,
+  content: TEXT.connected,
+  // The error is announced by the alert below, not by the status line.
+  error: '',
+}
+
+type Props = {
+  /** How long to wait for the API. Tests pass a short one. */
+  timeoutMs?: number
+}
+
+export function StatusPage({ timeoutMs }: Props) {
   const [state, setState] = useState<State>({ kind: 'loading' })
   // Each retry is a new attempt; the effect below runs once per attempt.
   const [attempt, setAttempt] = useState(0)
+  // Always mounted, so a screen reader announces each change and the focus has where to go
+  // when the retry button disappears.
+  const statusLine = useRef<HTMLParagraphElement>(null)
 
   useEffect(() => {
     let cancelled = false
-    void checkReadiness().then((readiness) => {
+    void checkReadiness(timeoutMs).then((readiness) => {
       if (cancelled) return
       setState(
         readiness.kind === 'ready' ? { kind: 'content' } : { kind: 'error', cause: readiness.kind },
@@ -33,11 +50,12 @@ export function StatusPage() {
     return () => {
       cancelled = true
     }
-  }, [attempt])
+  }, [attempt, timeoutMs])
 
   function retry() {
     setState({ kind: 'loading' })
     setAttempt((current) => current + 1)
+    statusLine.current?.focus()
   }
 
   return (
@@ -45,19 +63,15 @@ export function StatusPage() {
       <h2 id="status-heading" className="card__heading">
         {TEXT.heading}
       </h2>
-      {state.kind === 'loading' && (
-        <p className="card__text" role="status">
-          {TEXT.loading}
-        </p>
-      )}
-      {state.kind === 'content' && (
-        <>
-          <p className="status status--ok" role="status">
-            {TEXT.connected}
-          </p>
-          <p className="card__text">{TEXT.connectedDetail}</p>
-        </>
-      )}
+      <p
+        ref={statusLine}
+        role="status"
+        tabIndex={-1}
+        className={state.kind === 'content' ? 'status status--ok' : 'card__text'}
+      >
+        {STATUS_TEXT[state.kind]}
+      </p>
+      {state.kind === 'content' && <p className="card__text">{TEXT.connectedDetail}</p>}
       {state.kind === 'error' && (
         <div role="alert">
           <p className="status status--error">{TEXT.disconnected}</p>

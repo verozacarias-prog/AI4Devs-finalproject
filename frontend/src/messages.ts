@@ -12,6 +12,8 @@ export const MESSAGES = {
     disconnected: 'Sin conexión',
     databaseUnreachable: 'La API responde, pero no llega a la base de datos.',
     apiUnreachable: 'No se puede llegar a la API.',
+    apiError: 'La API respondió con un error.',
+    apiTimeout: 'La API no respondió a tiempo.',
     retry: 'Reintentar',
   },
 } as const

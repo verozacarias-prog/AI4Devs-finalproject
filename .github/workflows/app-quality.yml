@@ -159,7 +159,7 @@ jobs:
       - run: pip install -r requirements.txt
         working-directory: backend
       - name: Export the contract from the API
-        run: python -m app.adapters.inbound.cli.export_openapi > ../frontend/src/api/openapi.json
+        run: python -m app.adapters.inbound.api.export_openapi > ../frontend/src/api/openapi.json
         working-directory: backend
       - run: npm ci
         working-directory: frontend
