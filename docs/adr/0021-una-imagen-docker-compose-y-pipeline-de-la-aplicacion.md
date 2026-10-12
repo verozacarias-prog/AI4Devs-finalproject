@@ -1,4 +1,4 @@
-# 0021 — Una imagen, Docker Compose para levantar todo y un pipeline de cinco controles
+# 0021 — Una imagen, Docker Compose para levantar todo y un pipeline de seis controles
 
 - Estado: Aceptada
 - Fecha: 2026-10-04
@@ -45,7 +45,7 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
 5. **Sin adaptador falso de LLM dentro de la aplicación.** Los dobles del LLM y de embeddings
    viven solo en los tests automáticos. Las pruebas manuales, en local y en demostración, usan
    el modelo real, así que necesitan la clave del proveedor.
-6. **Cinco controles en paralelo, desde el primer commit de código:**
+6. **Seis controles en paralelo, desde el primer commit de código:**
    1. Formato, lint y tipos. En el backend, `ruff` y `mypy` en modo estricto. En el dashboard,
       su linter, su verificación de tipos y la compilación.
    2. Tests unitarios y de integración, con `pytest` contra un PostgreSQL real con pgvector y
@@ -59,16 +59,25 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
       vulnerabilidad que tenga arreglo: la herramienta no filtra por severidad. En el dashboard,
       `npm audit`, que bloquea desde severidad alta. Además, Dependabot propone una vez por
       semana la actualización de las dependencias y de las acciones.
+   6. Análisis de seguridad del código, con CodeQL. Sigue el recorrido de un dato por el
+      backend, el dashboard y los flujos de GitHub Actions, y publica lo que encuentra como
+      alertas del repositorio. Corre también una vez por semana, porque sus consultas cambian
+      con cada versión y puede aparecer una alerta en código que nadie tocó. Se sumó después
+      de los otros cinco: hasta entonces la seguridad del dashboard y de los flujos no la
+      revisaba nadie, porque `/security-audit` recorre solo el backend.
 7. **Solo lectura y acciones fijadas.** Los flujos corren con permiso de solo lectura sobre el
    repositorio. Cada acción se referencia por el hash de su commit, con la versión en un
-   comentario. El flujo que publica el portal conserva los permisos de Pages, que necesita para
-   desplegar.
+   comentario. Hay dos excepciones. El flujo que publica el portal conserva los permisos de
+   Pages, que necesita para desplegar. Y el de CodeQL puede escribir las alertas de seguridad,
+   sin lo que no las publica: el permiso lo tiene su único trabajo, no el flujo.
 8. **El pipeline no guarda secretos.** Ningún control necesita una credencial. Es la regla de
    [Operación](../operacion.md#3-pipeline-de-la-aplicación), y no cambia.
 9. **Qué bloquea el merge.** Los controles corren en cada pull request y en cada push a `main` y
    a la rama de la entrega. Para que además impidan un merge, la rama de la entrega tiene que estar
    protegida en este repositorio, con esos controles como obligatorios. Es una configuración de
-   GitHub, que se hace a mano.
+   GitHub, que se hace a mano. Con CodeQL son dos cosas distintas: sus trabajos fallan solo si
+   el análisis no pudo correr, y lo que encontró lo informa GitHub en un control aparte, que
+   falla ante una alerta nueva de severidad alta o crítica. Los dos van como obligatorios.
 10. **Se aplica ahora lo que no depende del código:** el control de secretos, las acciones
     fijadas por hash y Dependabot para las acciones y para `site/`. El resto se crea con el
     primer commit de código, no antes: un flujo sin nada que compilar ni testear fallaría.
@@ -90,6 +99,8 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
 - El orden de arranque repite el de producción: primero migra un solo proceso, después arranca
   el resto.
 - Una acción fijada por hash no cambia sola si alguien mueve su etiqueta.
+- El código del dashboard y los flujos de GitHub Actions tienen un análisis de seguridad en cada
+  pull request, y el backend deja de depender solo de una auditoría a mano por entrega.
 - El flujo conversacional que se prueba a mano es el real: no hay un camino con respuestas
   inventadas que pueda quedar encendido.
 
@@ -105,6 +116,9 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
 - `gitleaks` marca ejemplos que no son secretos. Los seis que encontró en el historial, cinco
   heredados del repositorio del curso, están exceptuados uno por uno en `.gitleaksignore`.
 - Hasta la entrega final nadie revisa las vulnerabilidades de la imagen base.
+- CodeQL es el único control que escribe en el repositorio, y suma tres trabajos a cada
+  corrida. Puede marcar algo que no es un problema: esa alerta se descarta en GitHub con su
+  motivo, nunca desactivando la consulta.
 - El entorno de pruebas cambia con cada integración a la rama de la entrega: quien prueba puede
   encontrar una historia a medio camino entre dos cortes.
 

@@ -9,7 +9,7 @@ decidida y el resto sigue como propuesta, escrita para que esté a mano cuando s
 |---|---|---|---|
 | Una imagen y Docker Compose en local | [2](#2-entornos) | [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) | Entrega 2 |
 | Qué rama despliega cada entorno: la de la entrega, `demo`; `main`, `production` | [2](#2-entornos) | [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) | El primer despliegue |
-| Los cinco controles del pipeline | [3](#3-pipeline-de-la-aplicación) | [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) | El primer commit de código. El control de secretos y las acciones fijadas, desde ahora |
+| Los seis controles del pipeline | [3](#3-pipeline-de-la-aplicación) | [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) | El primer commit de código. El control de secretos y las acciones fijadas, desde ahora |
 | Métricas de las llamadas al modelo | [6.2](#62-métricas) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | Entrega 2 |
 | Registros en JSON, filtro de datos personales y eventos de seguridad | [6.3](#63-registros) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | Los registros y el filtro, el primer commit de código. Cada evento, la funcionalidad que lo produce |
 | Las tres rutas de salud | [6.4](#64-alertas) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | `/healthz` y `/readyz`, el primer commit de código. `/queuez`, la tabla de mensajes entrantes |
@@ -116,8 +116,8 @@ anterior. Cuándo agregarlo está en [7](#7-cuándo-crecer).
 Se suma al que ya valida la documentación ([ADR 0009](adr/0009-validacion-de-documentacion-en-ci.md)),
 en GitHub Actions. Todas las etapas corren en paralelo y apuntan a menos de diez minutos.
 
-Las etapas marcadas como decididas son los cinco controles del [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md). Corren con
-permiso de solo lectura y con cada acción fijada al hash de su commit. Para que bloqueen un
+Las etapas marcadas como decididas son los seis controles del [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md). Corren con
+permiso de solo lectura, salvo CodeQL, que escribe sus alertas, y con cada acción fijada al hash de su commit. Para que bloqueen un
 merge, la rama de la entrega tiene que estar protegida en GitHub con esos controles como
 obligatorios.
 
@@ -133,6 +133,7 @@ obligatorios.
 | Secretos en el código | gitleaks | El merge | Decidido, control 4. Ya corre |
 | Vulnerabilidades en dependencias | pip-audit y `npm audit` | El merge. En Python, ante cualquiera que tenga arreglo; en el dashboard, desde severidad alta | Decidido, control 5. Ya corre |
 | Actualización de dependencias | Dependabot, una vez por semana | No: abre un pull request | Decidido, control 5. Ya corre para las acciones, el portal, el backend, el dashboard y la imagen |
+| Análisis de seguridad del código | CodeQL, sobre el backend, el dashboard y los flujos de GitHub Actions. También corre una vez por semana | El merge, ante una alerta nueva de severidad alta o crítica | Decidido, control 6 |
 | Migraciones desde el esquema de la versión anterior | `alembic upgrade head` sobre el esquema anterior, más `alembic check` | El merge | Entrega final |
 | Imagen | build de Docker, escaneo e inventario de componentes | El merge, si hay críticas con arreglo | Entrega final |
 | Migración en producción | `preDeployCommand` de Render | El despliegue | Propuesto |
