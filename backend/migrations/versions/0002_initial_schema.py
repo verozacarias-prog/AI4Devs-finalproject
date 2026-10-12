@@ -875,6 +875,7 @@ CREATE_FUNCTIONS: tuple[str, ...] = (
         account_found BOOLEAN;
         period_status TEXT;
         period_currency CHAR(3);
+        period_user UUID;
         period_found BOOLEAN;
         currencies INTEGER;
         refunded_type TEXT;
@@ -898,8 +899,8 @@ CREATE_FUNCTIONS: tuple[str, ...] = (
          WHERE a.id = NEW.account_id;
         account_found := FOUND;
 
-        SELECT p.status, p.primary_currency
-          INTO period_status, period_currency
+        SELECT p.status, p.primary_currency, p.user_id
+          INTO period_status, period_currency, period_user
           FROM budget_period p
          WHERE p.id = NEW.budget_period_id;
         period_found := FOUND;
@@ -921,6 +922,18 @@ CREATE_FUNCTIONS: tuple[str, ...] = (
                 USING ERRCODE = 'check_violation',
                       TABLE = 'transaction',
                       CONSTRAINT = 'tg_transaction_period_confirmed';
+        END IF;
+        -- An individual period is charged only by its own user. A group period has no user
+        -- here: membership is for the application. The halves of a pair are checked at the
+        -- commit, by transaction_validate_pair.
+        IF period_found
+            AND NEW.paired_with IS NULL
+            AND period_user IS NOT NULL
+            AND period_user <> NEW.user_id THEN
+            RAISE EXCEPTION 'a movement is not charged to the individual period of another user'
+                USING ERRCODE = 'check_violation',
+                      TABLE = 'transaction',
+                      CONSTRAINT = 'tg_transaction_period_owner';
         END IF;
 
         IF account_found AND period_found AND NEW.currency IS NOT NULL THEN
@@ -1262,6 +1275,7 @@ CURRENCIES: tuple[tuple[str, str], ...] = (
     ("USD", "Dólar estadounidense"),
     ("UYU", "Peso uruguayo"),
     ("UZS", "Sum uzbeko"),
+    ("VED", "Bolívar digital venezolano"),
     ("VES", "Bolívar venezolano"),
     ("VND", "Dong vietnamita"),
     ("VUV", "Vatu vanuatuense"),
