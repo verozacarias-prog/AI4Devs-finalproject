@@ -82,7 +82,7 @@ erDiagram
         string name "NULLABLE until onboarding is completed"
         string whatsapp_phone "UNIQUE, NULLABLE only once the account is deleted"
         string email "NULLABLE"
-        boolean email_connected "DEFAULT FALSE"
+        boolean email_connected "NOT NULL, DEFAULT FALSE"
         string country "NULLABLE until onboarding is completed"
         string time_zone "NULLABLE until onboarding is completed, IANA name, e.g. America/Argentina/Buenos_Aires"
         string primary_currency "NULLABLE until onboarding is completed, FK to CURRENCY"
@@ -94,13 +94,13 @@ erDiagram
         string onboarding_status "NOT NULL, CHECK IN ('in_progress','completed'), DEFAULT 'in_progress'"
         string account_status "NOT NULL, CHECK IN ('active','deactivated','deleted'), DEFAULT 'active'"
         timestamptz deactivated_at "NULLABLE — start of the grace period before deletion"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     FAMILY_GROUP {
         uuid id PK
         string name "NOT NULL"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     USER_GROUP {
@@ -120,7 +120,7 @@ erDiagram
         uuid used_by FK "NULLABLE — the user who joined with it"
         timestamptz used_at "NULLABLE — set together with used_by"
         timestamptz revoked_at "NULLABLE — set when the owner revokes it"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     FINANCIAL_PROFILE {
@@ -150,7 +150,7 @@ erDiagram
         timestamptz expires_at "NOT NULL — created_at + 5 minutes"
         int attempts "NOT NULL, DEFAULT 0, CHECK (attempts BETWEEN 0 AND 5)"
         timestamptz used_at "NULLABLE — set on the one successful exchange"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     SESSION {
@@ -254,7 +254,7 @@ erDiagram
         string primary_currency "NOT NULL, FK to CURRENCY — fixed once confirmed"
         decimal estimated_income "NUMERIC(20,2), NOT NULL, DEFAULT 0"
         string status "NOT NULL, CHECK IN ('draft','confirmed'), DEFAULT 'draft'"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     BUDGET {
@@ -262,14 +262,14 @@ erDiagram
         uuid budget_period_id FK "NOT NULL"
         uuid category_id FK "NOT NULL, UNIQUE (budget_period_id, category_id)"
         decimal limit_amount "NUMERIC(20,2), NOT NULL, > 0"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     CATEGORY {
         uuid id PK
         string name "NOT NULL"
         uuid user_id FK "NULLABLE, NULL = system base category"
-        boolean is_base "DEFAULT FALSE"
+        boolean is_base "NOT NULL, DEFAULT FALSE"
         string kind "NOT NULL, CHECK IN ('expense','income'), UNIQUE (id, kind)"
     }
 
@@ -292,7 +292,7 @@ erDiagram
         string description "NULLABLE"
         date transaction_date "NOT NULL"
         uuid client_request_id "NULLABLE — Idempotency-Key of the dashboard request that created it; UNIQUE (user_id, client_request_id)"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
         timestamptz updated_at "NULLABLE — last change; null while never modified; set by trigger"
         uuid updated_by FK "NULLABLE — user who made the last change; null if never modified or changed by a scheduled process"
         timestamptz deleted_at "NULLABLE — set when the user deletes it; the row stays and leaves every aggregate"
@@ -315,7 +315,7 @@ erDiagram
         int threshold "NOT NULL, CHECK (threshold BETWEEN 1 AND 100), percentage, UNIQUE (budget_id, threshold, user_id)"
         uuid user_id FK "NOT NULL — who received it; in a family budget, one row per member"
         uuid outbound_message_id FK "NOT NULL — the alert that was queued"
-        timestamptz sent_at "DEFAULT now()"
+        timestamptz sent_at "NOT NULL, DEFAULT now()"
     }
 ```
 
@@ -347,7 +347,7 @@ erDiagram
         int closing_day "NULLABLE, 1 to 31 — only for credit_card"
         int due_day "NULLABLE, 1 to 31 — only for credit_card"
         boolean uses_linked_cards "NULLABLE — only for digital_wallet; null until asked whether the user pays with cards linked to it"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     CARD_STATEMENT {
@@ -373,7 +373,7 @@ erDiagram
         string description "NULLABLE"
         string source "NOT NULL, CHECK IN ('manual','automatic')"
         uuid client_request_id "NULLABLE — Idempotency-Key of the dashboard request that created it; UNIQUE (user_id, client_request_id)"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
         timestamptz updated_at "NULLABLE — last change; null while never modified; set by trigger"
         uuid updated_by FK "NULLABLE — user who made the last change; null if never modified or changed by a scheduled process"
         timestamptz deleted_at "NULLABLE — set when the user deletes it; the row stays and leaves every aggregate"
@@ -398,8 +398,8 @@ erDiagram
         date next_execution "NOT NULL — date of the next occurrence; for yearly rules it is the only source of the date"
         int occurrences "NULLABLE, CHECK (occurrences >= 1) — total occurrences, e.g. the number of installments; null when it has no end"
         int generated_occurrences "NOT NULL, DEFAULT 0 — advanced together with next_execution; never above occurrences; starts above 0 for a card purchase whose first installments were paid before the card was added"
-        boolean active "DEFAULT TRUE — false pauses it"
-        timestamptz created_at "DEFAULT now()"
+        boolean active "NOT NULL, DEFAULT TRUE — false pauses it"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
         timestamptz updated_at "NULLABLE — last change; null while never modified; set by trigger"
         uuid updated_by FK "NULLABLE — user who made the last change; null if never modified or changed by a scheduled process"
         timestamptz deleted_at "NULLABLE — set when the user deletes it; no further occurrences are generated"
@@ -434,7 +434,7 @@ erDiagram
         uuid user_id FK "NOT NULL"
         string intent "NOT NULL, CHECK IN ('transaction','transfer','recurring_rule','change'), DEFAULT 'transaction' — what it becomes once complete; a card purchase becomes a recurring_rule; change: a correction, deletion or restoration of a confirmed movement"
         jsonb parsed_data "NOT NULL — whatever was successfully extracted so far"
-        string missing_fields "NOT NULL — array of required fields still unanswered"
+        string[] missing_fields "NOT NULL — array of required fields still unanswered"
         string source "NOT NULL, CHECK IN ('manual','automatic')"
         uuid batch_id FK "NOT NULL, FK (batch_id, source) to PENDING_BATCH (id, source)"
         int position "NOT NULL, 1 to 10 — number shown to the user inside the batch"
@@ -448,7 +448,7 @@ erDiagram
         uuid resolved_by FK "NULLABLE — user who promoted or rejected it; differs from user_id only when a family group owner resolved it"
         timestamptz expires_at "NULLABLE — discarded if never completed; null only for pendings of a recurring rule, which never expire"
         int corrected_fields_count "NOT NULL, DEFAULT 0, CHECK (corrected_fields_count >= 0) — fields interpreted by the model that the user changed before confirming; read only by the quality metric"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     PENDING_BATCH {
@@ -460,7 +460,7 @@ erDiagram
         uuid confirmation_message_id FK "NULLABLE — outbound message that confirmed the batch once closed; indexed; quoting it targets the batch's movements"
         string status "NOT NULL, CHECK IN ('open','closed'), DEFAULT 'open'"
         timestamptz reminded_at "NULLABLE — set when the one reminder before expiry was sent"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     INBOUND_MESSAGE {
@@ -478,7 +478,7 @@ erDiagram
         timestamptz next_attempt_at "NOT NULL, DEFAULT now()"
         timestamptz locked_until "NULLABLE — lease while a worker processes it"
         timestamptz processed_at "NULLABLE"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     OUTBOUND_MESSAGE {
@@ -494,7 +494,7 @@ erDiagram
         timestamptz next_attempt_at "NOT NULL, DEFAULT now()"
         string provider_message_id "NULLABLE — set once the provider accepts it; always null on web; UNIQUE (provider, provider_message_id)"
         timestamptz sent_at "NULLABLE"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     LLM_CALL {
@@ -644,7 +644,7 @@ Historial de indicadores de mercado que usan los consejos: en el MVP, la tasa pr
 
 ##### CURRENCY
 
-Catálogo de monedas ISO 4217, cargado como dato de referencia en una migración y compartido por todos los usuarios. Existe para que la moneda no sea texto libre: toda columna de moneda la referencia.
+Catálogo de las monedas nacionales en uso de ISO 4217, sin los códigos de fondos ni de metales, cargado como dato de referencia en una migración y compartido por todos los usuarios. Existe para que la moneda no sea texto libre: toda columna de moneda la referencia.
 
 ##### EXCHANGE_RATE
 
@@ -795,7 +795,7 @@ Todo mensaje que llega por el webhook de WhatsApp o por el chat web de desarroll
 - En `INBOUND_MESSAGE` y `OUTBOUND_MESSAGE`, el contenido y el teléfono (`payload` y `from_phone` en la entrada, `content` y `to_phone` en la salida) son nulos si y solo si `purged_at` está informado (`CHECK`): la purga borra los dos a la vez, como pide [reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos). Solo se purgan mensajes ya procesados, así que el worker, que identifica al remitente por `from_phone` cuando no hay `user_id`, nunca encuentra un pendiente sin teléfono.
 - En `INBOUND_MESSAGE`, `UNIQUE (provider, provider_message_id)`: un mensaje del proveedor se guarda una sola vez, así un reintento del webhook no genera un segundo procesamiento. En un mensaje web el identificador es el usuario de la sesión seguido del código que generó el navegador: el servidor pone la parte del usuario, así la clave es única por usuario y un reenvío del navegador no duplica. El fundamento está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
 - En `INBOUND_MESSAGE`, un mensaje con `provider = 'web'` tiene `user_id` informado (`CHECK`), porque viene de una sesión. Su `from_phone` es el teléfono de ese usuario, así que la restricción de la purga no cambia.
-- El mensaje citado es del mismo usuario, y la base lo impone: `INBOUND_MESSAGE (quoted_outbound_message_id, user_id)` es una clave foránea compuesta contra `OUTBOUND_MESSAGE (id, user_id)`, apoyada en un `UNIQUE (id, user_id)`. Así nadie puede citar la confirmación de otro para corregir sus movimientos. Si el mensaje citado no se encuentra, la columna queda nula y el mensaje se procesa como si no citara nada ([reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)).
+- El mensaje citado es del mismo usuario, y la base lo impone: `INBOUND_MESSAGE (quoted_outbound_message_id, user_id)` es una clave foránea compuesta contra `OUTBOUND_MESSAGE (id, user_id)`, apoyada en un `UNIQUE (id, user_id)`. Como esa clave no se evalúa cuando `user_id` es nulo, un mensaje que cita otro tiene `user_id` informado (`CHECK`). Así nadie puede citar la confirmación de otro para corregir sus movimientos. Si el mensaje citado no se encuentra, la columna queda nula y el mensaje se procesa como si no citara nada ([reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)).
 
 ##### OUTBOUND_MESSAGE
 
