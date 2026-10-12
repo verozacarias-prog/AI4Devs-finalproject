@@ -1,7 +1,7 @@
 # One image for every backend process, with the dashboard build inside it (ADR 0021).
 
 # Stage 1: compiles the dashboard to static files. Nothing of Node reaches the final image.
-FROM node:24-slim AS dashboard
+FROM node:26-slim AS dashboard
 
 WORKDIR /srv/frontend
 
