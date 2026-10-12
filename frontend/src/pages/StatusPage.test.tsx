@@ -15,7 +15,7 @@ const apiDown = () => HttpResponse.error()
 
 const api = setupServer()
 
-beforeAll(() => api.listen({ onUnhandledRequest: 'error' }))
+beforeAll(() => api.listen({ onUnhandledFrame: 'error' }))
 afterEach(() => {
   cleanup()
   api.resetHandlers()
