@@ -1,0 +1,86 @@
+{
+  "components": {
+    "schemas": {
+      "HealthState": {
+        "description": "The only two answers of a health route.",
+        "enum": [
+          "ok",
+          "unavailable"
+        ],
+        "title": "HealthState",
+        "type": "string"
+      },
+      "HealthStatus": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/HealthState"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "HealthStatus",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Platita",
+    "version": "dev"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/healthz": {
+      "get": {
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Healthz",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/readyz": {
+      "get": {
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Readyz",
+        "tags": [
+          "health"
+        ]
+      }
+    }
+  }
+}

@@ -158,9 +158,14 @@ para que la cookie de sesión funcione sin un dominio propio.
   usuarios no se nota.
 - El dashboard y la API se despliegan juntos: un cambio solo visual reinicia también el servicio
   que recibe el webhook. Meta reintenta lo que no recibió `200`, así que no se pierden mensajes.
+  El código no queda acoplado: el backend solo sabe en qué carpeta está el dashboard compilado,
+  y un cambio visual no toca ninguna línea suya. La salida a un frontend desplegado aparte está
+  prevista: cuando haya dominio propio, o más de una persona desplegando, se quita esa carpeta
+  del servicio y los mismos archivos los sirve otro servidor, sin cambiar el dashboard.
 - Como el servicio sirve HTML, también le corresponde enviar los headers de seguridad de la
   página, incluida una política de contenido (CSP), que antes eran configuración del Static
-  Site.
+  Site. La política deja cargar solo lo que viene del propio origen, sin código en línea, y
+  prohíbe que otra página embeba el dashboard.
 - Una aplicación móvil nativa no puede usar la cookie tal cual: necesitará el mismo token en un
   header `Authorization`. Se decide cuando exista la aplicación, que es también el momento de
   revisar este registro.

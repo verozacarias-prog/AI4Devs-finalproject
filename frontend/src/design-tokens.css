@@ -1,0 +1,36 @@
+/*
+ * Design tokens. Components use these variables and never a literal colour, size or
+ * spacing, so the future mobile app can inherit the same decisions
+ * (docs/convenciones-de-desarrollo.md).
+ */
+:root {
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-text: #0f172a;
+  --color-text-muted: #475569;
+  --color-brand: #0f766e;
+  --color-on-brand: #ffffff;
+  --color-success: #15803d;
+  --color-danger: #b91c1c;
+
+  --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-size-body: 1rem;
+  --font-size-small: 0.875rem;
+  --font-size-title: 1.5rem;
+  --font-weight-regular: 400;
+  --font-weight-strong: 600;
+  --line-height: 1.5;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  --radius-medium: 0.5rem;
+  --border-width: 1px;
+  --content-width: 40rem;
+  --focus-ring: 2px solid var(--color-brand);
+}

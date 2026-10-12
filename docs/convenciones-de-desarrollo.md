@@ -63,7 +63,7 @@ Tres reglas acompañan ese orden:
   para que pase.
 - **Un caso nuevo vuelve al plan.** Si aparece mientras se implementa, se suma a `qa_plan.md`, se
   aprueba, y en el backend su test se escribe antes que su código.
-- **Las pantallas tienen su propio momento.** Los casos de los cuatro estados se suman a
+- **Las pantallas tienen su propio momento.** Los casos de sus estados ([sección 2](#2-los-cuatro-estados-de-una-pantalla)) se suman a
   `qa_plan.md` y se aprueban cuando la pantalla está armada, antes de escribir sus tests. Esos
   tests van en el commit de la implementación o en uno posterior del mismo corte.
 - **Una tarea sigue la misma regla, sin carpeta.** El trabajo que no es de una historia, como el
@@ -82,7 +82,7 @@ Qué va primero según la capa:
 |---|---|---|
 | Dominio y casos de uso | Unitario, con dobles de los puertos | Antes que el código |
 | Adaptadores y restricciones de la base | De integración, contra PostgreSQL real | Antes que el código |
-| Pantallas | De componente, uno por cada uno de los cuatro estados | En el mismo corte, después de armar la pantalla y de aprobar sus casos |
+| Pantallas | De componente, uno por cada estado de la pantalla | En el mismo corte, después de armar la pantalla y de aprobar sus casos |
 | Flujo completo | De punta a punta | En la entrega final, con la pantalla ya construida |
 
 No se exige un porcentaje de cobertura. Se exige que cada criterio de aceptación y cada
@@ -122,6 +122,10 @@ diferencia es de dominio, no cosmética:
 
 Esta regla aplica igual a la futura aplicación móvil: la máquina de estados es del contrato de
 la pantalla, no de la tecnología que la renderiza.
+
+**La única excepción es una pantalla que no muestra datos del usuario,** como la de estado del
+sistema: no tiene estado vacío, porque no hay una consulta que pueda funcionar y no traer nada.
+Los otros tres se implementan y se testean igual.
 
 ## 3. Artefactos de una funcionalidad
 

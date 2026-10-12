@@ -7,12 +7,14 @@ import os
 from alembic import context
 from sqlalchemy import create_engine
 
+from app.constants import EnvVar
+
 config = context.config
 
 
 def database_url() -> str:
     # A test passes the URL of its own empty database; every other run uses the environment.
-    return config.get_main_option("sqlalchemy.url") or os.environ["DATABASE_URL"]
+    return config.get_main_option("sqlalchemy.url") or os.environ[EnvVar.DATABASE_URL]
 
 
 def run_migrations() -> None:

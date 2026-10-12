@@ -2,7 +2,7 @@
 # checks, the repository verifiers and the secret scan, run in docs-quality.yml.
 #
 # Each action is pinned to its commit hash, with the version in a comment. No check needs a
-# stored secret. The dashboard parts are added when the dashboard exists.
+# stored secret.
 name: Aplicación — calidad
 
 on:
@@ -22,7 +22,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # No job pushes or needs the token after the checkout.
           persist-credentials: false
@@ -62,7 +62,7 @@ jobs:
     env:
       TEST_DATABASE_URL: postgresql+psycopg://platita:platita@127.0.0.1:5432/platita
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # No job pushes or needs the token after the checkout.
           persist-credentials: false
@@ -82,7 +82,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # No job pushes or needs the token after the checkout.
           persist-credentials: false
@@ -94,3 +94,78 @@ jobs:
       - run: pip install "$(grep '^pip-audit==' requirements-dev.txt)"
       # Blocks on any vulnerability that has a fix: the tool does not filter by severity.
       - run: pip-audit -r requirements.txt
+
+  dashboard:
+    name: Dashboard — lint, tipos, tests y compilación
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No job pushes or needs the token after the checkout.
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      # The four states of every screen, against a simulated API.
+      - run: npm test
+      - run: npm run build
+
+  dashboard-dependencias:
+    name: Dashboard — vulnerabilidades en dependencias
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No job pushes or needs the token after the checkout.
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      # Blocks from high severity up (ADR 0021).
+      - run: npm audit --audit-level=high
+
+  contrato:
+    name: El cliente del dashboard coincide con el contrato de la API
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No job pushes or needs the token after the checkout.
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.14'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: pip install -r requirements.txt
+        working-directory: backend
+      - name: Export the contract from the API
+        run: python -m app.adapters.inbound.api.export_openapi > ../frontend/src/api/openapi.json
+        working-directory: backend
+      - run: npm ci
+        working-directory: frontend
+      - name: Generate the dashboard types from the contract
+        run: npm run api:generate
+        working-directory: frontend
+      - name: Neither file changed
+        # Both are versioned. If the API changed and they were not regenerated, it shows here.
+        run: git diff --exit-code -- frontend/src/api
