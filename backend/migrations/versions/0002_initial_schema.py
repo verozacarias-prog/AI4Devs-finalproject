@@ -879,6 +879,16 @@ CREATE_FUNCTIONS: tuple[str, ...] = (
         currencies INTEGER;
         refunded_type TEXT;
     BEGIN
+        -- A pair is deleted by marking both halves; the link between them stays.
+        IF TG_OP = 'UPDATE'
+            AND OLD.paired_with IS NOT NULL
+            AND NEW.paired_with IS DISTINCT FROM OLD.paired_with THEN
+            RAISE EXCEPTION 'paired_with does not change once set'
+                USING ERRCODE = 'check_violation',
+                      TABLE = 'transaction',
+                      CONSTRAINT = 'tg_transaction_pair_fixed';
+        END IF;
+
         SELECT a.type,
                a.currency,
                CAST(a.created_at AT TIME ZONE COALESCE(u.time_zone, 'UTC') AS DATE)
