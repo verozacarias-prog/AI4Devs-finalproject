@@ -531,6 +531,9 @@ erDiagram
   `account`). La tabla de usuarios es `app_user` y no `user`, porque `user` es palabra reservada
   en PostgreSQL y obligaría a escribirla entre comillas en todo SQL escrito a mano. La entidad del
   dominio sigue siendo `User`.
+- **Esquema**: todas las tablas viven en `public`, el esquema por defecto de PostgreSQL. No hay
+  un esquema propio: con una sola base y una sola aplicación no separa nada, y una consulta
+  nombra la tabla sola, como `SELECT * FROM currency`.
 
 ### **3.2. Descripción de entidades principales:**
 
