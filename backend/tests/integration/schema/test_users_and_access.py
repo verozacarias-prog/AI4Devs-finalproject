@@ -105,6 +105,14 @@ def test_a_currency_code_outside_the_catalog_is_rejected_in_every_currency_colum
         insert(rows)
 
 
+def test_a_phone_belongs_to_one_user(rows: Rows) -> None:
+    # Case 142.
+    rows.user(whatsapp_phone="+5491100000001")
+
+    with rows.rejected_by("uq_app_user_whatsapp_phone"):
+        rows.user(whatsapp_phone="+5491100000001")
+
+
 def test_a_user_keeps_a_phone_unless_the_account_is_deleted(rows: Rows) -> None:
     # Case 116.
     rows.user()

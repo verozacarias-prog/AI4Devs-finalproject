@@ -148,6 +148,28 @@ def test_the_source_of_a_transfer_comes_from_a_closed_set(rows: Rows, wallets: W
         rows.transfer(wallets.user, wallets.pesos, wallets.savings, source=OUTSIDE_THE_SET)
 
 
+@pytest.mark.parametrize("rate", [Decimal("0"), Decimal("-1200")])
+def test_the_exchange_rate_of_a_transfer_is_positive(
+    rows: Rows, wallets: Wallets, rate: Decimal
+) -> None:
+    # Case 144.
+    rows.transfer(wallets.user, wallets.pesos, wallets.dollars, **_to_dollars())
+
+    with rows.rejected_by("ck_transfer_exchange_rate"):
+        rows.transfer(
+            wallets.user, wallets.pesos, wallets.dollars, **_to_dollars(exchange_rate=rate)
+        )
+
+
+def test_the_type_of_a_rule_is_expense_or_income(rows: Rows) -> None:
+    # Case 143.
+    home = rows.home()
+    rows.rule(home)
+
+    with rows.rejected_by("ck_recurring_rule_type"):
+        rows.rule(home, type=OUTSIDE_THE_SET)
+
+
 def test_a_rule_charges_the_budget_of_a_user_or_of_a_group_never_of_none(rows: Rows) -> None:
     # Case 67.
     home = rows.home()

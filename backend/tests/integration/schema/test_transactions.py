@@ -1,4 +1,4 @@
-"""TRANSACTION: cases 39 to 62, and cases 134, 136 and 138."""
+"""TRANSACTION: cases 39 to 62, and cases 134, 136, 138 and 139."""
 
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ from tests.integration.schema.names import (
     OUTSIDE_THE_SET,
     OWNER,
     PESOS_PER_DOLLAR,
+    Table,
 )
 from tests.integration.schema.rows import MOVEMENT_DATE, Home, Rows
 
@@ -315,6 +316,29 @@ def test_the_individual_half_of_a_pair_is_in_a_period_of_its_own_user(
 
     with rows.rejected_by("tg_transaction_pair_individual_owner"):
         _pair(rows, setting, income={"budget_period_id": foreign_period})
+
+
+def test_paired_with_does_not_change_once_set(rows: Rows, setting: PairSetting) -> None:
+    # Case 139. A withdrawal is deleted by marking both halves; the link stays.
+    expense, income = uuid.uuid4(), uuid.uuid4()
+    rows.transaction(
+        setting.home, id=expense, paired_with=income, budget_period_id=setting.group_period
+    )
+    rows.transaction(
+        setting.home,
+        id=income,
+        paired_with=expense,
+        type=INCOME,
+        category_id=setting.income_category,
+    )
+    rows.check_deferred()
+    rows.update(Table.TRANSACTION, expense, description="retiro de marzo")
+    another = rows.transaction(setting.home)
+
+    with rows.rejected_by("tg_transaction_pair_fixed"):
+        rows.update(Table.TRANSACTION, expense, paired_with=None)
+    with rows.rejected_by("tg_transaction_pair_fixed"):
+        rows.update(Table.TRANSACTION, expense, paired_with=another)
 
 
 def _occurrence(rule: uuid.UUID, day: date = MOVEMENT_DATE) -> dict[str, object]:

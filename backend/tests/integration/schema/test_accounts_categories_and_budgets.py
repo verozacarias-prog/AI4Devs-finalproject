@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
 
 import pytest
 
@@ -71,6 +72,19 @@ def test_closing_and_due_days_belong_to_a_credit_card_and_only_to_it(rows: Rows)
         rows.card(user, due_day=None)
     with rows.rejected_by("ck_account_card_days"):
         rows.account(user, closing_day=20, due_day=5)
+
+
+@pytest.mark.parametrize("column", ["closing_day", "due_day"])
+@pytest.mark.parametrize("day", [0, 32])
+def test_the_closing_and_due_days_of_a_card_go_from_1_to_31(
+    rows: Rows, column: str, day: int
+) -> None:
+    # Case 140.
+    user = rows.user()
+    rows.card(user, closing_day=31, due_day=1)
+
+    with rows.rejected_by(f"ck_account_{column}"):
+        rows.card(user, **{column: day})
 
 
 def test_a_user_has_no_two_categories_with_the_same_name_ignoring_case(rows: Rows) -> None:
@@ -196,6 +210,16 @@ def test_a_period_has_one_limit_per_category(rows: Rows) -> None:
 
     with rows.rejected_by("uq_budget_period_category"):
         rows.budget(home.period, home.category)
+
+
+@pytest.mark.parametrize("limit", [Decimal("0.00"), Decimal("-300000.00")])
+def test_the_limit_of_a_budget_is_positive(rows: Rows, limit: Decimal) -> None:
+    # Case 141.
+    home = rows.home()
+    rows.budget(home.period, home.category)
+
+    with rows.rejected_by("ck_budget_limit_amount"):
+        rows.budget(home.period, rows.category(home.user), limit_amount=limit)
 
 
 def test_each_recipient_gets_one_alert_per_threshold_of_a_budget(rows: Rows) -> None:

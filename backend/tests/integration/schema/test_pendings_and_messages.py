@@ -191,6 +191,20 @@ def test_a_pending_expires_unless_it_comes_from_a_recurring_rule(rows: Rows, hom
         )
 
 
+def test_a_pending_has_a_rule_and_an_occurrence_date_or_neither(rows: Rows, home: Home) -> None:
+    # Case 145.
+    manual = rows.batch(home.user)
+    automatic = rows.batch(home.user, source=AUTOMATIC)
+    rule = rows.rule(home)
+    rows.pending(home.user, manual)
+    rows.pending(home.user, automatic, **_of_rule(rule))
+
+    with rows.rejected_by("ck_pending_transaction_rule_occurrence_together"):
+        rows.pending(home.user, automatic, position=2, **_of_rule(rule, occurrence_date=None))
+    with rows.rejected_by("ck_pending_transaction_rule_occurrence_together"):
+        rows.pending(home.user, manual, position=2, occurrence_date=MOVEMENT_DATE)
+
+
 RESULTS: dict[str, Callable[[Rows, Home], dict[str, object]]] = {
     "transaction": _promoted_to_transaction,
     "transfer": _promoted_to_transfer,
