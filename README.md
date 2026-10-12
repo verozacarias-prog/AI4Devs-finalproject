@@ -115,7 +115,7 @@ cd site && npm install                # solo para ver o regenerar el portal
 5. **Escribir los tests del backend y verlos fallar.** Es el primer commit del corte,
    `test(alcance): …`. Desde ahí, un test no se modifica ni se borra sin aprobación.
 6. **Implementar lo mínimo para que pasen,** y refactorizar en verde. Es el segundo commit,
-   `feat(alcance): …`. Los tests de los cuatro estados de una pantalla van en este mismo corte.
+   `feat(alcance): …`. Los tests de los estados de una pantalla van en este mismo corte.
    La documentación que el cambio afecta —API, modelo de datos, reglas de dominio— va en el
    mismo commit, y una decisión de arquitectura lleva su [ADR](docs/adr/).
 7. **Verificar antes de cada commit.** El hook corre solo los dos verificadores de

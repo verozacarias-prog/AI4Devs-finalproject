@@ -102,12 +102,13 @@ completo antes de escribir código.
 - Sin textos ni valores sueltos en el código: van como constantes, en un lugar por tipo. En el
   backend, `app/constants.py` (entornos, variables de entorno, valores por defecto),
   `app/messages.py` (todo mensaje para una persona), `adapters/inbound/api/routes.py` (las
-  rutas de la API y los valores de sus respuestas), `adapters/outbound/observability/events.py`
+  rutas de la API y los valores de sus respuestas), `adapters/inbound/api/security_headers.py`
+  (los encabezados de seguridad), `adapters/outbound/observability/events.py`
   (eventos, campos, nombres y reglas de los registros) y `adapters/outbound/postgres/queries.py`
   (el SQL escrito a mano). Quedan en su lugar solo las palabras que define una librería, como
   el nombre de un parámetro suyo, el SQL de cada migración, que es su contenido, y lo que
-  vive en un archivo estático del dashboard: el título de `index.html` y el ícono. En el dashboard, `src/messages.ts` (todo texto que se muestra) y
-  `src/api/routes.ts`. Los tests sí escriben el valor literal: comprueban lo que se ve desde
+  vive en un archivo estático del dashboard: el título de `index.html` y el ícono. En el dashboard, `src/messages.ts` (todo texto que se muestra),
+  `src/api/routes.ts` (las rutas de la API) y `src/constants.ts` (el resto). Los tests sí escriben el valor literal: comprueban lo que se ve desde
   afuera.
 
 ## 7. Seguridad

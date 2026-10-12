@@ -8,7 +8,7 @@ import { MESSAGES } from '../messages'
  */
 type State = { kind: 'loading' } | { kind: 'content' } | { kind: 'error'; cause: ErrorCause }
 
-type ErrorCause = Exclude<Readiness['kind'], 'ready'>
+type ErrorCause = Exclude<Readiness['kind'], 'ready' | 'cancelled'>
 
 const TEXT = MESSAGES.status
 
@@ -40,16 +40,16 @@ export function StatusPage({ timeoutMs }: Props) {
   const statusLine = useRef<HTMLParagraphElement>(null)
 
   useEffect(() => {
-    let cancelled = false
-    void checkReadiness(timeoutMs).then((readiness) => {
-      if (cancelled) return
+    // Abandoned when the screen goes away or a new attempt starts, so no request is left
+    // alive behind it.
+    const abandon = new AbortController()
+    void checkReadiness({ timeoutMs, signal: abandon.signal }).then((readiness) => {
+      if (readiness.kind === 'cancelled') return
       setState(
         readiness.kind === 'ready' ? { kind: 'content' } : { kind: 'error', cause: readiness.kind },
       )
     })
-    return () => {
-      cancelled = true
-    }
+    return () => abandon.abort()
   }, [attempt, timeoutMs])
 
   function retry() {

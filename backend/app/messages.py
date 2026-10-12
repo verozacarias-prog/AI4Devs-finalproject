@@ -9,3 +9,6 @@ from __future__ import annotations
 # Start-up errors. They name the variable and never show a value.
 MISSING_ENV_VAR = "Missing required environment variable: {name}"
 INVALID_ENV_VAR = "{name} must be one of: {allowed}"
+
+# The body of the answer to an error nobody handled. It never describes the error.
+INTERNAL_SERVER_ERROR = "Internal Server Error"

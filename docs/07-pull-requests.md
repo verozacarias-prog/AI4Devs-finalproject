@@ -15,7 +15,7 @@ desde [`features/TEMPLATE/pr.md`](features/TEMPLATE/pr.md).
 ### Funcionalidad
 
 - [ ] Cumple los criterios de aceptación de la historia de usuario enlazada.
-- [ ] Si toca una pantalla, los cuatro estados están implementados y se ven en las capturas.
+- [ ] Si toca una pantalla, sus estados están implementados y se ven en las capturas: los cuatro, o tres si no muestra datos del usuario.
 - [ ] El corte está completo de punta a punta: no quedó backend sin frontend ni al revés.
 
 ### Dominio

@@ -8,8 +8,10 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 
-from fastapi import Request, Response
+from fastapi import Request, Response, status
+from fastapi.responses import PlainTextResponse
 
+from app import messages
 from app.adapters.inbound.api.routes import DASHBOARD_PREFIX
 
 # Sent with every response.
@@ -38,11 +40,25 @@ DASHBOARD_HEADERS = {
 }
 
 
+def security_headers_for(path: str) -> dict[str, str]:
+    """The headers a response to this path must carry."""
+    is_dashboard = path == DASHBOARD_PREFIX or path.startswith(f"{DASHBOARD_PREFIX}/")
+    return COMMON_HEADERS | DASHBOARD_HEADERS if is_dashboard else COMMON_HEADERS
+
+
 async def add_security_headers(
     request: Request, call_next: Callable[[Request], Awaitable[Response]]
 ) -> Response:
     response = await call_next(request)
-    response.headers.update(COMMON_HEADERS)
-    if request.url.path.startswith(DASHBOARD_PREFIX):
-        response.headers.update(DASHBOARD_HEADERS)
+    response.headers.update(security_headers_for(request.url.path))
     return response
+
+
+async def unexpected_error_response(request: Request, error: Exception) -> Response:
+    """The answer to an error nobody handled. It never passes through the middleware above,
+    so it carries the headers itself. It says nothing about the error."""
+    return PlainTextResponse(
+        messages.INTERNAL_SERVER_ERROR,
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        headers=security_headers_for(request.url.path),
+    )

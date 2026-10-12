@@ -1,11 +1,11 @@
 /**
- * Cases 35 to 39 and 45 to 48: the states of the status page. The API is simulated at the network level,
+ * Cases 35 to 39, 45 to 48 and 51: the states of the status page. The API is simulated at the network level,
  * so the page and its API call are tested together.
  */
 import { cleanup, render, screen } from '@testing-library/react'
 import { delay, http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
-import { afterAll, afterEach, beforeAll, expect, test } from 'vitest'
+import { afterAll, afterEach, beforeAll, expect, test, vi } from 'vitest'
 import { StatusPage } from './StatusPage'
 
 const READYZ = '*/readyz'
@@ -154,11 +154,60 @@ test('case 48: the status line is one fixed element across every state', async (
       return ready()
     }),
   )
+  api.use(http.get(READYZ, apiDown, { once: true }))
 
   render(<StatusPage />)
   const whileLoading = screen.getByRole('status')
+
+  const retry = await screen.findByRole('button', { name: 'Reintentar' })
+  expect(screen.getByRole('status')).toBe(whileLoading)
+
+  retry.click()
+  await screen.findByText('Consultando el estado…')
+  expect(screen.getByRole('status')).toBe(whileLoading)
+
   answer()
   await screen.findByText('Todo conectado')
-
   expect(screen.getByRole('status')).toBe(whileLoading)
+})
+
+test('case 46: running out of time while reading the answer is also a timeout', async () => {
+  const bodyThatNeverEnds = new ReadableStream({ start() {} })
+  api.use(
+    http.get(
+      READYZ,
+      () => new HttpResponse(bodyThatNeverEnds, { headers: { 'Content-Type': 'application/json' } }),
+    ),
+  )
+
+  render(<StatusPage timeoutMs={50} />)
+
+  const alert = await screen.findByRole('alert')
+  expect(alert.textContent).toContain('La API no respondió a tiempo.')
+})
+
+/** Simulates an API that never answers, and tells when the browser gives up on a request. */
+function apiThatRecordsAbandonedRequests() {
+  const abandoned: boolean[] = []
+  api.use(
+    http.get(READYZ, async ({ request }) => {
+      const index = abandoned.push(false) - 1
+      request.signal.addEventListener('abort', () => {
+        abandoned[index] = true
+      })
+      await delay('infinite')
+      return ready()
+    }),
+  )
+  return abandoned
+}
+
+test('case 51: closing the screen cancels the request in progress', async () => {
+  const abandoned = apiThatRecordsAbandonedRequests()
+
+  const { unmount } = render(<StatusPage />)
+  await vi.waitFor(() => expect(abandoned).toEqual([false]))
+  unmount()
+
+  await vi.waitFor(() => expect(abandoned).toEqual([true]))
 })
