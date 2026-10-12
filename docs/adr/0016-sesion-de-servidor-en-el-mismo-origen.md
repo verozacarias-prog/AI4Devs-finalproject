@@ -94,7 +94,7 @@ para que la cookie de sesión funcione sin un dominio propio.
      lo devuelve. Todavía no crea ningún usuario. La primera vez que la persona abre el enlace
      ve un **aviso de prueba**: que es un entorno de prueba, que lo que escriba lo procesa un
      proveedor de IA, y que sus datos pueden borrarse sin aviso. Recién cuando lo acepta se
-     crea su usuario de prueba, con la etiqueta como nombre, un teléfono inventado, la fecha y
+     crea su usuario de prueba, con la etiqueta como nombre, un teléfono inventado que empieza con `+000`, la fecha y
      la versión del aviso como consentimiento, y la misma plantilla que usa el script de datos
      de prueba: país, moneda, cuentas con saldo, un primer período confirmado y un perfil,
      todos inventados. Sin aceptar, no entra y no se guarda nada que haya escrito. Es la misma

@@ -104,6 +104,30 @@ se despliegan demostración y producción sigue como propuesta.
 | Demostración y pruebas | Mostrar el flujo conversacional por el chat web, sin WhatsApp, y que lo pruebe otra persona | Entorno `demo`: usuarios de prueba, chat web encendido y entrada por un enlace personal, uno por persona, con un aviso de prueba que se acepta la primera vez ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Tiene su propia base. Dónde se aloja está sin decidir | Con cada integración a la rama de la entrega |
 | Producción | Usuarios | Entorno `production`: Render, con los secretos en un Environment Group y registros en nivel INFO. No arranca con el chat web ni la entrada de desarrollo encendidos | Despliegue automático de Render cuando pasan los checks |
 
+**Datos de prueba.** Un usuario de prueba nace de una plantilla, la misma en `local` y en
+`demo`. Son datos inventados y a la vista, no valores por defecto de un registro
+([reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos)):
+
+- **Usuario:** Argentina, zona horaria de Buenos Aires, pesos como moneda primaria, el dólar MEP
+  como cotización de referencia y sin permiso para avisos.
+- **Cuentas:** "Galicia pesos", de banco, con $350.000; "Mercado Pago", billetera, con $80.000;
+  "Efectivo", con $25.000; y "Galicia USD", de banco, con US$500. Las dos "Galicia" están para
+  que una mención ambigua obligue a preguntar. No trae tarjeta ni cuenta de inversión.
+- **Primer período:** el de la regla del alta
+  ([reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)).
+- **Perfil:** tramo de ingreso `range_3`, una persona a cargo, sin deudas, fondo de emergencia
+  de 2 meses y objetivo de ahorrar.
+- **Teléfono:** empieza con `+000`, un código que ningún país tiene, así no puede ser el número
+  de nadie.
+
+En `local`, el script de datos de prueba crea tres usuarios con esa plantilla: Lucía, que tiene
+solo su presupuesto; Pablo, dueño del grupo "Casa"; y Sofía, miembro de "Casa". Sus teléfonos
+son `+000000000001` a `+000000000003`, y su consentimiento queda con la versión `local-seed-1` y
+la fecha en que corrió el script, para que nunca parezca que alguien aceptó algo. Se puede correr
+las veces que haga falta: a un usuario que ya existe, reconocido por su teléfono, no lo toca ni
+lo repara, y crea los que falten. Para empezar de cero se reinicia la base. Se niega a correr con
+el entorno en `demo` o en `production`.
+
 El entorno `demo` no figura en los costos de [1](#1-qué-se-suma-a-la-arquitectura): es una
 segunda instancia con su base, y cuánto cuesta depende del proveedor que se elija.
 

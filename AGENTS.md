@@ -57,16 +57,17 @@ de pre-commit. No son una recomendación: rompen el commit.
 
 ## 4. Mapa de carpetas
 
-- `backend/app/domain/entities/` — User, Account, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk.
-- `backend/app/domain/use_cases/` — RegisterTransaction, GetBudgetStatus, CalculateAccountBalance, GenerateProactiveAlert.
+- `backend/app/domain/entities/` — User, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk.
+- `backend/app/domain/use_cases/` — CreateTestUser, SeedTestData, RegisterTransaction, GetBudgetStatus, CalculateAccountBalance, GenerateProactiveAlert.
 - `backend/app/domain/ports/` — interfaces que el dominio declara y no implementa.
 - `backend/app/adapters/inbound/api/` — routers de FastAPI: traducen HTTP a llamadas a casos de uso. Incluye el chat web de desarrollo, que guarda el mensaje y no lo procesa.
 - `backend/app/adapters/inbound/whatsapp_webhook/` — traduce payloads de WhatsApp a llamadas a casos de uso.
 - `backend/app/adapters/inbound/message_worker/` — punto de entrada del worker: toma los mensajes guardados y los pasa a casos de uso.
 - `backend/app/adapters/inbound/scheduler/` — punto de entrada de los procesos programados: recurrentes, cierres de resumen, alertas, vencimientos, cotizaciones y borrado de cuentas, siempre por casos de uso.
-- `backend/app/adapters/inbound/cli/` — comandos de operación: carga de la base de conocimiento, habilitación de números, y enlaces personales del entorno `demo`, siempre por casos de uso.
+- `backend/app/adapters/inbound/cli/` — comandos de operación: datos de prueba del entorno `local`, carga de la base de conocimiento, habilitación de números, y enlaces personales del entorno `demo`, siempre por casos de uso.
 - `backend/app/adapters/outbound/postgres/` — repositorios SQLAlchemy que implementan los puertos `*_repository`, la unidad de trabajo y la creación de la conexión.
 - `backend/app/adapters/outbound/pgvector/` — implementación de `VectorStorePort`.
+- `backend/app/adapters/outbound/clock/` — implementación de `ClockPort` con el reloj de la máquina.
 - `backend/app/adapters/outbound/whatsapp_client/` — envío de mensajes salientes de WhatsApp.
 - `backend/app/adapters/outbound/email_reader/` — integración IMAP/Gmail (could-have, fuera del MVP).
 - `backend/app/adapters/outbound/exchange_rate_client/` — proveedor de cotizaciones e indicadores de mercado (tasa de plazo fijo, inflación).
@@ -101,6 +102,7 @@ completo antes de escribir código.
 - Sin `Any`.
 - Sin textos ni valores sueltos en el código: van como constantes, en un lugar por tipo. En el
   backend, `app/constants.py` (entornos, variables de entorno, valores por defecto),
+  `app/test_data.py` (la plantilla de un usuario de prueba y los usuarios de `local`),
   `app/messages.py` (todo mensaje para una persona), `adapters/inbound/api/routes.py` (las
   rutas de la API y los valores de sus respuestas), `adapters/inbound/api/security_headers.py`
   (los encabezados de seguridad), `adapters/outbound/observability/events.py`

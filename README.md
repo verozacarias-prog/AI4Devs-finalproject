@@ -169,6 +169,16 @@ docker compose up --build
 El dashboard queda en <http://127.0.0.1:8000/app/>, y muestra si llega a la API y la API a la
 base.
 
+Para tener con qué probar, el script de datos de prueba crea tres usuarios inventados, con sus
+cuentas, su primer período y un grupo. Se puede correr las veces que haga falta, y solo corre
+en el entorno `local`:
+
+```sh
+docker compose exec api python -m app.adapters.inbound.cli.seed_test_data
+```
+
+Qué trae cada usuario está en [operación](docs/operacion.md#2-entornos).
+
 Para correr los tests del backend, con la base de Compose levantada:
 
 ```sh
