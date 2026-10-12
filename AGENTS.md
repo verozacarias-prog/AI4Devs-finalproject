@@ -189,10 +189,12 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
 - Backend, desde `backend/` y con su entorno activado: `pytest` corre los tests, `ruff check .`
   y `ruff format --check .` el lint y el formato, `mypy` los tipos en modo estricto, y
   `pip-audit -r requirements.txt` las vulnerabilidades. Los tests de integración necesitan la
-  base de `docker compose up db`. Los cinco controles del pipeline están en el
+  base de `docker compose up db`. Los seis controles del pipeline están en el
   [ADR 0021](docs/adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md), y los
   corre el flujo `.github/workflows/app-quality.yml`. El otro flujo busca secretos con
   `gitleaks`; una excepción se anota en `.gitleaksignore`, nunca se desactiva el control.
+  El sexto, el análisis de seguridad con CodeQL, corre en `.github/workflows/codeql.yml` y no
+  tiene comando local: una alerta que no es un problema se descarta en GitHub con su motivo.
 - Dashboard, desde `frontend/`: `npm test` corre los tests de las pantallas, `npm run lint` el
   linter, `npm run typecheck` los tipos, `npm run build` la compilación y
   `npm audit --audit-level=high` las vulnerabilidades.

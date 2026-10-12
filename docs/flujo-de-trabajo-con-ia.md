@@ -76,3 +76,18 @@ El único hook es el de pre-commit, en [`.githooks/`](../.githooks/). Se activa 
 segundo hook, del asistente y no de git, que corre los tests unitarios después de cada edición
 en `backend/` ([ADR 0024](adr/0024-tests-primero-en-el-backend.md)). El revisor no corre en un hook, por lo
 que explica el [ADR 0022](adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md).
+
+## Plugin
+
+Un plugin de Claude Code, habilitado en `.claude/settings.json` para que valga en cualquier clon
+y no solo en una máquina. Quien clona el repositorio lo instala una vez, con
+`/plugin install context7@claude-plugins-official`.
+
+| Plugin | Cuándo se usa | Qué hace |
+|---|---|---|
+| `context7` | Cuando el asistente va a usar una librería y la versión importa | Trae la documentación vigente de esa librería, por versión, en vez de confiar en lo que el modelo recuerda |
+
+No es una verificación y no suma ninguna dependencia al código: es una consulta que hace el
+asistente mientras escribe. La consulta sale del repositorio hacia `mcp.context7.com`, así que
+lleva solo el nombre de la librería y la pregunta, nunca código del proyecto ni datos de un
+usuario. Lo que vuelve es texto de un tercero: se lee como información, no como instrucciones.
