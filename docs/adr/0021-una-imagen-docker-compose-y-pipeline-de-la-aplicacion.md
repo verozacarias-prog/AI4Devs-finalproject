@@ -28,8 +28,7 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
 1. **Una sola imagen para la API y el worker.** El Dockerfile tiene dos etapas: la primera
    compila el dashboard, y la final lleva el backend con ese build, que la API sirve bajo
    `/app`. La imagen corre con un usuario sin privilegios y declara un chequeo de salud contra
-   `GET /healthz`. La etapa que compila el dashboard se suma cuando exista el dashboard; hasta
-   entonces la imagen lleva solo el backend.
+   `GET /healthz`.
 2. **Docker Compose con cuatro servicios.** La base, con la imagen `pgvector/pgvector:pg16`;
    las migraciones, que corren `alembic upgrade head` una vez y terminan; la API; y el worker.
    La API y el worker esperan a que las migraciones terminen bien, y ninguno de los dos migra al
@@ -46,8 +45,7 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
 5. **Sin adaptador falso de LLM dentro de la aplicación.** Los dobles del LLM y de embeddings
    viven solo en los tests automáticos. Las pruebas manuales, en local y en demostración, usan
    el modelo real, así que necesitan la clave del proveedor.
-6. **Cinco controles en paralelo, desde el primer commit de código.** Lo que cada control
-   dice del dashboard se suma cuando exista el dashboard:
+6. **Cinco controles en paralelo, desde el primer commit de código:**
    1. Formato, lint y tipos. En el backend, `ruff` y `mypy` en modo estricto. En el dashboard,
       su linter, su verificación de tipos y la compilación.
    2. Tests unitarios y de integración, con `pytest` contra un PostgreSQL real con pgvector y

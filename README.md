@@ -159,13 +159,15 @@ está en [documentación viva](docs/documentacion-viva.md).
 
 ## Cómo ejecutar localmente
 
-Hace falta Docker. Levanta la base, las migraciones y la API:
+Hace falta Docker. Levanta la base, las migraciones y la API, que sirve también el dashboard:
 
 ```sh
 cp .env.example .env
 docker compose up --build
-curl http://127.0.0.1:8000/readyz         # {"status":"ok"} si la API llega a la base
 ```
+
+El dashboard queda en <http://127.0.0.1:8000/app/>, y muestra si llega a la API y la API a la
+base.
 
 Para correr los tests del backend, con la base de Compose levantada:
 
@@ -175,4 +177,13 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/pytest
 ```
 
-El dashboard y el worker se suman a medida que se construyen.
+Para trabajar en el dashboard con recarga automática, con Compose levantado:
+
+```sh
+cd frontend
+npm ci
+npm run dev                               # http://127.0.0.1:5173/app/
+npm test
+```
+
+El worker se suma cuando exista la tabla de mensajes.

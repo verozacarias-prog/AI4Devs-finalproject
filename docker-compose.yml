@@ -1,5 +1,6 @@
-# Local environment: the database, the migrations and the API, started with one command
-# (ADR 0021). The worker joins when the message tables exist.
+# Local environment: the database, the migrations and the API, which also serves the
+# dashboard under /app, started with one command (ADR 0021). The worker joins when the
+# message tables exist.
 #
 #   cp .env.example .env
 #   docker compose up --build

@@ -202,12 +202,20 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
         /embedding_client         # embeddings provider client
         /text_splitter             # the only place that imports langchain-text-splitters
       /observability              # wrappers of the LLM and embedding ports that record each call, and the JSON log format with its redaction filter
+    constants.py         # environments, environment variable names and default values
+    messages.py          # every message written for a person
     settings.py          # process configuration, read from environment variables
     main.py              # entry point of the API process
   /tests
   /migrations          # Alembic
-/frontend
-  ...
+/frontend                # React, TypeScript and Vite (ADR 0026)
+  /src
+    /api                 # API contract exported by the backend, the types generated from it, and the API paths
+    /pages               # one file per screen, with its test next to it
+    messages.ts          # every text the dashboard shows
+    design-tokens.css    # design tokens: the only place with colours, sizes and spacing
+    App.tsx
+    main.tsx
 docs/
   01-producto.md
   02-arquitectura.md
@@ -227,7 +235,7 @@ prompts.md
 llms.txt                    # descripción del proyecto para agentes de IA
 ```
 
-`/backend` existe desde el scaffold, con las carpetas que ya tienen código; las demás se crean con lo primero que va en ellas. `/frontend` es la estructura prevista para la Entrega 2.
+`/backend` y `/frontend` existen desde el scaffold, con las carpetas que ya tienen código; las demás se crean con lo primero que va en ellas.
 
 ### **2.4. Infraestructura y despliegue**
 

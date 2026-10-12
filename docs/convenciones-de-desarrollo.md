@@ -123,6 +123,10 @@ diferencia es de dominio, no cosmética:
 Esta regla aplica igual a la futura aplicación móvil: la máquina de estados es del contrato de
 la pantalla, no de la tecnología que la renderiza.
 
+**La única excepción es una pantalla que no muestra datos del usuario,** como la de estado del
+sistema: no tiene estado vacío, porque no hay una consulta que pueda funcionar y no traer nada.
+Los otros tres se implementan y se testean igual.
+
 ## 3. Artefactos de una funcionalidad
 
 Cada funcionalidad tiene su carpeta en `docs/features/FEAT-XXX/`, creada copiando

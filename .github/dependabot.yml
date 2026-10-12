@@ -3,7 +3,6 @@
 # que en este fork es la rama de la entrega en curso. En un fork hay que
 # habilitarlo a mano, en Settings → Code security.
 #
-# Cuando exista el dashboard se suma acá frontend/ (npm).
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -24,6 +23,11 @@ updates:
   # La imagen base del Dockerfile.
   - package-ecosystem: docker
     directory: /
+    schedule:
+      interval: weekly
+      day: monday
+  - package-ecosystem: npm
+    directory: /frontend
     schedule:
       interval: weekly
       day: monday

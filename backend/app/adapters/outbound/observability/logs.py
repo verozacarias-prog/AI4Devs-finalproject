@@ -33,27 +33,37 @@ from contextvars import ContextVar
 from datetime import UTC, datetime
 from typing import TextIO
 
-LOGGER_NAME = "platita"
-REDACTED = "[redacted]"
+from app.adapters.outbound.observability.events import (
+    CLASS_NAME_PATTERN,
+    EVENT_NAME_PATTERN,
+    HANDLER_NAME,
+    IDENTIFIER_PATTERN,
+    MAX_DURATION_MS,
+    MAX_EVENT_LENGTH,
+    MAX_RESULT_CODE,
+    MIN_RESULT_CODE,
+    REDACTED,
+    SHORT_WORD_PATTERN,
+    Field,
+    LineKey,
+    LoggerName,
+)
+from app.constants import ProcessName
+
+__all__ = ["REDACTED", "build_handler", "configure_logging", "request_id_var"]
 
 LogValue = str | int | float | bool | None
 
 # Identifier of the API request being served. A request that is not a message gets one when
 # it arrives; the worker will set the message id the same way.
-request_id_var: ContextVar[str | None] = ContextVar("request_id", default=None)
+request_id_var: ContextVar[str | None] = ContextVar(Field.REQUEST_ID, default=None)
 
-MAX_EVENT_LENGTH = 64
-MAX_DURATION_MS = 3_600_000
-
-_EVENT_NAME = re.compile(r"[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+")
-_IDENTIFIER = re.compile(r"[0-9a-f]{32}|[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}")
-_CLASS_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,63}")
-_SHORT_WORD = re.compile(r"[a-z][a-z_]{0,31}")
+_EVENT_NAME = re.compile(EVENT_NAME_PATTERN)
+_IDENTIFIER = re.compile(IDENTIFIER_PATTERN)
+_CLASS_NAME = re.compile(CLASS_NAME_PATTERN)
+_SHORT_WORD = re.compile(SHORT_WORD_PATTERN)
+# The attributes every record has, as the logging library names them.
 _RECORD_ATTRIBUTES = frozenset(logging.makeLogRecord({}).__dict__) | {"message", "asctime"}
-_HANDLER_NAME = "platita-json"
-# The web server logs every access with the client IP; that log is turned off.
-_SERVER_ACCESS_LOGGER = "uvicorn.access"
-_SERVER_LOGGERS = ("uvicorn", "uvicorn.error")
 
 
 def _extra_fields(record: logging.LogRecord) -> list[str]:
@@ -72,17 +82,19 @@ def _matches(pattern: re.Pattern[str]) -> Callable[[object], bool]:
 
 
 def _is_result(value: object) -> bool:
-    return _is_integer_between(100, 599)(value) or _matches(_SHORT_WORD)(value)
+    return _is_integer_between(MIN_RESULT_CODE, MAX_RESULT_CODE)(value) or _matches(_SHORT_WORD)(
+        value
+    )
 
 
 # The fields that may appear in a log line, each with the only shape it accepts.
 FIELD_RULES: dict[str, Callable[[object], bool]] = {
-    "message_id": _matches(_IDENTIFIER),
-    "request_id": _matches(_IDENTIFIER),
-    "user_id": _matches(_IDENTIFIER),
-    "duration_ms": _is_integer_between(0, MAX_DURATION_MS),
-    "result": _is_result,
-    "error_type": _matches(_CLASS_NAME),
+    Field.MESSAGE_ID: _matches(_IDENTIFIER),
+    Field.REQUEST_ID: _matches(_IDENTIFIER),
+    Field.USER_ID: _matches(_IDENTIFIER),
+    Field.DURATION_MS: _is_integer_between(0, MAX_DURATION_MS),
+    Field.RESULT: _is_result,
+    Field.ERROR_TYPE: _matches(_CLASS_NAME),
 }
 
 
@@ -114,24 +126,24 @@ class JsonFormatter(logging.Formatter):
         if len(event) > MAX_EVENT_LENGTH or not _EVENT_NAME.fullmatch(event):
             event = REDACTED
         line: dict[str, LogValue] = {
-            "ts": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
-            "level": record.levelname,
-            "process": self._process,
-            "version": self._version,
-            "logger": record.name,
-            "event": event,
-            "request_id": request_id_var.get(),
+            LineKey.TIMESTAMP: datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
+            LineKey.LEVEL: record.levelname,
+            LineKey.PROCESS: self._process,
+            LineKey.VERSION: self._version,
+            LineKey.LOGGER: record.name,
+            LineKey.EVENT: event,
+            Field.REQUEST_ID: request_id_var.get(),
         }
         for name in _extra_fields(record):
             line[name] = record.__dict__[name]
         if record.exc_info and record.exc_info[0] is not None:
-            line["error_type"] = record.exc_info[0].__name__
+            line[Field.ERROR_TYPE] = record.exc_info[0].__name__
         return json.dumps(line, ensure_ascii=False)
 
 
-def build_handler(stream: TextIO, version: str, process: str = "api") -> logging.Handler:
+def build_handler(stream: TextIO, version: str, process: str = ProcessName.API) -> logging.Handler:
     handler = logging.StreamHandler(stream)
-    handler.set_name(_HANDLER_NAME)
+    handler.set_name(HANDLER_NAME)
     # Even if a library sets its own logger to DEBUG, the line is not emitted.
     handler.setLevel(logging.INFO)
     handler.addFilter(RedactionFilter())
@@ -139,14 +151,14 @@ def build_handler(stream: TextIO, version: str, process: str = "api") -> logging
     return handler
 
 
-def configure_logging(stream: TextIO, version: str, process: str = "api") -> None:
+def configure_logging(stream: TextIO, version: str, process: str = ProcessName.API) -> None:
     root = logging.getLogger()
-    root.handlers = [h for h in root.handlers if h.get_name() != _HANDLER_NAME]
+    root.handlers = [h for h in root.handlers if h.get_name() != HANDLER_NAME]
     root.addHandler(build_handler(stream, version, process))
     # Libraries log from WARNING up; the application and the server, from INFO. DEBUG is
     # where payloads end up dumped, so it is never enabled.
     root.setLevel(logging.WARNING)
-    logging.getLogger(LOGGER_NAME).setLevel(logging.INFO)
+    logging.getLogger(LoggerName.APP).setLevel(logging.INFO)
     # If a handler ever fails, logging must not print the record to stderr on its own.
     logging.raiseExceptions = False
     # Python warnings become log records of "py.warnings" instead of raw text on stderr.
@@ -156,11 +168,12 @@ def configure_logging(stream: TextIO, version: str, process: str = "api") -> Non
     logging.captureWarnings(True)
 
     # However the server was started, its lines go to the root handler and nowhere else.
-    for name in _SERVER_LOGGERS:
+    for name in (LoggerName.SERVER, LoggerName.SERVER_ERROR):
         server_logger = logging.getLogger(name)
         server_logger.handlers = []
         server_logger.propagate = True
         server_logger.setLevel(logging.INFO)
-    access_logger = logging.getLogger(_SERVER_ACCESS_LOGGER)
+    # The web server logs every access with the client IP; that log is turned off.
+    access_logger = logging.getLogger(LoggerName.SERVER_ACCESS)
     access_logger.handlers = []
     access_logger.disabled = True

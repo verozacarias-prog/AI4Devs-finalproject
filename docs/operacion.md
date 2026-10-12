@@ -125,14 +125,14 @@ obligatorios.
 |---|---|---|---|
 | Formato y lint | ruff | El merge | Decidido, control 1. Ya corre |
 | Tipos | mypy en modo estricto, que hace cumplir la prohibición de `Any` | El merge | Decidido, control 1. Ya corre |
-| Frontend | lint, tipos y build | El merge | Decidido, control 1 |
-| Tests unitarios | pytest, y los tests de los cuatro estados del dashboard | El merge | Decidido, control 2. Los del backend ya corren |
+| Frontend | lint, tipos y build | El merge | Decidido, control 1. Ya corre |
+| Tests unitarios | pytest, y los tests de los cuatro estados del dashboard | El merge | Decidido, control 2. Ya corre |
 | Tests de integración, incluido el aislamiento entre usuarios | pytest contra PostgreSQL con pgvector, con dobles para el LLM y los embeddings | El merge | Decidido, control 2. Ya corre |
 | Migraciones desde una base vacía | `alembic upgrade head` en cada corrida de los tests | El merge | Decidido, control 2. Ya corre |
 | Regla hexagonal y documentación | Los dos verificadores que ya existen | El merge | Decidido, control 3 |
 | Secretos en el código | gitleaks | El merge | Decidido, control 4. Ya corre |
-| Vulnerabilidades en dependencias | pip-audit y `npm audit` | El merge. En Python, ante cualquiera que tenga arreglo; en el dashboard, desde severidad alta | Decidido, control 5 |
-| Actualización de dependencias | Dependabot, una vez por semana | No: abre un pull request | Decidido, control 5. Ya corre para las acciones, el portal, el backend y la imagen |
+| Vulnerabilidades en dependencias | pip-audit y `npm audit` | El merge. En Python, ante cualquiera que tenga arreglo; en el dashboard, desde severidad alta | Decidido, control 5. Ya corre |
+| Actualización de dependencias | Dependabot, una vez por semana | No: abre un pull request | Decidido, control 5. Ya corre para las acciones, el portal, el backend, el dashboard y la imagen |
 | Migraciones desde el esquema de la versión anterior | `alembic upgrade head` sobre el esquema anterior, más `alembic check` | El merge | Entrega final |
 | Imagen | build de Docker, escaneo e inventario de componentes | El merge, si hay críticas con arreglo | Entrega final |
 | Migración en producción | `preDeployCommand` de Render | El despliegue | Propuesto |

@@ -1,0 +1,77 @@
+@import './design-tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height);
+}
+
+.app {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-4);
+}
+
+.app__title {
+  margin: 0 0 var(--space-6);
+  color: var(--color-brand);
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-strong);
+}
+
+.card {
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
+.card__heading {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-strong);
+}
+
+.card__text {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.status {
+  margin: 0 0 var(--space-2);
+  font-weight: var(--font-weight-strong);
+}
+
+.status--ok {
+  color: var(--color-success);
+}
+
+.status--error {
+  color: var(--color-danger);
+}
+
+.button {
+  margin-top: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+  border: 0;
+  border-radius: var(--radius-medium);
+  font: inherit;
+  font-weight: var(--font-weight-strong);
+  cursor: pointer;
+}
+
+.button:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--space-1);
+}
