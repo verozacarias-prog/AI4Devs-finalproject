@@ -185,6 +185,14 @@ los datos en lotes con un script que se puede repetir, el código pasa a leer so
 viejo se borra cuando la versión anterior lleva al menos 24 horas estable. Los índices se crean
 con `CONCURRENTLY`.
 
+**Roles de la base.** La migración del esquema crea el rol `platita_app`, que no puede eliminar
+movimientos ([ADR 0015](adr/0015-borrado-logico-de-movimientos.md)). Para eso, el usuario que
+corre las migraciones necesita permiso para crear roles; en una base administrada hay que
+comprobarlo en el primer despliegue. El rol no inicia sesión por sí mismo. Cómo se conecta la
+aplicación con él en cada entorno todavía no está decidido, y figura en la
+[hoja de ruta](hoja-de-ruta.md#entrega-2): hasta entonces la API usa el mismo usuario que las
+migraciones, y la prohibición existe en la base pero no protege.
+
 **Vuelta atrás del código.** Con el botón *Rollback* de Render, que redespliega la imagen
 anterior. Funciona porque la migración ya aplicada es compatible con esa versión. Hay una
 trampa: la versión anterior no conoce la revisión nueva de Alembic, así que si el paso previo
