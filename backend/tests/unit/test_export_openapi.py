@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from app.adapters.inbound.cli.export_openapi import export_openapi
+from app.adapters.inbound.api.export_openapi import export_openapi
 
 
 def test_the_contract_is_exported_as_json_with_the_health_routes() -> None:

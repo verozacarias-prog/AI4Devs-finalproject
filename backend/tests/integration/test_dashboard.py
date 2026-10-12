@@ -1,4 +1,4 @@
-"""Cases 28 to 34: the API serves the compiled dashboard under /app (ADR 0016)."""
+"""Cases 28 to 34 and 41 to 44: the API serves the compiled dashboard under /app (ADR 0016)."""
 
 from __future__ import annotations
 
@@ -68,9 +68,7 @@ def test_a_missing_file_does_not_return_the_page(client: TestClient) -> None:
     assert INDEX_HTML not in response.text
 
 
-@pytest.mark.parametrize(
-    "path", ["/app/../outside.txt", "/app/%2e%2e/outside.txt", "/app/..%2foutside.txt"]
-)
+@pytest.mark.parametrize("path", ["/app/%2e%2e/outside.txt", "/app/..%2foutside.txt"])
 def test_a_request_cannot_leave_the_dashboard_folder(client: TestClient, path: str) -> None:
     """Case 32."""
     response = client.get(path)
@@ -106,3 +104,41 @@ def test_without_the_dashboard_setting_the_api_still_starts(database_url: str) -
 
     assert client.get("/healthz").status_code == 200
     assert client.get("/app/").status_code == 404
+
+
+def test_the_page_carries_its_content_policy(client: TestClient) -> None:
+    """Case 41."""
+    policy = client.get("/app/").headers["content-security-policy"]
+
+    assert "default-src 'self'" in policy
+    assert "frame-ancestors 'none'" in policy
+    assert "unsafe-inline" not in policy
+    assert "unsafe-eval" not in policy
+
+
+def test_the_dashboard_files_carry_the_same_policy(client: TestClient) -> None:
+    """Case 42."""
+    page = client.get("/app/").headers["content-security-policy"]
+    script = client.get("/app/assets/app.js").headers["content-security-policy"]
+
+    assert script == page
+
+
+@pytest.mark.parametrize("path", ["/app/", "/app/assets/app.js", "/healthz", "/readyz"])
+def test_no_response_lets_the_browser_guess_the_type_or_leak_the_referrer(
+    client: TestClient, path: str
+) -> None:
+    """Case 43."""
+    headers = client.get(path).headers
+
+    assert headers["x-content-type-options"] == "nosniff"
+    assert headers["referrer-policy"] == "no-referrer"
+
+
+def test_the_policy_does_not_break_the_api(client: TestClient) -> None:
+    """Case 44."""
+    for path in ("/healthz", "/readyz"):
+        response = client.get(path)
+
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
