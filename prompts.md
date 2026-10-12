@@ -48,7 +48,8 @@ dejó, en síntesis:
 | Validación contra el módulo de RAG y alcance de la entrega 2 | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Contrastar once definiciones de diseño contra la especificación en modo de solo lectura, resolver cada conflicto con la autora y escribir el resultado en `docs/`, en tres ADR nuevos y en el verificador de arquitectura |
 | Validación contra los módulos de DevSecOps y de observabilidad | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Contrastar seis definiciones de infraestructura, pipeline, revisión de código, seguridad de la capa de IA y observabilidad contra la especificación en modo de solo lectura, resolver los conflictos con la autora y escribir el resultado en `docs/`, en tres ADR nuevos, en un agente revisor y en un command |
 | Elección del modelo de lenguaje | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`). Modelos evaluados: GPT-5.4 mini, GPT-5.4 nano y Claude Haiku 5.5 | Armar con la autora los casos y sus resultados esperados, escribir y correr la evaluación contra los tres modelos, y registrar la elección en un ADR |
-| Código, tests y despliegue | *(pendiente — Entrega 2)* | | |
+| Migración del esquema inicial, con tests primero | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`). El agente `pr-reviewer` corrió dos veces, en un contexto separado | Proponer los casos de test y esperar la aprobación de la autora, escribir los tests y verlos fallar, escribir la migración, y cerrar con `/spec-drift` y el agente revisor |
+| Resto del código, tests y despliegue | *(pendiente — Entrega 2)* | | |
 
 La auditoría de repos de referencia (ver §1, Prompt 2) recomendó configurar y versionar las rules antes de empezar a codear, porque **ninguno de los dos proyectos de ejemplo del curso lo había hecho**. Esa recomendación se siguió al cierre de la Entrega 1. La configuración resultante —contratos, skill, commands, verificadores y hook— está descrita en [`docs/flujo-de-trabajo-con-ia.md`](docs/flujo-de-trabajo-con-ia.md) y no se repite acá.
 
@@ -428,6 +429,32 @@ La IA la había registrado primero en un ADR nuevo, porque la convención declar
 
 ---
 
+**Prompt 6** — *Claude Code · la migración del esquema, con los casos aprobados antes de cada test*
+
+> "abrí tarea-esquema y pasame los casos"
+>
+> *(ante la propuesta de un rol de base sin permiso de borrado)* ""sin DELETE sobre esas tres tablas;" cuales son esas tres tablas, y porque el usuario mas poderoso no podria borrar registros de esa tabla?"
+>
+> *(con la lista de 135 casos a la vista)* "apruebo los cuatro bloques, sumá el D, actualiza adrs y el ticket 3"
+>
+> *(al revisar los tests)* "Recorda que en sesiones anteriores, sino buscar el pr, te hice poner un monton de variables que habias puesto hardcodeada, si paso lo mismo ahora, corregilo e incluilo como normal para no que vuelva a pasar"
+>
+> "lo que va a pasar mucho con TDD es que primero van a existir las constantes en el test y despues en el codigo pero las variables tienen que vivir en la aplicacion y los test pueden usar esas constantes, no al revez, que una constante exista en los test y de ahi la use la aplicacion, asi que si se crean primero las constantes en el test y despues se necesitan en la aplicacion hay que moverlas"
+>
+> *(ante las seis diferencias de `/spec-drift`)* "coincido con todos los "cual parece estar mal""
+>
+> *(sobre si un par de retiro o aporte se puede desarmar)* "apruebo los casos, paired_with no cambia una vez puesto"
+
+*Qué devolvió y qué se decidió:* es la primera tarea con código de dominio, y la primera hecha con la regla de tests primero del [ADR 0024](docs/adr/0024-tests-primero-en-el-backend.md). La IA propuso 135 casos sacados de los criterios del [Ticket 3](docs/06-tickets.md) y del [modelo de datos](docs/03-modelo-de-datos.md), y no escribió ningún test hasta la aprobación. Al armarlos apareció que los criterios del ticket eran más cortos que el modelo: veinte restricciones estaban declaradas y nadie las iba a probar. La autora las sumó al ticket.
+
+Los tests se escribieron contra una base todavía sin tablas, fallaron los 197, y recién entonces se escribió la migración: 28 tablas con sus restricciones y triggers, el catálogo de monedas y de categorías, y el rol `platita_app`, que no puede eliminar movimientos ([ADR 0015](docs/adr/0015-borrado-logico-de-movimientos.md)). Cada rechazo comprueba el nombre de la restricción que respondió, para que un test no pase por un error distinto del que busca.
+
+Las decisiones que la especificación no traía las tomó la autora, de a una: cómo se llama el rol y quién lo crea, que el ingreso del perfil se guarda como código de tramo, que las categorías se llaman "Vivienda" y "Servicios", que el catálogo son las monedas nacionales en uso, y que el vínculo de un par no cambia una vez puesto.
+
+El cierre encontró más que la escritura. `/spec-drift` comparó la migración con el modelo columna por columna y dio seis diferencias; dos eran del código, que dejaba pasar lo que el modelo decía que la base impide. El agente revisor, en dos corridas, encontró que un `UPDATE` podía romper un par, que un gasto común se podía imputar al período individual de otro usuario, siete restricciones sin test y una moneda faltante. La tarea terminó en 146 casos y 283 tests, en el [pull request #30](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/30).
+
+---
+
 ## 4. Especificación de la API
 
 *Los tres endpoints principales (`POST /webhook/whatsapp`, `GET /budgets/{budget_id}`, `POST /transactions`) se derivaron de las decisiones de modelo de datos de §3, no de un prompt independiente. El diagnóstico arquitectónico de §2.2 (Prompt 3) sumó siete operaciones más, hasta llegar a diez: la verificación del webhook que exige Meta (`GET /webhook/whatsapp`), el login (`POST /auth/code`, `POST /auth/token`), la exportación de un grupo familiar y los derechos de acceso y supresión (`GET /me/export`, `POST` y `DELETE /me/deletion`). La plantilla pide tres; se documentan todas porque forman parte del alcance comprometido y un contrato incompleto sería justamente la divergencia entre documentación y código que se quiere evitar. El contrato OpenAPI completo se genera desde el código en la Entrega 2 — patrón tomado de la auditoría de repos de referencia (§1, Prompt 2), que identificó los ERD y árboles de carpetas generados **a partir del código real** como marcador de una entrega sólida.*
@@ -619,6 +646,11 @@ La validación por casos de uso no se tocó: es un registro que se regenera, y s
 | 51 | Elegir Claude Haiku 5.5 con 27 casos, sin los dos de inyección que el ADR 0013 exigía | El agente revisor marcó la falta. Con esos dos casos Haiku dejó de responder ante datos con una orden escondida, y la autora cambió la elección a GPT-5.4 mini |
 | 52 | Escribir en el ADR que mini omitió un total "en dos de tres corridas" y que un control "respondió bien", sin que los archivos de resultados lo respaldaran | El revisor contrastó cada cifra contra los resultados. Una era un error del control automático de la IA, que no aceptaba "34,0%", y la otra una prueba hecha a mano que no había quedado guardada. Se corrigió la cifra y el control pasó a ser un caso más |
 | 53 | Recomendar GPT-5.4 mini sin pesar que retiene los pedidos 30 días, y avisarlo recién después de que la autora eligió | La autora lo resolvió con un criterio: priorizar que el modelo responda bien. El revisor pidió que ese criterio quedara en la especificación y no solo en la conversación, y se reescribió el punto 4 del ADR 0013 |
+| 54 | Tests con los mismos textos repetidos decenas de veces: nombres de tablas, monedas, tipos de movimiento | La autora recordó que ya lo había corregido en el scaffold. Pasaron a un archivo de constantes de los tests, y la regla quedó escrita en las convenciones de desarrollo |
+| 55 | Escribir en esa regla que un test nunca importa una constante de la aplicación | Era lo contrario de lo que la autora quería. Las constantes viven en la aplicación; con los tests primero suelen nacer en los tests, y se mueven en cuanto la aplicación las necesita |
+| 56 | Permitir desarmar un par de retiro o aporte si se cambiaban las dos mitades juntas | La autora eligió la regla más simple: el vínculo no cambia una vez puesto, porque un par se borra marcando las dos mitades |
+| 57 | Dar por terminada la migración con una regla implementada que no estaba entre los casos aprobados, y con siete restricciones sin test | Lo marcó el agente revisor. Los tests se sumaron después de la implementación, así que no pasaron por rojo; el pull request lo declara como falta contra el ADR 0024 |
+| 58 | Indicar `docker compose up migrations` para actualizar la base local, y dar la tarea por cerrada | El comando usaba la imagen vieja. La IA lo encontró al comprobar la base antes de explicar cómo verla: seguía en la migración anterior. Faltaba `--build` |
 
 El patrón que se repite: la IA tiende a **resolver la ambigüedad por su cuenta** eligiendo un valor por defecto razonable, y a **justificar decisiones técnicas por el esfuerzo** que ahorran en vez de por sus propiedades de diseño. Las dos cosas hay que detectarlas leyendo, porque el resultado siempre suena defendible.
 
@@ -640,6 +672,13 @@ correcto y estaba completo, pero mezclaba ajustes técnicos sin alternativa con 
 producto, y nombraba cada problema por su tabla o su restricción. De a una, y con la escena de
 uso, la autora no solo decidió: en cinco de las diecisiete encontró una solución más simple que
 la propuesta.
+
+Al escribir el primer código aparece otro: la IA **da por terminado lo que pasa sus propios
+controles**. Los tests estaban en verde y la migración coincidía con lo que la IA había leído del
+modelo. Lo que faltaba lo encontraron dos revisiones hechas con otro criterio, la comparación
+columna por columna de `/spec-drift` y el agente revisor en un contexto separado, y una
+comprobación sobre el resultado real, la base de la autora, en vez de sobre el comando que debía
+producirlo.
 
 ---
 
