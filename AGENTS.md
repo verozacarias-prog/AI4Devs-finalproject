@@ -84,8 +84,9 @@ de pre-commit. No son una recomendación: rompen el commit.
 ## 5. Invariantes que un asistente rompe por defecto
 
 - Nunca usar una cuenta por defecto. Si el mensaje no la menciona, preguntar.
-- Nunca asignar `budget_period_id` sin confirmación explícita del usuario.
-- Los defaults derivables permitidos son solo fecha, moneda y categoría, y los tres van siempre listados en el mensaje de confirmación.
+- Nunca asignar `budget_period_id` sin confirmación explícita del usuario. La única excepción es
+  que haya un solo período posible para esa fecha: ahí se imputa a ese sin preguntar.
+- Los defaults derivables permitidos son solo fecha, moneda y categoría, y los tres van siempre listados en el mensaje de confirmación, junto con el presupuesto cuando se imputó por ser el único.
 - Montos en `Decimal`, nunca `float`.
 - La moneda viaja siempre junto al monto, nunca implícita.
 - El saldo de una cuenta se calcula, no se almacena como campo mutable.

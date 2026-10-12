@@ -28,7 +28,8 @@ rama de la entrega con `git diff` y `git log`. Usá Bash solo para leer: `git di
    monto con un nombre que el verificador no reconoce y tipado como `float`.
 2. **Reglas de dominio.** Que el cambio no contradiga `docs/reglas-de-dominio.md`. En especial
    las siete invariantes de `AGENTS.md`, sección 5: ninguna cuenta por defecto, ningún
-   presupuesto sin confirmación, ningún default fuera de fecha, moneda y categoría.
+   presupuesto sin confirmación salvo que sea el único posible, ningún default fuera de fecha,
+   moneda y categoría.
 3. **Datos identificatorios.** Que nada identificatorio viaje al proveedor de LLM o de
    embeddings ni termine en un registro: teléfono, nombre, ids internos, montos y texto del
    usuario (ADR 0013 y ADR 0023).
