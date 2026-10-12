@@ -1,14 +1,21 @@
 """The names and values the schema tests repeat, in one place.
 
 They were born here because the tests came first. A constant lives in the application: as soon
-as the application needs one of these, such as the types of a movement in the domain, it moves
-there and the tests import it. The application never imports from here. What a single test
-asserts, such as the name of the constraint that must answer, stays in that test.
+as the application needs one of these, it moves there and the tests import it. The first ones
+moved with the test data template: the two currencies, the time zone, the owner role and the
+type and status of a period. The types of a movement follow when the domain defines them.
+
+The application never imports from here. What a single test asserts, such as the name of the
+constraint that must answer, stays in that test.
 """
 
 from __future__ import annotations
 
 from decimal import Decimal
+
+from app import test_data
+from app.domain.entities.budget_period import PeriodStatus, PeriodType
+from app.domain.entities.family_group import GroupRole
 
 
 class Table:
@@ -48,8 +55,9 @@ class Table:
 APPLICATION_ROLE = "platita_app"
 
 # Currencies of the catalog, and a code that is not in it.
-PESOS = "ARS"
-DOLLARS = "USD"
+# The application defines these two since the test data template; they are imported, not repeated.
+PESOS = test_data.PESOS
+DOLLARS = test_data.DOLLARS
 EUROS = "EUR"
 OUTSIDE_THE_CATALOG = "ZZZ"
 PESOS_PER_DOLLAR = Decimal("1200")
@@ -59,15 +67,15 @@ EXPENSE = "expense"
 INCOME = "income"
 MANUAL = "manual"
 AUTOMATIC = "automatic"
-OWNER = "owner"
-DRAFT = "draft"
-CONFIRMED = "confirmed"
+OWNER = GroupRole.OWNER
+DRAFT = PeriodStatus.DRAFT
+CONFIRMED = PeriodStatus.CONFIRMED
 PROMOTED = "promoted"
-MONTHLY = "monthly"
+MONTHLY = PeriodType.MONTHLY
 META = "meta"
 TWILIO = "twilio"
 WEB = "web"
 # A value that belongs to no closed set.
 OUTSIDE_THE_SET = "unknown"
 
-TIME_ZONE = "America/Argentina/Buenos_Aires"
+TIME_ZONE = test_data.TEMPLATE_TIME_ZONE

@@ -1,0 +1,9 @@
+from __future__ import annotations
+
+from typing import Protocol
+
+from app.domain.entities.account import Account
+
+
+class AccountRepository(Protocol):
+    def add(self, account: Account) -> None: ...

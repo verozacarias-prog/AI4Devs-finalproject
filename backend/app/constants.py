@@ -55,3 +55,7 @@ LINE_END = "\n"
 # Where the API listens inside its container. Compose publishes it on localhost only.
 API_HOST = "0.0.0.0"  # noqa: S104
 API_PORT = 8000
+
+# What an operation command returns to the shell.
+EXIT_OK = 0
+EXIT_REFUSED = 1
