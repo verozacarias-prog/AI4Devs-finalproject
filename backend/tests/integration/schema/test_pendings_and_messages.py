@@ -277,6 +277,16 @@ def test_a_message_quotes_a_reply_sent_to_the_same_user(rows: Rows, home: Home) 
         rows.inbound(user_id=home.user, quoted_outbound_message_id=foreign)
 
 
+def test_a_message_that_quotes_a_reply_comes_from_a_user(rows: Rows, home: Home) -> None:
+    # Case 137. Without a user the database could not tell whose reply is being quoted.
+    rows.inbound()
+    rows.inbound(user_id=home.user, quoted_outbound_message_id=rows.outbound(home.user))
+    reply = rows.outbound(home.user)
+
+    with rows.rejected_by("ck_inbound_message_quote_needs_user"):
+        rows.inbound(quoted_outbound_message_id=reply)
+
+
 def test_the_kind_of_a_reply_comes_from_a_closed_set(rows: Rows, home: Home) -> None:
     # Case 101.
     rows.outbound(home.user, content={"text": "Listo", "response_kind": "fixed_text"})

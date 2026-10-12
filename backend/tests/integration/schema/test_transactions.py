@@ -1,4 +1,4 @@
-"""TRANSACTION: cases 39 to 62, and cases 134 and 136."""
+"""TRANSACTION: cases 39 to 62, and cases 134, 136 and 138."""
 
 from __future__ import annotations
 
@@ -303,6 +303,18 @@ def test_each_half_of_a_pair_points_to_the_other(rows: Rows, setting: PairSettin
 
     with rows.rejected_by("tg_transaction_pair_mutual"):
         rows.transaction(setting.home, budget_period_id=setting.group_period, paired_with=income)
+
+
+def test_the_individual_half_of_a_pair_is_in_a_period_of_its_own_user(
+    rows: Rows, setting: PairSetting
+) -> None:
+    # Case 138.
+    _pair(rows, setting)
+    rows.check_deferred()
+    foreign_period = rows.home().period
+
+    with rows.rejected_by("tg_transaction_pair_individual_owner"):
+        _pair(rows, setting, income={"budget_period_id": foreign_period})
 
 
 def _occurrence(rule: uuid.UUID, day: date = MOVEMENT_DATE) -> dict[str, object]:
