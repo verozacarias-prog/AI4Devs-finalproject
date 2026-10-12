@@ -76,7 +76,7 @@ de pre-commit. No son una recomendación: rompen el commit.
 - `backend/app/adapters/outbound/observability/` — envoltorios de los puertos de LLM y de embeddings, que registran cada llamada sin su contenido, y el formato JSON de los registros con su filtro.
 - `backend/tests/` — tests unitarios, de integración y end-to-end.
 - `backend/migrations/` — migraciones de Alembic.
-- `frontend/` — dashboard web.
+- `frontend/` — dashboard web, en React con TypeScript y Vite ([ADR 0026](docs/adr/0026-react-typescript-y-vite-para-el-dashboard.md)). `src/api/` tiene el contrato exportado y los tipos generados, `src/pages/` una pantalla por archivo con su test al lado, y `src/design-tokens.css` los tokens de diseño.
 - `site/` — portal de documentación (Astro Starlight). Se genera desde `docs/`; no es fuente.
 - `docs/` — la especificación del proyecto.
 
@@ -99,6 +99,17 @@ completo antes de escribir código.
 - Pydantic solo en el borde, es decir en los adaptadores. El dominio no conoce Pydantic.
 - Sin lógica de negocio en adaptadores: traducen y delegan.
 - Sin `Any`.
+- Sin textos ni valores sueltos en el código: van como constantes, en un lugar por tipo. En el
+  backend, `app/constants.py` (entornos, variables de entorno, valores por defecto),
+  `app/messages.py` (todo mensaje para una persona), `adapters/inbound/api/routes.py` (las
+  rutas de la API y los valores de sus respuestas), `adapters/inbound/api/security_headers.py`
+  (los encabezados de seguridad), `adapters/outbound/observability/events.py`
+  (eventos, campos, nombres y reglas de los registros) y `adapters/outbound/postgres/queries.py`
+  (el SQL escrito a mano). Quedan en su lugar solo las palabras que define una librería, como
+  el nombre de un parámetro suyo, el SQL de cada migración, que es su contenido, y lo que
+  vive en un archivo estático del dashboard: el título de `index.html` y el ícono. En el dashboard, `src/messages.ts` (todo texto que se muestra),
+  `src/api/routes.ts` (las rutas de la API) y `src/constants.ts` (el resto). Los tests sí escriben el valor literal: comprueban lo que se ve desde
+  afuera.
 
 ## 7. Seguridad
 
@@ -179,10 +190,15 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   y `ruff format --check .` el lint y el formato, `mypy` los tipos en modo estricto, y
   `pip-audit -r requirements.txt` las vulnerabilidades. Los tests de integración necesitan la
   base de `docker compose up db`. Los cinco controles del pipeline están en el
-  [ADR 0021](docs/adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md); el flujo
-  `.github/workflows/app-quality.yml` corre los del backend, y la parte del dashboard se suma
-  cuando exista. El otro flujo ya busca secretos con `gitleaks`; una excepción se anota en
-  `.gitleaksignore`, nunca se desactiva el control.
+  [ADR 0021](docs/adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md), y los
+  corre el flujo `.github/workflows/app-quality.yml`. El otro flujo busca secretos con
+  `gitleaks`; una excepción se anota en `.gitleaksignore`, nunca se desactiva el control.
+- Dashboard, desde `frontend/`: `npm test` corre los tests de las pantallas, `npm run lint` el
+  linter, `npm run typecheck` los tipos, `npm run build` la compilación y
+  `npm audit --audit-level=high` las vulnerabilidades.
+- Si cambia una ruta o una respuesta de la API, se regenera el contrato y sus tipos: desde
+  `backend/`, `python -m app.adapters.inbound.api.export_openapi > ../frontend/src/api/openapi.json`,
+  y desde `frontend/`, `npm run api:generate`. El pipeline falla si quedaron desactualizados.
 - Antes de pedir el merge de un pull request se corre a mano el agente `pr-reviewer`, y su
   informe se pega en el pull request
   ([ADR 0022](docs/adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md)).
@@ -206,7 +222,7 @@ o al mensaje de WhatsApp, queda funcionando de punta a punta y, si toca el backe
 dos commits, el de sus tests y el de su implementación.
 Lo contrario, cortar por capa, deja la interfaz para el final y es como se llega a una entrega
 sin nada que mostrar.
-Toda pantalla implementa y testea los cuatro estados: cargando, con contenido, vacío y error.
+Toda pantalla implementa y testea los cuatro estados: cargando, con contenido, vacío y error. La única excepción está en las [convenciones de desarrollo](docs/convenciones-de-desarrollo.md#2-los-cuatro-estados-de-una-pantalla): una pantalla que no muestra datos del usuario no tiene estado vacío.
 
 En el backend el test va antes que el código
 ([ADR 0024](docs/adr/0024-tests-primero-en-el-backend.md)):

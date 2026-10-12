@@ -9,9 +9,11 @@ from collections.abc import Awaitable, Callable
 
 from fastapi import Request, Response, status
 
-from app.adapters.outbound.observability.logs import LOGGER_NAME, request_id_var
+from app.adapters.outbound.observability.events import Event, Field, LoggerName
+from app.adapters.outbound.observability.logs import request_id_var
+from app.constants import MILLISECONDS_PER_SECOND
 
-logger = logging.getLogger(f"{LOGGER_NAME}.api")
+logger = logging.getLogger(LoggerName.API)
 
 
 async def log_request(
@@ -25,20 +27,20 @@ async def log_request(
         response = await call_next(request)
     except Exception as error:
         logger.error(
-            "http.request",
+            Event.HTTP_REQUEST,
             extra={
-                "result": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "duration_ms": _elapsed_ms(started),
-                "error_type": type(error).__name__,
+                Field.RESULT: status.HTTP_500_INTERNAL_SERVER_ERROR,
+                Field.DURATION_MS: _elapsed_ms(started),
+                Field.ERROR_TYPE: type(error).__name__,
             },
         )
         raise
     logger.info(
-        "http.request",
-        extra={"result": response.status_code, "duration_ms": _elapsed_ms(started)},
+        Event.HTTP_REQUEST,
+        extra={Field.RESULT: response.status_code, Field.DURATION_MS: _elapsed_ms(started)},
     )
     return response
 
 
 def _elapsed_ms(started: float) -> int:
-    return round((time.monotonic() - started) * 1000)
+    return round((time.monotonic() - started) * MILLISECONDS_PER_SECOND)

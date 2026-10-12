@@ -1,4 +1,4 @@
-# The image only needs backend/. Everything else stays out of the build context.
+# The image only needs backend/ and frontend/. Everything else stays out of the build context.
 .git
 .github
 .githooks
@@ -16,3 +16,5 @@ backend/tests
 .env
 .env.*
 !.env.example
+frontend/dist
+frontend/src/**/*.test.tsx

@@ -4,9 +4,10 @@ import logging
 
 from sqlalchemy import Engine, text
 
-from app.adapters.outbound.observability.logs import LOGGER_NAME
+from app.adapters.outbound.observability.events import Event, Field, LoggerName
+from app.adapters.outbound.postgres.queries import PING
 
-logger = logging.getLogger(f"{LOGGER_NAME}.postgres")
+logger = logging.getLogger(LoggerName.POSTGRES)
 
 
 class PostgresDatabaseHealth:
@@ -18,9 +19,11 @@ class PostgresDatabaseHealth:
     def is_reachable(self) -> bool:
         try:
             with self._engine.connect() as connection:
-                connection.execute(text("SELECT 1"))
+                connection.execute(text(PING))
         except Exception as error:  # the port promises never to raise
             # Only the class: the message of a connection error carries the database URL.
-            logger.warning("database.unreachable", extra={"error_type": type(error).__name__})
+            logger.warning(
+                Event.DATABASE_UNREACHABLE, extra={Field.ERROR_TYPE: type(error).__name__}
+            )
             return False
         return True

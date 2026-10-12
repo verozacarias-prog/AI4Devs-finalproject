@@ -4,8 +4,16 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from pathlib import Path
 
-ENVIRONMENTS = ("local", "demo", "production")
+from app import messages
+from app.constants import (
+    DEFAULT_ENVIRONMENT,
+    DEFAULT_VERSION,
+    LIST_SEPARATOR,
+    Environment,
+    EnvVar,
+)
 
 
 class SettingsError(Exception):
@@ -15,19 +23,31 @@ class SettingsError(Exception):
 @dataclass(frozen=True)
 class Settings:
     database_url: str
-    environment: str
+    environment: Environment
     version: str
+    # Folder with the compiled dashboard, or None when this process does not serve it.
+    dashboard_dir: Path | None = None
+
+
+def _read(environ: Mapping[str, str], name: EnvVar, default: str = "") -> str:
+    return environ.get(name, default).strip()
 
 
 def load_settings(environ: Mapping[str, str]) -> Settings:
-    database_url = environ.get("DATABASE_URL", "").strip()
+    database_url = _read(environ, EnvVar.DATABASE_URL)
     if not database_url:
-        raise SettingsError("Missing required environment variable: DATABASE_URL")
-    environment = environ.get("APP_ENV", "local").strip()
-    if environment not in ENVIRONMENTS:
-        raise SettingsError(f"APP_ENV must be one of: {', '.join(ENVIRONMENTS)}")
+        raise SettingsError(messages.MISSING_ENV_VAR.format(name=EnvVar.DATABASE_URL))
+    try:
+        environment = Environment(_read(environ, EnvVar.APP_ENV, DEFAULT_ENVIRONMENT))
+    except ValueError:
+        allowed = LIST_SEPARATOR.join(Environment)
+        raise SettingsError(
+            messages.INVALID_ENV_VAR.format(name=EnvVar.APP_ENV, allowed=allowed)
+        ) from None
+    dashboard_dir = _read(environ, EnvVar.DASHBOARD_DIR)
     return Settings(
         database_url=database_url,
         environment=environment,
-        version=environ.get("APP_VERSION", "dev").strip() or "dev",
+        version=_read(environ, EnvVar.APP_VERSION) or DEFAULT_VERSION,
+        dashboard_dir=Path(dashboard_dir) if dashboard_dir else None,
     )

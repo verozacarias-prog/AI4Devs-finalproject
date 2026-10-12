@@ -42,7 +42,8 @@ rama de la entrega con `git diff` y `git log`. Usá Bash solo para leer: `git di
    verdad no tiene lógica.
 5. **Tests.** Que el cambio traiga los suyos. Un endpoint o un caso de uso que toca datos de un
    usuario tiene un test en el que otro usuario recibe `404`. Una pantalla tiene los cuatro
-   estados testeados.
+   estados testeados, salvo la que no muestra datos del usuario, que no tiene estado vacío
+   (`docs/convenciones-de-desarrollo.md`, sección 2).
 6. **Documentación.** Que `docs/` refleje lo que cambió, en este mismo cambio: endpoints,
    esquema y reglas de negocio. Si el código y la especificación difieren, es una divergencia:
    reportala, no elijas un lado (`AGENTS.md`, sección 10).

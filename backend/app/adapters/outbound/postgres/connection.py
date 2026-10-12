@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from sqlalchemy import Engine, create_engine
 
-CONNECT_TIMEOUT_SECONDS = 3
+from app.constants import DATABASE_CONNECT_TIMEOUT_SECONDS
 
 
 def create_db_engine(database_url: str) -> Engine:
@@ -13,5 +13,5 @@ def create_db_engine(database_url: str) -> Engine:
     return create_engine(
         database_url,
         pool_pre_ping=True,
-        connect_args={"connect_timeout": CONNECT_TIMEOUT_SECONDS},
+        connect_args={"connect_timeout": DATABASE_CONNECT_TIMEOUT_SECONDS},
     )

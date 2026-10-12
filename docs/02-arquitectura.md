@@ -202,12 +202,20 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
         /embedding_client         # embeddings provider client
         /text_splitter             # the only place that imports langchain-text-splitters
       /observability              # wrappers of the LLM and embedding ports that record each call, and the JSON log format with its redaction filter
+    constants.py         # environments, environment variable names and default values
+    messages.py          # every message written for a person
     settings.py          # process configuration, read from environment variables
     main.py              # entry point of the API process
   /tests
   /migrations          # Alembic
-/frontend
-  ...
+/frontend                # React, TypeScript and Vite (ADR 0026)
+  /src
+    /api                 # API contract exported by the backend, the types generated from it, and the API paths
+    /pages               # one file per screen, with its test next to it
+    messages.ts          # every text the dashboard shows
+    design-tokens.css    # design tokens: the only place with colours, sizes and spacing
+    App.tsx
+    main.tsx
 docs/
   01-producto.md
   02-arquitectura.md
@@ -227,7 +235,7 @@ prompts.md
 llms.txt                    # descripción del proyecto para agentes de IA
 ```
 
-`/backend` existe desde el scaffold, con las carpetas que ya tienen código; las demás se crean con lo primero que va en ellas. `/frontend` es la estructura prevista para la Entrega 2.
+`/backend` y `/frontend` existen desde el scaffold, con las carpetas que ya tienen código; las demás se crean con lo primero que va en ellas.
 
 ### **2.4. Infraestructura y despliegue**
 
@@ -314,7 +322,7 @@ Cuatro niveles, cada uno con su momento ([ADR 0024](adr/0024-tests-primero-en-el
 |---|---|---|---|
 | Unitario | El dominio y los casos de uso: conversión de moneda, saldo por cuenta, categorización, pendientes, presupuesto | Dobles de los puertos, incluido el del LLM. Es la ventaja directa de tener puertos | Antes que el código |
 | De integración | Los adaptadores, las restricciones de la base y los endpoints | PostgreSQL real con pgvector, con las migraciones aplicadas desde cero | Antes que el código |
-| De componente | Los cuatro estados de cada pantalla | El dashboard, con la API simulada | En el mismo corte que la pantalla |
+| De componente | Los estados de cada pantalla: los cuatro, o tres si no muestra datos del usuario | El dashboard, con la API simulada | En el mismo corte que la pantalla |
 | De punta a punta | Al menos el flujo principal: registrar un gasto por WhatsApp y verlo reflejado en el saldo de la cuenta y en el presupuesto del dashboard | El sistema levantado completo | En la entrega final, con la pantalla ya construida |
 
 El método, con quién aprueba los casos y cómo queda a la vista el orden, está en las [convenciones de desarrollo](convenciones-de-desarrollo.md#1-cortes-verticales).
