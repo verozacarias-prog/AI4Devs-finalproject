@@ -1,4 +1,4 @@
-"""Cases 28 to 34 and 41 to 44: the API serves the compiled dashboard under /app (ADR 0016)."""
+"""Cases 28 to 34, 41 to 44, 49 and 50: the API serves the compiled dashboard (ADR 0016)."""
 
 from __future__ import annotations
 
@@ -15,6 +15,11 @@ pytestmark = pytest.mark.integration
 INDEX_HTML = "<!doctype html><title>Platita</title><div id=root></div>"
 SCRIPT = "console.log('platita')"
 OUTSIDE_FILE = "this file is outside the dashboard folder"
+# Everything the page loads comes from its own origin, and no other page may embed it.
+PAGE_POLICY = (
+    "default-src 'self'; base-uri 'self'; form-action 'self'; "
+    "frame-ancestors 'none'; object-src 'none'"
+)
 
 
 @pytest.fixture
@@ -108,12 +113,10 @@ def test_without_the_dashboard_setting_the_api_still_starts(database_url: str) -
 
 def test_the_page_carries_its_content_policy(client: TestClient) -> None:
     """Case 41."""
-    policy = client.get("/app/").headers["content-security-policy"]
+    headers = client.get("/app/").headers
 
-    assert "default-src 'self'" in policy
-    assert "frame-ancestors 'none'" in policy
-    assert "unsafe-inline" not in policy
-    assert "unsafe-eval" not in policy
+    assert headers["content-security-policy"] == PAGE_POLICY
+    assert headers["x-frame-options"] == "DENY"
 
 
 def test_the_dashboard_files_carry_the_same_policy(client: TestClient) -> None:
@@ -142,3 +145,30 @@ def test_the_policy_does_not_break_the_api(client: TestClient) -> None:
 
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
+
+
+def test_an_unexpected_error_carries_the_headers_too(
+    database_url: str, dashboard_dir: Path
+) -> None:
+    """Case 49."""
+    settings = load_settings({"DATABASE_URL": database_url, "DASHBOARD_DIR": str(dashboard_dir)})
+    app = create_app(settings)
+
+    @app.get("/boom")
+    def boom() -> None:
+        raise RuntimeError("unexpected")
+
+    response = TestClient(app, raise_server_exceptions=False).get("/boom")
+
+    assert response.status_code == 500
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["referrer-policy"] == "no-referrer"
+
+
+@pytest.mark.parametrize("path", ["/application", "/apple/pie", "/healthz"])
+def test_the_page_policy_does_not_reach_other_routes(client: TestClient, path: str) -> None:
+    """Case 50."""
+    headers = client.get(path).headers
+
+    assert "content-security-policy" not in headers
+    assert "x-frame-options" not in headers
