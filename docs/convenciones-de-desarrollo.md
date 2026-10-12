@@ -88,6 +88,14 @@ Qué va primero según la capa:
 No se exige un porcentaje de cobertura. Se exige que cada criterio de aceptación y cada
 invariante en riesgo tengan su test, y que cada test diga de qué criterio sale.
 
+**Constantes en los tests.** Lo que un test comprueba queda escrito en ese test: el mensaje o
+el nombre de la restricción que espera. Los nombres y valores que varios tests repiten para
+armar sus datos, como tablas, monedas o valores de un conjunto cerrado, no se escriben sueltos.
+Si la constante ya existe en la aplicación, el test la usa. Si todavía no existe, va en un
+archivo de constantes de los tests, como `backend/tests/integration/schema/names.py`. Con los
+tests primero una constante suele nacer ahí: en cuanto la aplicación la necesita, se mueve a la
+aplicación y los tests la importan desde ahí. La aplicación nunca importa nada de `tests/`.
+
 **Por qué el corte 2 existe por separado.** En Platita el camino no feliz *es* el producto. La
 [HU3](05-historias-de-usuario.md) es casi enteramente eso: falta la cuenta, falta confirmar el
 presupuesto, el movimiento queda como `PENDING_TRANSACTION`, el asistente pregunta, recuerda y

@@ -108,8 +108,10 @@ completo antes de escribir código.
   (el SQL escrito a mano). Quedan en su lugar solo las palabras que define una librería, como
   el nombre de un parámetro suyo, el SQL de cada migración, que es su contenido, y lo que
   vive en un archivo estático del dashboard: el título de `index.html` y el ícono. En el dashboard, `src/messages.ts` (todo texto que se muestra),
-  `src/api/routes.ts` (las rutas de la API) y `src/constants.ts` (el resto). Los tests sí escriben el valor literal: comprueban lo que se ve desde
-  afuera.
+  `src/api/routes.ts` (las rutas de la API) y `src/constants.ts` (el resto). Los tests sí escriben el valor literal de lo que comprueban, que es lo que se ve desde
+  afuera; lo que varios tests repiten va como constante, y vive en la aplicación en cuanto esta
+  lo necesita. El detalle está en las
+  [convenciones de desarrollo](docs/convenciones-de-desarrollo.md#1-cortes-verticales).
 
 ## 7. Seguridad
 
