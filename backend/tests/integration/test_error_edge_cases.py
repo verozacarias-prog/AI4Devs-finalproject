@@ -133,3 +133,26 @@ def test_the_details_of_an_error_cannot_replace_its_code(database_url: str) -> N
     response = TestClient(app).get("/fails")
 
     assert response.json()["error"] == "missing_fields"
+
+
+def test_the_context_of_an_error_cannot_replace_the_reference_or_break_the_line(
+    database_url: str,
+) -> None:
+    """Case E26, the fields the line sets outside the error."""
+    stream = io.StringIO()
+    app = _app(database_url, stream)
+
+    @app.get("/fails")
+    def fails() -> None:
+        raise ConflictError(
+            "period_overlaps",
+            context={"request_id": uuid.uuid4(), "name": _Word.OTHER, "account_id": uuid.uuid4()},
+        )
+
+    response = TestClient(app).get("/fails")
+
+    assert response.status_code == 409
+    line = events_of(stream, "error.expected")[0]
+    assert line["request_id"] == response.headers["x-request-id"]
+    assert line["logger"] == "platita.errors"
+    assert line["account_id"]

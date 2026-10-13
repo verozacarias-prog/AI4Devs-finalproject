@@ -9,13 +9,13 @@ from __future__ import annotations
 import io
 import re
 import uuid
-from enum import StrEnum
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.adapters.inbound.api.app import create_app
+from app.constants import Environment
 from app.domain.errors import ConflictError
 from app.settings import load_settings
 from tests.log_lines import events_of, stack_of
@@ -24,14 +24,6 @@ pytestmark = pytest.mark.integration
 
 MESSAGE = "could not register 58400 for +5491155551234"
 PLACE = re.compile(r"[A-Za-z_][\w.]*:\w+:\d+")
-
-
-class _MovementType(StrEnum):
-    EXPENSE = "expense"
-
-
-class _Currency(StrEnum):
-    PESOS = "ARS"
 
 
 def _app(database_url: str, stream: io.StringIO, environment: str = "production") -> FastAPI:
@@ -114,8 +106,7 @@ def test_the_line_says_which_rows_and_which_catalog_values_were_involved(
             context={
                 "account_id": account_id,
                 "budget_period_id": period_id,
-                "transaction_type": _MovementType.EXPENSE,
-                "currency": _Currency.PESOS,
+                "environment": Environment.DEMO,
             },
         )
 
@@ -124,8 +115,7 @@ def test_the_line_says_which_rows_and_which_catalog_values_were_involved(
     line = events_of(stream, "error.expected")[0]
     assert line["account_id"] == str(account_id)
     assert line["budget_period_id"] == str(period_id)
-    assert line["transaction_type"] == "expense"
-    assert line["currency"] == "ARS"
+    assert line["environment"] == "demo"
 
 
 def test_in_local_an_error_is_also_written_in_full(

@@ -43,8 +43,7 @@ def _logged(logger: logging.Logger, stream: io.StringIO, field: str, value: Valu
         ("constraint", "uq_app_user_whatsapp_phone"),
         ("account_id", "0b3d5c1e-6f0a-4c57-9b1e-2f6a8d4c7e10"),
         ("budget_period_id", "0b3d5c1e6f0a4c579b1e2f6a8d4c7e10"),
-        ("transaction_type", "expense"),
-        ("currency", "ARS"),
+        ("environment", "demo"),
         (
             "error_stack",
             [
@@ -69,8 +68,9 @@ def test_a_field_with_its_own_shape_passes(
         ("constraint", "c" * 64),
         ("account_id", "Galicia pesos"),
         ("budget_period_id", "58400"),
-        ("transaction_type", "gasté 58400 en el súper"),
-        ("currency", "pesos argentinos"),
+        ("environment", "gasté 58400 en el súper"),
+        ("transaction_type", "expense"),
+        ("currency", "ARS"),
         ("error_stack", ["could not register 58400 for +5491155551234"]),
         ("error_stack", "could not register 58400"),
         ("error_message", "could not register 58400"),
