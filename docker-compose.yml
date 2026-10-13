@@ -4,9 +4,14 @@
 #
 #   cp .env.example .env
 #   docker compose up --build
+#
+# Each container has a name of its own, which is what `docker compose logs` and `docker ps`
+# show: without it they say "api-1", which tells nothing about what is running. The services
+# keep their short names, so the commands and the address of the database do not change.
 services:
   db:
     image: pgvector/pgvector:pg16
+    container_name: platita-database
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -25,6 +30,7 @@ services:
   # start-up: they wait for this service to finish successfully.
   migrations:
     build: .
+    container_name: platita-migrations
     command: ["alembic", "upgrade", "head"]
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
@@ -35,6 +41,7 @@ services:
 
   api:
     build: .
+    container_name: platita-api-and-dashboard
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       APP_ENV: ${APP_ENV:-local}
