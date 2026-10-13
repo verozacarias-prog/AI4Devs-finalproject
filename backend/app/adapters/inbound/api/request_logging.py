@@ -8,7 +8,7 @@ import uuid
 from collections.abc import Awaitable, Callable
 
 from fastapi import Request, Response, status
-from starlette.routing import Route
+from starlette.routing import Match, Route
 
 from app.adapters.inbound.api.routes import DASHBOARD_PREFIX, REQUEST_ID_HEADER
 from app.adapters.outbound.observability.events import (
@@ -60,9 +60,10 @@ def _endpoint(request: Request) -> str:
     """The method and the route as the code declares it, read once the request was routed.
 
     Never the address that was asked for: it may carry an identifier, a query with data, or
-    whatever someone typed. A request that matched no route is logged with its method alone.
+    whatever someone typed. A request that matched no route is logged with its method alone,
+    and so is one that was refused before being routed.
     """
-    route: object = request.scope.get("route")
+    route: object = request.scope.get("route") or _framework_route(request)
     if isinstance(route, Route):
         return request.method + ENDPOINT_SEPARATOR + route.path
     # The dashboard is mounted, not routed: what marks its requests is the prefix they were
@@ -70,6 +71,17 @@ def _endpoint(request: Request) -> str:
     if request.scope.get("root_path") == DASHBOARD_PREFIX:
         return request.method + ENDPOINT_SEPARATOR + DASHBOARD_PREFIX
     return request.method
+
+
+def _framework_route(request: Request) -> Route | None:
+    """The route of a page the framework serves itself, such as the interactive contract.
+
+    Those are routes of the application too, but they do not say so in the request.
+    """
+    for route in request.app.routes:
+        if isinstance(route, Route) and route.matches(request.scope)[0] is Match.FULL:
+            return route
+    return None
 
 
 def _elapsed_ms(started: float) -> int:

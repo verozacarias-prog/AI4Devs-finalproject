@@ -6,6 +6,7 @@ never repeats what the client sent and never describes the failure (docs/04-api.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from http import HTTPStatus
 
 from fastapi import FastAPI, Request, Response, status
@@ -27,6 +28,16 @@ STATUS_BY_CATEGORY = {
     ErrorCategory.CONFLICT: status.HTTP_409_CONFLICT,
     ErrorCategory.INVALID: status.HTTP_422_UNPROCESSABLE_CONTENT,
 }
+
+
+def answer_for_status(status_code: int, headers: Mapping[str, str] | None = None) -> Response:
+    """What the API answers before any use case ran. The name of the status is its code:
+    `not_found`, `method_not_allowed`, `forbidden`."""
+    return JSONResponse(
+        {ERROR_KEY: HTTPStatus(status_code).name.lower()},
+        status_code=status_code,
+        headers=headers,
+    )
 
 
 def install_error_handlers(app: FastAPI, environment: Environment) -> None:
@@ -52,12 +63,7 @@ def install_error_handlers(app: FastAPI, environment: Environment) -> None:
         """A route that does not exist, a method it does not accept. It leaves no error line:
         nothing in the code to locate, and the line of its request already says the result."""
         assert isinstance(error, HTTPException)  # noqa: S101
-        return JSONResponse(
-            # The name of the status is its code: `not_found`, `method_not_allowed`.
-            {ERROR_KEY: HTTPStatus(error.status_code).name.lower()},
-            status_code=error.status_code,
-            headers=error.headers,
-        )
+        return answer_for_status(error.status_code, error.headers)
 
     async def unexpected(request: Request, error: Exception) -> Response:
         """It never passes through the middlewares, so it carries their headers itself."""

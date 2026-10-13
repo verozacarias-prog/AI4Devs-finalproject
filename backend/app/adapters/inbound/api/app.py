@@ -6,13 +6,13 @@ import logging
 import sys
 from typing import TextIO
 
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 
 from app.adapters.inbound.api.dashboard import mount_dashboard
 from app.adapters.inbound.api.dev_entry import build_dev_entry_router
 from app.adapters.inbound.api.errors import install_error_handlers
 from app.adapters.inbound.api.health import build_health_router
-from app.adapters.inbound.api.origin_check import require_own_origin_and_json
+from app.adapters.inbound.api.origin_check import refuse_requests_from_elsewhere
 from app.adapters.inbound.api.request_logging import log_request
 from app.adapters.inbound.api.security_headers import add_security_headers
 from app.adapters.inbound.api.session import build_session_router
@@ -42,11 +42,10 @@ def create_app(settings: Settings, log_stream: TextIO | None = None) -> FastAPI:
         # One for each request: it holds the connection of its transaction.
         return SqlAlchemyUnitOfWork(engine)
 
-    app = FastAPI(
-        title=APP_TITLE,
-        version=settings.version,
-        dependencies=[Depends(require_own_origin_and_json)],
-    )
+    app = FastAPI(title=APP_TITLE, version=settings.version)
+    # The middleware added last runs first: the request is logged, gets its headers, and
+    # only then is checked, so a refused one leaves its line and carries its reference.
+    app.middleware("http")(refuse_requests_from_elsewhere)
     app.middleware("http")(add_security_headers)
     install_error_handlers(app, settings.environment)
     app.middleware("http")(log_request)
