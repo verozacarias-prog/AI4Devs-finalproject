@@ -1,4 +1,5 @@
-"""Case 40: the API contract is exported with a command, without needing the database."""
+"""Cases 40 and 82: the API contract is exported with a command, without needing the
+database, and the versioned copy is the one the code generates."""
 
 from __future__ import annotations
 
@@ -28,7 +29,7 @@ VERSIONED_CONTRACT = (
 
 
 def test_the_versioned_contract_is_the_one_the_code_generates() -> None:
-    """The reference and the types of the dashboard come from that file: it cannot lag behind."""
+    """Case 82. The reference and the types of the dashboard come from that file."""
     if not VERSIONED_CONTRACT.is_file():
         pytest.skip("the dashboard is not in this checkout")
 

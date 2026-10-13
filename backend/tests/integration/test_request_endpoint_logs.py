@@ -1,6 +1,6 @@
 """Which endpoint a request line is about (docs/operacion.md, 6.3).
 
-Cases 68 to 72, 74 and 80. The line carries the method and the route as the code declares it,
+Cases 68 to 72, 74, 80 and 83. The line carries the method and the route as the code declares it,
 never the address that was asked for.
 """
 
@@ -104,7 +104,7 @@ def test_the_pages_of_the_contract_are_logged_with_their_route(
 
 
 def test_the_reference_has_one_page_only(database_url: str, stream: io.StringIO) -> None:
-    # The second page the framework offers shows the same contract, so it is turned off.
+    # Case 83. The second page the framework offers shows the same contract, so it is off.
     response = TestClient(_app(database_url, stream)).get("/redoc")
 
     assert response.status_code == 404
