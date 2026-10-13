@@ -11,6 +11,10 @@ from sqlalchemy.exc import IntegrityError
 
 from app.domain.errors import ConflictError, ErrorCode, StoreRejectionError
 
+# How the schema names its primary keys. PostgreSQL reports a repeated primary key and a
+# repeated unique key with the same error, and only the name tells them apart.
+PRIMARY_KEY_PREFIX = "pk_"
+
 
 def execute_write(connection: Connection, statement: str, parameters: Mapping[str, object]) -> None:
     try:
@@ -22,8 +26,11 @@ def execute_write(connection: Connection, statement: str, parameters: Mapping[st
 def _translated(error: IntegrityError) -> Exception:
     original = error.orig
     constraint = original.diag.constraint_name if isinstance(original, psycopg.Error) else None
-    # A repeated unique key is a conflict the domain foresees. Anything else, such as a CHECK,
-    # is a rule the use case should have enforced before writing.
-    if isinstance(original, postgres_errors.UniqueViolation):
+    # A repeated unique key is a conflict the domain foresees. Anything else is a failure of
+    # the code: a CHECK the use case should have enforced, or an identifier created twice.
+    is_unique_key = isinstance(original, postgres_errors.UniqueViolation) and not (
+        constraint or PRIMARY_KEY_PREFIX
+    ).startswith(PRIMARY_KEY_PREFIX)
+    if is_unique_key:
         return ConflictError(ErrorCode.CONFLICT, constraint=constraint)
     return StoreRejectionError(constraint)

@@ -268,6 +268,12 @@ def check_shared_utilities():
         except SyntaxError as exc:
             errors.append('%s:%s no se pudo parsear (%s)' % (path, exc.lineno, exc.msg))
             continue
+        for node in ast.walk(tree):
+            # Un punto queda dentro de shared/; dos o más salen hacia el resto de app/.
+            if isinstance(node, ast.ImportFrom) and node.level > 1:
+                errors.append('%s:%d sale de app/shared/ con un import relativo — app/shared/ '
+                              'no importa nada del resto de app/ (ADR 0001)'
+                              % (path, node.lineno))
         for module, line in imported_modules(tree):
             head = root_module(module)
             if head not in STDLIB_MODULES:

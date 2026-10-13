@@ -22,29 +22,27 @@ logger = logging.getLogger(LoggerName.ERRORS)
 _LIBRARY_DIRECTORIES = tuple({Path(path).resolve() for path in sysconfig.get_paths().values()})
 
 
-def log_error(error: BaseException, *, in_full: bool, code: str | None = None) -> None:
-    """Logs one line for this error. `code` is for an expected error that is not a DomainError.
+def log_error(error: BaseException, *, in_full: bool) -> None:
+    """Logs one line for this error: expected if the domain foresees it, unexpected otherwise.
 
     `in_full` also writes the message and the traceback to the error output. Only the local
     environment asks for it, because only its users are invented.
     """
-    fields: dict[str, LogValue] = {
-        Field.ERROR_TYPE: type(error).__name__,
-        Field.ERROR_STACK: code_path(error),
-    }
+    fields: dict[str, LogValue] = {}
     if isinstance(error, DomainError):
-        code = error.code
-        for name, value in error.context.items():
-            fields[name] = str(value)
+        fields.update({name: str(value) for name, value in error.context.items()})
+    # After the context, so that nothing an error carries can replace a field of the line.
+    fields[Field.ERROR_TYPE] = type(error).__name__
+    fields[Field.ERROR_STACK] = code_path(error)
     if isinstance(error, DomainError | StoreRejectionError):
         if error.constraint is not None:
             fields[Field.CONSTRAINT] = error.constraint
         if error.__cause__ is not None:
             fields[Field.ERROR_CAUSE] = type(error.__cause__).__name__
-    if code is None:
-        logger.error(Event.ERROR_UNEXPECTED, extra=fields)
+    if isinstance(error, DomainError):
+        logger.info(Event.ERROR_EXPECTED, extra={**fields, Field.ERROR_CODE: error.code})
     else:
-        logger.info(Event.ERROR_EXPECTED, extra={**fields, Field.ERROR_CODE: code})
+        logger.error(Event.ERROR_UNEXPECTED, extra=fields)
     if in_full:
         traceback.print_exception(error, file=sys.stderr)
 

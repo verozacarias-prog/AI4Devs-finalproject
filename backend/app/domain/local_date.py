@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
-NAIVE_INSTANT = "An instant needs its time zone to say which day it is"
+from app import messages
 
 
 def local_today(now: datetime, time_zone: str) -> date:
@@ -13,5 +13,5 @@ def local_today(now: datetime, time_zone: str) -> date:
     """
     if now.tzinfo is None:
         # Python would silently assume the zone of the machine.
-        raise ValueError(NAIVE_INSTANT)
+        raise ValueError(messages.NAIVE_INSTANT)
     return now.astimezone(ZoneInfo(time_zone)).date()

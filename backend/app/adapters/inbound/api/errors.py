@@ -35,12 +35,13 @@ def install_error_handlers(app: FastAPI, environment: Environment) -> None:
         assert isinstance(error, DomainError)  # noqa: S101
         log_error(error, in_full=in_full)
         return JSONResponse(
-            {ERROR_KEY: error.code, **error.details},
+            # The code goes last: no detail can take its place.
+            {**error.details, ERROR_KEY: error.code},
             status_code=STATUS_BY_CATEGORY[error.category],
         )
 
     async def outside_the_contract(request: Request, error: Exception) -> Response:
-        log_error(error, in_full=in_full, code=ApiErrorCode.INVALID_REQUEST)
+        """It never reached a use case either, so it leaves no error line."""
         return JSONResponse(
             {ERROR_KEY: ApiErrorCode.INVALID_REQUEST},
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,

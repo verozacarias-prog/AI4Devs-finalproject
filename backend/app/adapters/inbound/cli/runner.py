@@ -46,15 +46,25 @@ def run_command(
         out.write(command(settings) + LINE_END)
     except DomainError as error:
         log_error(error, in_full=in_full)
-        template = messages.COMMAND_ERRORS.get(error.code, messages.COMMAND_REFUSED)
-        context = {name: str(value) for name, value in error.context.items()}
-        _write_error(out, template.format(code=error.code, **context), reference)
+        _write_error(out, _message_for(error), reference)
         return EXIT_REFUSED
     except Exception as error:
         log_error(error, in_full=in_full)
         _write_error(out, messages.COMMAND_FAILED, reference)
         return EXIT_FAILED
     return EXIT_OK
+
+
+def _message_for(error: DomainError) -> str:
+    generic = messages.COMMAND_REFUSED.format(code=error.code)
+    template = messages.COMMAND_ERRORS.get(error.code)
+    if template is None:
+        return generic
+    try:
+        return template.format(**{name: str(value) for name, value in error.context.items()})
+    except KeyError:
+        # The text asks for something this error does not carry: say less instead of failing.
+        return generic
 
 
 def _write_error(out: TextIO, message: str, reference: str) -> None:

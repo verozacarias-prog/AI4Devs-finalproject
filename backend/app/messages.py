@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from app.constants import Environment
 from app.domain.errors import ErrorCode
 
 # Start-up errors. They name the variable and never show a value.
@@ -21,11 +22,14 @@ TEST_DATA_SEEDED = "Test data: {created} created, {existing} already existed."
 # the context of its error, which holds identifiers and catalog values only.
 COMMAND_ERRORS: Mapping[str, str] = {
     ErrorCode.TEST_DATA_NOT_ALLOWED: (
-        "The test data script runs only in the local environment, and this one is "
-        "{environment}. Nothing was written."
+        f"The test data script runs only in the {Environment.LOCAL} environment, and this one "
+        "is {environment}. Nothing was written."
     ),
 }
 COMMAND_REFUSED = "The command was refused: {code}."
 COMMAND_FAILED = "The command failed."
+# A mistake of the code, for whoever reads the traceback: never shown to an end user.
+NAIVE_INSTANT = "An instant needs its time zone to say which day it is"
+
 # The identifier to look for in the logs.
 ERROR_REFERENCE = "Reference: {reference}"
