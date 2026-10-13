@@ -5,5 +5,5 @@ from typing import Protocol
 from app.domain.entities.account import Account
 
 
-class AccountRepository(Protocol):
+class AccountRepositoryPort(Protocol):
     def add(self, account: Account) -> None: ...
