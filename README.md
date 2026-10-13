@@ -72,7 +72,7 @@ El registro de uso de IA durante el proyecto está en [`prompts.md`](prompts.md)
 ## Flujo de trabajo con IA
 
 El proyecto se desarrolla con asistentes de IA y la configuración está versionada en el
-repositorio: un skill, tres commands, un agente revisor, dos verificadores y un hook de pre-commit.
+repositorio: un skill, tres commands, un agente revisor, tres verificadores y un hook de pre-commit.
 Todo está descrito en el [flujo de trabajo con IA](docs/flujo-de-trabajo-con-ia.md).
 
 ## Cómo colaborar
@@ -118,7 +118,7 @@ cd site && npm install                # solo para ver o regenerar el portal
    `feat(alcance): …`. Los tests de los estados de una pantalla van en este mismo corte.
    La documentación que el cambio afecta —API, modelo de datos, reglas de dominio— va en el
    mismo commit, y una decisión de arquitectura lleva su [ADR](docs/adr/).
-7. **Verificar antes de cada commit.** El hook corre solo los dos verificadores de
+7. **Verificar antes de cada commit.** El hook corre solo los tres verificadores de
    [Verificación](#verificación). Si cambió `docs/`, además `cd site && npm run build`, que
    regenera `llms.txt`. Un documento nuevo se suma a la tabla de arriba y a la barra lateral de
    `site/astro.config.mjs`.
@@ -172,7 +172,7 @@ Qué queda levantado:
 | Dirección | Qué es |
 |---|---|
 | <http://127.0.0.1:8000/app/> | El dashboard. Muestra si llega a la API y la API a la base |
-| <http://127.0.0.1:8000/docs> | La API en Swagger, generada desde el código: las rutas que existen hoy, para probarlas |
+| <http://127.0.0.1:8000/docs> | La referencia de la API en Swagger, generada desde el código: las rutas que existen hoy. Desde ahí se prueban las de lectura; las que modifican algo se prueban desde el dashboard, porque exigen venir de su página y como JSON |
 | `127.0.0.1:5433` | PostgreSQL, con el usuario, la clave y la base de `.env` |
 
 En los registros, cada línea empieza con el nombre de su contenedor:

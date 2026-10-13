@@ -165,7 +165,7 @@ obligatorios.
 | Tests unitarios | pytest, y los tests de los estados de cada pantalla del dashboard | El merge | Decidido, control 2. Ya corre |
 | Tests de integración, incluido el aislamiento entre usuarios | pytest contra PostgreSQL con pgvector, con dobles para el LLM y los embeddings | El merge | Decidido, control 2. Ya corre |
 | Migraciones desde una base vacía | `alembic upgrade head` en cada corrida de los tests | El merge | Decidido, control 2. Ya corre |
-| Regla hexagonal y documentación | Los dos verificadores que ya existen | El merge | Decidido, control 3 |
+| Regla hexagonal y documentación | Los tres verificadores que ya existen | El merge | Decidido, control 3 |
 | Secretos en el código | gitleaks | El merge | Decidido, control 4. Ya corre |
 | Vulnerabilidades en dependencias | pip-audit y `npm audit` | El merge. En Python, ante cualquiera que tenga arreglo; en el dashboard, desde severidad alta | Decidido, control 5. Ya corre |
 | Actualización de dependencias | Dependabot, una vez por semana | No: abre un pull request | Decidido, control 5. Ya corre para las acciones, el portal, el backend, el dashboard y la imagen |

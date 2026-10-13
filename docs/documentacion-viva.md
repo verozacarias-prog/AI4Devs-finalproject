@@ -49,8 +49,8 @@ Cada cambio pasa por tres controles, de más cerca a más lejos de quien escribe
 
 | Cuándo | Qué corre | Se saltea |
 |---|---|---|
-| Antes de cada commit | Los dos verificadores propios, vía `.githooks/pre-commit` | Sí, con `--no-verify` |
-| En cada pull request | Los dos verificadores, `markdownlint-cli2`, `lychee`, la construcción del portal y `gitleaks`, que busca secretos | No |
+| Antes de cada commit | Los tres verificadores propios, vía `.githooks/pre-commit` | Sí, con `--no-verify` |
+| En cada pull request | Los tres verificadores, `markdownlint-cli2`, `lychee`, la construcción del portal y `gitleaks`, que busca secretos | No |
 | Todos los lunes | `lychee`, porque un enlace externo se rompe sin que nadie toque nada | No |
 
 El detalle de qué valida cada herramienta está en
@@ -79,9 +79,8 @@ La lista completa está en la sección Documentación del
 [Definition of Done](07-pull-requests.md#definition-of-done). Se verifica leyendo, con la
 ayuda de `/spec-drift`. La parte que es binaria la automatiza
 [`scripts/verify_api_contract.py`](../scripts/verify_api_contract.py), sobre el contrato que
-genera FastAPI: que cada operación, cada respuesta y cada campo tengan su texto en la
-referencia, y que cada operación y cada estado que responde estén en [`04-api.md`](04-api.md).
-Corre en el hook de pre-commit y en cada pull request. Que el contrato versionado sea el que
+genera FastAPI. Corre en el hook de pre-commit y en cada pull request, y sus reglas están en
+el encabezado del script. Que el contrato versionado sea el que
 genera el código lo comprueban un test del backend y el pipeline.
 
 ## 6. Trabajar con el portal

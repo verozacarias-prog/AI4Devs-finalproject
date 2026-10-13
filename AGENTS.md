@@ -209,11 +209,13 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   Tolerante mientras `backend/` y `frontend/` no
   existan, pero falla si `backend/` existe y el dominio no está en `backend/app/domain/`.
 - Contrato de la API: `python3 scripts/verify_api_contract.py`. Lee el contrato versionado,
-  `frontend/src/api/openapi.json`. Valida que cada operación diga para qué sirve, que cada
-  respuesta diga cuándo ocurre, que cada parámetro y cada campo tengan su descripción, que
-  todo error use el cuerpo de un error, y que cada operación y cada estado que responde estén
-  en `docs/04-api.md`. No valida que `04-api.md` describa cada campo, ni que un endpoint
-  especificado esté implementado.
+  `frontend/src/api/openapi.json`. Valida que cada operación diga para qué sirve, con un
+  título escrito a mano, que cada respuesta diga cuándo ocurre, que cada parámetro y cada
+  campo tengan su descripción, que todo error tenga el cuerpo de un error, que lo que pide
+  sesión documente su `401` y lo que modifica algo su `403`, y que cada operación y cada
+  estado que responde estén en `docs/04-api.md`. No valida que `04-api.md` describa cada
+  campo, que un endpoint especificado esté implementado, ni que lo especificado para una
+  operación esté en el contrato: compara del contrato hacia la especificación.
 - Los tres tienen que pasar sin errores antes de commitear; el hook de pre-commit los corre solo,
   y el flujo `.github/workflows/docs-quality.yml` los repite en cada pull request junto con
   `markdownlint-cli2` y `lychee`.
