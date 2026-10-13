@@ -178,7 +178,6 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
         - transaction_repository_port.py
         - account_repository_port.py
         - unit_of_work_port.py
-        - clock_port.py
         - vector_store_port.py
         - whatsapp_gateway_port.py
         - exchange_rate_port.py
@@ -188,6 +187,7 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
         - llm_call_log_port.py
         - database_health_port.py
       errors.py          # the errors a business rule foresees, each with a stable code and a category
+      local_date.py      # which day it is for a user, in the time zone of that user
     /adapters
       /inbound
         /api               # FastAPI routers — translate HTTP into use case calls
@@ -197,7 +197,6 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
         /cli                # operator commands: local test data, knowledge base load, enabling phone numbers, personal links for the demo
       /outbound
         /postgres           # SQLAlchemy repositories, unit of work and connection setup
-        /clock              # ClockPort implementation with the machine clock
         /pgvector            # VectorStorePort implementation
         /whatsapp_client      # sends outbound WhatsApp messages
         /email_reader          # IMAP/Gmail integration (could-have, not in the MVP)

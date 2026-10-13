@@ -84,8 +84,13 @@ ninguna es un puerto con su adaptador.
    una regla de negocio prevé están en `domain/errors.py`. Cada uno tiene un código estable y
    una categoría: algo que no existe o es de otro, falta de permiso, conflicto, o un dato que
    viola una regla. No saben nada de HTTP ni de la base. Un adaptador de salida que recibe un
-   error de su librería que el dominio prevé, como el rechazo de una restricción, lo convierte
-   en el error del dominio que corresponde y conserva el original como causa. Cada adaptador
+   error de su librería que el dominio prevé, como una clave única repetida, lo convierte
+   en el error del dominio que corresponde y conserva el original como causa. Lo único que el
+   error se lleva de la base es el nombre de la restricción que rechazó la escritura, para el
+   registro: es un nombre del esquema, no un dato. Un rechazo que ninguna regla previó, como
+   una clave primaria repetida o una restricción de valores violada, no es un error del
+   dominio: es una falla del código, tiene su propio error con ese mismo nombre de
+   restricción, y sale como cualquier error no previsto. Cada adaptador
    de entrada tiene un único lugar que convierte un error en su salida: un código de estado en
    la API, un mensaje en WhatsApp, un código de salida en un comando. Ese lugar es también el
    que lo registra ([ADR 0023](0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).

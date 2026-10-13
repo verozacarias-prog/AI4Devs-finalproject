@@ -345,7 +345,8 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   | `constraint` | El nombre de la restricción de la base que rechazó la escritura | Si el error original fue ese rechazo |
 
   La única respuesta de error que no deja su línea es la que el servidor da antes de llegar a
-  un caso de uso, como la de una ruta que no existe o la de un método que la ruta no acepta.
+  un caso de uso, como la de una ruta que no existe, la de un método que la ruta no acepta o
+  la de un pedido que no tiene la forma del contrato.
   No tiene camino en el código ni filas que ubicar, y la línea de su pedido ya dice el
   resultado. Registrarla dejaría que cualquiera que pruebe rutas al azar tape los errores
   reales.
