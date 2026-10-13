@@ -4,6 +4,20 @@
 
 **Aislamiento entre usuarios, en todo endpoint autenticado.** El usuario sale siempre de la sesión autenticada, nunca del cuerpo, de la ruta ni de un parámetro. Toda lectura o escritura se limita a los recursos de ese usuario y de los grupos familiares a los que pertenece, según [reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad). Un recurso que existe pero es de otro usuario responde `404`, igual que uno que no existe, para no confirmar su existencia. Cada endpoint lo detalla para sus propios recursos, pero la regla vale aunque no lo diga.
 
+**Cuerpo de un error.** Toda respuesta de error es JSON y tiene la misma forma: un campo `error` con el código del error, una palabra corta en minúsculas que no cambia, como `period_overlaps`. Es el mismo código que queda en los registros. El dashboard elige qué mostrar por ese código, nunca por un texto. Un error suma otros campos, con nombre propio, solo cuando el cliente los necesita para seguir, y cada endpoint los documenta: por ejemplo `missing_fields` en `POST /transactions`. El cuerpo nunca repite lo que el cliente mandó ni describe la falla. Lo que el servidor responde antes de llegar a un endpoint tiene la misma forma, con el nombre del estado como código: `not_found` para una ruta que no existe y `method_not_allowed`, con `405`, para un método que la ruta no acepta.
+
+| Estado | Cuándo |
+|---|---|
+| `401` | No hay sesión válida, o la firma del webhook no lo es |
+| `403` | El recurso existe para el usuario, que lo puede leer, pero no puede hacer eso |
+| `404` | El recurso no existe, es de otro usuario, o la funcionalidad está apagada |
+| `409` | El pedido choca con el estado actual |
+| `422` | Falta un dato o viola una regla. También el pedido que no tiene la forma del contrato, que responde `invalid_request` |
+| `429` | Se alcanzó un límite de intentos |
+| `500` | Un error que nadie previó. Responde `internal_error` y nada más |
+
+**Referencia de cada respuesta.** Toda respuesta, también la de un error, lleva el header `X-Request-Id` con el identificador del pedido. Es el mismo que queda en los registros ([Operación 6.3](operacion.md#63-registros)), y no dice nada del usuario ni del pedido.
+
 ### `POST /webhook/whatsapp`
 
 Recibe los mensajes entrantes desde la Cloud API de Meta. **No los procesa**: verifica la firma, los guarda y confirma la recepción. La interpretación por IA, el registro y la respuesta al usuario ocurren después, en el worker, y la respuesta viaja por WhatsApp, no en este response. El fundamento está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
@@ -345,7 +359,7 @@ responses:
     content:
       application/json:
         example:
-          detail: "missing required fields"
+          error: "missing_fields"
           missing_fields: ["account_id", "budget_period_id"]
   404:
     description: account_id, budget_period_id or category_id does not belong to the authenticated user (category_id may also be from the base catalog)

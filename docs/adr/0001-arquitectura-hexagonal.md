@@ -67,6 +67,30 @@ la API: son los tres procesos que comparten el código del dominio.
    lado. El proveedor de LLM tampoco accede a la base
    ([ADR 0013](0013-datos-minimos-al-proveedor-de-llm.md)).
 
+**Lo que comparten las capas.** Hay dos cosas que usan a la vez el dominio y los adaptadores, y
+ninguna es un puerto con su adaptador.
+
+1. **Las utilidades técnicas viven en `app/shared/`.** Son piezas chicas que no son negocio y
+   que no aíslan ningún sistema externo, así que un adaptador de salida para cada una sería
+   ceremonia. Tres reglas las mantienen acotadas: un módulo importa solo la librería estándar,
+   no importa nada del resto de `app/`, y hay uno por tema, nunca uno general. Lo que es lógica
+   de negocio no va ahí aunque sea una función suelta: va en el dominio.
+2. **El reloj es la primera.** `shared/clock.py` tiene el protocolo del reloj y su
+   implementación con el reloj de la máquina. Un caso de uso recibe el reloj al construirse y
+   nunca lee la hora por su cuenta, que es lo que deja fijar el momento en un test. Calcular
+   qué día es para un usuario, en su zona horaria, es una regla de negocio y vive en el
+   dominio.
+3. **El dominio declara sus errores, y cada borde los traduce una sola vez.** Los errores que
+   una regla de negocio prevé están en `domain/errors.py`. Cada uno tiene un código estable y
+   una categoría: algo que no existe o es de otro, falta de permiso, conflicto, o un dato que
+   viola una regla. No saben nada de HTTP ni de la base. Un adaptador de salida que recibe un
+   error de su librería que el dominio prevé, como el rechazo de una restricción, lo convierte
+   en el error del dominio que corresponde y conserva el original como causa. Cada adaptador
+   de entrada tiene un único lugar que convierte un error en su salida: un código de estado en
+   la API, un mensaje en WhatsApp, un código de salida en un comando. Ese lugar es también el
+   que lo registra ([ADR 0023](0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
+   Un error que nadie previó sale con una respuesta genérica, que no dice nada de él.
+
 ## Consecuencias
 
 ### Positivas
@@ -83,6 +107,8 @@ la API: son los tres procesos que comparten el código del dominio.
 - Una regla de negocio se implementa una sola vez: la API, el worker, los procesos programados
   y los comandos de operación la ejecutan por el mismo caso de uso, en vez de repetirla en un
   script con SQL propio.
+- Un caso de uso dice qué salió mal sin saber quién lo llamó: el mismo error es un `409` en la
+  API y una frase en WhatsApp, y ningún router repite esa traducción.
 - Que el SQL viva en un solo lugar es verificable: un script falla el commit si una librería de
   acceso a la base aparece fuera de los directorios permitidos.
 
@@ -94,6 +120,8 @@ la API: son los tres procesos que comparten el código del dominio.
   interfaz gigante.
 - La API, el worker y los procesos programados se despliegan con el mismo código. Un cambio en
   un caso de uso reinicia los tres, aunque solo lo use uno.
+- `app/shared/` es una carpeta que el dominio y los adaptadores importan por igual. Si sus
+  tres reglas se aflojan, se convierte en el lugar donde termina lo que nadie supo ubicar.
 - Una consulta de lectura simple, como listar movimientos para el dashboard, también pasa por un
   caso de uso y un repositorio, aunque un router con SQL directo sería más corto.
 
@@ -102,6 +130,14 @@ la API: son los tres procesos que comparten el código del dominio.
 - **CRUD directo controlador-a-base de datos:** menos carpetas e indirección, descartado porque
   con este número de integraciones externas cambiantes el dominio quedaría acoplado a detalles
   de infraestructura y los casos de uso no serían testeables sin levantar servicios reales.
+- **El reloj como un puerto con su adaptador de salida:** es la forma canónica del patrón, pero
+  son un paquete y un archivo de puerto para diez líneas de librería estándar, y la misma
+  ceremonia se repetiría con cada utilidad.
+- **Que los casos de uso lean la hora directamente:** no hace falta inyectar nada, pero un test
+  de períodos pasaría o fallaría según el día en que corre.
+- **Que cada router decida el código de estado de cada error:** no hace falta la jerarquía,
+  pero la misma regla respondería distinto según el endpoint, y el worker y los comandos
+  tendrían que repetir la traducción.
 - **El worker y los procesos programados como clientes HTTP de la API:** dejaría a la API como
   única puerta a la base también por dentro, pero rompe la atomicidad del procesamiento de un
   mensaje: si el proceso se cae entre la llamada a la API y la marca de procesado, el reintento

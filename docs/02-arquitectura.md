@@ -172,11 +172,13 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
 /backend
   /app
     /domain
-      /entities         # User, Account, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk
-      /use_cases         # RegisterTransaction, GetBudgetStatus, CalculateAccountBalance, GenerateProactiveAlert...
+      /entities         # User, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk
+      /use_cases         # CreateTestUser, SeedTestData, RegisterTransaction, GetBudgetStatus, CalculateAccountBalance, GenerateProactiveAlert...
       /ports             # interfaces the domain depends on but does not implement
         - transaction_repository_port.py
         - account_repository_port.py
+        - unit_of_work_port.py
+        - clock_port.py
         - vector_store_port.py
         - whatsapp_gateway_port.py
         - exchange_rate_port.py
@@ -185,15 +187,17 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
         - text_splitter_port.py
         - llm_call_log_port.py
         - database_health_port.py
+      errors.py          # the errors a business rule foresees, each with a stable code and a category
     /adapters
       /inbound
         /api               # FastAPI routers — translate HTTP into use case calls
         /whatsapp_webhook   # translate WhatsApp payloads into use case calls
         /message_worker     # worker entry point: takes stored messages, calls use cases
         /scheduler          # scheduled jobs entry point: calls use cases, never raw SQL
-        /cli                # operator commands: knowledge base load, enabling phone numbers, personal links for the demo
+        /cli                # operator commands: local test data, knowledge base load, enabling phone numbers, personal links for the demo
       /outbound
         /postgres           # SQLAlchemy repositories, unit of work and connection setup
+        /clock              # ClockPort implementation with the machine clock
         /pgvector            # VectorStorePort implementation
         /whatsapp_client      # sends outbound WhatsApp messages
         /email_reader          # IMAP/Gmail integration (could-have, not in the MVP)
@@ -202,7 +206,9 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
         /embedding_client         # embeddings provider client
         /text_splitter             # the only place that imports langchain-text-splitters
       /observability              # wrappers of the LLM and embedding ports that record each call, and the JSON log format with its redaction filter
+    /shared              # small technical utilities, standard library only: clock.py is the first
     constants.py         # environments, environment variable names and default values
+    test_data.py         # the template of a test user and the test users of local
     messages.py          # every message written for a person
     settings.py          # process configuration, read from environment variables
     main.py              # entry point of the API process
