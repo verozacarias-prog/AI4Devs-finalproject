@@ -13,8 +13,9 @@ from app.adapters.inbound.api.routes import DEV_TAG, HEALTH_TAG, SESSION_TAG
 API_DESCRIPTION = (
     "The API of Platita, a personal and family finance assistant. The dashboard is its only "
     "client, and both are served from one origin.\n\n"
-    "**Session.** It travels in the cookie `__Host-sid`, which the page cannot read. A "
-    "request without a valid session answers `401`.\n\n"
+    "**Session.** It travels in the cookie `__Host-sid`, which the page cannot read. An "
+    "operation that asks for a session is marked as such, and answers `401` without a "
+    "valid one.\n\n"
     "**Requests that change something.** A `POST`, `PUT`, `PATCH` or `DELETE` must come "
     "from the page of the API itself and be JSON: with another `Origin`, without one, or "
     "with another `Content-Type`, it answers `403`.\n\n"
@@ -96,6 +97,7 @@ DEV_USERS_DESCRIPTION = (
 )
 DEV_USERS_OK = "The test users, ordered by name. An empty list when there are none."
 DEV_USERS_LIST = "The test users, ordered by name."
+DEV_USERS_NOT_FOUND = "The development entry is disabled, or the environment is not local."
 DEV_SESSION_SUMMARY = "Enter as a test user"
 DEV_SESSION_DESCRIPTION = (
     "Opens a real session without a login code and returns it in the session cookie. In the "
@@ -105,8 +107,9 @@ DEV_SESSION_DESCRIPTION = (
 )
 DEV_SESSION_OK = "The session was opened. Its token is in the cookie, and the body is empty."
 DEV_SESSION_NOT_FOUND = (
-    "The user does not exist or is not a test user, `user_id` was sent outside the local "
-    "environment, or the personal link is unknown. The same answer for all of them."
+    "The development entry is disabled, the user does not exist or is not a test user, "
+    "`user_id` was sent outside the local environment, or the personal link is unknown. The "
+    "same answer for all of them."
 )
 DEV_SESSION_INVALID = "Neither `user_id` nor `access_token` was sent, or `user_id` is not a UUID."
 DEV_SESSION_USER_ID = "The test user to enter as, from the list. Only in the local environment."

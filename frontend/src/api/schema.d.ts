@@ -273,7 +273,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description The user does not exist or is not a test user, `user_id` was sent outside the local environment, or the personal link is unknown. The same answer for all of them. */
+            /** @description The development entry is disabled, the user does not exist or is not a test user, `user_id` was sent outside the local environment, or the personal link is unknown. The same answer for all of them. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -309,6 +309,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DevUsers"];
+                };
+            };
+            /** @description The development entry is disabled, or the environment is not local. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };

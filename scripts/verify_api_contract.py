@@ -6,17 +6,20 @@ The contract of the API is generated from the code and versioned in
 frontend/src/api/openapi.json; the pipeline fails if that file is not what the code
 generates. This script checks that file, so it needs nothing installed:
 
-  1. The reference is complete. Every operation says what it is for (summary and
-     description) and has a tag; every response says when it happens, in words of its own
+  1. The reference is complete. Every operation says what it is for, with a summary someone
+     wrote, not the one the framework derives from the name of the function, and a
+     description, and has a tag; every response says when it happens, in words of its own
      and not the default ones of the framework; every parameter and every field of every
      schema is described; and no schema of the framework is left in the contract. An
      operation that asks for a session documents its 401, and one that changes something
-     documents the 403 of the origin check.
-  2. Every error has the body of an error. A response that is not a success uses the
-     error schema, unless it answers with the same body as the success, as the health
-     routes do.
+     documents the 403 of the origin check, unless it is listed here as exempt from it.
+  2. Every error has the body of an error. A response that is not a success uses a schema
+     with the field `error`, alone or with the fields its endpoint adds, unless it answers
+     with the same body as the success, as the health routes do.
   3. The contract matches the specification. Every operation of the contract is in
-     docs/04-api.md, and so is every status it may answer with.
+     docs/04-api.md, and so is every status it may answer with: in the block of that
+     operation when its section marks one with a line such as `# POST /auth/logout`, and
+     anywhere in its section otherwise.
 
 What it does not check: that docs/04-api.md describes each field, or that an endpoint the
 specification describes is implemented. The specification may be ahead of the code.
@@ -36,15 +39,18 @@ CONTRACT_PATH = os.path.join('frontend', 'src', 'api', 'openapi.json')
 SPEC_PATH = os.path.join('docs', '04-api.md')
 
 HTTP_METHODS = ('get', 'post', 'put', 'patch', 'delete', 'head', 'options')
-ERROR_SCHEMA = 'ErrorBody'
+# El campo que todo cuerpo de error tiene (docs/04-api.md, "Cuerpo de un error").
+ERROR_FIELD = 'error'
 # Lo que el framework escribe solo cuando nadie describió la respuesta.
 FRAMEWORK_DESCRIPTIONS = {'Successful Response', 'Validation Error'}
 FRAMEWORK_SCHEMAS = {'HTTPValidationError', 'ValidationError'}
 FIRST_ERROR_STATUS = 400
-MIN_SUMMARY_WORDS = 2
 # Un pedido que modifica algo pasa por el control de origen, y uno que pide sesión puede no
 # tenerla: los dos tienen que estar en la referencia.
 CHANGING_METHODS = {'POST', 'PUT', 'PATCH', 'DELETE'}
+# Las operaciones que no pasan por el control de origen, escritas como "POST /ruta". El
+# webhook de WhatsApp va acá cuando exista: Meta lo llama sin Origin y firma cada pedido.
+ORIGIN_CHECK_EXEMPT = set()
 UNAUTHORIZED = '401'
 FORBIDDEN = '403'
 
@@ -52,6 +58,12 @@ FORBIDDEN = '403'
 SPEC_HEADING = re.compile(r'^#{2,6} ')
 SPEC_OPERATION = re.compile(r'`(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS) (/[^`\s]*)`')
 SPEC_STATUS = re.compile(r'(?<![\w.])([1-5][0-9]{2})(?![\w.])')
+# Dentro de un bloque de código, la línea que dice de qué operación es lo que sigue, y cada
+# estado que esa operación responde.
+SPEC_BLOCK_MARKER = re.compile(r'^# .*\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS) /')
+SPEC_BLOCK_OPERATION = re.compile(r'\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS) (/[^\s?·]*)')
+SPEC_BLOCK_STATUS = re.compile(r'^\s{1,4}([1-5][0-9]{2}):')
+NOT_A_WORD_CHARACTER = re.compile(r'\W')
 PATH_PARAMETER = re.compile(r'\{[^}]*\}')
 
 
@@ -83,6 +95,23 @@ def is_default_description(status, description):
         return False
 
 
+def derived_summary(operation, method, path):
+    """The summary the framework writes by itself: the name of the function, as a title.
+
+    The identifier of an operation is that name followed by its path and its method.
+    """
+    suffix = '{}_{}'.format(NOT_A_WORD_CHARACTER.sub('_', path), method.lower())
+    identifier = operation.get('operationId', '')
+    if not identifier.endswith(suffix):
+        return None
+    return identifier[:-len(suffix)].replace('_', ' ').title()
+
+
+def is_error_body(name, schemas):
+    """Whether a schema is the body of an error: it has the code, whatever else it adds."""
+    return ERROR_FIELD in schemas.get(name, {}).get('properties', {})
+
+
 def schema_names(node):
     """Every schema a piece of the contract refers to, by name."""
     names = set()
@@ -105,15 +134,17 @@ def check_reference(contract):
         errors.append('el contrato no dice qué es la API (falta info.description)')
     described_tags = {tag.get('name') for tag in contract.get('tags', []) if tag.get('description')}
 
+    schemas = contract.get('components', {}).get('schemas', {})
     for label, _method, _path, operation in operations_of(contract):
         summary = operation.get('summary', '')
-        if len(summary.split()) < MIN_SUMMARY_WORDS:
-            # Una sola palabra es el nombre de la función, que el framework pone solo.
-            errors.append('{}: falta el resumen (summary), escrito a mano'.format(label))
+        if not summary or summary == derived_summary(operation, _method, _path):
+            errors.append('{}: falta el resumen (summary), escrito a mano: el que tiene es '
+                          'el nombre de la función'.format(label))
         responses = operation.get('responses', {})
         if operation.get('security') and UNAUTHORIZED not in responses:
             errors.append('{}: pide sesión y no documenta su {}'.format(label, UNAUTHORIZED))
-        if _method in CHANGING_METHODS and FORBIDDEN not in responses:
+        passes_origin_check = _method in CHANGING_METHODS and label not in ORIGIN_CHECK_EXEMPT
+        if passes_origin_check and FORBIDDEN not in responses:
             errors.append('{}: modifica algo y no documenta el {} del control de '
                           'origen'.format(label, FORBIDDEN))
         if not operation.get('description'):
@@ -137,11 +168,11 @@ def check_reference(contract):
                 errors.append('{}: la respuesta {} no dice cuándo ocurre'.format(label, status))
             if status.isdigit() and int(status) >= FIRST_ERROR_STATUS:
                 used = schema_names(response)
-                if used != {ERROR_SCHEMA} and not (used and used <= success_schemas):
-                    errors.append('{}: la respuesta {} no usa el cuerpo de un error ({})'.format(
-                        label, status, ERROR_SCHEMA))
+                is_error = bool(used) and all(is_error_body(name, schemas) for name in used)
+                if not is_error and not (used and used <= success_schemas):
+                    errors.append('{}: la respuesta {} no tiene el cuerpo de un error, con '
+                                  'su campo "{}"'.format(label, status, ERROR_FIELD))
 
-    schemas = contract.get('components', {}).get('schemas', {})
     for name in sorted(schemas):
         if name in FRAMEWORK_SCHEMAS:
             errors.append('el esquema "{}" es del framework: ninguna respuesta de la API '
@@ -183,6 +214,34 @@ def spec_sections(text):
     return sections
 
 
+def block_statuses(section):
+    """Maps each operation a code block of the section marks to the statuses listed under it.
+
+    Empty when the section marks no operation: then the whole section speaks for all of it.
+    """
+    statuses = {}
+    current = []
+    in_code = False
+    for line in section.splitlines():
+        if line.startswith('```'):
+            in_code = not in_code
+            current = []
+            continue
+        if not in_code:
+            continue
+        if SPEC_BLOCK_MARKER.match(line):
+            current = [(method, normalized(path))
+                       for method, path in SPEC_BLOCK_OPERATION.findall(line)]
+            for operation in current:
+                statuses.setdefault(operation, set())
+            continue
+        found = SPEC_BLOCK_STATUS.match(line)
+        if found:
+            for operation in current:
+                statuses[operation].add(found.group(1))
+    return statuses
+
+
 def check_against_spec(contract, spec_text):
     errors = []
     sections = spec_sections(spec_text)
@@ -191,11 +250,15 @@ def check_against_spec(contract, spec_text):
         if section is None:
             errors.append('{}: está en el contrato y no en {}'.format(label, SPEC_PATH))
             continue
-        documented = set(SPEC_STATUS.findall(section))
+        in_blocks = block_statuses(section).get((method, normalized(path)))
+        if in_blocks is None:
+            documented, where = set(SPEC_STATUS.findall(section)), 'su sección'
+        else:
+            documented, where = in_blocks, 'el bloque de esa operación'
         for status in sorted(operation.get('responses', {})):
             if status not in documented:
-                errors.append('{}: responde {} y su sección de {} no lo nombra'.format(
-                    label, status, SPEC_PATH))
+                errors.append('{}: responde {} y {} en {} no lo lista'.format(
+                    label, status, where, SPEC_PATH))
     return errors
 
 

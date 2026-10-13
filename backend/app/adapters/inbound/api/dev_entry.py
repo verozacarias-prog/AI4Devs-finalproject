@@ -59,6 +59,7 @@ def build_dev_entry_router(
             summary=reference.DEV_USERS_SUMMARY,
             description=reference.DEV_USERS_DESCRIPTION,
             response_description=reference.DEV_USERS_OK,
+            responses=documented_errors({status.HTTP_404_NOT_FOUND: reference.DEV_USERS_NOT_FOUND}),
         )
         def users() -> DevUsers:
             return DevUsers(

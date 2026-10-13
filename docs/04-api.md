@@ -467,6 +467,8 @@ responses:
     description: Current session (logout) or every session of the user (logout-all) revoked; the cookie is cleared
   401:
     description: No valid session
+  403:
+    description: The request did not come from the page of the API itself, or it is not JSON
 ```
 
 ### `GET /dev/users` y `POST /dev/session`
@@ -479,7 +481,7 @@ La entrada de desarrollo: abre una sesión sin código, mientras no exista por d
   - `accept_test_notice`: opcional. La primera vez, el enlace todavía no tiene usuario: sin este campo la respuesta es `409` con la versión del aviso de prueba, y la página lo muestra. Cuando la persona lo acepta, la página repite el pedido con `accept_test_notice` y esa versión; ahí se crea el usuario de prueba, con la plantilla de los datos de prueba y con la fecha y la versión del aviso como consentimiento, y se abre la sesión. Las veces siguientes el campo no hace falta.
   - `user_id`: el usuario elegido de la lista. **Solo en `local`**; en `demo` un pedido que lo trae responde `404`, venga o no con un `access_token`. Es el único caso en que el usuario sale del pedido y no de una sesión. Un `user_id` que no existe, o que es de un usuario con un teléfono real, responde el mismo `404`.
 
-Un pedido sin `user_id` ni `access_token` responde `422`.
+Un pedido sin `user_id` ni `access_token`, o con un `user_id` que no es un UUID, responde `422`.
 
 Un enlace que no existe o que ya se regeneró responde el mismo `404` que la entrada apagada.
 
@@ -532,7 +534,7 @@ responses:
   404:
     description: The development entry is disabled, the link is unknown or was regenerated, user_id was sent outside local, or user_id is not a test user
   422:
-    description: Neither user_id nor access_token was sent
+    description: Neither user_id nor access_token was sent, or user_id is not a UUID
 ```
 
 ### `GET /me`
