@@ -26,8 +26,6 @@ export const MESSAGES = {
     logout: 'Cerrar sesión',
     empty: 'No hay usuarios de prueba',
     emptyDetail: 'Corré el script de datos de prueba y volvé a consultar:',
-    unavailable: 'La entrada de desarrollo está apagada',
-    unavailableDetail: 'Se enciende con DEV_ENTRY_ENABLED=true, y la lista existe solo en el entorno local.',
     failed: 'No se pudo consultar la sesión',
     apiUnreachable: 'No se puede llegar a la API.',
     apiError: 'La API respondió con un error.',

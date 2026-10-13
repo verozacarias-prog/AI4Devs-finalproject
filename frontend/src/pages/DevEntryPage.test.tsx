@@ -147,14 +147,21 @@ test('case 60: without test users it is empty, with the command to create them',
   expect(screen.queryByRole('alert')).toBeNull()
 })
 
-test('case 61: with the entry off it says so, without an error or a retry', async () => {
-  api.use(http.get(ME, noSession), http.get(USERS, notFound))
+test('case 61: with the entry off, the card is not shown at all', async () => {
+  let asked = false
+  api.use(
+    http.get(ME, noSession),
+    http.get(USERS, () => {
+      asked = true
+      return notFound()
+    }),
+  )
 
-  render(<DevEntryPage />)
+  const { container } = render(<DevEntryPage />)
 
-  await screen.findByText('La entrada de desarrollo está apagada')
-  expect(screen.queryByRole('alert')).toBeNull()
-  expect(screen.queryByRole('button')).toBeNull()
+  await vi.waitFor(() => expect(asked).toBe(true))
+  await vi.waitFor(() => expect(container.innerHTML).toBe(''))
+  expect(screen.queryByText('Entrada de desarrollo')).toBeNull()
 })
 
 test.each([

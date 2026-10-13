@@ -6,8 +6,8 @@ import { MESSAGES } from '../messages'
 
 /**
  * The four states of a screen (docs/convenciones-de-desarrollo.md, section 2). With content
- * it is one of three things: the list to choose from, the user who is in, or the notice that
- * the entry is off.
+ * it is the list to choose from or the user who is in. With the entry off there is nothing
+ * to show: the card is not there, so that nobody outside development ever sees it.
  */
 type State =
   | { kind: 'loading' }
@@ -86,6 +86,8 @@ export function DevEntryPage({ timeoutMs }: Props) {
     statusLine.current?.focus()
   }
 
+  if (state.kind === 'unavailable') return null
+
   return (
     <section className="card" aria-labelledby="dev-entry-heading">
       <h2 id="dev-entry-heading" className="card__heading">
@@ -133,7 +135,6 @@ export function DevEntryPage({ timeoutMs }: Props) {
           </button>
         </>
       )}
-      {state.kind === 'unavailable' && <p className="card__text">{TEXT.unavailableDetail}</p>}
       {state.kind === 'error' && (
         <div role="alert">
           <p className="status status--error">{TEXT.failed}</p>
@@ -147,7 +148,7 @@ export function DevEntryPage({ timeoutMs }: Props) {
   )
 }
 
-function statusText(state: State): string {
+function statusText(state: Exclude<State, { kind: 'unavailable' }>): string {
   switch (state.kind) {
     case 'loading':
       return TEXT.loading
@@ -157,8 +158,6 @@ function statusText(state: State): string {
       return TEXT.signedInAs(state.user.name)
     case 'empty':
       return TEXT.empty
-    case 'unavailable':
-      return TEXT.unavailable
     case 'error':
       // The error is announced by the alert below, not by the status line.
       return ''
