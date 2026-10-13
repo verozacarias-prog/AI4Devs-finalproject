@@ -23,15 +23,14 @@ antes de la rama de consejos, con la evaluación del
 | Entra en la entrega 2 | Dónde está la regla |
 |---|---|
 | Chat web dentro del dashboard, por el mismo camino asíncrono que WhatsApp | [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md), [la API](04-api.md) |
-| Entrada de desarrollo, que abre una sesión real sin código: en `local` se elige un usuario de prueba, y en `demo` se entra con un enlace personal, para que otra persona pueda probar siendo dueña de sus datos | [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md) |
-| Registro de gastos e ingresos con toda su conversación: lo que se resuelve solo a la vista, preguntar lo que falta, el pendiente y su continuación, varios en un mensaje con respuestas por número, categoría nueva con confirmación, y elegir entre el presupuesto individual y el de un grupo | [Reglas de dominio § 1, § 4 y § 5](reglas-de-dominio.md) |
-| Corregir, borrar y restaurar un movimiento confirmado, con el botón de responder un mensaje | [Reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado) |
+| Entrada de desarrollo en `local`, que abre una sesión real sin código: se elige un usuario de prueba | [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md) |
+| Registro de gastos e ingresos con toda su conversación: lo que se resuelve solo a la vista, preguntar lo que falta, el pendiente y su continuación, y categoría nueva con confirmación | [Reglas de dominio § 1, § 4 y § 5](reglas-de-dominio.md) |
 | Pantalla de cuentas con el saldo calculado, donde se ve el efecto de cada movimiento | [Reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado), `GET /accounts` |
 | El paso de clasificación con las tres clases de mensaje, el tope diario total y las tres cuotas | [ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md) |
 | Desde la primera migración, la extensión pgvector; desde la migración del esquema, la columna del mensaje citado. El puerto de LLM, desde el primer caso de uso que lo usa; los de embeddings y de vector store, con la rama de consejos | [ADR 0019](adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md), [3. Modelo de datos](03-modelo-de-datos.md) |
 | Docker Compose que levanta la base, las migraciones, la API y el worker con un comando, y el pipeline de seis controles, cinco desde el primer commit de código y el análisis de seguridad después | [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) |
 | La tabla de llamadas al modelo con su envoltorio y el script de métricas, los registros en JSON con su filtro y su test, los eventos de seguridad y las tres rutas de salud | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) |
-| Datos de prueba: una plantilla de usuario con el alta completa, cuentas, su primer período confirmado y perfil financiero. En `local` el script de datos de prueba crea varios usuarios con ella, con el consentimiento registrado y al menos uno con un grupo; en `demo` se crea uno por persona, cuando acepta el aviso de prueba | [Reglas de dominio § 3 y § 11](reglas-de-dominio.md) |
+| Datos de prueba: una plantilla de usuario con el alta completa, cuentas, su primer período confirmado y perfil financiero. En `local` el script de datos de prueba crea varios usuarios con ella, con el consentimiento registrado y al menos uno con un grupo | [Reglas de dominio § 3 y § 11](reglas-de-dominio.md) |
 
 | Queda para la entrega final | Por qué |
 |---|---|
@@ -40,6 +39,9 @@ antes de la rama de consejos, con la evaluación del
 | Un gasto en otra moneda, reintegros vinculados, retiro y aporte del titular, y el aviso de duplicado entre miembros | Cada uno es un flujo con sus propios casos de error |
 | Transferencias, compras con tarjeta y reglas recurrentes | Las dos últimas dependen de los procesos programados |
 | Procesos programados: vencimiento y recordatorio de pendientes, alertas, recurrentes, cierres de resumen, cotizaciones | En la entrega 2 un pendiente sin responder queda abierto |
+| Varios movimientos en un mensaje, con respuestas por número, y elegir entre el presupuesto individual y el de un grupo | Son los dos últimos tramos de la conversación del registro ([reglas de dominio § 1 y § 5](reglas-de-dominio.md)). Se pasaron el 13 de octubre de 2026, porque la entrega 2 vence el 22 |
+| Corregir, borrar y restaurar un movimiento confirmado, con el botón de responder un mensaje | Es un flujo aparte, que parte de un movimiento ya registrado ([reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado)). Se pasó en la misma fecha |
+| El entorno `demo` y su despliegue: la entrada con un enlace personal, para que otra persona pueda probar siendo dueña de sus datos, los dos comandos que crean y regeneran el enlace, la pantalla del aviso de prueba y el usuario de prueba de cada persona | El proveedor y el plan siguen sin decidir, y la entrega 2 se prueba en `local` ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Se pasó en la misma fecha |
 | La pantalla de presupuesto y `GET /budgets/{budget_id}`, y los formularios de carga del dashboard | La pantalla de cuentas ya muestra el efecto de un gasto. El reparto por ticket está en [6. Tickets](06-tickets.md) |
 
 **Lo que todavía no tiene código responde un texto fijo.** La clasificación reconoce las tres
@@ -52,12 +54,11 @@ tabla, el asistente no llama al modelo otra vez ni cobra cuota:
   ingresos, y tus saldos están en el dashboard."
 
 **Si el tiempo no alcanza, se cae lo último de esta lista y no lo primero:** el camino feliz de
-un gasto y de un ingreso con la pantalla de cuentas; los pendientes y la categoría nueva; varios
-movimientos en un mensaje; el presupuesto de un grupo; y corregir, borrar y restaurar.
+un gasto y de un ingreso con la pantalla de cuentas; y los pendientes y la categoría nueva.
 
-El entorno `demo` se despliega desde la rama de la entrega y hace de entorno de pruebas: cada
-persona que prueba tiene su usuario y su enlace. Dónde se aloja depende de la decisión abierta
-sobre el proveedor y el plan.
+El entorno `demo` llega en la entrega final. Se despliega desde la rama de la entrega y hace de
+entorno de pruebas: cada persona que prueba tiene su usuario y su enlace. Dónde se aloja depende
+de la decisión abierta sobre el proveedor y el plan. En la entrega 2 Platita se prueba en `local`.
 
 ## Entrega 2
 
@@ -82,7 +83,7 @@ sobre el proveedor y el plan.
 | Que el campo `endpoint` de los registros conserve el prefijo de un router incluido con `prefix=` | Se incluya el primer router con prefijo | Hoy toda ruta se declara completa en `routes.py`. Con un prefijo dado al incluir, la línea `http.request` registraría la ruta sin él, y dejaría de ser "la ruta como está declarada" ([Operación 6.3](operacion.md#63-registros)) |
 | Decidir si la referencia de la API, `/docs` y `/openapi.json`, queda abierta en `production` | Haya un primer despliegue | Hoy está abierta en todo entorno. No expone datos de nadie, pero sí qué endpoints existen. Lo habitual es apagarla en producción o dejarla solo en `local` y `demo` |
 | Enviar el encabezado `Strict-Transport-Security` | Haya un primer despliegue | El control de origen compara sin el esquema, así que una página servida por `http` en el mismo dominio lo pasaría ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). En `local` no aplica: no hay `https` |
-| Los dos comandos de operación del entorno `demo`, que crean y regeneran un enlace personal, y la pantalla del aviso de prueba, con su texto versionado | Exista el scaffold | Es lo que deja probar a alguien más sin que vea los datos de otro, y con su consentimiento registrado ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Sin ellos, `demo` no tiene por dónde entrar |
+| Los dos comandos de operación del entorno `demo`, que crean y regeneran un enlace personal, y la pantalla del aviso de prueba, con su texto versionado | Se decida el proveedor, en la entrega final | Es lo que deja probar a alguien más sin que vea los datos de otro, y con su consentimiento registrado ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Sin ellos, `demo` no tiene por dónde entrar |
 | Sumar al verificador de arquitectura el nombre del SDK del proveedor de embeddings | Se elija ese proveedor | El dominio no conoce ninguna librería de IA ([ADR 0020](adr/0020-sin-framework-de-orquestacion-de-ia.md)), y el verificador solo frena las que tiene en su lista. El del LLM, `openai`, ya está |
 | Revisar las dependencias que trae `langchain-text-splitters` y que ninguna envíe datos por su cuenta | Se instale, con la carga de la base de conocimiento | Lo pide el [ADR 0020](adr/0020-sin-framework-de-orquestacion-de-ia.md). Es para la entrega final |
 | Política de acceso central y tests de aislamiento entre usuarios | Exista el scaffold | La regla ya está en la [API](04-api.md): el usuario sale de la sesión y un recurso ajeno responde `404`. Lo que falta es aplicarla en un solo lugar del dominio, incluida la visibilidad por intervalos de membresía de los grupos familiares y las respuestas por WhatsApp que citan un lote, y probarla en cada endpoint y en el worker. Implementada caso por caso, alguno se escapa |
@@ -170,6 +171,12 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   decidir un tope de tokens por mensaje, cuotas menores para cuentas nuevas y una alerta de
   gasto diario antes de llegar al tope. El costo por día ya se puede leer de la tabla de
   llamadas al modelo ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
+- **Qué responde el asistente ante lo que pasó a la entrega final: sin decidir.** Los textos
+  fijos de arriba cubren un registro que no es gasto ni ingreso, y una consulta o un consejo.
+  No cubren tres casos que en la entrega 2 no tienen código: un mensaje con varios movimientos,
+  un usuario con un período individual y uno de grupo para la misma fecha, y una respuesta que
+  cita una confirmación para corregirla o borrarla. Hay que decidirlo antes de escribir el
+  registro de un gasto.
 - **Alta por el chat web: sin decidir.** El alta corre por el chat, igual en WhatsApp y en el
   chat web, desde el segundo paso. Pero para abrir el chat web hace falta una sesión, y una
   persona que todavía no es usuario no la tiene. Falta decidir cómo entra. La candidata es que el
