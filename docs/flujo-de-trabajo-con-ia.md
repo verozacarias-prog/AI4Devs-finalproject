@@ -42,8 +42,9 @@ que requiere criterio es un command.
 |---|---|
 | [`scripts/verify_docs.py`](../scripts/verify_docs.py) | Enlaces y anclas, documentos huérfanos, texto duplicado entre archivos, bloques Mermaid, nombres de archivo, plantilla de los ADR, y frontmatter de commands, skills y agentes |
 | [`scripts/verify_architecture.py`](../scripts/verify_architecture.py) | Que `domain/` no importe infraestructura ni adaptadores ni tipe montos con `float`, que las librerías de acceso a la base solo aparezcan en los adaptadores de salida de PostgreSQL y pgvector, las migraciones y los tests, que ningún framework de orquestación de IA se importe fuera del adaptador de particionado, y que `frontend/` no alcance la base de datos. Tolerante mientras no exista el código, pero falla si existe `backend/` sin su dominio en la ruta esperada |
+| [`scripts/verify_api_contract.py`](../scripts/verify_api_contract.py) | Que la referencia de la API, la que muestra `/docs`, esté completa, y que lo que el contrato declara esté en [`04-api.md`](04-api.md). Compara del contrato hacia la especificación, no al revés |
 
-Los dos corren también en integración continua, junto con `markdownlint-cli2` y `lychee`, porque
+Los tres corren también en integración continua, junto con `markdownlint-cli2` y `lychee`, porque
 el hook se saltea con `--no-verify` y depende de que cada clon lo active. Detalle en las
 [convenciones de documentación](08-convenciones-de-documentacion.md#87-verificación-automática).
 

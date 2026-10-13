@@ -8,6 +8,7 @@ from typing import TextIO
 
 from fastapi import FastAPI
 
+from app.adapters.inbound.api import reference
 from app.adapters.inbound.api.dashboard import mount_dashboard
 from app.adapters.inbound.api.dev_entry import build_dev_entry_router
 from app.adapters.inbound.api.errors import install_error_handlers
@@ -42,7 +43,14 @@ def create_app(settings: Settings, log_stream: TextIO | None = None) -> FastAPI:
         # One for each request: it holds the connection of its transaction.
         return SqlAlchemyUnitOfWork(engine)
 
-    app = FastAPI(title=APP_TITLE, version=settings.version)
+    app = FastAPI(
+        title=APP_TITLE,
+        version=settings.version,
+        description=reference.API_DESCRIPTION,
+        openapi_tags=reference.TAGS,
+        # One page for the reference is enough: the other one shows the same contract.
+        redoc_url=None,
+    )
     # The middleware added last runs first: the request is logged, gets its headers, and
     # only then is checked, so a refused one leaves its line and carries its reference.
     app.middleware("http")(refuse_requests_from_elsewhere)

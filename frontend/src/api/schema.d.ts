@@ -13,7 +13,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Logout */
+        /**
+         * Close this session
+         * @description Revokes the session of the request, and only that one, and clears its cookie. The body of the request is ignored.
+         */
         post: operations["logout_auth_logout_post"];
         delete?: never;
         options?: never;
@@ -30,7 +33,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Enter */
+        /**
+         * Enter as a test user
+         * @description Opens a real session without a login code and returns it in the session cookie. In the local environment the user is chosen from the list, with `user_id`. A personal link, with `access_token`, is the way in of the demo environment and is not built yet: it answers `404`. One of the two is required.
+         */
         post: operations["enter_dev_session_post"];
         delete?: never;
         options?: never;
@@ -45,7 +51,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Users */
+        /**
+         * List the test users
+         * @description The users anyone may enter as: the ones with an invented phone, which starts with `+000`. A user with a real phone is never listed. It asks for no session. It exists only in the local environment.
+         */
         get: operations["users_dev_users_get"];
         put?: never;
         post?: never;
@@ -62,7 +71,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Healthz */
+        /**
+         * Is the process alive
+         * @description Answers as long as the process runs. It does not touch the database.
+         */
         get: operations["healthz_healthz_get"];
         put?: never;
         post?: never;
@@ -79,7 +91,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Me */
+        /**
+         * Who is behind this session
+         * @description The user of the session of the request. The dashboard asks this when it loads, because it cannot read the cookie. It counts as activity of the session.
+         */
         get: operations["me_me_get"];
         put?: never;
         post?: never;
@@ -96,7 +111,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Readyz */
+        /**
+         * Can the API reach the database
+         * @description Asks the database the cheapest question there is. It is what a deployment waits for before sending requests.
+         */
         get: operations["readyz_readyz_get"];
         put?: never;
         post?: never;
@@ -112,9 +130,15 @@ export interface components {
     schemas: {
         /** DevSessionRequest */
         DevSessionRequest: {
-            /** Access Token */
+            /**
+             * Access Token
+             * @description The value of a personal link. Not built yet: it answers `404`.
+             */
             access_token?: string | null;
-            /** User Id */
+            /**
+             * User Id
+             * @description The test user to enter as, from the list. Only in the local environment.
+             */
             user_id?: string | null;
         };
         /** DevUser */
@@ -122,20 +146,33 @@ export interface components {
             /**
              * Id
              * Format: uuid
+             * @description The identifier of the user.
              */
             id: string;
-            /** Name */
+            /**
+             * Name
+             * @description The name the user is shown with.
+             */
             name: string;
         };
         /** DevUsers */
         DevUsers: {
-            /** Users */
+            /**
+             * Users
+             * @description The test users, ordered by name.
+             */
             users: components["schemas"]["DevUser"][];
         };
-        /** HTTPValidationError */
-        HTTPValidationError: {
-            /** Detail */
-            detail?: components["schemas"]["ValidationError"][];
+        /**
+         * ErrorBody
+         * @description The body of every error. An endpoint adds a field only when the client needs it.
+         */
+        ErrorBody: {
+            /**
+             * Error
+             * @description The code of the error: a short lowercase word that never changes.
+             */
+            error: string;
         };
         /**
          * HealthState
@@ -145,6 +182,7 @@ export interface components {
         HealthState: "ok" | "unavailable";
         /** HealthStatus */
         HealthStatus: {
+            /** @description `ok`, or `unavailable` when the database does not answer. */
             status: components["schemas"]["HealthState"];
         };
         /** Me */
@@ -152,23 +190,14 @@ export interface components {
             /**
              * Id
              * Format: uuid
+             * @description The identifier of the user.
              */
             id: string;
-            /** Name */
+            /**
+             * Name
+             * @description The name the user is shown with.
+             */
             name: string;
-        };
-        /** ValidationError */
-        ValidationError: {
-            /** Context */
-            ctx?: Record<string, never>;
-            /** Input */
-            input?: unknown;
-            /** Location */
-            loc: (string | number)[];
-            /** Message */
-            msg: string;
-            /** Error Type */
-            type: string;
         };
     };
     responses: never;
@@ -188,12 +217,30 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
+            /** @description The session was revoked and its cookie cleared. */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description There is no valid session: missing, unknown, revoked or expired, told apart nowhere. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
             };
         };
     };
@@ -210,20 +257,38 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Successful Response */
+            /** @description The session was opened. Its token is in the cookie, and the body is empty. */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Validation Error */
+            /** @description The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description The development entry is disabled, the user does not exist or is not a test user, `user_id` was sent outside the local environment, or the personal link is unknown. The same answer for all of them. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Neither `user_id` nor `access_token` was sent, or `user_id` is not a UUID. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
@@ -237,13 +302,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
+            /** @description The test users, ordered by name. An empty list when there are none. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["DevUsers"];
+                };
+            };
+            /** @description The development entry is disabled, or the environment is not local. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
@@ -257,7 +331,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
+            /** @description The process is alive. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -277,13 +351,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
+            /** @description The user of the session. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description There is no valid session: missing, unknown, revoked or expired, told apart nowhere. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
@@ -297,7 +380,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
+            /** @description The database answers. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -306,7 +389,7 @@ export interface operations {
                     "application/json": components["schemas"]["HealthStatus"];
                 };
             };
-            /** @description Service Unavailable */
+            /** @description The database does not answer. The body has the same shape as the `200`. */
             503: {
                 headers: {
                     [name: string]: unknown;

@@ -12,8 +12,10 @@ from http import HTTPStatus
 from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException
 
+from app.adapters.inbound.api import reference
 from app.adapters.inbound.api.routes import ERROR_KEY, REQUEST_ID_HEADER, ApiErrorCode
 from app.adapters.inbound.api.security_headers import security_headers_for
 from app.adapters.outbound.observability.errors import log_error
@@ -28,6 +30,20 @@ STATUS_BY_CATEGORY = {
     ErrorCategory.CONFLICT: status.HTTP_409_CONFLICT,
     ErrorCategory.INVALID: status.HTTP_422_UNPROCESSABLE_CONTENT,
 }
+
+
+class ErrorBody(BaseModel):
+    """The body of every error. An endpoint adds a field only when the client needs it."""
+
+    error: str = Field(description=reference.ERROR_CODE)
+
+
+def documented_errors(errors: Mapping[int, str]) -> dict[int | str, dict[str, object]]:
+    """The error responses of an operation, for the reference: when each one happens."""
+    return {
+        status_code: {"model": ErrorBody, "description": description}
+        for status_code, description in errors.items()
+    }
 
 
 def answer_for_status(status_code: int, headers: Mapping[str, str] | None = None) -> Response:

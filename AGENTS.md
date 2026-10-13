@@ -119,7 +119,8 @@ completo antes de escribir código.
   backend, `app/constants.py` (entornos, variables de entorno, valores por defecto),
   `app/test_data.py` (la plantilla de un usuario de prueba y los usuarios de `local`),
   `app/messages.py` (todo mensaje para una persona), `adapters/inbound/api/routes.py` (las
-  rutas de la API y los valores de sus respuestas), `adapters/inbound/api/security_headers.py`
+  rutas de la API y los valores de sus respuestas), `adapters/inbound/api/reference.py` (los
+  textos de la referencia de la API), `adapters/inbound/api/security_headers.py`
   (los encabezados de seguridad), `adapters/outbound/observability/events.py`
   (eventos, campos, nombres y reglas de los registros) y `adapters/outbound/postgres/queries.py`
   (el SQL escrito a mano). Quedan en su lugar solo las palabras que define una librería, como
@@ -207,7 +208,15 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   traduzcan en un solo lugar, ni que un caso de uso no lea la hora por su cuenta.
   Tolerante mientras `backend/` y `frontend/` no
   existan, pero falla si `backend/` existe y el dominio no está en `backend/app/domain/`.
-- Los dos tienen que pasar sin errores antes de commitear; el hook de pre-commit los corre solo,
+- Contrato de la API: `python3 scripts/verify_api_contract.py`. Lee el contrato versionado,
+  `frontend/src/api/openapi.json`. Valida que cada operación diga para qué sirve, con un
+  título escrito a mano, que cada respuesta diga cuándo ocurre, que cada parámetro y cada
+  campo tengan su descripción, que todo error tenga el cuerpo de un error, que lo que pide
+  sesión documente su `401` y lo que modifica algo su `403`, y que cada operación y cada
+  estado que responde estén en `docs/04-api.md`. No valida que `04-api.md` describa cada
+  campo, que un endpoint especificado esté implementado, ni que lo especificado para una
+  operación esté en el contrato: compara del contrato hacia la especificación.
+- Los tres tienen que pasar sin errores antes de commitear; el hook de pre-commit los corre solo,
   y el flujo `.github/workflows/docs-quality.yml` los repite en cada pull request junto con
   `markdownlint-cli2` y `lychee`.
 - Backend, desde `backend/` y con su entorno activado: `pytest` corre los tests, `ruff check .`
@@ -224,7 +233,9 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   `npm audit --audit-level=high` las vulnerabilidades.
 - Si cambia una ruta o una respuesta de la API, se regenera el contrato y sus tipos: desde
   `backend/`, `python -m app.adapters.inbound.api.export_openapi > ../frontend/src/api/openapi.json`,
-  y desde `frontend/`, `npm run api:generate`. El pipeline falla si quedaron desactualizados.
+  y desde `frontend/`, `npm run api:generate`. El pipeline y un test del backend fallan si
+  quedaron desactualizados. Una ruta nueva lleva sus textos en `reference.py`: sin ellos el
+  verificador del contrato falla.
 - Antes de pedir el merge de un pull request se corre a mano el agente `pr-reviewer`, y su
   informe se pega en el pull request
   ([ADR 0022](docs/adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md)).

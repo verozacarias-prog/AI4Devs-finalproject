@@ -53,7 +53,7 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
       base vacía. Incluye los tests del dashboard, con los estados de cada pantalla: los cuatro, o tres en una
       pantalla que no muestra datos del usuario
       ([convenciones de desarrollo](../convenciones-de-desarrollo.md#2-los-cuatro-estados-de-una-pantalla)).
-   3. Los dos verificadores del repositorio.
+   3. Los tres verificadores del repositorio.
    4. Secretos en el código, con `gitleaks`.
    5. Vulnerabilidades en dependencias. En Python, `pip-audit`, que bloquea ante cualquier
       vulnerabilidad que tenga arreglo: la herramienta no filtra por severidad. En el dashboard,
