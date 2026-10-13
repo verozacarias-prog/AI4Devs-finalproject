@@ -40,16 +40,19 @@ from app.adapters.outbound.observability.events import (
     CLASS_NAME_PATTERN,
     CODE_PLACE_PATTERN,
     CONSTRAINT_PATTERN,
+    ENDPOINT_PATTERN,
     EVENT_NAME_PATTERN,
     HANDLER_NAME,
     IDENTIFIER_FIELD_SUFFIX,
     IDENTIFIER_PATTERN,
     MAX_DURATION_MS,
+    MAX_ENDPOINT_LENGTH,
     MAX_EVENT_LENGTH,
     MAX_RESULT_CODE,
     MAX_STACK_DEPTH,
     MIN_RESULT_CODE,
     REDACTED,
+    ROUTE_PART_SEPARATOR,
     SHORT_WORD_PATTERN,
     Field,
     LineKey,
@@ -72,6 +75,7 @@ _CLASS_NAME = re.compile(CLASS_NAME_PATTERN)
 _SHORT_WORD = re.compile(SHORT_WORD_PATTERN)
 _CONSTRAINT = re.compile(CONSTRAINT_PATTERN)
 _CODE_PLACE = re.compile(CODE_PLACE_PATTERN)
+_ENDPOINT = re.compile(ENDPOINT_PATTERN)
 # The attributes every record has, as the logging library names them.
 _RECORD_ATTRIBUTES = frozenset(logging.makeLogRecord({}).__dict__) | {"message", "asctime"}
 
@@ -97,6 +101,16 @@ def _is_result(value: object) -> bool:
     )
 
 
+def _is_endpoint(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) <= MAX_ENDPOINT_LENGTH
+        and _ENDPOINT.fullmatch(value) is not None
+        # A route may have a number in it, as in "/v2", but never an identifier.
+        and not any(_IDENTIFIER.fullmatch(part) for part in value.split(ROUTE_PART_SEPARATOR))
+    )
+
+
 def _is_code_path(value: object) -> bool:
     return (
         isinstance(value, list)
@@ -109,6 +123,7 @@ def _is_code_path(value: object) -> bool:
 FIELD_RULES: dict[str, Callable[[object], bool]] = {
     Field.DURATION_MS: _is_integer_between(0, MAX_DURATION_MS),
     Field.RESULT: _is_result,
+    Field.ENDPOINT: _is_endpoint,
     Field.ERROR_TYPE: _matches(_CLASS_NAME),
     Field.ERROR_CODE: _matches(_SHORT_WORD),
     Field.ERROR_STACK: _is_code_path,

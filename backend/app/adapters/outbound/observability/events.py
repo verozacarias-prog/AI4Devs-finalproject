@@ -20,6 +20,16 @@ SHORT_WORD_PATTERN = r"[a-z][a-z_]{0,31}"
 CONSTRAINT_PATTERN = r"[a-z][a-z0-9_]{0,62}"
 # A place of the code: module, function and line.
 CODE_PLACE_PATTERN = r"[A-Za-z_][A-Za-z0-9_.]{0,127}:[A-Za-z_<][A-Za-z0-9_<>]{0,63}:[0-9]{1,6}"
+# An endpoint: the method, and the route as the code declares it, with the names of its
+# parameters and never their values. A part of the route starts with a letter, and one that
+# is an identifier does not pass.
+ENDPOINT_PATTERN = (
+    r"(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)( (/([a-z][a-z0-9.-]*|\{[a-z][a-z_]*\}))+)?"
+)
+ROUTE_PART_SEPARATOR = "/"
+MAX_ENDPOINT_LENGTH = 128
+# What separates the method from the route.
+ENDPOINT_SEPARATOR = " "
 # Any field whose name ends like this holds an identifier, and nothing else passes in it.
 IDENTIFIER_FIELD_SUFFIX = "_id"
 MAX_STACK_DEPTH = 30
@@ -53,6 +63,8 @@ class Field(StrEnum):
     METHOD = "method"
     DURATION_MS = "duration_ms"
     RESULT = "result"
+    # Which endpoint a request was for: never the address that was asked for.
+    ENDPOINT = "endpoint"
     ERROR_TYPE = "error_type"
     ERROR_CODE = "error_code"
     ERROR_STACK = "error_stack"
