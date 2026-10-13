@@ -12,9 +12,15 @@ import sysconfig
 import traceback
 from pathlib import Path
 
-from app.adapters.outbound.observability.events import MAX_STACK_DEPTH, Event, Field, LoggerName
+from app.adapters.outbound.observability.events import (
+    IDENTIFIER_FIELD_SUFFIX,
+    MAX_STACK_DEPTH,
+    Event,
+    Field,
+    LoggerName,
+)
 from app.adapters.outbound.observability.logs import LogValue
-from app.domain.errors import DomainError, StoreRejectionError
+from app.domain.errors import ContextField, DomainError, StoreRejectionError
 
 logger = logging.getLogger(LoggerName.ERRORS)
 
@@ -30,7 +36,9 @@ def log_error(error: BaseException, *, in_full: bool) -> None:
     """
     fields: dict[str, LogValue] = {}
     if isinstance(error, DomainError):
-        fields.update({name: str(value) for name, value in error.context.items()})
+        fields.update(
+            {name: str(value) for name, value in error.context.items() if _may_be_logged(name)}
+        )
     # After the context, so that nothing an error carries can replace a field of the line.
     fields[Field.ERROR_TYPE] = type(error).__name__
     fields[Field.ERROR_STACK] = code_path(error)
@@ -45,6 +53,14 @@ def log_error(error: BaseException, *, in_full: bool) -> None:
         logger.error(Event.ERROR_UNEXPECTED, extra=fields)
     if in_full:
         traceback.print_exception(error, file=sys.stderr)
+
+
+def _may_be_logged(name: str) -> bool:
+    """Of what an error says it was touching, only catalog fields and identifiers pass, and
+    never the reference of the line, which the error does not own."""
+    if name == Field.REQUEST_ID:
+        return False
+    return name in set(ContextField) or name.endswith(IDENTIFIER_FIELD_SUFFIX)
 
 
 def code_path(error: BaseException) -> list[str]:

@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+# How the schema names its primary keys (docs/03-modelo-de-datos.md, 3.2). PostgreSQL reports
+# a repeated primary key and a repeated unique key with the same error, and only the name
+# tells them apart.
+PRIMARY_KEY_PREFIX = "pk_"
+
 # The cheapest query that proves the database answers.
 PING = "SELECT 1"
 

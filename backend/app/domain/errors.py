@@ -11,6 +11,8 @@ from collections.abc import Mapping
 from enum import StrEnum
 from typing import ClassVar
 
+from app.constants import Environment
+
 # An extra field of the answer, for the client to go on: never something the client sent.
 DetailValue = str | int | bool | list[str]
 # What the error was touching, for the log: an identifier or a value of a closed catalog.
@@ -22,8 +24,6 @@ class ContextField(StrEnum):
     """The catalog values an error may say it was touching. Identifiers end in `_id`."""
 
     ENVIRONMENT = "environment"
-    TRANSACTION_TYPE = "transaction_type"
-    CURRENCY = "currency"
 
 
 class ErrorCategory(StrEnum):
@@ -54,6 +54,9 @@ class DomainError(Exception):
         context: Mapping[str, ContextValue] | None = None,
         constraint: str | None = None,
     ) -> None:
+        if not hasattr(type(self), "category"):
+            # Only an error with a category can be turned into an answer.
+            raise TypeError(type(self).__name__)
         super().__init__(code)
         self.code = code
         self.details = dict(details or {})
@@ -80,6 +83,18 @@ class InvalidError(DomainError):
     """A value is missing or breaks a rule."""
 
     category = ErrorCategory.INVALID
+
+
+class TestDataNotAllowedError(ForbiddenError):
+    """The test data script was asked to run outside the local environment."""
+
+    __test__ = False  # not a test class, whatever its name suggests to pytest
+
+    def __init__(self, environment: Environment) -> None:
+        super().__init__(
+            ErrorCode.TEST_DATA_NOT_ALLOWED, context={ContextField.ENVIRONMENT: environment}
+        )
+        self.environment = environment
 
 
 class StoreRejectionError(Exception):

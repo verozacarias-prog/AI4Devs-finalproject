@@ -40,7 +40,6 @@ from app.adapters.outbound.observability.events import (
     CLASS_NAME_PATTERN,
     CODE_PLACE_PATTERN,
     CONSTRAINT_PATTERN,
-    CURRENCY_CODE_PATTERN,
     EVENT_NAME_PATTERN,
     HANDLER_NAME,
     IDENTIFIER_FIELD_SUFFIX,
@@ -73,7 +72,6 @@ _CLASS_NAME = re.compile(CLASS_NAME_PATTERN)
 _SHORT_WORD = re.compile(SHORT_WORD_PATTERN)
 _CONSTRAINT = re.compile(CONSTRAINT_PATTERN)
 _CODE_PLACE = re.compile(CODE_PLACE_PATTERN)
-_CURRENCY_CODE = re.compile(CURRENCY_CODE_PATTERN)
 # The attributes every record has, as the logging library names them.
 _RECORD_ATTRIBUTES = frozenset(logging.makeLogRecord({}).__dict__) | {"message", "asctime"}
 
@@ -107,10 +105,6 @@ def _is_code_path(value: object) -> bool:
     )
 
 
-def _is_catalog_value(value: object) -> bool:
-    return _matches(_SHORT_WORD)(value) or _matches(_CURRENCY_CODE)(value)
-
-
 # The fields that may appear in a log line, each with the only shape it accepts.
 FIELD_RULES: dict[str, Callable[[object], bool]] = {
     Field.DURATION_MS: _is_integer_between(0, MAX_DURATION_MS),
@@ -120,7 +114,8 @@ FIELD_RULES: dict[str, Callable[[object], bool]] = {
     Field.ERROR_STACK: _is_code_path,
     Field.ERROR_CAUSE: _matches(_CLASS_NAME),
     Field.CONSTRAINT: _matches(_CONSTRAINT),
-    **dict.fromkeys(ContextField, _is_catalog_value),
+    # A catalog value is a short word of the code.
+    **dict.fromkeys(ContextField, _matches(_SHORT_WORD)),
 }
 
 

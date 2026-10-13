@@ -9,11 +9,8 @@ from psycopg import errors as postgres_errors
 from sqlalchemy import Connection, text
 from sqlalchemy.exc import IntegrityError
 
+from app.adapters.outbound.postgres.queries import PRIMARY_KEY_PREFIX
 from app.domain.errors import ConflictError, ErrorCode, StoreRejectionError
-
-# How the schema names its primary keys. PostgreSQL reports a repeated primary key and a
-# repeated unique key with the same error, and only the name tells them apart.
-PRIMARY_KEY_PREFIX = "pk_"
 
 
 def execute_write(connection: Connection, statement: str, parameters: Mapping[str, object]) -> None:

@@ -8,23 +8,11 @@ from app.constants import Environment
 from app.domain.entities.budget_period import first_period
 from app.domain.entities.family_group import FamilyGroup, GroupRole, Membership
 from app.domain.entities.user import User
-from app.domain.errors import ContextField, ErrorCode, ForbiddenError
+from app.domain.errors import TestDataNotAllowedError
 from app.domain.local_date import local_today
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
 from app.domain.use_cases.create_test_user import CreateTestUser
 from app.shared.clock import Clock
-
-
-class TestDataNotAllowedError(ForbiddenError):
-    """The test data script was asked to run outside the local environment."""
-
-    __test__ = False  # not a test class, whatever its name suggests to pytest
-
-    def __init__(self, environment: Environment) -> None:
-        super().__init__(
-            ErrorCode.TEST_DATA_NOT_ALLOWED, context={ContextField.ENVIRONMENT: environment}
-        )
-        self.environment = environment
 
 
 @dataclass(frozen=True)

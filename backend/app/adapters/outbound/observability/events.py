@@ -20,7 +20,6 @@ SHORT_WORD_PATTERN = r"[a-z][a-z_]{0,31}"
 CONSTRAINT_PATTERN = r"[a-z][a-z0-9_]{0,62}"
 # A place of the code: module, function and line.
 CODE_PLACE_PATTERN = r"[A-Za-z_][A-Za-z0-9_.]{0,127}:[A-Za-z_<][A-Za-z0-9_<>]{0,63}:[0-9]{1,6}"
-CURRENCY_CODE_PATTERN = r"[A-Z]{3}"
 # Any field whose name ends like this holds an identifier, and nothing else passes in it.
 IDENTIFIER_FIELD_SUFFIX = "_id"
 MAX_STACK_DEPTH = 30
