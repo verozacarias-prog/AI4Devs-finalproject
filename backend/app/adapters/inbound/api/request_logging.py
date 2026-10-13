@@ -9,6 +9,7 @@ from collections.abc import Awaitable, Callable
 
 from fastapi import Request, Response, status
 
+from app.adapters.inbound.api.routes import REQUEST_ID_HEADER
 from app.adapters.outbound.observability.events import Event, Field, LoggerName
 from app.adapters.outbound.observability.logs import request_id_var
 from app.constants import MILLISECONDS_PER_SECOND
@@ -21,7 +22,8 @@ async def log_request(
 ) -> Response:
     # Not reset afterwards: whatever the server logs about this request once it leaves this
     # function, such as an unhandled error, carries the same identifier.
-    request_id_var.set(uuid.uuid4().hex)
+    request_id = uuid.uuid4().hex
+    request_id_var.set(request_id)
     started = time.monotonic()
     try:
         response = await call_next(request)
@@ -39,6 +41,7 @@ async def log_request(
         Event.HTTP_REQUEST,
         extra={Field.RESULT: response.status_code, Field.DURATION_MS: _elapsed_ms(started)},
     )
+    response.headers[REQUEST_ID_HEADER] = request_id
     return response
 
 

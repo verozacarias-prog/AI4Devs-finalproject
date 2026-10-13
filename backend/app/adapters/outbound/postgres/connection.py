@@ -10,8 +10,11 @@ from app.constants import DATABASE_CONNECT_TIMEOUT_SECONDS
 def create_db_engine(database_url: str) -> Engine:
     # Never pass echo=True: SQLAlchemy would install its own handler and print every query
     # with its parameters, bypassing the log filter (docs/operacion.md 6.3).
+    # hide_parameters keeps the values of a query out of the text of its errors. The database
+    # still names the offending value in its own message, so that text is never logged either.
     return create_engine(
         database_url,
         pool_pre_ping=True,
+        hide_parameters=True,
         connect_args={"connect_timeout": DATABASE_CONNECT_TIMEOUT_SECONDS},
     )

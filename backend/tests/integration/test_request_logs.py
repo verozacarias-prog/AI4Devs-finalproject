@@ -28,7 +28,9 @@ def stream() -> io.StringIO:
 
 @pytest.fixture
 def client(database_url: str, stream: io.StringIO) -> TestClient:
-    settings = load_settings({"DATABASE_URL": database_url, "APP_VERSION": "test"})
+    settings = load_settings(
+        {"DATABASE_URL": database_url, "APP_ENV": "local", "APP_VERSION": "test"}
+    )
     return TestClient(create_app(settings, log_stream=stream))
 
 
@@ -63,7 +65,9 @@ def test_a_failing_request_leaves_a_line_with_its_identifier_and_the_error_class
     database_url: str, stream: io.StringIO
 ) -> None:
     """Case 17."""
-    settings = load_settings({"DATABASE_URL": database_url, "APP_VERSION": "test"})
+    settings = load_settings(
+        {"DATABASE_URL": database_url, "APP_ENV": "local", "APP_VERSION": "test"}
+    )
     app = create_app(settings, log_stream=stream)
 
     @app.get("/boom")
@@ -84,7 +88,9 @@ def test_a_failing_request_leaves_a_line_with_its_identifier_and_the_error_class
 
 def test_an_unreachable_database_is_logged_without_its_url(stream: io.StringIO) -> None:
     """Case 19."""
-    settings = load_settings({"DATABASE_URL": UNREACHABLE_DATABASE_URL, "APP_VERSION": "test"})
+    settings = load_settings(
+        {"DATABASE_URL": UNREACHABLE_DATABASE_URL, "APP_ENV": "local", "APP_VERSION": "test"}
+    )
     client = TestClient(create_app(settings, log_stream=stream))
 
     response = client.get("/readyz")

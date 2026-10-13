@@ -2,25 +2,28 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from zoneinfo import ZoneInfo
 
 from app import test_data
 from app.constants import Environment
 from app.domain.entities.budget_period import first_period
 from app.domain.entities.family_group import FamilyGroup, GroupRole, Membership
 from app.domain.entities.user import User
-from app.domain.ports.clock_port import ClockPort
+from app.domain.errors import ContextField, ErrorCode, ForbiddenError
+from app.domain.local_date import local_today
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
 from app.domain.use_cases.create_test_user import CreateTestUser
+from app.shared.clock import Clock
 
 
-class TestDataNotAllowedError(Exception):
+class TestDataNotAllowedError(ForbiddenError):
     """The test data script was asked to run outside the local environment."""
 
     __test__ = False  # not a test class, whatever its name suggests to pytest
 
     def __init__(self, environment: Environment) -> None:
-        super().__init__(environment)
+        super().__init__(
+            ErrorCode.TEST_DATA_NOT_ALLOWED, context={ContextField.ENVIRONMENT: environment}
+        )
         self.environment = environment
 
 
@@ -41,7 +44,7 @@ class SeedTestData:
     def __init__(
         self,
         unit_of_work: UnitOfWorkPort,
-        clock: ClockPort,
+        clock: Clock,
         create_test_user: CreateTestUser,
         environment: Environment,
     ) -> None:
@@ -89,7 +92,7 @@ class SeedTestData:
                 Membership(owner.id, group.id, GroupRole.OWNER, now)
             )
             # A group is born with its first period, like a user (domain rules, § 10).
-            today = now.astimezone(ZoneInfo(owner.time_zone)).date()
+            today = local_today(now, owner.time_zone)
             unit_of_work.budget_periods.add(
                 first_period(family_group_id=group.id, currency=owner.primary_currency, today=today)
             )

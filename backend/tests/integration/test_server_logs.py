@@ -36,7 +36,9 @@ def free_port() -> int:
 
 def test_a_websocket_attempt_leaves_no_ip_token_or_address_in_the_logs(database_url: str) -> None:
     stream = io.StringIO()
-    settings = load_settings({"DATABASE_URL": database_url, "APP_VERSION": "test"})
+    settings = load_settings(
+        {"DATABASE_URL": database_url, "APP_ENV": "local", "APP_VERSION": "test"}
+    )
     port = free_port()
     server = build_server(create_app(settings, log_stream=stream), host="127.0.0.1", port=port)
     thread = threading.Thread(target=server.run, daemon=True)

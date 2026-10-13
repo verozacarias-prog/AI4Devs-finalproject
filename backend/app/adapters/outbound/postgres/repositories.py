@@ -12,6 +12,7 @@ from dataclasses import asdict
 from sqlalchemy import Connection, text
 
 from app.adapters.outbound.postgres import queries
+from app.adapters.outbound.postgres.rejections import execute_write
 from app.domain.entities.account import Account
 from app.domain.entities.budget_period import BudgetPeriod
 from app.domain.entities.family_group import FamilyGroup, GroupRole, Membership
@@ -24,7 +25,7 @@ class PostgresUserRepository:
         self._connection = connection
 
     def add(self, user: User) -> None:
-        self._connection.execute(text(queries.INSERT_USER), asdict(user))
+        execute_write(self._connection, queries.INSERT_USER, asdict(user))
 
     def find_by_phone(self, phone: str) -> User | None:
         row = self._connection.execute(
@@ -52,7 +53,7 @@ class PostgresAccountRepository:
         self._connection = connection
 
     def add(self, account: Account) -> None:
-        self._connection.execute(text(queries.INSERT_ACCOUNT), asdict(account))
+        execute_write(self._connection, queries.INSERT_ACCOUNT, asdict(account))
 
 
 class PostgresBudgetPeriodRepository:
@@ -60,7 +61,7 @@ class PostgresBudgetPeriodRepository:
         self._connection = connection
 
     def add(self, period: BudgetPeriod) -> None:
-        self._connection.execute(text(queries.INSERT_BUDGET_PERIOD), asdict(period))
+        execute_write(self._connection, queries.INSERT_BUDGET_PERIOD, asdict(period))
 
 
 class PostgresFinancialProfileRepository:
@@ -68,7 +69,7 @@ class PostgresFinancialProfileRepository:
         self._connection = connection
 
     def add(self, profile: FinancialProfile) -> None:
-        self._connection.execute(text(queries.INSERT_FINANCIAL_PROFILE), asdict(profile))
+        execute_write(self._connection, queries.INSERT_FINANCIAL_PROFILE, asdict(profile))
 
 
 class PostgresFamilyGroupRepository:
@@ -76,10 +77,10 @@ class PostgresFamilyGroupRepository:
         self._connection = connection
 
     def add(self, group: FamilyGroup) -> None:
-        self._connection.execute(text(queries.INSERT_FAMILY_GROUP), asdict(group))
+        execute_write(self._connection, queries.INSERT_FAMILY_GROUP, asdict(group))
 
     def add_membership(self, membership: Membership) -> None:
-        self._connection.execute(text(queries.INSERT_MEMBERSHIP), asdict(membership))
+        execute_write(self._connection, queries.INSERT_MEMBERSHIP, asdict(membership))
 
     def find_owned_by(self, owner_id: uuid.UUID, name: str) -> FamilyGroup | None:
         row = self._connection.execute(

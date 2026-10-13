@@ -14,39 +14,29 @@ from collections.abc import Mapping
 from typing import TextIO
 
 from app import messages
-from app.adapters.outbound.clock.system_clock import SystemClock
+from app.adapters.inbound.cli.runner import run_command
 from app.adapters.outbound.postgres.connection import create_db_engine
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
-from app.constants import EXIT_OK, EXIT_REFUSED, LINE_END, Environment
 from app.domain.use_cases.create_test_user import CreateTestUser
-from app.domain.use_cases.seed_test_data import SeedTestData, TestDataNotAllowedError
-from app.settings import load_settings
+from app.domain.use_cases.seed_test_data import SeedTestData
+from app.settings import Settings
+from app.shared.clock import SystemClock
 
 
-def main(environ: Mapping[str, str], out: TextIO) -> int:
-    settings = load_settings(environ)
+def seed(settings: Settings) -> str:
     engine = create_db_engine(settings.database_url)
     clock = SystemClock()
-    seed = SeedTestData(
-        SqlAlchemyUnitOfWork(engine), clock, CreateTestUser(clock), settings.environment
-    )
     try:
-        report = seed.execute()
-    except TestDataNotAllowedError as error:
-        out.write(
-            messages.TEST_DATA_NOT_ALLOWED.format(
-                allowed=Environment.LOCAL, current=error.environment
-            )
-            + LINE_END
-        )
-        return EXIT_REFUSED
+        report = SeedTestData(
+            SqlAlchemyUnitOfWork(engine), clock, CreateTestUser(clock), settings.environment
+        ).execute()
     finally:
         engine.dispose()
-    out.write(
-        messages.TEST_DATA_SEEDED.format(created=report.created, existing=report.existing)
-        + LINE_END
-    )
-    return EXIT_OK
+    return messages.TEST_DATA_SEEDED.format(created=report.created, existing=report.existing)
+
+
+def main(environ: Mapping[str, str], out: TextIO, log_stream: TextIO | None = None) -> int:
+    return run_command(seed, environ, out, log_stream)
 
 
 if __name__ == "__main__":

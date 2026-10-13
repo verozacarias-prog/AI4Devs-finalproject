@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import uuid
-from zoneinfo import ZoneInfo
 
 from app import test_data
 from app.domain.entities.account import Account
 from app.domain.entities.budget_period import first_period
 from app.domain.entities.financial_profile import FinancialProfile
 from app.domain.entities.user import OnboardingStatus, User
-from app.domain.ports.clock_port import ClockPort
+from app.domain.local_date import local_today
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
+from app.shared.clock import Clock
 
 
 class CreateTestUser:
@@ -19,7 +19,7 @@ class CreateTestUser:
     test data script and the acceptance of the test notice call it (ADR 0016).
     """
 
-    def __init__(self, clock: ClockPort) -> None:
+    def __init__(self, clock: Clock) -> None:
         self._clock = clock
 
     def execute(
@@ -52,7 +52,7 @@ class CreateTestUser:
                     opened_at=now,
                 )
             )
-        today = now.astimezone(ZoneInfo(user.time_zone)).date()
+        today = local_today(now, user.time_zone)
         unit_of_work.budget_periods.add(
             first_period(user_id=user.id, currency=user.primary_currency, today=today)
         )

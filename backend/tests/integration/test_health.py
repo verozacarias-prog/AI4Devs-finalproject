@@ -13,7 +13,7 @@ pytestmark = pytest.mark.integration
 
 
 def client_for(database_url: str) -> TestClient:
-    return TestClient(create_app(load_settings({"DATABASE_URL": database_url})))
+    return TestClient(create_app(load_settings({"DATABASE_URL": database_url, "APP_ENV": "local"})))
 
 
 def test_healthz_says_the_process_is_alive(database_url: str) -> None:

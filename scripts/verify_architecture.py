@@ -47,6 +47,12 @@ AI_SPLITTER_ALLOWED = [
     os.path.join(BACKEND_DIR, 'tests'),
 ]
 
+# ADR 0001 — app/shared/ tiene utilidades técnicas: sólo librería estándar, nada del resto de
+# app/, y un módulo por tema. Estos nombres son los de un módulo general.
+SHARED_DIR = os.path.join(BACKEND_DIR, 'app', 'shared')
+SHARED_GENERAL_NAMES = {'helpers.py', 'helper.py', 'utils.py', 'util.py', 'common.py', 'misc.py'}
+STDLIB_MODULES = set(getattr(sys, 'stdlib_module_names', ())) | {'__future__'}
+
 # AGENTS.md — imports prohibidos dentro de domain/
 FORBIDDEN_IN_DOMAIN = {
     'sqlalchemy': 'ORM: pertenece a adapters/outbound/postgres/',
@@ -242,6 +248,34 @@ def check_database_access():
     return checked
 
 
+def check_shared_utilities():
+    """Regla 5 (ADR 0001): un módulo de app/shared/ importa sólo la librería estándar y no se
+    llama como un módulo general."""
+    if not os.path.isdir(SHARED_DIR):
+        return 0
+    if len(STDLIB_MODULES) < 2:
+        skipped.append('este Python no lista su librería estándar: %s no evaluado' % SHARED_DIR)
+        return 0
+
+    checked = 0
+    for path in walk(SHARED_DIR, ('.py',)):
+        checked += 1
+        if os.path.basename(path) in SHARED_GENERAL_NAMES:
+            errors.append('%s es un módulo general — en app/shared/ va un módulo por tema, con '
+                          'el nombre de su tema (ADR 0001)' % path)
+        try:
+            tree = ast.parse(read(path), filename=path)
+        except SyntaxError as exc:
+            errors.append('%s:%s no se pudo parsear (%s)' % (path, exc.lineno, exc.msg))
+            continue
+        for module, line in imported_modules(tree):
+            head = root_module(module)
+            if head not in STDLIB_MODULES:
+                errors.append('%s:%d importa %s — app/shared/ usa sólo la librería estándar y '
+                              'nada del resto de app/ (ADR 0001)' % (path, line, module))
+    return checked
+
+
 def is_ai_framework(head):
     return head.startswith('langchain') or head in AI_FRAMEWORKS
 
@@ -301,6 +335,7 @@ def main():
     check_money_types()
     backend_files = check_database_access()
     check_ai_frameworks()
+    check_shared_utilities()
     frontend_files = check_frontend_isolation()
 
     print('Verificación de arquitectura')
