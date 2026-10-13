@@ -27,6 +27,7 @@ desde [`features/TEMPLATE/pr.md`](features/TEMPLATE/pr.md).
 ### Arquitectura
 
 - [ ] `python3 scripts/verify_architecture.py` pasa sin errores.
+- [ ] `python3 scripts/verify_api_contract.py` pasa sin errores.
 - [ ] No se agregaron dependencias nuevas sin justificar por qué no alcanzaba lo instalado.
 - [ ] Si hubo una decisión de arquitectura, tiene su [ADR](adr/).
 

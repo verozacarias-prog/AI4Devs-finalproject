@@ -151,6 +151,7 @@ Los commands, el skill y el agente están descritos en el
 git config core.hooksPath .githooks       # una vez por clon
 python3 scripts/verify_docs.py            # enlaces, anclas, duplicación, Mermaid
 python3 scripts/verify_architecture.py    # regla hexagonal, acceso a la base y aislamiento del frontend
+python3 scripts/verify_api_contract.py    # la referencia de la API, completa y fiel a 04-api.md
 ```
 
 El hook de pre-commit los corre solo, y GitHub Actions los repite en cada pull request junto con
@@ -166,8 +167,19 @@ cp .env.example .env
 docker compose up --build
 ```
 
-El dashboard queda en <http://127.0.0.1:8000/app/>, y muestra si llega a la API y la API a la
-base.
+Qué queda levantado:
+
+| Dirección | Qué es |
+|---|---|
+| <http://127.0.0.1:8000/app/> | El dashboard. Muestra si llega a la API y la API a la base |
+| <http://127.0.0.1:8000/docs> | La API en Swagger, generada desde el código: las rutas que existen hoy, para probarlas |
+| `127.0.0.1:5433` | PostgreSQL, con el usuario, la clave y la base de `.env` |
+
+En los registros, cada línea empieza con el nombre de su contenedor:
+`platita-api-and-dashboard`, `platita-database` o `platita-migrations`.
+
+Si ya tenías un `.env` de antes, comparalo con `.env.example`: una variable nueva no llega
+sola. La que enciende la entrada de desarrollo es `DEV_ENTRY_ENABLED=true`.
 
 Para tener con qué probar, el script de datos de prueba crea tres usuarios inventados, con sus
 cuentas, su primer período y un grupo. Se puede correr las veces que haga falta, y solo corre
@@ -180,8 +192,7 @@ docker compose exec api python -m app.adapters.inbound.cli.seed_test_data
 Qué trae cada usuario está en [operación](docs/operacion.md#2-entornos).
 
 Con esos usuarios creados, el dashboard muestra la entrada de desarrollo: se elige uno y se
-abre una sesión real, sin código. Está encendida porque `.env.example` trae
-`DEV_ENTRY_ENABLED=true`. Conviene abrirlo en Chrome o Firefox: la cookie de la sesión es
+abre una sesión real, sin código. Conviene abrirlo en Chrome o Firefox: la cookie de la sesión es
 `Secure`, y esos navegadores la aceptan sin HTTPS en la propia máquina.
 
 Para correr los tests del backend, con la base de Compose levantada:

@@ -76,10 +76,13 @@ actualiza el documento que lo describe **en ese mismo pull request**, no despué
 forma de que la documentación no se desactualice: si el cambio se aplaza, no ocurre.
 
 La lista completa está en la sección Documentación del
-[Definition of Done](07-pull-requests.md#definition-of-done). Hoy se verifica leyendo, con la
-ayuda de `/spec-drift`. La parte que es binaria —comparar el contrato generado por FastAPI contra
-[`04-api.md`](04-api.md)— se automatiza con `verify_api_contract.py` cuando exista la API, y está
-en la [hoja de ruta](hoja-de-ruta.md).
+[Definition of Done](07-pull-requests.md#definition-of-done). Se verifica leyendo, con la
+ayuda de `/spec-drift`. La parte que es binaria la automatiza
+[`scripts/verify_api_contract.py`](../scripts/verify_api_contract.py), sobre el contrato que
+genera FastAPI: que cada operación, cada respuesta y cada campo tengan su texto en la
+referencia, y que cada operación y cada estado que responde estén en [`04-api.md`](04-api.md).
+Corre en el hook de pre-commit y en cada pull request. Que el contrato versionado sea el que
+genera el código lo comprueban un test del backend y el pipeline.
 
 ## 6. Trabajar con el portal
 
