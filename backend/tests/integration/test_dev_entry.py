@@ -462,6 +462,24 @@ def test_a_request_that_is_not_json_is_forbidden(
     assert _sessions(engine) == 0
 
 
+@pytest.mark.parametrize("body", [b"{not json", b"", b"\xff\xfe"], ids=["broken", "empty", "bytes"])
+def test_a_request_from_another_origin_is_forbidden_whatever_its_body_is(
+    client: TestClient, engine: Engine, stream: io.StringIO, body: bytes
+) -> None:
+    # Case 79. The origin is checked before anything the request sent is read.
+    response = client.post(
+        "/dev/session",
+        content=body,
+        headers={"Origin": "https://evil.example", "Content-Type": "application/json"},
+    )
+
+    assert response.status_code == 403
+    assert response.json() == FORBIDDEN
+    assert _sessions(engine) == 0
+    # A refused request still leaves its line.
+    assert [line["result"] for line in events_of(stream, "http.request")] == [403]
+
+
 def test_a_read_needs_no_origin(client: TestClient) -> None:
     # Case 48.
     _enter_as(client, "Lucía")

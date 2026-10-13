@@ -92,6 +92,17 @@ def test_a_route_that_does_not_exist_is_logged_with_its_method_alone(
     assert "5491100000000" not in logged
 
 
+@pytest.mark.parametrize("path", ["/docs", "/openapi.json", "/redoc"])
+def test_the_pages_of_the_contract_are_logged_with_their_route(
+    database_url: str, stream: io.StringIO, path: str
+) -> None:
+    # Case 80. The framework serves them, and they are routes like any other.
+    response = TestClient(_app(database_url, stream)).get(path)
+
+    assert response.status_code == 200
+    assert _request_line(stream)["endpoint"] == f"GET {path}"
+
+
 @pytest.mark.parametrize("path", ["/app/", "/app/assets/app.js", "/app/cuentas"])
 def test_a_request_to_the_dashboard_is_logged_without_the_file(
     database_url: str, stream: io.StringIO, tmp_path: Path, path: str
