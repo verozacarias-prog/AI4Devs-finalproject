@@ -101,6 +101,8 @@ Cada proceso recibe su entorno en la variable `APP_ENV`, y no hay un valor por d
 ella, o con un valor que no es `local`, `demo` ni `production`, el proceso no arranca y dice
 qué variable falta. Un despliegue que la olvidara no puede quedar funcionando como `local`,
 que es el entorno donde un error se escribe con sus datos ([6.3](#63-registros)). El
+La entrada de desarrollo se enciende con `DEV_ENTRY_ENABLED=true`, y sin la variable queda
+apagada ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). El
 `docker-compose.yml` del repositorio levanta solo el entorno local, y por eso es el único lugar
 que la declara como `local` cuando nadie la definió.
 
@@ -367,8 +369,8 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   - **Los valores de catálogo.** El tipo de movimiento, la moneda, un estado, o el nombre del
     campo que falló: palabras de una lista cerrada del código, nunca un texto que escribió
     alguien. El error los lleva con su tipo, así un texto libre no puede entrar por ahí. Cada
-    campo de catálogo se suma a los permitidos con la funcionalidad que lo usa: hoy el único es
-    el entorno, que usa el script de datos de prueba. De lo que un error dice que tocaba pasan
+    campo de catálogo se suma a los permitidos con la funcionalidad que lo usa: hoy son el
+    entorno, que usa el script de datos de prueba, y la forma en que se abrió una sesión. De lo que un error dice que tocaba pasan
     solo esos campos y los terminados en `_id`, y ninguno reemplaza a un campo propio de la
     línea, como su referencia.
 
@@ -383,7 +385,7 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   |---|---|---|
   | `auth.code_requested` | Se pidió un código de acceso | El login por código |
   | `auth.code_failed` | Un canje de código falló | El login por código |
-  | `auth.session_created` | Se abrió una sesión, por código, por la lista de `local` o por un enlace personal | La entrada de desarrollo |
+  | `auth.session_created` | Se abrió una sesión, por código, por la lista de `local` o por un enlace personal. Lleva el usuario, la sesión y la forma en el campo `method`: hoy solo `dev_user_list` | La entrada de desarrollo |
   | `auth.throttled` | Se alcanzó un límite de intentos | El login por código |
   | `usage.quota_exceeded` | Un usuario superó una cuota o el tope diario total | Las cuotas, con el registro de gastos |
   | `llm.output_blocked` | La validación de salida frenó una respuesta | Las consultas y los consejos |

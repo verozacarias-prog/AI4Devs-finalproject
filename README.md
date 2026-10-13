@@ -179,6 +179,11 @@ docker compose exec api python -m app.adapters.inbound.cli.seed_test_data
 
 Qué trae cada usuario está en [operación](docs/operacion.md#2-entornos).
 
+Con esos usuarios creados, el dashboard muestra la entrada de desarrollo: se elige uno y se
+abre una sesión real, sin código. Está encendida porque `.env.example` trae
+`DEV_ENTRY_ENABLED=true`. Conviene abrirlo en Chrome o Firefox: la cookie de la sesión es
+`Secure`, y esos navegadores la aceptan sin HTTPS en la propia máquina.
+
 Para correr los tests del backend, con la base de Compose levantada:
 
 ```sh

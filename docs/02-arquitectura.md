@@ -172,11 +172,12 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
 /backend
   /app
     /domain
-      /entities         # User, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk
-      /use_cases         # CreateTestUser, SeedTestData, RegisterTransaction, GetBudgetStatus, CalculateAccountBalance, GenerateProactiveAlert...
+      /entities         # User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk
+      /use_cases         # CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, CalculateAccountBalance, GenerateProactiveAlert...
       /ports             # interfaces the domain depends on but does not implement
         - transaction_repository_port.py
         - account_repository_port.py
+        - session_repository_port.py
         - unit_of_work_port.py
         - vector_store_port.py
         - whatsapp_gateway_port.py
