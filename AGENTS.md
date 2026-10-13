@@ -69,8 +69,8 @@ de pre-commit. No son una recomendación: rompen el commit.
 
 ## 4. Mapa de carpetas
 
-- `backend/app/domain/entities/` — User, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk.
-- `backend/app/domain/use_cases/` — CreateTestUser, SeedTestData, RegisterTransaction, GetBudgetStatus, CalculateAccountBalance, GenerateProactiveAlert.
+- `backend/app/domain/entities/` — User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk.
+- `backend/app/domain/use_cases/` — CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, CalculateAccountBalance, GenerateProactiveAlert.
 - `backend/app/domain/ports/` — interfaces que el dominio declara y no implementa.
 - `backend/app/domain/errors.py` — los errores que una regla de negocio prevé, cada uno con su código y su categoría.
 - `backend/app/domain/local_date.py` — qué día es para un usuario, en su zona horaria.

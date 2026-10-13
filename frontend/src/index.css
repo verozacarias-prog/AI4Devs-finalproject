@@ -35,6 +35,10 @@ body {
   border-radius: var(--radius-medium);
 }
 
+.card + .card {
+  margin-top: var(--space-6);
+}
+
 .card__heading {
   margin: 0 0 var(--space-3);
   font-size: var(--font-size-body);
@@ -74,4 +78,20 @@ body {
 .button:focus-visible {
   outline: var(--focus-ring);
   outline-offset: var(--space-1);
+}
+
+.choices {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.command {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3);
+  overflow-x: auto;
+  background: var(--color-background);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-medium);
+  font-size: var(--font-size-small);
 }

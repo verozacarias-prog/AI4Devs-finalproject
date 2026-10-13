@@ -8,6 +8,10 @@ import type { components, paths } from './schema.d.ts'
 export const API_ROUTES = {
   healthz: '/healthz',
   readyz: '/readyz',
+  me: '/me',
+  logout: '/auth/logout',
+  devUsers: '/dev/users',
+  devSession: '/dev/session',
 } as const satisfies Record<string, keyof paths>
 
 /** The answer of a health route when everything is fine. */

@@ -20,6 +20,7 @@ class EnvVar(StrEnum):
     APP_ENV = "APP_ENV"
     APP_VERSION = "APP_VERSION"
     DASHBOARD_DIR = "DASHBOARD_DIR"
+    DEV_ENTRY_ENABLED = "DEV_ENTRY_ENABLED"
 
 
 class ProcessName(StrEnum):
@@ -28,6 +29,10 @@ class ProcessName(StrEnum):
     API = "api"
     CLI = "cli"
 
+
+# How a variable that turns something on or off is written. Nothing else is accepted.
+ENABLED = "true"
+DISABLED = "false"
 
 APP_TITLE = "Platita"
 

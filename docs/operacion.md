@@ -104,6 +104,9 @@ que es el entorno donde un error se escribe con sus datos ([6.3](#63-registros))
 `docker-compose.yml` del repositorio levanta solo el entorno local, y por eso es el único lugar
 que la declara como `local` cuando nadie la definió.
 
+La entrada de desarrollo se enciende con `DEV_ENTRY_ENABLED=true`, y sin la variable queda
+apagada ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
+
 | Entorno | Para qué | En qué se diferencia | Cómo se promueve |
 |---|---|---|---|
 | Local | Desarrollo y pruebas manuales del flujo por WhatsApp | Docker Compose con la imagen `pgvector/pgvector:pg16`, el número de prueba gratuito de Meta detrás de un túnel, y datos semilla que se niegan a correr contra producción | Pull request |
@@ -319,7 +322,15 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
 - **Formato:** JSON de una línea a la salida estándar, con la librería estándar de logging y un
   formateador propio. Campos: momento, nivel, proceso, versión desplegada, identificador del
   mensaje, identificador interno del usuario, evento, duración y resultado. Un error suma los
-  suyos, que están más abajo. La API, el worker, los procesos programados y los comandos de
+  suyos, que están más abajo. La línea de un pedido a la API, `http.request`, dice además a
+  qué endpoint fue, en el campo `endpoint`: el método y la ruta como está declarada en el
+  código, por ejemplo `GET /budget-periods/{budget_period_id}`. Nunca lleva la dirección que
+  se pidió, que puede traer un identificador, parámetros con datos o lo que alguien haya
+  escrito. Un pedido a una ruta que no existe lleva solo el método. Uno rechazado
+  por su origen se responde antes de resolver su ruta, así que puede llevar solo el método:
+  es el caso de las rutas de hoy. Uno al dashboard lleva `GET /app`, sin el
+  archivo. Las páginas del contrato que sirve el framework, como `/docs` y `/openapi.json`,
+  llevan su ruta como cualquier otra. La API, el worker, los procesos programados y los comandos de
   operación registran igual, cada uno con su nombre de proceso.
 - **Correlación:** el identificador es el `id` del mensaje en la tabla de entrada. El worker lo
   pone en cada registro mientras procesa ese mensaje, y es el mismo que queda en la tabla de
@@ -367,8 +378,8 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   - **Los valores de catálogo.** El tipo de movimiento, la moneda, un estado, o el nombre del
     campo que falló: palabras de una lista cerrada del código, nunca un texto que escribió
     alguien. El error los lleva con su tipo, así un texto libre no puede entrar por ahí. Cada
-    campo de catálogo se suma a los permitidos con la funcionalidad que lo usa: hoy el único es
-    el entorno, que usa el script de datos de prueba. De lo que un error dice que tocaba pasan
+    campo de catálogo se suma a los permitidos con la funcionalidad que lo usa: hoy son el
+    entorno, que usa el script de datos de prueba, y la forma en que se abrió una sesión. De lo que un error dice que tocaba pasan
     solo esos campos y los terminados en `_id`, y ninguno reemplaza a un campo propio de la
     línea, como su referencia.
 
@@ -383,7 +394,7 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   |---|---|---|
   | `auth.code_requested` | Se pidió un código de acceso | El login por código |
   | `auth.code_failed` | Un canje de código falló | El login por código |
-  | `auth.session_created` | Se abrió una sesión, por código, por la lista de `local` o por un enlace personal | La entrada de desarrollo |
+  | `auth.session_created` | Se abrió una sesión, por código, por la lista de `local` o por un enlace personal. Lleva el usuario, la sesión y la forma en el campo `method`: hoy solo `dev_user_list` | La entrada de desarrollo |
   | `auth.throttled` | Se alcanzó un límite de intentos | El login por código |
   | `usage.quota_exceeded` | Un usuario superó una cuota o el tope diario total | Las cuotas, con el registro de gastos |
   | `llm.output_blocked` | La validación de salida frenó una respuesta | Las consultas y los consejos |
@@ -403,7 +414,8 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
 - **Cómo se hace cumplir:** un filtro de logging que redacta por nombre de campo, y que deja
   pasar solo lo que se sabe seguro. De los campos, solo los permitidos, y cada uno con su
   forma: una duración entre cero y una hora, la clase de un error o de su causa, un código
-  entre 100 y 599 o una palabra corta como resultado, una palabra corta como código de error,
+  entre 100 y 599 o una palabra corta como resultado, un método HTTP seguido de una ruta
+  declarada, sin ningún identificador entre sus partes, como endpoint, una palabra corta como código de error,
   una lista acotada de lugares del código, cada uno escrito como módulo, función y número de
   línea, el nombre de una restricción, en minúsculas y de hasta 63 caracteres, una palabra corta
   en un campo de catálogo, y un identificador hexadecimal o UUID, que es

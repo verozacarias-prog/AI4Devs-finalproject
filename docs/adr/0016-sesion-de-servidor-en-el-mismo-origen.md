@@ -66,7 +66,14 @@ para que la cookie de sesión funcione sin un dominio propio.
 6. **Sin CORS.** La API no habilita CORS: una página de otro origen no puede hacerle requests
    con la cookie.
 7. **CSRF.** Además de `SameSite=Strict`, toda request que modifica algo exige que el header
-   `Origin` sea el propio y que el cuerpo sea JSON. El webhook de WhatsApp queda fuera de esta
+   `Origin` sea el propio y que el cuerpo sea JSON. Un pedido sin `Origin` se rechaza igual: un
+   navegador siempre lo manda en esos pedidos. El `Origin` se compara con el `Host` del
+   pedido, sin el esquema, porque detrás del proxy del proveedor la API no ve si el navegador
+   usó `https`. La consecuencia es que una página servida por `http` en el mismo dominio
+   pasaría este control, y contra ella queda solo `SameSite=Strict`. Lo cierra el encabezado
+   `Strict-Transport-Security`, que obliga al navegador a usar siempre `https` con ese dominio
+   y que se suma con el primer despliegue. El control corre antes de leer el cuerpo del
+   pedido. El webhook de WhatsApp queda fuera de esta
    regla: no usa cookie y se autentica con su firma.
 8. **La consulta periódica no cuenta como actividad.** El chat web pregunta cada pocos segundos
    si hay mensajes nuevos ([ADR 0010](0010-webhook-asincrono-con-tabla-de-entrada.md)). Esa
@@ -76,15 +83,20 @@ para que la cookie de sesión funcione sin un dominio propio.
 9. **Tres entornos, y una entrada de desarrollo que no existe en producción.** La configuración
    declara el entorno: `local`, `demo` o `production`. En los dos primeros se pueden habilitar
    dos opciones: el chat web y la entrada de desarrollo. Con cualquiera de las dos encendida y
-   el entorno en `production`, ningún proceso arranca.
+   el entorno en `production`, ningún proceso arranca. Cada opción tiene su variable, que vale
+   `true` o `false`: la de la entrada de desarrollo es `DEV_ENTRY_ENABLED`. Sin la variable la
+   opción queda apagada, en cualquier entorno, y con otro valor el proceso no arranca: un
+   despliegue que la olvida queda cerrado.
 
    La entrada de desarrollo reemplaza al código mientras no exista el adaptador de WhatsApp, y
    crea una sesión real, con la misma tabla y la misma cookie. Desde ahí todo endpoint toma al
    usuario de la sesión, como siempre. No se construye nada del código de un solo uso hasta que
    haya por dónde enviarlo. Tiene dos formas, según el entorno:
 
-   - **En `local`, una lista.** La pantalla lista los usuarios de los datos de prueba y se elige
-     uno. Es una excepción deliberada a la regla de que el usuario nunca sale del request, y
+   - **En `local`, una lista.** La pantalla lista los usuarios de prueba y se elige uno. Un
+     usuario de prueba se reconoce por su teléfono inventado, que empieza con `+000`: solo esos
+     aparecen y solo con esos se puede entrar, así que una persona que hizo el alta con su
+     número real contra una base local no queda al alcance de la lista. Es una excepción deliberada a la regla de que el usuario nunca sale del request, y
      vale solo en la máquina de quien desarrolla.
    - **En `demo`, un enlace personal.** La lista no existe. Cada persona que prueba tiene un
      enlace propio, con un valor aleatorio de 256 bits, y solo ese enlace abre su cuenta. Así

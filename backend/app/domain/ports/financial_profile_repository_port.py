@@ -5,5 +5,5 @@ from typing import Protocol
 from app.domain.entities.financial_profile import FinancialProfile
 
 
-class FinancialProfileRepository(Protocol):
+class FinancialProfileRepositoryPort(Protocol):
     def add(self, profile: FinancialProfile) -> None: ...

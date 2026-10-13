@@ -28,6 +28,7 @@ class ContextField(StrEnum):
 
 class ErrorCategory(StrEnum):
     NOT_FOUND = "not_found"
+    UNAUTHENTICATED = "unauthenticated"
     FORBIDDEN = "forbidden"
     CONFLICT = "conflict"
     INVALID = "invalid"
@@ -38,6 +39,11 @@ class ErrorCode(StrEnum):
 
     # A unique key that was already there, when no use case gave the conflict its own code.
     CONFLICT = "conflict"
+    # What does not exist, belongs to someone else or is turned off, when it needs no code of
+    # its own. The same word the API answers for a route that does not exist.
+    NOT_FOUND = "not_found"
+    # No valid session. One code for every reason, so that the answer tells none apart.
+    UNAUTHORIZED = "unauthorized"
     TEST_DATA_NOT_ALLOWED = "test_data_not_allowed"
 
 
@@ -69,6 +75,15 @@ class NotFoundError(DomainError):
     """It does not exist, or it belongs to someone else: the two are told apart nowhere."""
 
     category = ErrorCategory.NOT_FOUND
+
+
+class UnauthenticatedError(DomainError):
+    """There is no valid session: missing, unknown, revoked or expired, told apart nowhere."""
+
+    category = ErrorCategory.UNAUTHENTICATED
+
+    def __init__(self) -> None:
+        super().__init__(ErrorCode.UNAUTHORIZED)
 
 
 class ForbiddenError(DomainError):

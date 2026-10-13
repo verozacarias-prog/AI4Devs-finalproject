@@ -5,5 +5,5 @@ from typing import Protocol
 from app.domain.entities.budget_period import BudgetPeriod
 
 
-class BudgetPeriodRepository(Protocol):
+class BudgetPeriodRepositoryPort(Protocol):
     def add(self, period: BudgetPeriod) -> None: ...

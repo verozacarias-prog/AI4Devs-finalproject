@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import replace
 from datetime import datetime
 from types import TracebackType
 from typing import Self
@@ -11,6 +12,7 @@ from app.domain.entities.account import Account
 from app.domain.entities.budget_period import BudgetPeriod
 from app.domain.entities.family_group import FamilyGroup, GroupRole, Membership
 from app.domain.entities.financial_profile import FinancialProfile
+from app.domain.entities.session import Session
 from app.domain.entities.user import User
 
 
@@ -31,6 +33,13 @@ class InMemoryUsers:
 
     def find_by_phone(self, phone: str) -> User | None:
         return next((user for user in self.added if user.whatsapp_phone == phone), None)
+
+    def find_by_id(self, user_id: uuid.UUID) -> User | None:
+        return next((user for user in self.added if user.id == user_id), None)
+
+    def list_by_phone_prefix(self, prefix: str) -> list[User]:
+        matching = [user for user in self.added if user.whatsapp_phone.startswith(prefix)]
+        return sorted(matching, key=lambda user: user.name)
 
 
 class InMemoryAccounts:
@@ -79,6 +88,26 @@ class InMemoryFamilyGroups:
         )
 
 
+class InMemorySessions:
+    def __init__(self) -> None:
+        self.stored: dict[uuid.UUID, Session] = {}
+
+    def add(self, session: Session) -> None:
+        self.stored[session.id] = session
+
+    def find_by_token_hash(self, token_hash: str) -> Session | None:
+        return next(
+            (session for session in self.stored.values() if session.token_hash == token_hash),
+            None,
+        )
+
+    def touch(self, session_id: uuid.UUID, at: datetime) -> None:
+        self.stored[session_id] = replace(self.stored[session_id], last_seen_at=at)
+
+    def revoke(self, session_id: uuid.UUID, at: datetime) -> None:
+        self.stored[session_id] = replace(self.stored[session_id], revoked_at=at)
+
+
 class InMemoryUnitOfWork:
     def __init__(self) -> None:
         self.users = InMemoryUsers()
@@ -86,6 +115,7 @@ class InMemoryUnitOfWork:
         self.budget_periods = InMemoryBudgetPeriods()
         self.financial_profiles = InMemoryFinancialProfiles()
         self.family_groups = InMemoryFamilyGroups()
+        self.sessions = InMemorySessions()
         self.commits = 0
 
     def __enter__(self) -> Self:

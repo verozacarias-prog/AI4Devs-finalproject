@@ -6,7 +6,7 @@ from typing import Protocol
 from app.domain.entities.family_group import FamilyGroup, Membership
 
 
-class FamilyGroupRepository(Protocol):
+class FamilyGroupRepositoryPort(Protocol):
     def add(self, group: FamilyGroup) -> None: ...
 
     def add_membership(self, membership: Membership) -> None: ...
