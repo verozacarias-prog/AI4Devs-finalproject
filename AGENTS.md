@@ -52,19 +52,34 @@ migraciones y los tests puede importar una librería de base de datos. El LLM nu
 base ni genera SQL. La regla completa, con sus
 excepciones, está en el [ADR 0001](docs/adr/0001-arquitectura-hexagonal.md).
 
+`app/shared/` tiene las utilidades técnicas que usan el dominio y los adaptadores, como el
+reloj. Un módulo de `shared/` importa solo la librería estándar, no importa nada del resto de
+`app/`, y hay uno por tema: no existe un `helpers.py` general. La lógica de negocio va en
+`domain/` aunque sea una función suelta. Un caso de uso recibe el reloj al construirse y nunca
+lee la hora por su cuenta.
+
+Los errores que una regla de negocio prevé se declaran en `domain/errors.py`, con un código
+estable y una categoría, y no saben nada de HTTP ni de la base. Un adaptador de salida traduce
+el error de su librería al del dominio. Cada adaptador de entrada tiene un solo lugar que
+convierte un error en su salida y lo registra: ningún router ni comando atrapa errores por su
+cuenta.
+
 Estas reglas se verifican con `python3 scripts/verify_architecture.py`, que corre en el hook
 de pre-commit. No son una recomendación: rompen el commit.
 
 ## 4. Mapa de carpetas
 
-- `backend/app/domain/entities/` — User, Account, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk.
-- `backend/app/domain/use_cases/` — RegisterTransaction, GetBudgetStatus, CalculateAccountBalance, GenerateProactiveAlert.
+- `backend/app/domain/entities/` — User, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk.
+- `backend/app/domain/use_cases/` — CreateTestUser, SeedTestData, RegisterTransaction, GetBudgetStatus, CalculateAccountBalance, GenerateProactiveAlert.
 - `backend/app/domain/ports/` — interfaces que el dominio declara y no implementa.
+- `backend/app/domain/errors.py` — los errores que una regla de negocio prevé, cada uno con su código y su categoría.
+- `backend/app/domain/local_date.py` — qué día es para un usuario, en su zona horaria.
+- `backend/app/shared/` — utilidades técnicas que usan todas las capas, solo con la librería estándar. `clock.py` tiene el protocolo del reloj y su implementación con el reloj de la máquina.
 - `backend/app/adapters/inbound/api/` — routers de FastAPI: traducen HTTP a llamadas a casos de uso. Incluye el chat web de desarrollo, que guarda el mensaje y no lo procesa.
 - `backend/app/adapters/inbound/whatsapp_webhook/` — traduce payloads de WhatsApp a llamadas a casos de uso.
 - `backend/app/adapters/inbound/message_worker/` — punto de entrada del worker: toma los mensajes guardados y los pasa a casos de uso.
 - `backend/app/adapters/inbound/scheduler/` — punto de entrada de los procesos programados: recurrentes, cierres de resumen, alertas, vencimientos, cotizaciones y borrado de cuentas, siempre por casos de uso.
-- `backend/app/adapters/inbound/cli/` — comandos de operación: carga de la base de conocimiento, habilitación de números, y enlaces personales del entorno `demo`, siempre por casos de uso.
+- `backend/app/adapters/inbound/cli/` — comandos de operación: datos de prueba del entorno `local`, carga de la base de conocimiento, habilitación de números, y enlaces personales del entorno `demo`, siempre por casos de uso.
 - `backend/app/adapters/outbound/postgres/` — repositorios SQLAlchemy que implementan los puertos `*_repository`, la unidad de trabajo y la creación de la conexión.
 - `backend/app/adapters/outbound/pgvector/` — implementación de `VectorStorePort`.
 - `backend/app/adapters/outbound/whatsapp_client/` — envío de mensajes salientes de WhatsApp.
@@ -83,8 +98,9 @@ de pre-commit. No son una recomendación: rompen el commit.
 ## 5. Invariantes que un asistente rompe por defecto
 
 - Nunca usar una cuenta por defecto. Si el mensaje no la menciona, preguntar.
-- Nunca asignar `budget_period_id` sin confirmación explícita del usuario.
-- Los defaults derivables permitidos son solo fecha, moneda y categoría, y los tres van siempre listados en el mensaje de confirmación.
+- Nunca asignar `budget_period_id` sin confirmación explícita del usuario. La única excepción es
+  que haya un solo período posible para esa fecha: ahí se imputa a ese sin preguntar.
+- Los defaults derivables permitidos son solo fecha, moneda y categoría, y los tres van siempre listados en el mensaje de confirmación, junto con el presupuesto cuando se imputó por ser el único.
 - Montos en `Decimal`, nunca `float`.
 - La moneda viaja siempre junto al monto, nunca implícita.
 - El saldo de una cuenta se calcula, no se almacena como campo mutable.
@@ -101,6 +117,7 @@ completo antes de escribir código.
 - Sin `Any`.
 - Sin textos ni valores sueltos en el código: van como constantes, en un lugar por tipo. En el
   backend, `app/constants.py` (entornos, variables de entorno, valores por defecto),
+  `app/test_data.py` (la plantilla de un usuario de prueba y los usuarios de `local`),
   `app/messages.py` (todo mensaje para una persona), `adapters/inbound/api/routes.py` (las
   rutas de la API y los valores de sus respuestas), `adapters/inbound/api/security_headers.py`
   (los encabezados de seguridad), `adapters/outbound/observability/events.py`
@@ -115,7 +132,10 @@ completo antes de escribir código.
 
 ## 7. Seguridad
 
-- Nunca loggear teléfono, monto ni texto del usuario sin enmascarar.
+- Nunca loggear teléfono, monto ni texto del usuario sin enmascarar. De un error se registran
+  su clase, su camino en el código, los identificadores de lo que tocaba y sus valores de
+  catálogo, nunca su mensaje. La única excepción es el entorno `local`, con usuarios
+  inventados, donde un error se escribe además completo.
 - Secretos solo por variables de entorno, nunca hardcodeados ni versionados.
 - Verificar la firma del webhook antes de procesar.
 - Todo acceso a datos se limita al usuario autenticado, que sale de la sesión y nunca del request. Un
@@ -182,7 +202,9 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   a la base no se importen fuera de los directorios permitidos, que ningún framework de IA se
   importe fuera del adaptador de particionado, y el aislamiento del frontend. No detecta un
   monto con otro nombre, una llamada HTTP de un proceso del backend a la API, ni el SDK de un
-  proveedor de IA que no esté en su lista.
+  proveedor de IA que no esté en su lista. Valida que un módulo de `app/shared/` importe solo
+  la librería estándar y no se llame como un módulo general. No valida que los errores se
+  traduzcan en un solo lugar, ni que un caso de uso no lea la hora por su cuenta.
   Tolerante mientras `backend/` y `frontend/` no
   existan, pero falla si `backend/` existe y el dominio no está en `backend/app/domain/`.
 - Los dos tienen que pasar sin errores antes de commitear; el hook de pre-commit los corre solo,

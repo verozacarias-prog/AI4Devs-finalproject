@@ -97,12 +97,45 @@ con un comando: la base, las migraciones, la API y el worker, los tres últimos 
 imagen. El worker se suma cuando exista la tabla de mensajes entrantes. Las pruebas manuales usan el modelo real, con la clave en un `.env` sin versionar. Dónde
 se despliegan demostración y producción sigue como propuesta.
 
+Cada proceso recibe su entorno en la variable `APP_ENV`, y no hay un valor por defecto: sin
+ella, o con un valor que no es `local`, `demo` ni `production`, el proceso no arranca y dice
+qué variable falta. Un despliegue que la olvidara no puede quedar funcionando como `local`,
+que es el entorno donde un error se escribe con sus datos ([6.3](#63-registros)). El
+`docker-compose.yml` del repositorio levanta solo el entorno local, y por eso es el único lugar
+que la declara como `local` cuando nadie la definió.
+
 | Entorno | Para qué | En qué se diferencia | Cómo se promueve |
 |---|---|---|---|
 | Local | Desarrollo y pruebas manuales del flujo por WhatsApp | Docker Compose con la imagen `pgvector/pgvector:pg16`, el número de prueba gratuito de Meta detrás de un túnel, y datos semilla que se niegan a correr contra producción | Pull request |
 | CI, efímero | Tests de integración y migraciones contra un PostgreSQL real | PostgreSQL como contenedor del job, sin secretos, con dobles de prueba para Meta, el LLM, los embeddings y las cotizaciones | Merge a la rama de despliegue con todos los checks en verde |
 | Demostración y pruebas | Mostrar el flujo conversacional por el chat web, sin WhatsApp, y que lo pruebe otra persona | Entorno `demo`: usuarios de prueba, chat web encendido y entrada por un enlace personal, uno por persona, con un aviso de prueba que se acepta la primera vez ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Tiene su propia base. Dónde se aloja está sin decidir | Con cada integración a la rama de la entrega |
 | Producción | Usuarios | Entorno `production`: Render, con los secretos en un Environment Group y registros en nivel INFO. No arranca con el chat web ni la entrada de desarrollo encendidos | Despliegue automático de Render cuando pasan los checks |
+
+**Datos de prueba.** Un usuario de prueba nace de una plantilla, la misma en `local` y en
+`demo`. Son datos inventados y a la vista, no valores por defecto de un registro
+([reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos)):
+
+- **Usuario:** Argentina, zona horaria de Buenos Aires, pesos como moneda primaria, el dólar MEP
+  como cotización de referencia y sin permiso para avisos.
+- **Cuentas:** "Galicia pesos", de banco, con $350.000; "Mercado Pago", billetera, con $80.000;
+  "Efectivo", con $25.000; y "Galicia USD", de banco, con US$500. Las dos "Galicia" están para
+  que una mención ambigua obligue a preguntar. No trae tarjeta ni cuenta de inversión.
+- **Primer período:** el de la regla del alta
+  ([reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)).
+- **Perfil:** tramo de ingreso `range_3`, una persona a cargo, sin deudas, fondo de emergencia
+  de 2 meses y objetivo de ahorrar.
+- **Teléfono:** empieza con `+000`, un código que ningún país tiene, así no puede ser el número
+  de nadie.
+
+En `local`, el script de datos de prueba crea tres usuarios con esa plantilla: Lucía, que tiene
+solo su presupuesto; Pablo, dueño del grupo "Casa"; y Sofía, miembro de "Casa". Sus teléfonos
+son `+000000000001` a `+000000000003`, y su consentimiento queda con la versión `local-seed-1` y
+la fecha en que corrió el script, para que nunca parezca que alguien aceptó algo. Se puede correr
+las veces que haga falta: a un usuario que ya existe, reconocido por su teléfono, no lo toca ni
+lo repara, y crea los que falten. La única excepción es la membresía de "Casa": si el grupo se
+crea en esa corrida, Sofía se suma aunque ya existiera, porque un grupo sin su miembro no sirve
+para probar. Para empezar de cero se reinicia la base. Se niega a correr con
+el entorno en `demo` o en `production`.
 
 El entorno `demo` no figura en los costos de [1](#1-qué-se-suma-a-la-arquitectura): es una
 segunda instancia con su base, y cuánto cuesta depende del proveedor que se elija.
@@ -285,12 +318,65 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
 
 - **Formato:** JSON de una línea a la salida estándar, con la librería estándar de logging y un
   formateador propio. Campos: momento, nivel, proceso, versión desplegada, identificador del
-  mensaje, identificador interno del usuario, evento, duración y resultado.
+  mensaje, identificador interno del usuario, evento, duración y resultado. Un error suma los
+  suyos, que están más abajo. La API, el worker, los procesos programados y los comandos de
+  operación registran igual, cada uno con su nombre de proceso.
 - **Correlación:** el identificador es el `id` del mensaje en la tabla de entrada. El worker lo
   pone en cada registro mientras procesa ese mensaje, y es el mismo que queda en la tabla de
   llamadas al modelo y en la respuesta de la tabla de salida. Un mensaje se sigue de punta a
   punta con un solo valor, sin columnas nuevas. Un pedido a la API que no es un mensaje lleva un
-  identificador generado al recibirlo.
+  identificador generado al recibirlo, y un comando de operación o una corrida de un proceso
+  programado, uno generado al arrancar. Toda respuesta de la API devuelve el suyo en el header
+  `X-Request-Id`, también la de un error: es la referencia con la que un reporte se busca en
+  los registros. El comando que falla lo escribe junto a su mensaje.
+- **Errores:** todo error deja una línea, con el mismo identificador que el pedido, el mensaje o
+  el comando donde ocurrió. Hay dos eventos, y los escribe un solo lugar por proceso, no cada
+  caso de uso.
+
+  | Evento | Nivel | Qué registra |
+  |---|---|---|
+  | `error.expected` | INFO | Un error que el dominio prevé: algo que no existe o es de otro, un conflicto, una regla violada, algo no permitido |
+  | `error.unexpected` | ERROR | Cualquier otro: una falla del código o de un servicio |
+
+  | Campo | Qué lleva | Cuándo |
+  |---|---|---|
+  | `error_type` | La clase del error | Siempre |
+  | `error_code` | El código estable del error, una constante del código | En un error esperado |
+  | `error_stack` | El camino del error dentro del código de la aplicación: el módulo, la función y la línea de cada paso, desde el punto de entrada hasta donde se originó | Siempre que el error haya pasado por código de la aplicación |
+  | `error_cause` | La clase del error original, cuando un adaptador lo tradujo a uno del dominio | Si hubo traducción |
+  | `constraint` | El nombre de la restricción de la base que rechazó la escritura | Si el error original fue ese rechazo |
+
+  La única respuesta de error que no deja su línea es la que el servidor da antes de llegar a
+  un caso de uso, como la de una ruta que no existe, la de un método que la ruta no acepta o
+  la de un pedido que no tiene la forma del contrato.
+  No tiene camino en el código ni filas que ubicar, y la línea de su pedido ya dice el
+  resultado. Registrarla dejaría que cualquiera que pruebe rutas al azar tape los errores
+  reales.
+
+  Ninguno lleva datos: son nombres del código y del esquema. El mensaje de un error y su
+  traceback llevan valores, y el de un rechazo de la base trae la fila entera, así que no se
+  registran. Por lo mismo, la conexión a la base se abre con los parámetros de las consultas
+  ocultos en sus errores.
+
+  Para reproducir un error sin sus valores, la línea dice cuáles son:
+
+  - **Los identificadores de lo involucrado.** Además del usuario y del mensaje, los de la
+    cuenta, el período, el movimiento o lo que el caso de uso estaba tocando, cada uno en un
+    campo terminado en `_id`. Con ellos, una consulta trae la fila exacta, y el del mensaje
+    trae su texto original mientras se conserve.
+  - **Los valores de catálogo.** El tipo de movimiento, la moneda, un estado, o el nombre del
+    campo que falló: palabras de una lista cerrada del código, nunca un texto que escribió
+    alguien. El error los lleva con su tipo, así un texto libre no puede entrar por ahí. Cada
+    campo de catálogo se suma a los permitidos con la funcionalidad que lo usa: hoy el único es
+    el entorno, que usa el script de datos de prueba. De lo que un error dice que tocaba pasan
+    solo esos campos y los terminados en `_id`, y ninguno reemplaza a un campo propio de la
+    línea, como su referencia.
+
+  **En `local`, y solo ahí, un error se escribe además completo,** con su mensaje y su
+  traceback, a la salida de errores. Los usuarios de ese entorno son inventados
+  ([sección 2](#2-entornos)), y es donde un error se reproduce con todos sus datos. Lo decide el
+  entorno del proceso: no hay una variable que lo encienda en `demo` ni en `production`. En
+  `demo` los usuarios son de prueba, pero quien entra escribe lo que quiere en el chat.
 - **Eventos de seguridad:** son eventos de este mismo registro, sin tabla ni herramienta aparte.
 
   | Evento | Qué registra | Llega con |
@@ -316,12 +402,17 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   de los emails; y la IP completa, que se trunca si hace falta para los límites de uso.
 - **Cómo se hace cumplir:** un filtro de logging que redacta por nombre de campo, y que deja
   pasar solo lo que se sabe seguro. De los campos, solo los permitidos, y cada uno con su
-  forma: una duración entre cero y una hora, la clase de un error, un código entre 100 y 599 o
-  una palabra corta como resultado, y un identificador hexadecimal o UUID. Un campo nuevo, un texto libre o un
+  forma: una duración entre cero y una hora, la clase de un error o de su causa, un código
+  entre 100 y 599 o una palabra corta como resultado, una palabra corta como código de error,
+  una lista acotada de lugares del código, cada uno escrito como módulo, función y número de
+  línea, el nombre de una restricción, en minúsculas y de hasta 63 caracteres, una palabra corta
+  en un campo de catálogo, y un identificador hexadecimal o UUID, que es
+  lo único que pasa en un campo terminado en `_id`. Un campo nuevo, un texto libre o un
   valor con otra forma sale redactado. Del mensaje, solo
   un nombre fijo de evento, como `http.request`, hecho de palabras en minúscula que empiezan
   con letra y de largo acotado: un texto armado con datos sale redactado. De un
-  error, solo su clase. Todo lo que el proceso registra pasa por ese filtro, incluidos el
+  error, solo los campos de la tabla de arriba y los que dicen qué estaba tocando, nunca su
+  mensaje ni su traceback, salvo en `local`. Todo lo que el proceso registra pasa por ese filtro, incluidos el
   servidor web, cuyo registro de accesos está apagado porque imprime la IP, las librerías,
   que registran desde el nivel de advertencia, y las advertencias de Python. Un registro mal
   armado no vuelca sus datos a la salida de errores ni se pierde: deja su línea con el evento

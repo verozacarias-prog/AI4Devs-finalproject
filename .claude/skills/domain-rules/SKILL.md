@@ -15,7 +15,8 @@ Después devolvé, sin escribir código todavía:
 - **Grupos que aplican.** Cuáles de los catorce grupos de `docs/reglas-de-dominio.md` rigen este
   ticket, con el número y el título de cada uno, y una línea diciendo por qué aplica.
 - **Qué se resuelve solo.** Qué valores puede completar el sistema sin preguntar. Recordá que los
-  únicos defaults derivables permitidos son fecha, moneda y categoría.
+  únicos defaults derivables permitidos son fecha, moneda y categoría, y que el presupuesto se
+  imputa sin preguntar solo cuando hay un único período posible.
 - **Qué exige confirmación del usuario.** Qué valores no se pueden deducir. Si aparece la cuenta
   o el período de presupuesto, decilo explícitamente: son los dos que más se rompen.
 - **Qué invariante podría romper este ticket.** Cuál de las siete es la que está en riesgo acá, y

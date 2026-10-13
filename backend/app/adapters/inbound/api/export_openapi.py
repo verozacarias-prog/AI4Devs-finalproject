@@ -12,7 +12,7 @@ import sys
 
 from app.adapters.inbound.api.app import create_app
 from app.constants import (
-    DEFAULT_ENVIRONMENT,
+    CONTRACT_EXPORT_ENVIRONMENT,
     DEFAULT_VERSION,
     JSON_INDENT,
     LINE_END,
@@ -25,7 +25,7 @@ def export_openapi() -> str:
     settings = Settings(
         # The contract does not depend on the database: the engine is never used here.
         database_url=UNUSED_DATABASE_URL,
-        environment=DEFAULT_ENVIRONMENT,
+        environment=CONTRACT_EXPORT_ENVIRONMENT,
         version=DEFAULT_VERSION,
     )
     app = create_app(settings, log_stream=io.StringIO())

@@ -8,7 +8,6 @@ from pathlib import Path
 
 from app import messages
 from app.constants import (
-    DEFAULT_ENVIRONMENT,
     DEFAULT_VERSION,
     LIST_SEPARATOR,
     Environment,
@@ -37,8 +36,12 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
     database_url = _read(environ, EnvVar.DATABASE_URL)
     if not database_url:
         raise SettingsError(messages.MISSING_ENV_VAR.format(name=EnvVar.DATABASE_URL))
+    # No default: a deployment that forgot it must not end up running as local.
+    declared_environment = _read(environ, EnvVar.APP_ENV)
+    if not declared_environment:
+        raise SettingsError(messages.MISSING_ENV_VAR.format(name=EnvVar.APP_ENV))
     try:
-        environment = Environment(_read(environ, EnvVar.APP_ENV, DEFAULT_ENVIRONMENT))
+        environment = Environment(declared_environment)
     except ValueError:
         allowed = LIST_SEPARATOR.join(Environment)
         raise SettingsError(

@@ -10,6 +10,9 @@ Rules (ADR 0023, docs/operacion.md 6.3):
   lowercase word as result, and a hexadecimal or UUID identifier. Any other field or value
   is redacted, so a new field cannot leak by omission.
 - Of an exception, only the class name is logged: its message and traceback can carry data.
+  An error adds what locates it without a value: its code, its path through the code, the
+  class it was translated from, the constraint that rejected a write, the identifiers of what
+  it was touching and its catalog values.
 
 Every logger of the process goes through the same handler, including the web server, the
 libraries and Python warnings, because the handler is installed on the root logger. Nothing
@@ -35,12 +38,16 @@ from typing import TextIO
 
 from app.adapters.outbound.observability.events import (
     CLASS_NAME_PATTERN,
+    CODE_PLACE_PATTERN,
+    CONSTRAINT_PATTERN,
     EVENT_NAME_PATTERN,
     HANDLER_NAME,
+    IDENTIFIER_FIELD_SUFFIX,
     IDENTIFIER_PATTERN,
     MAX_DURATION_MS,
     MAX_EVENT_LENGTH,
     MAX_RESULT_CODE,
+    MAX_STACK_DEPTH,
     MIN_RESULT_CODE,
     REDACTED,
     SHORT_WORD_PATTERN,
@@ -49,10 +56,11 @@ from app.adapters.outbound.observability.events import (
     LoggerName,
 )
 from app.constants import ProcessName
+from app.domain.errors import ContextField
 
 __all__ = ["REDACTED", "build_handler", "configure_logging", "request_id_var"]
 
-LogValue = str | int | float | bool | None
+LogValue = str | int | float | bool | list[str] | None
 
 # Identifier of the API request being served. A request that is not a message gets one when
 # it arrives; the worker will set the message id the same way.
@@ -62,6 +70,8 @@ _EVENT_NAME = re.compile(EVENT_NAME_PATTERN)
 _IDENTIFIER = re.compile(IDENTIFIER_PATTERN)
 _CLASS_NAME = re.compile(CLASS_NAME_PATTERN)
 _SHORT_WORD = re.compile(SHORT_WORD_PATTERN)
+_CONSTRAINT = re.compile(CONSTRAINT_PATTERN)
+_CODE_PLACE = re.compile(CODE_PLACE_PATTERN)
 # The attributes every record has, as the logging library names them.
 _RECORD_ATTRIBUTES = frozenset(logging.makeLogRecord({}).__dict__) | {"message", "asctime"}
 
@@ -87,15 +97,32 @@ def _is_result(value: object) -> bool:
     )
 
 
+def _is_code_path(value: object) -> bool:
+    return (
+        isinstance(value, list)
+        and len(value) <= MAX_STACK_DEPTH
+        and all(_matches(_CODE_PLACE)(place) for place in value)
+    )
+
+
 # The fields that may appear in a log line, each with the only shape it accepts.
 FIELD_RULES: dict[str, Callable[[object], bool]] = {
-    Field.MESSAGE_ID: _matches(_IDENTIFIER),
-    Field.REQUEST_ID: _matches(_IDENTIFIER),
-    Field.USER_ID: _matches(_IDENTIFIER),
     Field.DURATION_MS: _is_integer_between(0, MAX_DURATION_MS),
     Field.RESULT: _is_result,
     Field.ERROR_TYPE: _matches(_CLASS_NAME),
+    Field.ERROR_CODE: _matches(_SHORT_WORD),
+    Field.ERROR_STACK: _is_code_path,
+    Field.ERROR_CAUSE: _matches(_CLASS_NAME),
+    Field.CONSTRAINT: _matches(_CONSTRAINT),
+    # A catalog value is a short word of the code.
+    **dict.fromkeys(ContextField, _matches(_SHORT_WORD)),
 }
+
+
+def _rule_for(name: str) -> Callable[[object], bool] | None:
+    if name.endswith(IDENTIFIER_FIELD_SUFFIX):
+        return _matches(_IDENTIFIER)
+    return FIELD_RULES.get(name)
 
 
 class RedactionFilter(logging.Filter):
@@ -104,7 +131,7 @@ class RedactionFilter(logging.Filter):
             value = record.__dict__[name]
             if value is None:
                 continue
-            rule = FIELD_RULES.get(name)
+            rule = _rule_for(name)
             if rule is None or not rule(value):
                 record.__dict__[name] = REDACTED
         return True

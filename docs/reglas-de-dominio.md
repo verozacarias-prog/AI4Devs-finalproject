@@ -13,12 +13,12 @@ Antes de escribir código para cualquier ticket de dominio, leer este documento 
 
 ## 1. Registro de un movimiento: qué se asume y qué se confirma
 
-**Qué se asume y qué se confirma**: para que cargar un gasto sea un solo mensaje, el asistente completa solo lo que puede resolver sin adivinar — la **fecha** es la de hoy salvo que el mensaje diga otra cosa, la **moneda** es la de la cuenta que el mensaje nombra, o la primaria del usuario si no nombra ninguna, salvo que se indique otra, y la **categoría** se ubica entre las existentes, sugiriendo crear una nueva solo si no encaja en ninguna. Todo eso aparece explícito en el mensaje de confirmación, donde el usuario corrige cualquiera de esos valores con una respuesta corta. En cambio hay datos que **requieren confirmación del usuario**: el **monto**, si es **gasto o ingreso** cuando el mensaje no lo deja claro, la **cuenta** (imputarla mal rompe el saldo calculado) y **a qué presupuesto se imputa el gasto** — la fecha acota los períodos posibles, pero elegir si el gasto pesa sobre el presupuesto individual o el familiar es una decisión del usuario, no algo que el sistema pueda deducir. El asistente propone lo más probable y el usuario confirma. Lo ya interpretado queda guardado mientras tanto, así se responde solo lo que falta y no se repite el mensaje entero.
+**Qué se asume y qué se confirma**: para que cargar un gasto sea un solo mensaje, el asistente completa solo lo que puede resolver sin adivinar — la **fecha** es la de hoy salvo que el mensaje diga otra cosa, la **moneda** es la de la cuenta que el mensaje nombra, o la primaria del usuario si no nombra ninguna, salvo que se indique otra, y la **categoría** se ubica entre las existentes, sugiriendo crear una nueva solo si no encaja en ninguna. Todo eso aparece explícito en el mensaje de confirmación, donde el usuario corrige cualquiera de esos valores con una respuesta corta. En cambio hay datos que **requieren confirmación del usuario**: el **monto**, si es **gasto o ingreso** cuando el mensaje no lo deja claro, la **cuenta** (imputarla mal rompe el saldo calculado) y **a qué presupuesto se imputa el gasto** — la fecha acota los períodos posibles, pero elegir si el gasto pesa sobre el presupuesto individual o el familiar es una decisión del usuario, no algo que el sistema pueda deducir. El asistente propone lo más probable y el usuario confirma. Si hay un solo presupuesto posible, no hay nada que decidir y no se pregunta (ver abajo). Lo ya interpretado queda guardado mientras tanto, así se responde solo lo que falta y no se repite el mensaje entero.
 
 **Campos obligatorios de un movimiento.** Una fila en `TRANSACTION` solo existe con todos estos datos presentes: `amount`, `currency`, `type`, `transaction_date`, `category_id`, `account_id` y `budget_period_id` — todos `NOT NULL` en la base de datos, así que ninguna vía de carga puede insertar un movimiento a medias. Lo que cambia entre ellos es **de dónde sale el valor**, no si es obligatorio:
 
 - **Resueltos por el sistema, sin preguntar:** `transaction_date` (hoy en la zona horaria del usuario, salvo que el mensaje indique otra fecha), `currency` (la de la cuenta que el mensaje nombra, o la primaria del usuario si no nombra ninguna, salvo indicación contraria) y `category_id` (resuelto contra las categorías existentes; si ninguna encaja, se sugiere crear una). Quedan visibles en el mensaje de confirmación, que es donde el usuario los corrige.
-- **Pedidos o confirmados por el usuario:** `amount`, `type` si el mensaje no lo deja claro, `account_id` siempre que no se mencione una cuenta, y `budget_period_id` **siempre**. Con el presupuesto el sistema no decide solo: `transaction_date` acota los períodos candidatos (y si el usuario pertenece a un grupo familiar, esa fecha cae dentro de su período individual y del familiar a la vez), pero cuál de ellos absorbe el gasto es una decisión del usuario, no algo derivable. El asistente propone el candidato más probable y el usuario confirma o elige otro; ninguna transacción se imputa a un presupuesto sin ese visto bueno. Hay dos excepciones a que ese visto bueno lo dé el propio usuario en el momento: las reglas recurrentes (§ 8) y el dueño de un grupo familiar que saca a un miembro con pendientes abiertos (§ 10).
+- **Pedidos o confirmados por el usuario:** `amount`, `type` si el mensaje no lo deja claro, `account_id` siempre que no se mencione una cuenta, y `budget_period_id` cuando hay más de un período posible. Con el presupuesto el sistema no decide solo: `transaction_date` acota los períodos candidatos (y si el usuario pertenece a un grupo familiar, esa fecha cae dentro de su período individual y del familiar a la vez), pero cuál de ellos absorbe el gasto es una decisión del usuario, no algo derivable. El asistente propone el candidato más probable y el usuario confirma o elige otro; ninguna transacción se imputa a un presupuesto sin ese visto bueno, salvo cuando hay uno solo posible (ver abajo). Hay dos excepciones a que ese visto bueno lo dé el propio usuario en el momento: las reglas recurrentes (§ 8) y el dueño de un grupo familiar que saca a un miembro con pendientes abiertos (§ 10).
 
 Si falta o queda sin confirmar alguno de los campos que dependen del usuario, el movimiento no se registra: queda como `PENDING_TRANSACTION` hasta que responda. La misma regla aplicará a los movimientos detectados por el parser de emails cuando se implemente (could-have): traen monto, fecha y normalmente cuenta, pero nunca el presupuesto, así que quedarán pendientes de confirmación igual que los manuales incompletos.
 
@@ -27,6 +27,19 @@ Del alcance técnico del Ticket 1:
 - Aplicación de defaults derivables antes de decidir si falta algo: `transaction_date` = hoy si no viene, `currency` = la de la cuenta mencionada si no viene, o la primaria del usuario si tampoco se menciona una cuenta.
 - Resolución de cuenta por nombre si se menciona — **sin fallback ni cuenta por defecto**: si no se menciona, se pregunta.
 - Mensaje de confirmación que lista también los valores resueltos por defecto (fecha, moneda, categoría) y acepta una corrección posterior sobre cualquiera de ellos.
+
+**Con un solo presupuesto posible, no se pregunta.** La confirmación del presupuesto existe
+porque quien tiene un grupo puede imputar el mismo gasto a su presupuesto o al del grupo, y eso
+el sistema no lo puede deducir. Quien tiene un solo presupuesto donde ese movimiento puede ir no
+tiene nada que elegir, y preguntarle igual sería un mensaje de más en cada gasto. La regla es
+exacta: se cuentan los períodos que cubren la fecha del movimiento, el individual del usuario y
+el de cada grupo del que es miembro vigente, estén confirmados o en borrador. Si hay exactamente
+uno y está confirmado, el movimiento se imputa a ese sin preguntar, y el mensaje de confirmación
+dice a qué presupuesto fue, igual que dice la fecha, la moneda y la categoría. Si hay más de uno,
+se pregunta siempre, aunque uno parezca más probable. Si el único está en borrador, el movimiento
+queda pendiente como cualquier otro que cae en un período sin confirmar (§ 3). No es una
+elección del sistema: con un solo candidato no hay entre qué elegir. Cuando el usuario se suma a
+un grupo, o crea uno, vuelve a tener dos candidatos y se le vuelve a preguntar.
 
 **Hoy es el día en que el usuario escribió.** La fecha por defecto de un movimiento es el día en
 que el usuario mandó el mensaje, en su zona horaria, no el día en que Platita lo procesa. Al
@@ -271,7 +284,7 @@ presupuesto que el usuario todavía no aprobó.
 
 Del alcance técnico del Ticket 1:
 
-- Resolución de `budget_period_id`: a partir de `transaction_date` se arman los períodos candidatos del usuario (individual y de sus grupos familiares) y se propone el más probable — **nunca se asigna sin confirmación explícita del usuario**.
+- Resolución de `budget_period_id`: a partir de `transaction_date` se arman los períodos candidatos del usuario (individual y de sus grupos familiares) y se propone el más probable — **nunca se asigna sin confirmación explícita del usuario**, salvo que el candidato sea uno solo (§ 1).
 
 Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-principales) · [restricción XOR en 3.2](03-modelo-de-datos.md#budget_period) · [BUDGET_PERIOD en 3.2](03-modelo-de-datos.md#budget_period) · [HU2](05-historias-de-usuario.md).
 
@@ -398,7 +411,7 @@ Cada pendiente pertenece a un lote (`PENDING_BATCH`), y un gasto suelto es un lo
 campos que el modelo había interpretado cambió el usuario antes de confirmar: el monto, el tipo,
 la fecha, la moneda, la categoría o la cuenta que el mensaje nombraba. Suma uno por cada campo
 que una respuesta cambia. No cuenta completar un dato que faltaba ni elegir el presupuesto, que
-se pregunta siempre. El contador no cambia nada de lo que ve el usuario: lo lee solo la métrica
+se pregunta cuando hay más de uno posible. El contador no cambia nada de lo que ve el usuario: lo lee solo la métrica
 de calidad ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
 
 Ver también: [PENDING_TRANSACTION y PENDING_BATCH en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [HU3](05-historias-de-usuario.md).
@@ -711,9 +724,9 @@ grupo siguen imputados ahí: siguen pesando en el gastado del presupuesto famili
 visibles para los miembros del grupo. Salir no reescribe la historia del presupuesto.
 
 **No se sale con pendientes abiertos.** Un usuario no puede salir de un grupo mientras tenga
-alguna `PENDING_TRANSACTION` abierta, sea cual sea el presupuesto al que apunte: como el período
-nunca se asigna sin confirmación (§ 1), cualquier pendiente podría terminar en el presupuesto
-familiar. Primero confirma o rechaza cada uno. Rechazar es un cierre explícito del pendiente, no
+alguna `PENDING_TRANSACTION` abierta, sea cual sea el presupuesto al que apunte: como quien tiene un
+grupo confirma siempre el presupuesto (§ 1), cualquier pendiente podría terminar en el
+presupuesto familiar. Primero confirma o rechaza cada uno. Rechazar es un cierre explícito del pendiente, no
 un vencimiento (§ 5).
 
 **Los recurrentes hacia el grupo se pausan.** Al salir, cada `RECURRING_RULE` del usuario con

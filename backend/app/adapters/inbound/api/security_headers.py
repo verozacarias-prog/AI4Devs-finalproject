@@ -8,10 +8,8 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 
-from fastapi import Request, Response, status
-from fastapi.responses import PlainTextResponse
+from fastapi import Request, Response
 
-from app import messages
 from app.adapters.inbound.api.routes import DASHBOARD_PREFIX
 
 # Sent with every response.
@@ -52,13 +50,3 @@ async def add_security_headers(
     response = await call_next(request)
     response.headers.update(security_headers_for(request.url.path))
     return response
-
-
-async def unexpected_error_response(request: Request, error: Exception) -> Response:
-    """The answer to an error nobody handled. It never passes through the middleware above,
-    so it carries the headers itself. It says nothing about the error."""
-    return PlainTextResponse(
-        messages.INTERNAL_SERVER_ERROR,
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        headers=security_headers_for(request.url.path),
-    )

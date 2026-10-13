@@ -26,16 +26,19 @@ class ProcessName(StrEnum):
     """The processes that share the image. Each log line says which one wrote it."""
 
     API = "api"
+    CLI = "cli"
 
 
 APP_TITLE = "Platita"
 
-DEFAULT_ENVIRONMENT = Environment.LOCAL
 DEFAULT_VERSION = "dev"
 
 # For code that builds the application without ever touching the database, such as the
 # command that exports the API contract.
 UNUSED_DATABASE_URL = "postgresql+psycopg://unused@localhost/unused"
+# The environment has no default (docs/operacion.md, section 2). This one is for that same
+# code, which serves nobody.
+CONTRACT_EXPORT_ENVIRONMENT = Environment.LOCAL
 DATABASE_CONNECT_TIMEOUT_SECONDS = 3
 
 # Layout of the compiled dashboard, as the build tool leaves it.
@@ -55,3 +58,8 @@ LINE_END = "\n"
 # Where the API listens inside its container. Compose publishes it on localhost only.
 API_HOST = "0.0.0.0"  # noqa: S104
 API_PORT = 8000
+
+# What an operation command returns to the shell.
+EXIT_OK = 0
+EXIT_REFUSED = 1
+EXIT_FAILED = 2

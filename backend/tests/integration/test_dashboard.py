@@ -34,7 +34,9 @@ def dashboard_dir(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def client(database_url: str, dashboard_dir: Path) -> TestClient:
-    settings = load_settings({"DATABASE_URL": database_url, "DASHBOARD_DIR": str(dashboard_dir)})
+    settings = load_settings(
+        {"DATABASE_URL": database_url, "APP_ENV": "local", "DASHBOARD_DIR": str(dashboard_dir)}
+    )
     return TestClient(create_app(settings))
 
 
@@ -94,7 +96,11 @@ def test_without_a_compiled_dashboard_the_api_still_starts(
 ) -> None:
     """Case 34."""
     settings = load_settings(
-        {"DATABASE_URL": database_url, "DASHBOARD_DIR": str(tmp_path / "missing")}
+        {
+            "DATABASE_URL": database_url,
+            "APP_ENV": "local",
+            "DASHBOARD_DIR": str(tmp_path / "missing"),
+        }
     )
     client = TestClient(create_app(settings))
 
@@ -105,7 +111,9 @@ def test_without_a_compiled_dashboard_the_api_still_starts(
 
 def test_without_the_dashboard_setting_the_api_still_starts(database_url: str) -> None:
     """Case 34."""
-    client = TestClient(create_app(load_settings({"DATABASE_URL": database_url})))
+    client = TestClient(
+        create_app(load_settings({"DATABASE_URL": database_url, "APP_ENV": "local"}))
+    )
 
     assert client.get("/healthz").status_code == 200
     assert client.get("/app/").status_code == 404
@@ -151,7 +159,9 @@ def test_an_unexpected_error_carries_the_headers_too(
     database_url: str, dashboard_dir: Path
 ) -> None:
     """Case 49."""
-    settings = load_settings({"DATABASE_URL": database_url, "DASHBOARD_DIR": str(dashboard_dir)})
+    settings = load_settings(
+        {"DATABASE_URL": database_url, "APP_ENV": "local", "DASHBOARD_DIR": str(dashboard_dir)}
+    )
     app = create_app(settings)
 
     @app.get("/boom")
