@@ -321,7 +321,12 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
 - **Formato:** JSON de una línea a la salida estándar, con la librería estándar de logging y un
   formateador propio. Campos: momento, nivel, proceso, versión desplegada, identificador del
   mensaje, identificador interno del usuario, evento, duración y resultado. Un error suma los
-  suyos, que están más abajo. La API, el worker, los procesos programados y los comandos de
+  suyos, que están más abajo. La línea de un pedido a la API, `http.request`, dice además a
+  qué endpoint fue, en el campo `endpoint`: el método y la ruta como está declarada en el
+  código, por ejemplo `GET /budget-periods/{budget_period_id}`. Nunca lleva la dirección que
+  se pidió, que puede traer un identificador, parámetros con datos o lo que alguien haya
+  escrito. Un pedido a una ruta que no existe lleva solo el método, y uno al dashboard,
+  `GET /app`, sin el archivo. La API, el worker, los procesos programados y los comandos de
   operación registran igual, cada uno con su nombre de proceso.
 - **Correlación:** el identificador es el `id` del mensaje en la tabla de entrada. El worker lo
   pone en cada registro mientras procesa ese mensaje, y es el mismo que queda en la tabla de
@@ -405,7 +410,8 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
 - **Cómo se hace cumplir:** un filtro de logging que redacta por nombre de campo, y que deja
   pasar solo lo que se sabe seguro. De los campos, solo los permitidos, y cada uno con su
   forma: una duración entre cero y una hora, la clase de un error o de su causa, un código
-  entre 100 y 599 o una palabra corta como resultado, una palabra corta como código de error,
+  entre 100 y 599 o una palabra corta como resultado, un método HTTP seguido de una ruta
+  declarada, sin ningún identificador entre sus partes, como endpoint, una palabra corta como código de error,
   una lista acotada de lugares del código, cada uno escrito como módulo, función y número de
   línea, el nombre de una restricción, en minúsculas y de hasta 63 caracteres, una palabra corta
   en un campo de catálogo, y un identificador hexadecimal o UUID, que es
