@@ -1,6 +1,6 @@
 """Which endpoint a request line is about (docs/operacion.md, 6.3).
 
-Cases 68 to 72 and 74. The line carries the method and the route as the code declares it,
+Cases 68 to 72, 74 and 80. The line carries the method and the route as the code declares it,
 never the address that was asked for.
 """
 

@@ -1,7 +1,7 @@
 """The development entry of the local environment, over HTTP (docs/04-api.md, ADR 0016).
 
-Cases 21 to 27, 29, 31 to 54. Each test has a database of its own, with the test data of the
-script, and talks to the API the way the dashboard does.
+Cases 21 to 27, 29, 31 to 54, 79 and 81. Each test has a database of its own, with the test
+data of the script, and talks to the API the way the dashboard does.
 """
 
 from __future__ import annotations
@@ -478,6 +478,20 @@ def test_a_request_from_another_origin_is_forbidden_whatever_its_body_is(
     assert _sessions(engine) == 0
     # A refused request still leaves its line.
     assert [line["result"] for line in events_of(stream, "http.request")] == [403]
+
+
+def test_a_refused_request_is_answered_like_any_other(
+    client: TestClient, stream: io.StringIO
+) -> None:
+    # Case 81. Refused before reaching its endpoint, it still carries its reference and the
+    # security headers, and leaves its line.
+    response = client.post("/dev/session", json={}, headers={"Origin": "https://evil.example"})
+
+    assert response.status_code == 403
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["Referrer-Policy"] == "no-referrer"
+    [line] = [line for line in events_of(stream, "http.request") if line["result"] == 403]
+    assert line["request_id"] == response.headers["X-Request-Id"]
 
 
 def test_a_read_needs_no_origin(client: TestClient) -> None:
