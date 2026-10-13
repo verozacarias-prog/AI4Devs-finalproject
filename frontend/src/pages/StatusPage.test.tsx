@@ -186,28 +186,17 @@ test('case 46: running out of time while reading the answer is also a timeout', 
   expect(alert.textContent).toContain('La API no respondió a tiempo.')
 })
 
-/** Simulates an API that never answers, and tells when the browser gives up on a request. */
-function apiThatRecordsAbandonedRequests() {
-  const abandoned: boolean[] = []
-  api.use(
-    http.get(READYZ, async ({ request }) => {
-      const index = abandoned.push(false) - 1
-      request.signal.addEventListener('abort', () => {
-        abandoned[index] = true
-      })
-      await delay('infinite')
-      return ready()
-    }),
-  )
-  return abandoned
-}
-
 test('case 51: closing the screen cancels the request in progress', async () => {
-  const abandoned = apiThatRecordsAbandonedRequests()
+  api.use(http.get(READYZ, apiNeverAnswers))
+  // What the page hands to the browser with its request: the signal that cancels it. The
+  // simulated API is not asked whether it noticed, because it does not always notice.
+  const sent = vi.spyOn(globalThis, 'fetch')
 
   const { unmount } = render(<StatusPage />)
-  await vi.waitFor(() => expect(abandoned).toEqual([false]))
+  await vi.waitFor(() => expect(sent).toHaveBeenCalledTimes(1))
+  const signal = sent.mock.calls[0][1]?.signal
+  expect(signal?.aborted).toBe(false)
   unmount()
 
-  await vi.waitFor(() => expect(abandoned).toEqual([true]))
+  expect(signal?.aborted).toBe(true)
 })
