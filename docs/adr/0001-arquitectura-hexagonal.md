@@ -82,7 +82,7 @@ ninguna es un puerto con su adaptador.
    dominio.
 3. **El dominio declara sus errores, y cada borde los traduce una sola vez.** Los errores que
    una regla de negocio prevé están en `domain/errors.py`. Cada uno tiene un código estable y
-   una categoría: algo que no existe o es de otro, falta de permiso, conflicto, o un dato que
+   una categoría, y el error base no se puede lanzar sin una. Las categorías son: algo que no existe o es de otro, falta de permiso, conflicto, o un dato que
    viola una regla. No saben nada de HTTP ni de la base. Un adaptador de salida que recibe un
    error de su librería que el dominio prevé, como una clave única repetida, lo convierte
    en el error del dominio que corresponde y conserva el original como causa. Lo único que el

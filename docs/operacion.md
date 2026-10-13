@@ -100,7 +100,9 @@ se despliegan demostración y producción sigue como propuesta.
 Cada proceso recibe su entorno en la variable `APP_ENV`, y no hay un valor por defecto: sin
 ella, o con un valor que no es `local`, `demo` ni `production`, el proceso no arranca y dice
 qué variable falta. Un despliegue que la olvidara no puede quedar funcionando como `local`,
-que es el entorno donde un error se escribe con sus datos ([6.3](#63-registros)).
+que es el entorno donde un error se escribe con sus datos ([6.3](#63-registros)). El
+`docker-compose.yml` del repositorio levanta solo el entorno local, y por eso es el único lugar
+que la declara como `local` cuando nadie la definió.
 
 | Entorno | Para qué | En qué se diferencia | Cómo se promueve |
 |---|---|---|---|
@@ -365,7 +367,10 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   - **Los valores de catálogo.** El tipo de movimiento, la moneda, un estado, o el nombre del
     campo que falló: palabras de una lista cerrada del código, nunca un texto que escribió
     alguien. El error los lleva con su tipo, así un texto libre no puede entrar por ahí. Cada
-    campo de catálogo se suma a los permitidos con la funcionalidad que lo usa.
+    campo de catálogo se suma a los permitidos con la funcionalidad que lo usa: hoy el único es
+    el entorno, que usa el script de datos de prueba. De lo que un error dice que tocaba pasan
+    solo esos campos y los terminados en `_id`, y ninguno reemplaza a un campo propio de la
+    línea, como su referencia.
 
   **En `local`, y solo ahí, un error se escribe además completo,** con su mensaje y su
   traceback, a la salida de errores. Los usuarios de ese entorno son inventados
@@ -401,7 +406,7 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   entre 100 y 599 o una palabra corta como resultado, una palabra corta como código de error,
   una lista acotada de lugares del código, cada uno escrito como módulo, función y número de
   línea, el nombre de una restricción, en minúsculas y de hasta 63 caracteres, una palabra corta
-  o un código de moneda en un campo de catálogo, y un identificador hexadecimal o UUID, que es
+  en un campo de catálogo, y un identificador hexadecimal o UUID, que es
   lo único que pasa en un campo terminado en `_id`. Un campo nuevo, un texto libre o un
   valor con otra forma sale redactado. Del mensaje, solo
   un nombre fijo de evento, como `http.request`, hecho de palabras en minúscula que empiezan

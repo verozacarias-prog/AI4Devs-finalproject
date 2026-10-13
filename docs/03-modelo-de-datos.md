@@ -540,6 +540,13 @@ erDiagram
 Cada tabla lleva su descripción y, si las tiene, sus restricciones de integridad. Están agrupadas
 por área, en el mismo orden que los diagramas de [3.1](#31-diagrama-del-modelo-de-datos).
 
+Toda restricción lleva nombre, con un prefijo según su tipo: `pk_` para una clave primaria,
+`uq_` para una clave o un índice único, `fk_` para una clave foránea, `ck_` para un `CHECK` y
+`ex_` para una exclusión. El prefijo no es decorativo. PostgreSQL informa igual una clave
+primaria repetida y una clave única repetida, y el backend las distingue por el nombre: la
+primera es una falla del código, y la segunda, un conflicto que el dominio prevé
+([ADR 0001](adr/0001-arquitectura-hexagonal.md)).
+
 #### Usuarios, acceso y educación financiera
 
 ##### APP_USER
