@@ -10,12 +10,14 @@ from app.adapters.outbound.postgres.repositories import (
     PostgresBudgetPeriodRepository,
     PostgresFamilyGroupRepository,
     PostgresFinancialProfileRepository,
+    PostgresSessionRepository,
     PostgresUserRepository,
 )
 from app.domain.ports.account_repository_port import AccountRepositoryPort
 from app.domain.ports.budget_period_repository_port import BudgetPeriodRepositoryPort
 from app.domain.ports.family_group_repository_port import FamilyGroupRepositoryPort
 from app.domain.ports.financial_profile_repository_port import FinancialProfileRepositoryPort
+from app.domain.ports.session_repository_port import SessionRepositoryPort
 from app.domain.ports.user_repository_port import UserRepositoryPort
 
 
@@ -31,6 +33,7 @@ class SqlAlchemyUnitOfWork:
     budget_periods: BudgetPeriodRepositoryPort
     financial_profiles: FinancialProfileRepositoryPort
     family_groups: FamilyGroupRepositoryPort
+    sessions: SessionRepositoryPort
 
     def __init__(self, engine: Engine) -> None:
         self._engine = engine
@@ -45,6 +48,7 @@ class SqlAlchemyUnitOfWork:
         self.budget_periods = PostgresBudgetPeriodRepository(connection)
         self.financial_profiles = PostgresFinancialProfileRepository(connection)
         self.family_groups = PostgresFamilyGroupRepository(connection)
+        self.sessions = PostgresSessionRepository(connection)
         return self
 
     def __exit__(

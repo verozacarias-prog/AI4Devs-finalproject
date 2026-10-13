@@ -114,6 +114,7 @@ FIELD_RULES: dict[str, Callable[[object], bool]] = {
     Field.ERROR_STACK: _is_code_path,
     Field.ERROR_CAUSE: _matches(_CLASS_NAME),
     Field.CONSTRAINT: _matches(_CONSTRAINT),
+    Field.METHOD: _matches(_SHORT_WORD),
     # A catalog value is a short word of the code.
     **dict.fromkeys(ContextField, _matches(_SHORT_WORD)),
 }

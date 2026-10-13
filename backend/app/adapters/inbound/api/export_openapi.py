@@ -27,6 +27,8 @@ def export_openapi() -> str:
         database_url=UNUSED_DATABASE_URL,
         environment=CONTRACT_EXPORT_ENVIRONMENT,
         version=DEFAULT_VERSION,
+        # The contract has every route the dashboard may call, also the ones of the scaffold.
+        dev_entry_enabled=True,
     )
     app = create_app(settings, log_stream=io.StringIO())
     contract = json.dumps(app.openapi(), indent=JSON_INDENT, ensure_ascii=False, sort_keys=True)

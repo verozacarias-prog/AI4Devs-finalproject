@@ -45,6 +45,10 @@ TEMPLATE_HAS_DEBTS = False
 TEMPLATE_EMERGENCY_FUND_MONTHS = Decimal("2.0")
 TEMPLATE_MAIN_GOAL = MainGoal.SAVE
 
+# No country has a calling code that starts with 0, so a phone that starts like this is
+# nobody's number. It is what tells a test user apart (ADR 0016).
+TEST_PHONE_PREFIX = "+000"
+
 # What the script records as consent: nobody accepted anything, and the version says so.
 LOCAL_TERMS_VERSION = "local-seed-1"
 
@@ -52,7 +56,7 @@ LOCAL_TERMS_VERSION = "local-seed-1"
 @dataclass(frozen=True)
 class LocalTestUser:
     name: str
-    # No country has a calling code that starts with 0, so this is nobody's number.
+    # It starts with TEST_PHONE_PREFIX.
     phone: str
 
 

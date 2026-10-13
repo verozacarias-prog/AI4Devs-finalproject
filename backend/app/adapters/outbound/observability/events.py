@@ -37,6 +37,9 @@ class Event(StrEnum):
     # An error the domain foresees, and any other one.
     ERROR_EXPECTED = "error.expected"
     ERROR_UNEXPECTED = "error.unexpected"
+    # Security events (docs/operacion.md 6.3).
+    AUTH_SESSION_CREATED = "auth.session_created"
+    DEV_SCAFFOLD_ENABLED = "dev.scaffold_enabled"
 
 
 class Field(StrEnum):
@@ -45,6 +48,9 @@ class Field(StrEnum):
     MESSAGE_ID = "message_id"
     REQUEST_ID = "request_id"
     USER_ID = "user_id"
+    SESSION_ID = "session_id"
+    # How a session was opened: one of SessionMethod.
+    METHOD = "method"
     DURATION_MS = "duration_ms"
     RESULT = "result"
     ERROR_TYPE = "error_type"
@@ -52,6 +58,12 @@ class Field(StrEnum):
     ERROR_STACK = "error_stack"
     ERROR_CAUSE = "error_cause"
     CONSTRAINT = "constraint"
+
+
+class SessionMethod(StrEnum):
+    """The ways a session is opened."""
+
+    DEV_USER_LIST = "dev_user_list"
 
 
 class LineKey(StrEnum):

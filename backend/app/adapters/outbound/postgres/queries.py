@@ -30,6 +30,43 @@ SELECT_USER_BY_PHONE = """
      WHERE whatsapp_phone = :phone
 """
 
+SELECT_USER_BY_ID = """
+    SELECT id, name, whatsapp_phone, country, time_zone, primary_currency,
+           exchange_rate_reference, terms_accepted_at, terms_version, notifications_opt_in,
+           onboarding_status
+      FROM app_user
+     WHERE id = :user_id
+"""
+
+# The id breaks the tie between two users with the same name, so the order never changes.
+SELECT_USERS_BY_PHONE_PREFIX = """
+    SELECT id, name, whatsapp_phone, country, time_zone, primary_currency,
+           exchange_rate_reference, terms_accepted_at, terms_version, notifications_opt_in,
+           onboarding_status
+      FROM app_user
+     WHERE starts_with(whatsapp_phone, :prefix)
+     ORDER BY name, id
+"""
+
+INSERT_SESSION = """
+    INSERT INTO session (
+        id, user_id, token_hash, created_at, last_seen_at, expires_at, revoked_at
+    ) VALUES (
+        :id, :user_id, :token_hash, :created_at, :last_seen_at, :expires_at, :revoked_at
+    )
+"""
+
+# Not a secret: the name of this query has the word "token" in it.
+SELECT_SESSION_BY_TOKEN_HASH = """
+    SELECT id, user_id, token_hash, created_at, last_seen_at, expires_at, revoked_at
+      FROM session
+     WHERE token_hash = :token_hash
+"""  # noqa: S105
+
+TOUCH_SESSION = "UPDATE session SET last_seen_at = :at WHERE id = :session_id"
+
+REVOKE_SESSION = "UPDATE session SET revoked_at = :at WHERE id = :session_id"
+
 INSERT_ACCOUNT = """
     INSERT INTO account (id, user_id, name, type, currency, initial_balance, created_at)
     VALUES (:id, :user_id, :name, :type, :currency, :initial_balance, :opened_at)

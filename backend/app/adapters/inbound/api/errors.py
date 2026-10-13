@@ -22,6 +22,7 @@ from app.domain.errors import DomainError, ErrorCategory
 
 STATUS_BY_CATEGORY = {
     ErrorCategory.NOT_FOUND: status.HTTP_404_NOT_FOUND,
+    ErrorCategory.UNAUTHENTICATED: status.HTTP_401_UNAUTHORIZED,
     ErrorCategory.FORBIDDEN: status.HTTP_403_FORBIDDEN,
     ErrorCategory.CONFLICT: status.HTTP_409_CONFLICT,
     ErrorCategory.INVALID: status.HTTP_422_UNPROCESSABLE_CONTENT,
