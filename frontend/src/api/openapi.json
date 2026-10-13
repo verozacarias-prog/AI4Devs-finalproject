@@ -12,6 +12,7 @@
                 "type": "null"
               }
             ],
+            "description": "The value of a personal link. Not built yet: it answers `404`.",
             "title": "Access Token"
           },
           "user_id": {
@@ -24,6 +25,7 @@
                 "type": "null"
               }
             ],
+            "description": "The test user to enter as, from the list. Only in the local environment.",
             "title": "User Id"
           }
         },
@@ -33,11 +35,13 @@
       "DevUser": {
         "properties": {
           "id": {
+            "description": "The identifier of the user.",
             "format": "uuid",
             "title": "Id",
             "type": "string"
           },
           "name": {
+            "description": "The name the user is shown with.",
             "title": "Name",
             "type": "string"
           }
@@ -52,6 +56,7 @@
       "DevUsers": {
         "properties": {
           "users": {
+            "description": "The test users, ordered by name.",
             "items": {
               "$ref": "#/components/schemas/DevUser"
             },
@@ -65,17 +70,19 @@
         "title": "DevUsers",
         "type": "object"
       },
-      "HTTPValidationError": {
+      "ErrorBody": {
+        "description": "The body of every error. An endpoint adds a field only when the client needs it.",
         "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "title": "Detail",
-            "type": "array"
+          "error": {
+            "description": "The code of the error: a short lowercase word that never changes.",
+            "title": "Error",
+            "type": "string"
           }
         },
-        "title": "HTTPValidationError",
+        "required": [
+          "error"
+        ],
+        "title": "ErrorBody",
         "type": "object"
       },
       "HealthState": {
@@ -90,7 +97,8 @@
       "HealthStatus": {
         "properties": {
           "status": {
-            "$ref": "#/components/schemas/HealthState"
+            "$ref": "#/components/schemas/HealthState",
+            "description": "`ok`, or `unavailable` when the database does not answer."
           }
         },
         "required": [
@@ -102,11 +110,13 @@
       "Me": {
         "properties": {
           "id": {
+            "description": "The identifier of the user.",
             "format": "uuid",
             "title": "Id",
             "type": "string"
           },
           "name": {
+            "description": "The name the user is shown with.",
             "title": "Name",
             "type": "string"
           }
@@ -117,50 +127,19 @@
         ],
         "title": "Me",
         "type": "object"
-      },
-      "ValidationError": {
-        "properties": {
-          "ctx": {
-            "title": "Context",
-            "type": "object"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "title": "Location",
-            "type": "array"
-          },
-          "msg": {
-            "title": "Message",
-            "type": "string"
-          },
-          "type": {
-            "title": "Error Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError",
-        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "SessionCookie": {
+        "description": "The token of the session. The API sets it when a session is opened, and the browser sends it by itself.",
+        "in": "cookie",
+        "name": "__Host-sid",
+        "type": "apiKey"
       }
     }
   },
   "info": {
+    "description": "The API of Platita, a personal and family finance assistant. The dashboard is its only client, and both are served from one origin.\n\n**Session.** It travels in the cookie `__Host-sid`, which the page cannot read. A request without a valid session answers `401`.\n\n**Requests that change something.** A `POST`, `PUT`, `PATCH` or `DELETE` must come from the page of the API itself and be JSON: with another `Origin`, without one, or with another `Content-Type`, it answers `403`.\n\n**Errors.** Every error has the same body: its code in `error`, a short lowercase word that never changes. Every response carries the header `X-Request-Id`, the reference to look for in the logs.",
     "title": "Platita",
     "version": "dev"
   },
@@ -168,13 +147,39 @@
   "paths": {
     "/auth/logout": {
       "post": {
+        "description": "Revokes the session of the request, and only that one, and clears its cookie. The body of the request is ignored.",
         "operationId": "logout_auth_logout_post",
         "responses": {
           "204": {
-            "description": "Successful Response"
+            "description": "The session was revoked and its cookie cleared."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read."
           }
         },
-        "summary": "Logout",
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Close this session",
         "tags": [
           "session"
         ]
@@ -182,6 +187,7 @@
     },
     "/dev/session": {
       "post": {
+        "description": "Opens a real session without a login code and returns it in the session cookie. In the local environment the user is chosen from the list, with `user_id`. A personal link, with `access_token`, is the way in of the demo environment and is not built yet: it answers `404`. One of the two is required.",
         "operationId": "enter_dev_session_post",
         "requestBody": {
           "content": {
@@ -195,20 +201,40 @@
         },
         "responses": {
           "204": {
-            "description": "Successful Response"
+            "description": "The session was opened. Its token is in the cookie, and the body is empty."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The user does not exist or is not a test user, `user_id` was sent outside the local environment, or the personal link is unknown. The same answer for all of them."
           },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Neither `user_id` nor `access_token` was sent, or `user_id` is not a UUID."
           }
         },
-        "summary": "Enter",
+        "summary": "Enter as a test user",
         "tags": [
           "dev"
         ]
@@ -216,6 +242,7 @@
     },
     "/dev/users": {
       "get": {
+        "description": "The users anyone may enter as: the ones with an invented phone, which starts with `+000`. A user with a real phone is never listed. It asks for no session. It exists only in the local environment.",
         "operationId": "users_dev_users_get",
         "responses": {
           "200": {
@@ -226,10 +253,10 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "The test users, ordered by name. An empty list when there are none."
           }
         },
-        "summary": "Users",
+        "summary": "List the test users",
         "tags": [
           "dev"
         ]
@@ -237,6 +264,7 @@
     },
     "/healthz": {
       "get": {
+        "description": "Answers as long as the process runs. It does not touch the database.",
         "operationId": "healthz_healthz_get",
         "responses": {
           "200": {
@@ -247,10 +275,10 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "The process is alive."
           }
         },
-        "summary": "Healthz",
+        "summary": "Is the process alive",
         "tags": [
           "health"
         ]
@@ -258,6 +286,7 @@
     },
     "/me": {
       "get": {
+        "description": "The user of the session of the request. The dashboard asks this when it loads, because it cannot read the cookie. It counts as activity of the session.",
         "operationId": "me_me_get",
         "responses": {
           "200": {
@@ -268,10 +297,25 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "The user of the session."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
           }
         },
-        "summary": "Me",
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Who is behind this session",
         "tags": [
           "session"
         ]
@@ -279,6 +323,7 @@
     },
     "/readyz": {
       "get": {
+        "description": "Asks the database the cheapest question there is. It is what a deployment waits for before sending requests.",
         "operationId": "readyz_readyz_get",
         "responses": {
           "200": {
@@ -289,7 +334,7 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "The database answers."
           },
           "503": {
             "content": {
@@ -299,14 +344,28 @@
                 }
               }
             },
-            "description": "Service Unavailable"
+            "description": "The database does not answer. The body has the same shape as the `200`."
           }
         },
-        "summary": "Readyz",
+        "summary": "Can the API reach the database",
         "tags": [
           "health"
         ]
       }
     }
-  }
+  },
+  "tags": [
+    {
+      "description": "Whether the service is up. They ask for no session and return nobody's data.",
+      "name": "health"
+    },
+    {
+      "description": "Who is behind the session of a request, and closing it.",
+      "name": "session"
+    },
+    {
+      "description": "The development entry: a real session without a login code, for a test user. These routes exist only when the entry is enabled, and never in production.",
+      "name": "dev"
+    }
+  ]
 }

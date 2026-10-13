@@ -7,10 +7,14 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Callable
+from typing import Annotated
 
-from fastapi import APIRouter, Request, Response, status
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, Response, status
+from fastapi.security import APIKeyCookie
+from pydantic import BaseModel, Field
 
+from app.adapters.inbound.api import reference
+from app.adapters.inbound.api.errors import documented_errors
 from app.adapters.inbound.api.routes import (
     AUTH_LOGOUT,
     ME,
@@ -22,10 +26,20 @@ from app.adapters.inbound.api.routes import (
 from app.domain.use_cases.authenticate_session import AuthenticateSession
 from app.domain.use_cases.close_session import CloseSession
 
+# Reads the token of the session cookie, and tells the reference which operations ask for
+# a session. A missing cookie is not refused here: the use case answers for every case.
+session_cookie = APIKeyCookie(
+    name=SESSION_COOKIE,
+    scheme_name=reference.SESSION_COOKIE_SCHEME,
+    description=reference.SESSION_COOKIE_DESCRIPTION,
+    auto_error=False,
+)
+SessionToken = Annotated[str | None, Depends(session_cookie)]
+
 
 class Me(BaseModel):
-    id: uuid.UUID
-    name: str
+    id: uuid.UUID = Field(description=reference.USER_ID)
+    name: str = Field(description=reference.USER_NAME)
 
 
 def set_session_cookie(response: Response, token: str) -> None:
@@ -57,14 +71,32 @@ def build_session_router(
 ) -> APIRouter:
     router = APIRouter(tags=[SESSION_TAG])
 
-    @router.get(ME)
-    def me(request: Request) -> Me:
-        user = authenticate_session().execute(request.cookies.get(SESSION_COOKIE))
+    @router.get(
+        ME,
+        summary=reference.ME_SUMMARY,
+        description=reference.ME_DESCRIPTION,
+        response_description=reference.ME_OK,
+        responses=documented_errors({status.HTTP_401_UNAUTHORIZED: reference.NO_SESSION}),
+    )
+    def me(token: SessionToken) -> Me:
+        user = authenticate_session().execute(token)
         return Me(id=user.id, name=user.name)
 
-    @router.post(AUTH_LOGOUT, status_code=status.HTTP_204_NO_CONTENT)
-    def logout(request: Request) -> Response:
-        close_session().execute(request.cookies.get(SESSION_COOKIE))
+    @router.post(
+        AUTH_LOGOUT,
+        status_code=status.HTTP_204_NO_CONTENT,
+        summary=reference.LOGOUT_SUMMARY,
+        description=reference.LOGOUT_DESCRIPTION,
+        response_description=reference.LOGOUT_OK,
+        responses=documented_errors(
+            {
+                status.HTTP_401_UNAUTHORIZED: reference.NO_SESSION,
+                status.HTTP_403_FORBIDDEN: reference.FOREIGN_REQUEST,
+            }
+        ),
+    )
+    def logout(token: SessionToken) -> Response:
+        close_session().execute(token)
         response = Response(status_code=status.HTTP_204_NO_CONTENT)
         clear_session_cookie(response)
         return response
