@@ -9,6 +9,7 @@
 **Alcance técnico:**
 
 - Verificación de la firma del webhook antes de procesar, y verificación de la URL por `GET` con `hub.challenge`.
+- El control de origen de la API es global y corre antes de cualquier endpoint: la excepción de `/webhook/whatsapp`, que Meta llama sin `Origin` propio, se escribe en ese control ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 - El webhook no procesa: guarda cada mensaje en `INBOUND_MESSAGE`, sin duplicar reintentos del proveedor, y responde `200`. Un worker toma los mensajes de a uno por remitente y en orden, los procesa con reintentos, y envía las respuestas desde `OUTBOUND_MESSAGE`. Contrato en [la API](04-api.md) y fundamento en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
 - Una llamada inicial al LLM (puerto `LLMPort`) que clasifica el mensaje en registro, consulta o consejo y, si es un registro, devuelve en la misma salida validada sus campos (monto, moneda, tipo, fecha, categoría candidata, cuenta si se menciona). El tope diario total se mira antes y la cuota de la clase después ([ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md)). Una clase o un tipo de registro que todavía no tiene código responde un texto fijo.
 - El puerto de LLM queda declarado desde este ticket. Los de embeddings y de vector store llegan con la rama de consejos, que es la primera que los usa ([ADR 0019](adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md)).

@@ -326,8 +326,9 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   qué endpoint fue, en el campo `endpoint`: el método y la ruta como está declarada en el
   código, por ejemplo `GET /budget-periods/{budget_period_id}`. Nunca lleva la dirección que
   se pidió, que puede traer un identificador, parámetros con datos o lo que alguien haya
-  escrito. Un pedido a una ruta que no existe lleva solo el método, igual que uno
-  rechazado por su origen antes de resolver su ruta, y uno al dashboard, `GET /app`, sin el
+  escrito. Un pedido a una ruta que no existe lleva solo el método. Uno rechazado
+  por su origen se responde antes de resolver su ruta, así que puede llevar solo el método:
+  es el caso de las rutas de hoy. Uno al dashboard lleva `GET /app`, sin el
   archivo. Las páginas del contrato que sirve el framework, como `/docs` y `/openapi.json`,
   llevan su ruta como cualquier otra. La API, el worker, los procesos programados y los comandos de
   operación registran igual, cada uno con su nombre de proceso.
