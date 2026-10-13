@@ -101,10 +101,11 @@ Cada proceso recibe su entorno en la variable `APP_ENV`, y no hay un valor por d
 ella, o con un valor que no es `local`, `demo` ni `production`, el proceso no arranca y dice
 qué variable falta. Un despliegue que la olvidara no puede quedar funcionando como `local`,
 que es el entorno donde un error se escribe con sus datos ([6.3](#63-registros)). El
-La entrada de desarrollo se enciende con `DEV_ENTRY_ENABLED=true`, y sin la variable queda
-apagada ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). El
 `docker-compose.yml` del repositorio levanta solo el entorno local, y por eso es el único lugar
 que la declara como `local` cuando nadie la definió.
+
+La entrada de desarrollo se enciende con `DEV_ENTRY_ENABLED=true`, y sin la variable queda
+apagada ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 
 | Entorno | Para qué | En qué se diferencia | Cómo se promueve |
 |---|---|---|---|
@@ -325,8 +326,10 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   qué endpoint fue, en el campo `endpoint`: el método y la ruta como está declarada en el
   código, por ejemplo `GET /budget-periods/{budget_period_id}`. Nunca lleva la dirección que
   se pidió, que puede traer un identificador, parámetros con datos o lo que alguien haya
-  escrito. Un pedido a una ruta que no existe lleva solo el método, y uno al dashboard,
-  `GET /app`, sin el archivo. La API, el worker, los procesos programados y los comandos de
+  escrito. Un pedido a una ruta que no existe lleva solo el método, igual que uno
+  rechazado por su origen antes de resolver su ruta, y uno al dashboard, `GET /app`, sin el
+  archivo. Las páginas del contrato que sirve el framework, como `/docs` y `/openapi.json`,
+  llevan su ruta como cualquier otra. La API, el worker, los procesos programados y los comandos de
   operación registran igual, cada uno con su nombre de proceso.
 - **Correlación:** el identificador es el `id` del mensaje en la tabla de entrada. El worker lo
   pone en cada registro mientras procesa ese mensaje, y es el mismo que queda en la tabla de

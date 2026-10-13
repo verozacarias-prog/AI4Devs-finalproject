@@ -67,7 +67,13 @@ para que la cookie de sesión funcione sin un dominio propio.
    con la cookie.
 7. **CSRF.** Además de `SameSite=Strict`, toda request que modifica algo exige que el header
    `Origin` sea el propio y que el cuerpo sea JSON. Un pedido sin `Origin` se rechaza igual: un
-   navegador siempre lo manda en esos pedidos. El webhook de WhatsApp queda fuera de esta
+   navegador siempre lo manda en esos pedidos. El `Origin` se compara con el `Host` del
+   pedido, sin el esquema, porque detrás del proxy del proveedor la API no ve si el navegador
+   usó `https`. La consecuencia es que una página servida por `http` en el mismo dominio
+   pasaría este control, y contra ella queda solo `SameSite=Strict`. Lo cierra el encabezado
+   `Strict-Transport-Security`, que obliga al navegador a usar siempre `https` con ese dominio
+   y que se suma con el primer despliegue. El control corre antes de leer el cuerpo del
+   pedido. El webhook de WhatsApp queda fuera de esta
    regla: no usa cookie y se autentica con su firma.
 8. **La consulta periódica no cuenta como actividad.** El chat web pregunta cada pocos segundos
    si hay mensajes nuevos ([ADR 0010](0010-webhook-asincrono-con-tabla-de-entrada.md)). Esa
