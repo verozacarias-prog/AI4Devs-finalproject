@@ -24,11 +24,7 @@ type Step = { kind: 'load' } | { kind: 'enter'; userId: string } | { kind: 'logo
 
 const TEXT = MESSAGES.devEntry
 
-const ERROR_MESSAGES: Record<ErrorCause, string> = {
-  'api-error': TEXT.apiError,
-  'api-timeout': TEXT.apiTimeout,
-  'api-unreachable': TEXT.apiUnreachable,
-}
+const ERROR_MESSAGES: Record<ErrorCause, string> = MESSAGES.common.apiFailures
 
 type Props = {
   /** Told who is in once the screen knows it, or null when nobody is. */
@@ -143,7 +139,7 @@ export function DevEntryPage({ onSessionChange, timeoutMs }: Props) {
             <code>{SEED_TEST_DATA_COMMAND}</code>
           </pre>
           <button type="button" className="button" onClick={() => start({ kind: 'load' })}>
-            {TEXT.retry}
+            {MESSAGES.common.retry}
           </button>
         </>
       )}
@@ -152,7 +148,7 @@ export function DevEntryPage({ onSessionChange, timeoutMs }: Props) {
           <p className="status status--error">{TEXT.failed}</p>
           <p className="card__text">{ERROR_MESSAGES[state.cause]}</p>
           <button type="button" className="button" onClick={() => start({ kind: 'load' })}>
-            {TEXT.retry}
+            {MESSAGES.common.retry}
           </button>
         </div>
       )}

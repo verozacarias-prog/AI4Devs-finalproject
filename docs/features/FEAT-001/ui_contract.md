@@ -62,7 +62,7 @@ llega, con el formato de su moneda. Usa `type` solo para dejar afuera las cuenta
 
 ## Textos
 
-Están en `frontend/src/messages.ts`, bajo `accounts`.
+Están en `frontend/src/messages.ts`, bajo `accounts`, salvo los compartidos, bajo `common`.
 
 | Clave | Texto |
 |---|---|
@@ -75,6 +75,6 @@ Están en `frontend/src/messages.ts`, bajo `accounts`.
 | `empty` | Todavía no tenés cuentas |
 | `emptyDetail` | Las cuentas se dan de alta conversando con Platita. |
 | `failed` | No se pudieron consultar tus cuentas |
-| `apiUnreachable`, `apiError`, `apiTimeout` | Las mismas causas que la entrada de desarrollo |
-| `retry` | Reintentar |
+| `common.apiFailures` | La causa de un error, compartida con las otras pantallas |
+| `common.retry` | Reintentar, compartido con las otras pantallas |
 | `types` | Banco, Billetera, Inversión, Efectivo, Tarjeta de crédito, Me deben |

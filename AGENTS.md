@@ -74,6 +74,7 @@ de pre-commit. No son una recomendación: rompen el commit.
 - `backend/app/domain/ports/` — interfaces que el dominio declara y no implementa.
 - `backend/app/domain/errors.py` — los errores que una regla de negocio prevé, cada uno con su código y su categoría.
 - `backend/app/domain/local_date.py` — qué día es para un usuario, en su zona horaria.
+- `backend/app/domain/account_balance.py` — el saldo de una cuenta, calculado con lo que ya ocurrió en ella.
 - `backend/app/shared/` — utilidades técnicas que usan todas las capas, solo con la librería estándar. `clock.py` tiene el protocolo del reloj y su implementación con el reloj de la máquina.
 - `backend/app/adapters/inbound/api/` — routers de FastAPI: traducen HTTP a llamadas a casos de uso. Incluye el chat web de desarrollo, que guarda el mensaje y no lo procesa.
 - `backend/app/adapters/inbound/whatsapp_webhook/` — traduce payloads de WhatsApp a llamadas a casos de uso.

@@ -1,7 +1,7 @@
 # Especificación — FEAT-001 · Pantalla de cuentas
 
 - **Historia de usuario:** [HU1](../../05-historias-de-usuario.md)
-- **Estado:** borrador
+- **Estado:** aprobada para el corte 1. Los casos de los cortes 2 y 3 están en borrador
 - **Fecha:** 2026-10-13
 
 ## Alcance
@@ -444,7 +444,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 ### Corte 2 — errores y estado vacío
 
 - **Aprobado por:** pendiente
-- **Total:** 6 casos, 0 unitarios y 6 de integración.
+- **Total:** 11 casos, 6 de integración y 5 de componente.
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
@@ -561,7 +561,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 ### Corte 3 — observabilidad y accesibilidad
 
 - **Aprobado por:** pendiente
-- **Total:** 1 casos, 0 unitarios y 1 de integración.
+- **Total:** 1 caso, de integración.
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
@@ -626,6 +626,10 @@ Las preguntas que se abrieron al escribir este documento, ya resueltas.
    que en el ejemplo de [la API](../../04-api.md), escrito con sus dígitos exactos. El dashboard
    no hace cuentas con él
    ([convenciones de desarrollo](../../convenciones-de-desarrollo.md#2-los-cuatro-estados-de-una-pantalla)).
+   Límite conocido: el navegador lee el número como punto flotante, que muestra exactos los
+   montos con dos decimales hasta unos 90 billones. La base admite más, `NUMERIC(20,2)`. Para
+   los saldos de una persona no se llega; si alguna vez hiciera falta, el monto pasaría a
+   viajar como texto.
 2. ~~Si la pantalla muestra un total por moneda.~~ Resuelta el 13 de octubre de 2026: sin
    totales por ahora. La pantalla muestra las cuentas agrupadas por moneda y nada más. Sumar un
    total exige decidir antes si una tarjeta resta y si una cuenta "Me deben" suma, y cuando se

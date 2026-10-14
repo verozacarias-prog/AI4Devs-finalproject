@@ -92,7 +92,7 @@ LOGOUT_DESCRIPTION = (
 )
 LOGOUT_OK = "The session was revoked and its cookie cleared."
 
-# Development entry.
+# The accounts of the user.
 ACCOUNTS_SUMMARY = "List the accounts and their balance"
 ACCOUNTS_DESCRIPTION = (
     "The accounts of the user of the session, each with its balance computed from its "
@@ -116,6 +116,7 @@ ACCOUNT_BALANCE_KIND = (
     "plus transfers in, minus transfers out. Never added to any total."
 )
 
+# Development entry.
 DEV_USERS_SUMMARY = "List the test users"
 DEV_USERS_DESCRIPTION = (
     "The users anyone may enter as: the ones with an invented phone, which starts with "

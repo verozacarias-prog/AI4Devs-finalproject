@@ -21,11 +21,7 @@ type Group = { currency: string; accounts: Account[] }
 
 const TEXT = MESSAGES.accounts
 
-const ERROR_MESSAGES: Record<ErrorCause, string> = {
-  'api-error': TEXT.apiError,
-  'api-timeout': TEXT.apiTimeout,
-  'api-unreachable': TEXT.apiUnreachable,
-}
+const ERROR_MESSAGES: Record<ErrorCause, string> = MESSAGES.common.apiFailures
 
 type Props = {
   /** Called when the API says there is no session: the entry is shown again. */
@@ -95,7 +91,7 @@ export function AccountsPage({ onNoSession, timeoutMs }: Props) {
           <p className="status status--error">{TEXT.failed}</p>
           <p className="card__text">{ERROR_MESSAGES[state.cause]}</p>
           <button type="button" className="button" onClick={retry}>
-            {TEXT.retry}
+            {MESSAGES.common.retry}
           </button>
         </div>
       )}
