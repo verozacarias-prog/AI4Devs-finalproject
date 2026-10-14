@@ -98,7 +98,7 @@ flowchart TB
     end
 
     subgraph DOMAIN["Dominio — núcleo hexagonal"]
-        UC["<b>Casos de uso</b><br/>RegisterTransaction · GetBudgetStatus<br/>CalculateAccountBalance · GenerateAlert"]
+        UC["<b>Casos de uso</b><br/>RegisterTransaction · GetBudgetStatus<br/>ListAccounts · GenerateAlert"]
         ENT["<b>Entidades</b><br/>User · Account · Budget<br/>Transaction · Category"]
         PORTS["<b>Puertos</b><br/>interfaces que el dominio declara<br/>y no implementa"]
     end
@@ -173,7 +173,7 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
   /app
     /domain
       /entities         # User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk
-      /use_cases         # CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, CalculateAccountBalance, GenerateProactiveAlert...
+      /use_cases         # CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, ListAccounts, GenerateProactiveAlert...
       /ports             # interfaces the domain depends on but does not implement
         - transaction_repository_port.py
         - account_repository_port.py

@@ -88,7 +88,8 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **Aprobado por:** Verónica Zacarías 14/10/2026
 - **C1-22 y C1-23, sumados después de la aprobación:** Verónica Zacarías 14/10/2026
 - **C1-24, sumado después:** Verónica Zacarías 14/10/2026
-- **Total:** 24 casos, 17 unitarios y 7 de integración.
+- **C1-25 a C1-31, de componente, sumados con la pantalla armada:** Verónica Zacarías 14/10/2026
+- **Total:** 31 casos, 17 unitarios, 7 de integración y 7 de componente.
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
@@ -116,6 +117,13 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 | C1-22 | Una compra de dólares entre cuentas propias | Unitario | CA-2 |
 | C1-23 | La cuenta "Me deben" viene marcada por su tipo | Integración | CA-15 |
 | C1-24 | Una tarjeta con gastos vencidos sin pagar queda en negativo | Unitario | CA-2 |
+| C1-25 | Mientras se consulta, lo dice y no muestra saldos | Componente | CA-1 |
+| C1-26 | Las cuentas de Lucía, agrupadas por moneda y en orden | Componente | CA-1, CA-9 y CA-12 |
+| C1-27 | Una cuenta de inversión va aparte, con lo aportado neto | Componente | CA-6 |
+| C1-28 | Una cuenta "Me deben" no aparece | Componente | CA-15 |
+| C1-29 | Un saldo negativo se ve con su signo | Componente | CA-2 |
+| C1-30 | Un saldo se muestra tal como llega, sin cuentas propias | Componente | CA-2 |
+| C1-31 | Al entrar, lo primero que se ve son las cuentas | Componente | CA-13 |
 
 #### C1-01 · Una cuenta sin movimientos
 
@@ -377,6 +385,62 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
   cuenta, sin dar vuelta el signo por ser tarjeta.
 - **Test:** `tests/unit/test_list_accounts.py::test_a_card_with_unpaid_expenses_already_due_is_negative`
 
+#### C1-25 · Mientras se consulta, lo dice y no muestra saldos
+
+- **Sale de:** CA-1 · **Tipo:** componente
+- **Dado** una respuesta de `GET /accounts` que todavía no llegó,
+- **cuando** se abre la pantalla,
+- **entonces** dice "Consultando tus cuentas…" y no muestra ninguna cuenta ni ningún saldo.
+- **Test:** `src/pages/AccountsPage.test.tsx` › "case C1-25: while the accounts are being asked for, it says so and shows no balance"
+
+#### C1-26 · Las cuentas de Lucía, agrupadas por moneda y en orden
+
+- **Sale de:** CA-1, CA-9 y CA-12 · **Tipo:** componente
+- **Dado** una respuesta de `GET /accounts` simulada con las cuentas de Lucía, en este orden: "Efectivo", efectivo, ARS, 25000.00; "Galicia pesos", banco, ARS, 350000.00; "Mercado Pago", billetera, ARS, 80000.00; y "Galicia USD", banco, USD, 500.00, todas con `balance_kind` igual a `balance`,
+- **cuando** se abre la pantalla,
+- **entonces** muestra el grupo "Cuentas en ARS" con Efectivo $ 25.000,00, Galicia pesos $ 350.000,00 y Mercado Pago $ 80.000,00, en ese orden, y después el grupo "Cuentas en USD" con Galicia USD US$ 500,00. Cada cuenta dice su tipo: Efectivo, Banco, Billetera, Banco. No hay ningún total.
+- **Test:** `src/pages/AccountsPage.test.tsx` › "case C1-26: the accounts of Lucía, grouped by currency, in order, with no total"
+
+#### C1-27 · Una cuenta de inversión va aparte, con lo aportado neto
+
+- **Sale de:** CA-6 · **Tipo:** componente
+- **Dado** la respuesta del caso C1-26 más "Balanz USD", inversión, USD, 3100.00, con `balance_kind` igual a `net_contributed`,
+- **cuando** se abre la pantalla,
+- **entonces** "Balanz USD" aparece bajo "Inversiones", con "Aportado neto" en lugar del tipo y US$ 3.100,00, y no aparece en "Cuentas en USD".
+- **Test:** `src/pages/AccountsPage.test.tsx` › "case C1-27: an investment account goes apart, with the net contributed"
+
+#### C1-28 · Una cuenta "Me deben" no aparece
+
+- **Sale de:** CA-15 · **Tipo:** componente
+- **Dado** la respuesta del caso C1-26 más "Me debe Juan", "Me deben", ARS, 30000.00,
+- **cuando** se abre la pantalla,
+- **entonces** "Me debe Juan" no aparece en ningún lugar de la pantalla, y las otras cuatro cuentas sí.
+- **Test:** `src/pages/AccountsPage.test.tsx` › "case C1-28: an account others owe does not appear"
+
+#### C1-29 · Un saldo negativo se ve con su signo
+
+- **Sale de:** CA-2 · **Tipo:** componente
+- **Dado** una respuesta con una sola cuenta, "Visa", tarjeta de crédito, ARS, -50000.00,
+- **cuando** se abre la pantalla,
+- **entonces** muestra Visa con −$ 50.000,00, con el estilo de un monto negativo.
+- **Test:** `src/pages/AccountsPage.test.tsx` › "case C1-29: a negative balance is shown with its sign"
+
+#### C1-30 · Un saldo se muestra tal como llega, sin cuentas propias
+
+- **Sale de:** CA-2 · **Tipo:** componente
+- **Dado** una respuesta con una sola cuenta, "Caja chica", efectivo, ARS, con `balance` escrito como `0.30`,
+- **cuando** se abre la pantalla,
+- **entonces** muestra Caja chica con $ 0,30.
+- **Test:** `src/pages/AccountsPage.test.tsx` › "case C1-30: a balance is shown as it arrives, without sums of its own"
+
+#### C1-31 · Al entrar, lo primero que se ve son las cuentas
+
+- **Sale de:** CA-13 · **Tipo:** componente
+- **Dado** el dashboard abierto sin sesión, con la entrada de desarrollo encendida y la respuesta de `GET /accounts` del caso C1-26,
+- **cuando** se elige a Lucía en la entrada,
+- **entonces** aparece "Tus cuentas" con sus cuentas, antes que el estado del sistema y que la entrada.
+- **Test:** `src/App.test.tsx` › "case C1-31: choosing Lucía in the entry shows her accounts before anything else"
+
 ### Corte 2 — errores y estado vacío
 
 - **Aprobado por:** pendiente
@@ -390,6 +454,11 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 | C2-04 | Un gasto de Pablo no cambia el saldo de Lucía | Integración | CA-7 |
 | C2-05 | Un usuario sin cuentas | Integración | CA-10 |
 | C2-06 | El usuario sale de la sesión, no del pedido | Integración | CA-7 |
+| C2-07 | Sin cuentas, el estado vacío y no un error | Componente | CA-10 |
+| C2-08 | Con solo cuentas "Me deben", también vacío | Componente | CA-10 y CA-15 |
+| C2-09 | Un error por cada causa, sin ningún saldo | Componente | CA-11 |
+| C2-10 | Reintentar después de un error trae las cuentas | Componente | CA-11 |
+| C2-11 | Si la sesión venció, vuelve la entrada | Componente | CA-8 |
 
 #### C2-01 · Sin sesión no hay cuentas
 
@@ -449,6 +518,46 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
   no se lee.
 - **Test:** —
 
+#### C2-07 · Sin cuentas, el estado vacío y no un error
+
+- **Sale de:** CA-10 · **Tipo:** componente
+- **Dado** una respuesta de `GET /accounts` con la lista vacía,
+- **cuando** se abre la pantalla,
+- **entonces** dice "Todavía no tenés cuentas" y "Las cuentas se dan de alta conversando con Platita.", sin alerta y sin botón de reintentar.
+- **Test:** —
+
+#### C2-08 · Con solo cuentas "Me deben", también vacío
+
+- **Sale de:** CA-10 y CA-15 · **Tipo:** componente
+- **Dado** una respuesta con una sola cuenta, "Me debe Juan", "Me deben", ARS, 30000.00,
+- **cuando** se abre la pantalla,
+- **entonces** muestra el mismo estado vacío del caso C2-07, sin "Me debe Juan".
+- **Test:** —
+
+#### C2-09 · Un error por cada causa, sin ningún saldo
+
+- **Sale de:** CA-11 · **Tipo:** componente
+- **Dado** tres situaciones, una por vez: la API responde `500`; no se llega a la API; y la API no responde a tiempo,
+- **cuando** se abre la pantalla,
+- **entonces** en las tres muestra una alerta con "No se pudieron consultar tus cuentas" y su causa: "La API respondió con un error.", "No se puede llegar a la API." o "La API no respondió a tiempo.", con el botón Reintentar y sin ningún saldo.
+- **Test:** —
+
+#### C2-10 · Reintentar después de un error trae las cuentas
+
+- **Sale de:** CA-11 · **Tipo:** componente
+- **Dado** la pantalla en el error del caso C2-09 por un `500`, y una API que ahora responde las cuentas del caso C1-26,
+- **cuando** se aprieta Reintentar,
+- **entonces** el foco pasa a la línea de estado, dice "Consultando tus cuentas…" y después muestra las cuentas, sin la alerta.
+- **Test:** —
+
+#### C2-11 · Si la sesión venció, vuelve la entrada
+
+- **Sale de:** CA-8 · **Tipo:** componente
+- **Dado** Lucía adentro, con la pantalla de cuentas, y una API que ahora responde `401` a `GET /accounts`,
+- **cuando** se vuelve a abrir la pantalla de cuentas,
+- **entonces** la pantalla de cuentas desaparece, no queda ningún saldo a la vista, y la entrada vuelve a ofrecer los usuarios de prueba.
+- **Test:** —
+
 ### Corte 3 — observabilidad y accesibilidad
 
 - **Aprobado por:** pendiente
@@ -496,9 +605,6 @@ No hay mensajes de WhatsApp. Los textos de la pantalla van en `frontend/src/mess
 
 ## Sin cubrir
 
-- Los estados de la pantalla y cómo se llega a ella, CA-9 a CA-11 y CA-13, y que la lista deje
-  afuera las cuentas "Me deben", CA-15: sus casos de
-  componente se suman cuando la pantalla esté armada.
 - Que los montos sean `Decimal` y no `float` dentro del backend: lo valida
   `scripts/verify_architecture.py`.
 - Los totales por moneda: quedaron fuera de alcance.

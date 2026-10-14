@@ -31,11 +31,13 @@ const ERROR_MESSAGES: Record<ErrorCause, string> = {
 }
 
 type Props = {
+  /** Told who is in once the screen knows it, or null when nobody is. */
+  onSessionChange?: (user: SessionUser | null) => void
   /** How long to wait for the API. Tests pass a short one. */
   timeoutMs?: number
 }
 
-export function DevEntryPage({ timeoutMs }: Props) {
+export function DevEntryPage({ onSessionChange, timeoutMs }: Props) {
   const [state, setState] = useState<State>({ kind: 'loading' })
   // Each attempt runs the effect below once: the first load, a retry, entering or leaving.
   const [attempt, setAttempt] = useState<{ step: Step; number: number }>({
@@ -45,6 +47,11 @@ export function DevEntryPage({ timeoutMs }: Props) {
   // Always mounted, so a screen reader announces each change and the focus has where to go
   // when the button that was pressed disappears.
   const statusLine = useRef<HTMLParagraphElement>(null)
+  // Read when an answer arrives, so a new callback does not start a new attempt.
+  const sessionListener = useRef(onSessionChange)
+  useEffect(() => {
+    sessionListener.current = onSessionChange
+  }, [onSessionChange])
 
   useEffect(() => {
     // Abandoned when the screen goes away or a new attempt starts.
@@ -75,7 +82,12 @@ export function DevEntryPage({ timeoutMs }: Props) {
     }
 
     void run().then((next) => {
-      if (next !== null && !abandon.signal.aborted) setState(next)
+      if (next === null || abandon.signal.aborted) return
+      setState(next)
+      // An error says nothing about the session, so it changes nothing outside.
+      if (next.kind !== 'error' && next.kind !== 'loading') {
+        sessionListener.current?.(next.kind === 'signed-in' ? next.user : null)
+      }
     })
     return () => abandon.abort()
   }, [attempt, timeoutMs])
