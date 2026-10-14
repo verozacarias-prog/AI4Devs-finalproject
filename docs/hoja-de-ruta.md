@@ -179,6 +179,14 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   un usuario con un período individual y uno de grupo para la misma fecha, y una respuesta que
   cita una confirmación para corregirla o borrarla. Hay que decidirlo antes de escribir el
   registro de un gasto.
+- **Un movimiento roto bloquea todos los saldos: a revisar después de la entrega 2.** Si un
+  movimiento en otra moneda llegara sin cotización, el cálculo se detiene y la pantalla de
+  cuentas muestra el error, sin el saldo de ninguna cuenta (caso C2-12 de
+  [FEAT-001](features/FEAT-001/spec.md)). Hoy no puede pasar, porque la base rechaza ese
+  movimiento. Sigue la regla de que un saldo calculado no se muestra parcial
+  ([convenciones de desarrollo § 2](convenciones-de-desarrollo.md#2-los-cuatro-estados-de-una-pantalla)),
+  pero la autora duda de que una cuenta rota tenga que esconder las demás. La alternativa es
+  mostrar las otras y marcar esa como no calculada, que exige cambiar esa regla.
 - **Alta por el chat web: sin decidir.** El alta corre por el chat, igual en WhatsApp y en el
   chat web, desde el segundo paso. Pero para abrir el chat web hace falta una sesión, y una
   persona que todavía no es usuario no la tiene. Falta decidir cómo entra. La candidata es que el

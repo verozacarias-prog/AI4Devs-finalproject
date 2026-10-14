@@ -1,6 +1,6 @@
 /**
- * Case C1-31 of FEAT-001 (docs/features/FEAT-001/spec.md): once someone enters, the accounts
- * are the first thing seen. The whole dashboard is rendered, with the API simulated at the
+ * Cases C1-31 and C2-11 of FEAT-001 (docs/features/FEAT-001/spec.md): how the accounts screen
+ * appears once someone enters, and goes away when the session ends. The whole dashboard is rendered, with the API simulated at the
  * network level.
  */
 import { cleanup, render, screen } from '@testing-library/react'
@@ -49,4 +49,30 @@ test('case C1-31: choosing Lucía in the entry shows her accounts before anythin
   const entry = screen.getByRole('heading', { name: 'Entrada de desarrollo' })
   expect(accounts.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   expect(accounts.compareDocumentPosition(entry) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})
+
+test('case C2-11: when the session expired, the entry comes back', async () => {
+  // Lucía is in until the accounts are asked for, and from then on the session is over.
+  let signedIn = true
+  let accountsAskedFor = false
+  api.use(
+    http.get('*/healthz', () => HttpResponse.json({ status: 'ok' })),
+    http.get('*/readyz', () => HttpResponse.json({ status: 'ok' })),
+    http.get('*/me', () =>
+      signedIn ? HttpResponse.json(LUCIA) : HttpResponse.json({ error: 'unauthorized' }, { status: 401 }),
+    ),
+    http.get('*/dev/users', () => HttpResponse.json({ users: [LUCIA] })),
+    http.get('*/accounts', () => {
+      accountsAskedFor = true
+      signedIn = false
+      return HttpResponse.json({ error: 'unauthorized' }, { status: 401 })
+    }),
+  )
+
+  render(<App />)
+
+  await screen.findByRole('button', { name: 'Entrar como Lucía' })
+  expect(accountsAskedFor).toBe(true)
+  expect(screen.queryByRole('heading', { name: 'Tus cuentas' })).toBeNull()
+  expect(document.querySelectorAll('.account__amount')).toHaveLength(0)
 })
