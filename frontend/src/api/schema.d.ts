@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the accounts and their balance
+         * @description The accounts of the user of the session, each with its balance computed from its movements and transfers dated up to today, in the time zone of the user. The balance is never stored. They come first in the primary currency of the user, then in the other currencies by code, and within each currency by name. An account of type `receivable` is money others owe the user: the dashboard does not list it with the others.
+         */
+        get: operations["accounts_accounts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/logout": {
         parameters: {
             query?: never;
@@ -128,6 +148,53 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AccountItem */
+        AccountItem: {
+            /**
+             * Balance
+             * @description The computed balance, in the currency of the account, with its two decimals exactly as computed. In an investment account it is the net contributed.
+             */
+            balance: number;
+            /** @description `balance`, or `net_contributed` in an investment account: what was declared on opening, plus transfers in, minus transfers out. Never added to any total. */
+            balance_kind: components["schemas"]["BalanceKind"];
+            /**
+             * Currency
+             * @description The currency of the account, as an ISO 4217 code. Its balance is in it.
+             */
+            currency: string;
+            /**
+             * Id
+             * Format: uuid
+             * @description The identifier of the account.
+             */
+            id: string;
+            /**
+             * Name
+             * @description The name of the account, unique for its user.
+             */
+            name: string;
+            /** @description What kind of account it is. */
+            type: components["schemas"]["AccountType"];
+        };
+        /** AccountList */
+        AccountList: {
+            /**
+             * Accounts
+             * @description The accounts, in the order the dashboard shows them.
+             */
+            accounts: components["schemas"]["AccountItem"][];
+        };
+        /**
+         * AccountType
+         * @enum {string}
+         */
+        AccountType: "bank_account" | "digital_wallet" | "broker" | "cash" | "credit_card" | "receivable";
+        /**
+         * BalanceKind
+         * @description What the number of an account is: its balance, or what was put in an investment.
+         * @enum {string}
+         */
+        BalanceKind: "balance" | "net_contributed";
         /** DevSessionRequest */
         DevSessionRequest: {
             /**
@@ -208,6 +275,35 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    accounts_accounts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The accounts of the user. An empty list when there are none. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountList"];
+                };
+            };
+            /** @description There is no valid session: missing, unknown, revoked or expired, told apart nowhere. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     logout_auth_logout_post: {
         parameters: {
             query?: never;

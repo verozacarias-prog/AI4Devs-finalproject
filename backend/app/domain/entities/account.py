@@ -16,6 +16,14 @@ class AccountType(StrEnum):
     RECEIVABLE = "receivable"
 
 
+class BalanceKind(StrEnum):
+    """What the number of an account is: its balance, or what was put in an investment."""
+
+    BALANCE = "balance"
+    # An investment account: what was declared on opening, plus transfers in, minus out.
+    NET_CONTRIBUTED = "net_contributed"
+
+
 @dataclass(frozen=True)
 class Account:
     """An account of a user. Its balance is never stored: it is computed from its movements."""

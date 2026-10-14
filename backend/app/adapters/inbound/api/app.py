@@ -9,6 +9,7 @@ from typing import TextIO
 from fastapi import FastAPI
 
 from app.adapters.inbound.api import reference
+from app.adapters.inbound.api.accounts import build_accounts_router
 from app.adapters.inbound.api.dashboard import mount_dashboard
 from app.adapters.inbound.api.dev_entry import build_dev_entry_router
 from app.adapters.inbound.api.errors import install_error_handlers
@@ -26,6 +27,7 @@ from app.constants import APP_TITLE, Environment
 from app.domain.use_cases.authenticate_session import AuthenticateSession
 from app.domain.use_cases.check_readiness import CheckReadiness
 from app.domain.use_cases.close_session import CloseSession
+from app.domain.use_cases.list_accounts import ListAccounts
 from app.domain.use_cases.list_test_users import ListTestUsers
 from app.domain.use_cases.open_dev_session import OpenDevSession
 from app.settings import Settings
@@ -62,6 +64,12 @@ def create_app(settings: Settings, log_stream: TextIO | None = None) -> FastAPI:
         build_session_router(
             lambda: AuthenticateSession(unit_of_work(), clock),
             lambda: CloseSession(unit_of_work(), clock),
+        )
+    )
+    app.include_router(
+        build_accounts_router(
+            lambda: AuthenticateSession(unit_of_work(), clock),
+            lambda: ListAccounts(unit_of_work(), clock),
         )
     )
     if settings.dev_entry_enabled:

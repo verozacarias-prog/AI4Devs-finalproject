@@ -72,6 +72,27 @@ INSERT_ACCOUNT = """
     VALUES (:id, :user_id, :name, :type, :currency, :initial_balance, :opened_at)
 """
 
+SELECT_ACCOUNTS_BY_USER = """
+    SELECT id, user_id, name, type, currency, initial_balance, created_at AS opened_at
+    FROM account
+    WHERE user_id = :user_id
+"""
+
+# Deleted and duplicated movements included: which ones count is a rule of the domain.
+SELECT_TRANSACTIONS_BY_USER = """
+    SELECT id, user_id, account_id, type, amount, currency, exchange_rate, transaction_date,
+           duplicate_of, deleted_at
+    FROM transaction
+    WHERE user_id = :user_id
+"""
+
+SELECT_TRANSFERS_BY_USER = """
+    SELECT id, user_id, from_account_id, from_amount, from_currency, to_account_id, to_amount,
+           to_currency, exchange_rate, transfer_date, deleted_at
+    FROM transfer
+    WHERE user_id = :user_id
+"""
+
 INSERT_BUDGET_PERIOD = """
     INSERT INTO budget_period (
         id, user_id, family_group_id, period_type, period_start, period_end,

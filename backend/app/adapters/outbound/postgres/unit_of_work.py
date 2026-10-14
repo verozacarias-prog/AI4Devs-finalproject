@@ -11,6 +11,8 @@ from app.adapters.outbound.postgres.repositories import (
     PostgresFamilyGroupRepository,
     PostgresFinancialProfileRepository,
     PostgresSessionRepository,
+    PostgresTransactionRepository,
+    PostgresTransferRepository,
     PostgresUserRepository,
 )
 from app.domain.ports.account_repository_port import AccountRepositoryPort
@@ -18,6 +20,8 @@ from app.domain.ports.budget_period_repository_port import BudgetPeriodRepositor
 from app.domain.ports.family_group_repository_port import FamilyGroupRepositoryPort
 from app.domain.ports.financial_profile_repository_port import FinancialProfileRepositoryPort
 from app.domain.ports.session_repository_port import SessionRepositoryPort
+from app.domain.ports.transaction_repository_port import TransactionRepositoryPort
+from app.domain.ports.transfer_repository_port import TransferRepositoryPort
 from app.domain.ports.user_repository_port import UserRepositoryPort
 
 
@@ -34,6 +38,8 @@ class SqlAlchemyUnitOfWork:
     financial_profiles: FinancialProfileRepositoryPort
     family_groups: FamilyGroupRepositoryPort
     sessions: SessionRepositoryPort
+    transactions: TransactionRepositoryPort
+    transfers: TransferRepositoryPort
 
     def __init__(self, engine: Engine) -> None:
         self._engine = engine
@@ -49,6 +55,8 @@ class SqlAlchemyUnitOfWork:
         self.financial_profiles = PostgresFinancialProfileRepository(connection)
         self.family_groups = PostgresFamilyGroupRepository(connection)
         self.sessions = PostgresSessionRepository(connection)
+        self.transactions = PostgresTransactionRepository(connection)
+        self.transfers = PostgresTransferRepository(connection)
         return self
 
     def __exit__(
