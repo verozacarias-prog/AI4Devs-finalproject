@@ -383,3 +383,102 @@ def test_an_account_others_owe_comes_marked_by_its_type(client: TestClient, engi
     assert by_name["Me debe Juan"]["type"] == "receivable"
     assert by_name["Me debe Juan"]["balance"] == Decimal("30000.00")
     assert by_name["Mercado Pago"]["balance"] == Decimal("50000.00")
+
+
+# Cut 2: errors and the empty state.
+
+UNAUTHORIZED = {"error": "unauthorized"}
+
+
+def _template_balances(balance_of_galicia: str = "350000.00") -> dict[object, object]:
+    return {
+        "Galicia pesos": Decimal(balance_of_galicia),
+        "Mercado Pago": Decimal("80000.00"),
+        "Efectivo": Decimal("25000.00"),
+        "Galicia USD": Decimal("500.00"),
+    }
+
+
+def _account_ids(engine: Engine, user_id: uuid.UUID) -> set[str]:
+    with engine.connect() as connection:
+        rows = connection.execute(
+            text("SELECT id FROM account WHERE user_id = :user_id"), {"user_id": user_id}
+        ).scalars()
+        return {str(row) for row in rows}
+
+
+def test_without_a_session_there_are_no_accounts(client: TestClient) -> None:
+    # Case C2-01.
+    response = client.get("/accounts")
+
+    assert response.status_code == 401
+    assert response.json() == UNAUTHORIZED
+
+
+def test_an_expired_session_is_worth_the_same_as_none(client: TestClient, engine: Engine) -> None:
+    # Case C2-02: a session of Lucía created 12 hours ago.
+    _enter_as(client, "Lucía")
+    lucia = _user_id(engine, "Lucía")
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "UPDATE session SET created_at = now() - interval '12 hours', "
+                "last_seen_at = now() - interval '1 minute', expires_at = now() "
+                "WHERE user_id = :user_id"
+            ),
+            {"user_id": lucia},
+        )
+
+    response = client.get("/accounts")
+
+    assert response.status_code == 401
+    assert response.json() == UNAUTHORIZED
+
+
+def test_lucia_does_not_see_the_accounts_of_pablo(client: TestClient, engine: Engine) -> None:
+    # Case C2-03: the same four names for both, and only hers in the answer.
+    lucia = _account_ids(engine, _user_id(engine, "Lucía"))
+    pablo = _account_ids(engine, _user_id(engine, "Pablo"))
+    _enter_as(client, "Lucía")
+
+    ids = {account["id"] for account in _accounts(client)}
+
+    assert ids == lucia
+    assert ids.isdisjoint(pablo)
+
+
+def test_an_expense_of_pablo_does_not_change_the_balance_of_lucia(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C2-04.
+    pablo = _user_id(engine, "Pablo")
+    galicia_of_pablo = _account_id(engine, pablo, "Galicia pesos")
+    _movement(engine, pablo, galicia_of_pablo, type="expense", amount="3500.00", day=_today())
+    _enter_as(client, "Lucía")
+
+    assert _balances(_accounts(client)) == _template_balances()
+
+
+def test_a_user_without_accounts_gets_an_empty_list(client: TestClient, engine: Engine) -> None:
+    # Case C2-05: not an error.
+    _add_test_user(engine, "Elena", "+000000000007")
+    _enter_as(client, "Elena")
+
+    response = client.get("/accounts")
+
+    assert response.status_code == 200
+    assert response.json() == {"accounts": []}
+
+
+def test_the_user_comes_from_the_session_not_from_the_request(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C2-06: the parameter is not read.
+    pablo = _user_id(engine, "Pablo")
+    lucia = _account_ids(engine, _user_id(engine, "Lucía"))
+    _enter_as(client, "Lucía")
+
+    response = client.get("/accounts", params={"user_id": str(pablo)})
+
+    assert response.status_code == 200
+    assert {account["id"] for account in response.json()["accounts"]} == lucia

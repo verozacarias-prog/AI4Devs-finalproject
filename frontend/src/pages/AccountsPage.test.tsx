@@ -1,10 +1,10 @@
 /**
- * Cases C1-25 to C1-30 of FEAT-001 (docs/features/FEAT-001/spec.md): the states of the
- * accounts screen with content and while loading. The API is simulated at the network level,
+ * Cases C1-25 to C1-30 and C2-07 to C2-10 of FEAT-001 (docs/features/FEAT-001/spec.md): the
+ * four states of the accounts screen. The API is simulated at the network level,
  * so the page and its API call are tested together.
  */
 import { cleanup, render, screen, within } from '@testing-library/react'
-import { http, HttpResponse } from 'msw'
+import { delay, http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { afterAll, afterEach, beforeAll, expect, test } from 'vitest'
 import { AccountsPage } from './AccountsPage'
@@ -153,4 +153,77 @@ test('case C1-30: a balance is shown as it arrives, without sums of its own', as
 
   await screen.findByRole('region', { name: 'Cuentas en ARS' })
   expect(rowsOf(group('Cuentas en ARS'))).toEqual(['Caja chica · Efectivo · $ 0,30'])
+})
+
+test('case C2-07: without accounts it is empty, not an error', async () => {
+  api.use(http.get(ACCOUNTS, accountsAre([])))
+
+  render(<AccountsPage onNoSession={nothing} />)
+
+  await screen.findByText('Todavía no tenés cuentas')
+  screen.getByText('Las cuentas se dan de alta conversando con Platita.')
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Reintentar' })).toBeNull()
+})
+
+test('case C2-08: with only accounts others owe, it is empty too', async () => {
+  const owed = account('a6', 'Me debe Juan', 'receivable', 'ARS', 30000)
+  api.use(http.get(ACCOUNTS, accountsAre([owed])))
+
+  render(<AccountsPage onNoSession={nothing} />)
+
+  await screen.findByText('Todavía no tenés cuentas')
+  expect(screen.queryByText('Me debe Juan')).toBeNull()
+  expect(screen.queryByRole('alert')).toBeNull()
+})
+
+test.each([
+  ['the API answers 500', () => HttpResponse.json({ error: 'internal_error' }, { status: 500 }), 'La API respondió con un error.'],
+  ['the API cannot be reached', () => HttpResponse.error(), 'No se puede llegar a la API.'],
+  [
+    'the API does not answer in time',
+    async () => {
+      await delay('infinite')
+      return accountsAre(LUCIA)()
+    },
+    'La API no respondió a tiempo.',
+  ],
+])('case C2-09: an error for each cause, with no balance: %s', async (_, answer, cause) => {
+  api.use(http.get(ACCOUNTS, answer))
+
+  render(<AccountsPage onNoSession={nothing} timeoutMs={50} />)
+
+  const alert = await screen.findByRole('alert')
+  within(alert).getByText('No se pudieron consultar tus cuentas')
+  within(alert).getByText(cause)
+  within(alert).getByRole('button', { name: 'Reintentar' })
+  expect(screen.queryAllByRole('listitem')).toHaveLength(0)
+})
+
+test('case C2-10: retrying after an error brings the accounts', async () => {
+  let answer: () => void = () => {}
+  const pending = new Promise<void>((resolve) => {
+    answer = resolve
+  })
+  api.use(
+    http.get(ACCOUNTS, () => HttpResponse.json({ error: 'internal_error' }, { status: 500 }), {
+      once: true,
+    }),
+  )
+
+  render(<AccountsPage onNoSession={nothing} />)
+  const retry = await screen.findByRole('button', { name: 'Reintentar' })
+  api.use(
+    http.get(ACCOUNTS, async () => {
+      await pending
+      return accountsAre(LUCIA)()
+    }),
+  )
+  retry.click()
+
+  const status = await screen.findByText('Consultando tus cuentas…')
+  expect(document.activeElement).toBe(status)
+  answer()
+  await screen.findByRole('region', { name: 'Cuentas en ARS' })
+  expect(screen.queryByRole('alert')).toBeNull()
 })

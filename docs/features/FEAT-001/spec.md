@@ -443,8 +443,8 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 
 ### Corte 2 — errores y estado vacío
 
-- **Aprobado por:** pendiente
-- **Total:** 11 casos, 6 de integración y 5 de componente.
+- **Aprobado por:** Veronica Zacarias 14/10/2026
+- **Total:** 12 casos, 1 unitario, 6 de integración y 5 de componente.
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
@@ -459,6 +459,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 | C2-09 | Un error por cada causa, sin ningún saldo | Componente | CA-11 |
 | C2-10 | Reintentar después de un error trae las cuentas | Componente | CA-11 |
 | C2-11 | Si la sesión venció, vuelve la entrada | Componente | CA-8 |
+| C2-12 | Sin cotización, el saldo no se calcula | Unitario | CA-5 |
 
 #### C2-01 · Sin sesión no hay cuentas
 
@@ -468,7 +469,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **cuando** llega a `GET /accounts`,
 - **entonces** responde `401` con `{"error": "unauthorized"}`, y la respuesta no trae ninguna
   cuenta.
-- **Test:** —
+- **Test:** `tests/integration/test_accounts.py::test_lucia_sees_her_four_accounts`
 
 #### C2-02 · Una sesión vencida vale lo mismo que ninguna
 
@@ -478,7 +479,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **cuando** se pide `GET /accounts` con la cookie de esa sesión,
 - **entonces** responde `401` con `{"error": "unauthorized"}`, y la respuesta no trae ninguna
   cuenta.
-- **Test:** —
+- **Test:** `tests/integration/test_accounts.py::test_an_expired_session_is_worth_the_same_as_none`
 
 #### C2-03 · Lucía no ve las cuentas de Pablo
 
@@ -489,7 +490,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **cuando** Lucía pide `GET /accounts`,
 - **entonces** responde `200` con cuatro cuentas, las cuatro de Lucía, y ninguno de los cuatro
   `id` de las cuentas de Pablo aparece en la respuesta.
-- **Test:** —
+- **Test:** `tests/integration/test_accounts.py::test_lucia_does_not_see_the_accounts_of_pablo`
 
 #### C2-04 · Un gasto de Pablo no cambia el saldo de Lucía
 
@@ -499,7 +500,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
   tiene una sesión abierta,
 - **cuando** Lucía pide `GET /accounts`,
 - **entonces** su "Galicia pesos" viene con 350000.00, sin cambios.
-- **Test:** —
+- **Test:** `tests/integration/test_accounts.py::test_an_expense_of_pablo_does_not_change_the_balance_of_lucia`
 
 #### C2-05 · Un usuario sin cuentas
 
@@ -507,7 +508,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **Dado** un usuario de prueba que no tiene ninguna cuenta, con una sesión abierta,
 - **cuando** pide `GET /accounts`,
 - **entonces** responde `200` con `{"accounts": []}`. No es un error.
-- **Test:** —
+- **Test:** `tests/integration/test_accounts.py::test_a_user_without_accounts_gets_an_empty_list`
 
 #### C2-06 · El usuario sale de la sesión, no del pedido
 
@@ -516,7 +517,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **cuando** Lucía pide `GET /accounts?user_id=` seguido del `id` de Pablo,
 - **entonces** responde `200` con las cuatro cuentas de Lucía y ninguna de Pablo: el parámetro
   no se lee.
-- **Test:** —
+- **Test:** `tests/integration/test_accounts.py::test_the_user_comes_from_the_session_not_from_the_request`
 
 #### C2-07 · Sin cuentas, el estado vacío y no un error
 
@@ -524,7 +525,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **Dado** una respuesta de `GET /accounts` con la lista vacía,
 - **cuando** se abre la pantalla,
 - **entonces** dice "Todavía no tenés cuentas" y "Las cuentas se dan de alta conversando con Platita.", sin alerta y sin botón de reintentar.
-- **Test:** —
+- **Test:** `src/pages/AccountsPage.test.tsx` › "case C2-07: without accounts it is empty, not an error"
 
 #### C2-08 · Con solo cuentas "Me deben", también vacío
 
@@ -532,7 +533,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **Dado** una respuesta con una sola cuenta, "Me debe Juan", "Me deben", ARS, 30000.00,
 - **cuando** se abre la pantalla,
 - **entonces** muestra el mismo estado vacío del caso C2-07, sin "Me debe Juan".
-- **Test:** —
+- **Test:** `src/pages/AccountsPage.test.tsx` › "case C2-08: with only accounts others owe, it is empty too"
 
 #### C2-09 · Un error por cada causa, sin ningún saldo
 
@@ -540,7 +541,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **Dado** tres situaciones, una por vez: la API responde `500`; no se llega a la API; y la API no responde a tiempo,
 - **cuando** se abre la pantalla,
 - **entonces** en las tres muestra una alerta con "No se pudieron consultar tus cuentas" y su causa: "La API respondió con un error.", "No se puede llegar a la API." o "La API no respondió a tiempo.", con el botón Reintentar y sin ningún saldo.
-- **Test:** —
+- **Test:** `src/pages/AccountsPage.test.tsx` › "case C2-09: an error for each cause, with no balance: %s"
 
 #### C2-10 · Reintentar después de un error trae las cuentas
 
@@ -548,7 +549,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **Dado** la pantalla en el error del caso C2-09 por un `500`, y una API que ahora responde las cuentas del caso C1-26,
 - **cuando** se aprieta Reintentar,
 - **entonces** el foco pasa a la línea de estado, dice "Consultando tus cuentas…" y después muestra las cuentas, sin la alerta.
-- **Test:** —
+- **Test:** `src/pages/AccountsPage.test.tsx` › "case C2-10: retrying after an error brings the accounts"
 
 #### C2-11 · Si la sesión venció, vuelve la entrada
 
@@ -556,11 +557,23 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **Dado** Lucía adentro, con la pantalla de cuentas, y una API que ahora responde `401` a `GET /accounts`,
 - **cuando** se vuelve a abrir la pantalla de cuentas,
 - **entonces** la pantalla de cuentas desaparece, no queda ningún saldo a la vista, y la entrada vuelve a ofrecer los usuarios de prueba.
-- **Test:** —
+- **Test:** `src/App.test.tsx` › "case C2-11: when the session expired, the entry comes back"
+
+#### C2-12 · Sin cotización, el saldo no se calcula
+
+- **Sale de:** CA-5 · **Tipo:** unitario
+- **Dado** la cuenta "Galicia pesos", en ARS, con saldo inicial de $350.000,00, y un gasto de
+  50,00 USD del 10 de octubre que llegó sin cotización, un dato que la base hoy rechaza; y hoy
+  es 15 de octubre de 2026,
+- **cuando** se calcula su saldo,
+- **entonces** el cálculo se detiene con un error y no devuelve ningún saldo. No suma los 50
+  como si fueran pesos: el saldo nunca suma montos de monedas distintas
+  ([reglas de dominio § 2](../../reglas-de-dominio.md#2-cuentas-y-saldo-calculado)).
+- **Test:** `tests/unit/test_balance_without_rate.py::test_without_an_exchange_rate_the_balance_is_not_computed`
 
 ### Corte 3 — observabilidad y accesibilidad
 
-- **Aprobado por:** pendiente
+- **Aprobado por:** Veronica Zacarias 14/10/2026
 - **Total:** 1 caso, de integración.
 
 | Caso | Qué prueba | Tipo | Sale de |
