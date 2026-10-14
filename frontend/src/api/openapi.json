@@ -1,6 +1,87 @@
 {
   "components": {
     "schemas": {
+      "AccountItem": {
+        "properties": {
+          "balance": {
+            "description": "The computed balance, in the currency of the account, with its two decimals exactly as computed. In an investment account it is the net contributed.",
+            "title": "Balance",
+            "type": "number"
+          },
+          "balance_kind": {
+            "$ref": "#/components/schemas/BalanceKind",
+            "description": "`balance`, or `net_contributed` in an investment account: what was declared on opening, plus transfers in, minus transfers out. Never added to any total."
+          },
+          "currency": {
+            "description": "The currency of the account, as an ISO 4217 code. Its balance is in it.",
+            "title": "Currency",
+            "type": "string"
+          },
+          "id": {
+            "description": "The identifier of the account.",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the account, unique for its user.",
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/AccountType",
+            "description": "What kind of account it is."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "currency",
+          "balance",
+          "balance_kind"
+        ],
+        "title": "AccountItem",
+        "type": "object"
+      },
+      "AccountList": {
+        "properties": {
+          "accounts": {
+            "description": "The accounts, in the order the dashboard shows them.",
+            "items": {
+              "$ref": "#/components/schemas/AccountItem"
+            },
+            "title": "Accounts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "accounts"
+        ],
+        "title": "AccountList",
+        "type": "object"
+      },
+      "AccountType": {
+        "enum": [
+          "bank_account",
+          "digital_wallet",
+          "broker",
+          "cash",
+          "credit_card",
+          "receivable"
+        ],
+        "title": "AccountType",
+        "type": "string"
+      },
+      "BalanceKind": {
+        "description": "What the number of an account is: its balance, or what was put in an investment.",
+        "enum": [
+          "balance",
+          "net_contributed"
+        ],
+        "title": "BalanceKind",
+        "type": "string"
+      },
       "DevSessionRequest": {
         "properties": {
           "access_token": {
@@ -145,6 +226,43 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/accounts": {
+      "get": {
+        "description": "The accounts of the user of the session, each with its balance computed from its movements and transfers dated up to today, in the time zone of the user. The balance is never stored. They come first in the primary currency of the user, then in the other currencies by code, and within each currency by name. An account of type `receivable` is money others owe the user: the dashboard does not list it with the others.",
+        "operationId": "accounts_accounts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountList"
+                }
+              }
+            },
+            "description": "The accounts of the user. An empty list when there are none."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "List the accounts and their balance",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
     "/auth/logout": {
       "post": {
         "description": "Revokes the session of the request, and only that one, and clears its cookie. The body of the request is ignored.",
@@ -372,6 +490,10 @@
     {
       "description": "Who is behind the session of a request, and closing it.",
       "name": "session"
+    },
+    {
+      "description": "The accounts of the user of the session, with their computed balance.",
+      "name": "accounts"
     },
     {
       "description": "The development entry: a real session without a login code, for a test user. These routes exist only when the entry is enabled, and never in production.",

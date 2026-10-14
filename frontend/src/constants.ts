@@ -12,6 +12,10 @@ export const HTTP_SERVICE_UNAVAILABLE = 503
 
 export const JSON_CONTENT_TYPE = 'application/json'
 
+/** How the dashboard writes an amount: Argentine format, always with two decimals. */
+export const AMOUNT_LOCALE = 'es-AR'
+export const AMOUNT_DECIMALS = 2
+
 /** The command that creates the test users of the local environment (docs/operacion.md). */
 export const SEED_TEST_DATA_COMMAND =
   'docker compose exec api python -m app.adapters.inbound.cli.seed_test_data'

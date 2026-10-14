@@ -70,10 +70,11 @@ de pre-commit. No son una recomendación: rompen el commit.
 ## 4. Mapa de carpetas
 
 - `backend/app/domain/entities/` — User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk.
-- `backend/app/domain/use_cases/` — CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, CalculateAccountBalance, GenerateProactiveAlert.
+- `backend/app/domain/use_cases/` — CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, ListAccounts, GenerateProactiveAlert.
 - `backend/app/domain/ports/` — interfaces que el dominio declara y no implementa.
 - `backend/app/domain/errors.py` — los errores que una regla de negocio prevé, cada uno con su código y su categoría.
 - `backend/app/domain/local_date.py` — qué día es para un usuario, en su zona horaria.
+- `backend/app/domain/account_balance.py` — el saldo de una cuenta, calculado con lo que ya ocurrió en ella.
 - `backend/app/shared/` — utilidades técnicas que usan todas las capas, solo con la librería estándar. `clock.py` tiene el protocolo del reloj y su implementación con el reloj de la máquina.
 - `backend/app/adapters/inbound/api/` — routers de FastAPI: traducen HTTP a llamadas a casos de uso. Incluye el chat web de desarrollo, que guarda el mensaje y no lo procesa.
 - `backend/app/adapters/inbound/whatsapp_webhook/` — traduce payloads de WhatsApp a llamadas a casos de uso.
@@ -264,10 +265,10 @@ Toda pantalla implementa y testea los cuatro estados: cargando, con contenido, v
 En el backend el test va antes que el código
 ([ADR 0024](docs/adr/0024-tests-primero-en-el-backend.md)):
 
-- No escribas ningún test hasta que una persona haya aprobado los casos del corte en
-  `qa_plan.md`. Escribilos tal como están ahí, sin sumar ni cambiar casos. La línea de
+- No escribas ningún test hasta que una persona haya aprobado los casos del corte en el
+  `spec.md` de la funcionalidad. Escribilos tal como están ahí, sin sumar ni cambiar casos. La línea de
   aprobación la completa la persona: no la escribas vos.
-- En una tarea que no es de una historia no hay `qa_plan.md`: proponé los casos, esperá la
+- En una tarea que no es de una historia no hay `spec.md`: proponé los casos, esperá la
   aprobación, y dejalos listos para la descripción del pull request.
 - Corré los tests y confirmá que fallan antes de implementar. El commit de los tests va antes
   que el de la implementación.

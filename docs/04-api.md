@@ -131,6 +131,7 @@ Lista las cuentas del usuario autenticado con su saldo calculado, para la pantal
 - Devuelve solo las cuentas del usuario de la sesión.
 - En una cuenta de inversión, `balance` es lo aportado neto y `balance_kind` lo dice, para que la pantalla no lo sume a ningún total.
 - Las cuentas "Me deben" vienen marcadas por su `type`, para mostrarlas en su sección.
+- Vienen ordenadas: primero las de la moneda primaria del usuario, después las demás monedas por su código, y dentro de cada moneda por nombre, sin distinguir mayúsculas. El dashboard las muestra en ese orden.
 
 ```yaml
 responses:

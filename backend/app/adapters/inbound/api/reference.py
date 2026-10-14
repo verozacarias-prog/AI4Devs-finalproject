@@ -8,7 +8,7 @@ docs/04-api.md, not here.
 
 from __future__ import annotations
 
-from app.adapters.inbound.api.routes import DEV_TAG, HEALTH_TAG, SESSION_TAG
+from app.adapters.inbound.api.routes import ACCOUNTS_TAG, DEV_TAG, HEALTH_TAG, SESSION_TAG
 
 API_DESCRIPTION = (
     "The API of Platita, a personal and family finance assistant. The dashboard is its only "
@@ -33,6 +33,10 @@ TAGS: list[dict[str, str]] = [
     {
         "name": SESSION_TAG,
         "description": "Who is behind the session of a request, and closing it.",
+    },
+    {
+        "name": ACCOUNTS_TAG,
+        "description": "The accounts of the user of the session, with their computed balance.",
     },
     {
         "name": DEV_TAG,
@@ -87,6 +91,30 @@ LOGOUT_DESCRIPTION = (
     "of the request is ignored."
 )
 LOGOUT_OK = "The session was revoked and its cookie cleared."
+
+# The accounts of the user.
+ACCOUNTS_SUMMARY = "List the accounts and their balance"
+ACCOUNTS_DESCRIPTION = (
+    "The accounts of the user of the session, each with its balance computed from its "
+    "movements and transfers dated up to today, in the time zone of the user. The balance is "
+    "never stored. They come first in the primary currency of the user, then in the other "
+    "currencies by code, and within each currency by name. An account of type `receivable` "
+    "is money others owe the user: the dashboard does not list it with the others."
+)
+ACCOUNTS_OK = "The accounts of the user. An empty list when there are none."
+ACCOUNTS_LIST = "The accounts, in the order the dashboard shows them."
+ACCOUNT_ID = "The identifier of the account."
+ACCOUNT_NAME = "The name of the account, unique for its user."
+ACCOUNT_TYPE = "What kind of account it is."
+ACCOUNT_CURRENCY = "The currency of the account, as an ISO 4217 code. Its balance is in it."
+ACCOUNT_BALANCE = (
+    "The computed balance, in the currency of the account, with its two decimals exactly as "
+    "computed. In an investment account it is the net contributed."
+)
+ACCOUNT_BALANCE_KIND = (
+    "`balance`, or `net_contributed` in an investment account: what was declared on opening, "
+    "plus transfers in, minus transfers out. Never added to any total."
+)
 
 # Development entry.
 DEV_USERS_SUMMARY = "List the test users"

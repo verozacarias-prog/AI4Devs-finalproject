@@ -26,6 +26,10 @@ SESSION_COOKIE = "__Host-sid"
 SESSION_COOKIE_PATH = "/"
 SESSION_COOKIE_SAME_SITE: Literal["strict"] = "strict"
 
+# The accounts of the user of the session, with their computed balance.
+ACCOUNTS = "/accounts"
+ACCOUNTS_TAG = "accounts"
+
 # The development entry. It exists only when it is enabled, and never in production.
 DEV_USERS = "/dev/users"
 DEV_SESSION = "/dev/session"

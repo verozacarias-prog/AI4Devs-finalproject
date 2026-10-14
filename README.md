@@ -107,9 +107,9 @@ cd site && npm install                # solo para ver o regenerar el portal
    leer según el cambio. Si toca movimientos, cuentas, presupuestos o categorías, el skill
    `domain-rules` se activa solo y dice qué reglas aplican.
 3. **Especificar.** Copiar [`docs/features/TEMPLATE/`](docs/features/TEMPLATE/) a
-   `docs/features/FEAT-XXX/` y completar `spec.md`, con los criterios de aceptación numerados, y
-   `ui_contract.md` si hay pantalla.
-4. **Aprobar los casos de prueba** del corte en `qa_plan.md`. El asistente los propone; sin la
+   `docs/features/FEAT-XXX/` y completar `spec.md`, con los criterios de aceptación numerados y,
+   después, los casos de prueba de cada corte, y `ui_contract.md` si hay pantalla.
+4. **Aprobar los casos de prueba** del corte en `spec.md`. El asistente los propone; sin la
    aprobación de una persona no se escribe ningún test. En una rama `tarea-…` no hay carpeta:
    los casos aprobados van en la descripción del pull request.
 5. **Escribir los tests del backend y verlos fallar.** Es el primer commit del corte,

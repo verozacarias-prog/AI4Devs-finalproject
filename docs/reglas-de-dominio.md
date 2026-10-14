@@ -127,7 +127,9 @@ un agente de bolsa, se mueve solo con transferencias desde y hacia otras cuentas
 aportar es transferirle plata, y retirar es transferir desde ella. No lleva gastos, ingresos ni
 reglas recurrentes, y la base lo impone. Lo que pasa adentro, como comprar CEDEARs, cobrar
 dividendos o la suba y baja de los precios, no se registra. Por eso su saldo es lo aportado
-neto: lo transferido menos lo retirado. Puede quedar negativo, si el usuario retiró más de lo que
+neto: lo que el usuario declaró tener ahí al dar de alta la cuenta, más lo transferido, menos lo
+retirado. Lo declarado al alta cuenta como aportado, igual que el saldo inicial de cualquier
+otra cuenta. Puede quedar negativo, si el usuario retiró más de lo que
 aportó, y el dashboard lo muestra como "aportado neto" y no como saldo. Platita no sabe cuánto
 vale la cartera, y la cuenta no entra en el contraste mensual.
 
@@ -1066,7 +1068,9 @@ tarjetas. Pagado con tarjeta, es una compra con tarjeta sobre esa cuenta. La res
 cambiar después.
 
 **Saldo, deuda y comprometido.** Como en cualquier cuenta (§ 2), el saldo de la tarjeta cuenta
-solo lo que ya ocurrió: los gastos ya vencidos menos los pagos recibidos. Lo facturado en un
+solo lo que ya ocurrió, con la misma fórmula que cualquier cuenta: los pagos recibidos menos
+los gastos ya vencidos. Una tarjeta con gastos vencidos sin pagar tiene saldo negativo, como
+−$50.000, que es lo que el usuario debe de lo ya vencido. Lo facturado en un
 resumen que todavía no venció no es saldo, es deuda: se muestra aparte como lo que hay que pagar
 en el próximo vencimiento, que es el total del resumen del banco. Un pago cancela primero lo
 vencido y después esa deuda, así que pagar antes del vencimiento la reduce en el momento. Lo

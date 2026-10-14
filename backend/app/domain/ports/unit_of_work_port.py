@@ -8,6 +8,8 @@ from app.domain.ports.budget_period_repository_port import BudgetPeriodRepositor
 from app.domain.ports.family_group_repository_port import FamilyGroupRepositoryPort
 from app.domain.ports.financial_profile_repository_port import FinancialProfileRepositoryPort
 from app.domain.ports.session_repository_port import SessionRepositoryPort
+from app.domain.ports.transaction_repository_port import TransactionRepositoryPort
+from app.domain.ports.transfer_repository_port import TransferRepositoryPort
 from app.domain.ports.user_repository_port import UserRepositoryPort
 
 
@@ -31,6 +33,12 @@ class UnitOfWorkPort(Protocol):
 
     @property
     def sessions(self) -> SessionRepositoryPort: ...
+
+    @property
+    def transactions(self) -> TransactionRepositoryPort: ...
+
+    @property
+    def transfers(self) -> TransferRepositoryPort: ...
 
     def __enter__(self) -> Self: ...
 

@@ -14,9 +14,7 @@ const TEXT = MESSAGES.status
 
 const ERROR_MESSAGES: Record<ErrorCause, string> = {
   'database-unreachable': TEXT.databaseUnreachable,
-  'api-error': TEXT.apiError,
-  'api-timeout': TEXT.apiTimeout,
-  'api-unreachable': TEXT.apiUnreachable,
+  ...MESSAGES.common.apiFailures,
 }
 
 const STATUS_TEXT: Record<State['kind'], string> = {
@@ -77,7 +75,7 @@ export function StatusPage({ timeoutMs }: Props) {
           <p className="status status--error">{TEXT.disconnected}</p>
           <p className="card__text">{ERROR_MESSAGES[state.cause]}</p>
           <button type="button" className="button" onClick={retry}>
-            {TEXT.retry}
+            {MESSAGES.common.retry}
           </button>
         </div>
       )}

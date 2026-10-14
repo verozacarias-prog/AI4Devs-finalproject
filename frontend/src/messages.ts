@@ -4,6 +4,16 @@
  */
 export const MESSAGES = {
   appTitle: 'Platita',
+  /** Shared by every screen that asks the API for something. */
+  common: {
+    retry: 'Reintentar',
+    /** Why the API gave no usable answer, by the kind of failure of `api/request.ts`. */
+    apiFailures: {
+      'api-error': 'La API respondió con un error.',
+      'api-timeout': 'La API no respondió a tiempo.',
+      'api-unreachable': 'No se puede llegar a la API.',
+    },
+  },
   status: {
     heading: 'Estado del sistema',
     loading: 'Consultando el estado…',
@@ -11,10 +21,6 @@ export const MESSAGES = {
     connectedDetail: 'El dashboard llega a la API, y la API a la base de datos.',
     disconnected: 'Sin conexión',
     databaseUnreachable: 'La API responde, pero no llega a la base de datos.',
-    apiUnreachable: 'No se puede llegar a la API.',
-    apiError: 'La API respondió con un error.',
-    apiTimeout: 'La API no respondió a tiempo.',
-    retry: 'Reintentar',
   },
   devEntry: {
     heading: 'Entrada de desarrollo',
@@ -27,9 +33,24 @@ export const MESSAGES = {
     empty: 'No hay usuarios de prueba',
     emptyDetail: 'Corré el script de datos de prueba y volvé a consultar:',
     failed: 'No se pudo consultar la sesión',
-    apiUnreachable: 'No se puede llegar a la API.',
-    apiError: 'La API respondió con un error.',
-    apiTimeout: 'La API no respondió a tiempo.',
-    retry: 'Reintentar',
+  },
+  accounts: {
+    heading: 'Tus cuentas',
+    loading: 'Consultando tus cuentas…',
+    currencyGroup: (currency: string) => `Cuentas en ${currency}`,
+    investmentsHeading: 'Inversiones',
+    investmentsDetail: 'Lo aportado neto: lo que pusiste menos lo que sacaste, no lo que vale hoy.',
+    netContributed: 'Aportado neto',
+    empty: 'Todavía no tenés cuentas',
+    emptyDetail: 'Las cuentas se dan de alta conversando con Platita.',
+    failed: 'No se pudieron consultar tus cuentas',
+    types: {
+      bank_account: 'Banco',
+      digital_wallet: 'Billetera',
+      broker: 'Inversión',
+      cash: 'Efectivo',
+      credit_card: 'Tarjeta de crédito',
+      receivable: 'Me deben',
+    },
   },
 } as const

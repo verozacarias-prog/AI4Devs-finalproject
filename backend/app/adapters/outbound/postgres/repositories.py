@@ -14,11 +14,13 @@ from sqlalchemy import Connection, Row, text
 
 from app.adapters.outbound.postgres import queries
 from app.adapters.outbound.postgres.rejections import execute_write
-from app.domain.entities.account import Account
+from app.domain.entities.account import Account, AccountType
 from app.domain.entities.budget_period import BudgetPeriod
 from app.domain.entities.family_group import FamilyGroup, GroupRole, Membership
 from app.domain.entities.financial_profile import FinancialProfile
 from app.domain.entities.session import Session
+from app.domain.entities.transaction import Transaction, TransactionType
+from app.domain.entities.transfer import Transfer
 from app.domain.entities.user import OnboardingStatus, User
 
 
@@ -102,6 +104,74 @@ class PostgresAccountRepository:
 
     def add(self, account: Account) -> None:
         execute_write(self._connection, queries.INSERT_ACCOUNT, asdict(account))
+
+    def list_by_user(self, user_id: uuid.UUID) -> list[Account]:
+        rows = self._connection.execute(
+            text(queries.SELECT_ACCOUNTS_BY_USER), {"user_id": user_id}
+        ).all()
+        return [
+            Account(
+                id=row.id,
+                user_id=row.user_id,
+                name=row.name,
+                type=AccountType(row.type),
+                currency=row.currency,
+                initial_balance=row.initial_balance,
+                opened_at=row.opened_at,
+            )
+            for row in rows
+        ]
+
+
+class PostgresTransactionRepository:
+    def __init__(self, connection: Connection) -> None:
+        self._connection = connection
+
+    def list_by_user(self, user_id: uuid.UUID) -> list[Transaction]:
+        rows = self._connection.execute(
+            text(queries.SELECT_TRANSACTIONS_BY_USER), {"user_id": user_id}
+        ).all()
+        return [
+            Transaction(
+                id=row.id,
+                user_id=row.user_id,
+                account_id=row.account_id,
+                type=TransactionType(row.type),
+                amount=row.amount,
+                currency=row.currency,
+                exchange_rate=row.exchange_rate,
+                transaction_date=row.transaction_date,
+                duplicate_of=row.duplicate_of,
+                deleted_at=row.deleted_at,
+            )
+            for row in rows
+        ]
+
+
+class PostgresTransferRepository:
+    def __init__(self, connection: Connection) -> None:
+        self._connection = connection
+
+    def list_by_user(self, user_id: uuid.UUID) -> list[Transfer]:
+        rows = self._connection.execute(
+            text(queries.SELECT_TRANSFERS_BY_USER), {"user_id": user_id}
+        ).all()
+        return [
+            Transfer(
+                id=row.id,
+                user_id=row.user_id,
+                from_account_id=row.from_account_id,
+                from_amount=row.from_amount,
+                from_currency=row.from_currency,
+                to_account_id=row.to_account_id,
+                to_amount=row.to_amount,
+                to_currency=row.to_currency,
+                exchange_rate=row.exchange_rate,
+                transfer_date=row.transfer_date,
+                deleted_at=row.deleted_at,
+            )
+            for row in rows
+        ]
 
 
 class PostgresBudgetPeriodRepository:

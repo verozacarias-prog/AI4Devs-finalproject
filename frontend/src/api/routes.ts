@@ -12,6 +12,7 @@ export const API_ROUTES = {
   logout: '/auth/logout',
   devUsers: '/dev/users',
   devSession: '/dev/session',
+  accounts: '/accounts',
 } as const satisfies Record<string, keyof paths>
 
 /** The answer of a health route when everything is fine. */
