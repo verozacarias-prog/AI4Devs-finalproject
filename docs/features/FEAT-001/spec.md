@@ -469,7 +469,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **cuando** llega a `GET /accounts`,
 - **entonces** responde `401` con `{"error": "unauthorized"}`, y la respuesta no trae ninguna
   cuenta.
-- **Test:** `tests/integration/test_accounts.py::test_lucia_sees_her_four_accounts`
+- **Test:** `tests/integration/test_accounts.py::test_without_a_session_there_are_no_accounts`
 
 #### C2-02 · Una sesión vencida vale lo mismo que ninguna
 
