@@ -9,6 +9,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from app.domain.entities.account import Account, AccountType, BalanceKind
 from app.domain.entities.transaction import Transaction, TransactionType
 from app.domain.entities.transfer import Transfer
+from app.domain.errors import InconsistentDataError
 
 CENT = Decimal("0.01")
 
@@ -16,10 +17,13 @@ CENT = Decimal("0.01")
 def in_account_currency(transaction: Transaction, account: Account) -> Decimal:
     """What a movement moves in its account, rounded on its own before any sum (§ 6).
 
-    Rounded half away from zero, like ROUND in PostgreSQL, which the data model names.
+    Rounded half away from zero, like ROUND in PostgreSQL, which the data model names. Without
+    a rate the balance would add two currencies, so nothing is computed (FEAT-001, C2-12).
     """
-    if transaction.currency == account.currency or transaction.exchange_rate is None:
+    if transaction.currency == account.currency:
         return transaction.amount
+    if transaction.exchange_rate is None:
+        raise InconsistentDataError
     return (transaction.amount * transaction.exchange_rate).quantize(CENT, ROUND_HALF_UP)
 
 

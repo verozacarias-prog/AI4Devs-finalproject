@@ -112,6 +112,14 @@ class TestDataNotAllowedError(ForbiddenError):
         self.environment = environment
 
 
+class InconsistentDataError(Exception):
+    """Stored data breaks a rule the database already enforces, so no answer can be trusted.
+
+    Not a DomainError: no rule foresees it, and it ends as an unexpected error. It carries no
+    value of the data.
+    """
+
+
 class StoreRejectionError(Exception):
     """The store refused a write no rule foresaw. Not a DomainError: it is a failure of the code.
 
