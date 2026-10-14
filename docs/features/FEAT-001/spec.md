@@ -31,11 +31,12 @@ Cada criterio es una regla, en una frase. Los casos que la comprueban están má
 
 La pantalla lista las cuentas del usuario, agrupadas por moneda, y las de inversión aparte.
 
-- **CA-1.** Quien entró al dashboard ve, en la pantalla de cuentas, cada una de sus cuentas con su nombre, su tipo, su moneda y su saldo.
+- **CA-1.** Quien entró al dashboard ve, en la pantalla de cuentas, cada una de sus cuentas con su nombre, su tipo, su moneda y su saldo, salvo las cuentas "Me deben" (CA-15).
 - **CA-6.** Una cuenta de inversión se ve aparte de las demás, con lo aportado neto en lugar de un saldo.
 - **CA-9.** Las cuentas se ven agrupadas por moneda.
 - **CA-12.** Primero va el grupo de la moneda primaria del usuario y después los demás, por código de moneda. Dentro de cada grupo las cuentas van por nombre, sin distinguir mayúsculas.
 - **CA-13.** Quien entra por la entrada de desarrollo ve primero la pantalla de cuentas, sin pasar por un menú.
+- **CA-15.** Una cuenta "Me deben" no aparece en la lista de cuentas, porque esa plata la tiene otra persona ([reglas de dominio § 16](../../reglas-de-dominio.md#16-reintegros-devoluciones-y-plata-que-te-deben)). La API la manda, marcada por su tipo, y la pantalla no la lista. Su sección propia llega en la entrega final.
 
 ### El saldo se calcula
 
@@ -85,7 +86,9 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 ### Corte 1 — camino feliz
 
 - **Aprobado por:** Verónica Zacarías 14/10/2026
-- **Total:** 21 casos, 15 unitarios y 6 de integración.
+- **C1-22 y C1-23, sumados después de la aprobación:** Verónica Zacarías 14/10/2026
+- **C1-24, sumado después:** Verónica Zacarías 14/10/2026
+- **Total:** 24 casos, 17 unitarios y 7 de integración.
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
@@ -110,6 +113,9 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 | C1-17 | El monto llega con sus dígitos exactos | Integración | CA-2 |
 | C1-18 | Las cuentas de Lucía vienen ordenadas | Integración | CA-12 |
 | C1-19 | El orden con otra moneda primaria y con minúsculas | Integración | CA-12 |
+| C1-22 | Una compra de dólares entre cuentas propias | Unitario | CA-2 |
+| C1-23 | La cuenta "Me deben" viene marcada por su tipo | Integración | CA-15 |
+| C1-24 | Una tarjeta con gastos vencidos sin pagar queda en negativo | Unitario | CA-2 |
 
 #### C1-01 · Una cuenta sin movimientos
 
@@ -336,6 +342,41 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
   "Ahorro" aunque empiece con minúscula.
 - **Test:** —
 
+#### C1-22 · Una compra de dólares entre cuentas propias
+
+- **Sale de:** CA-2 · **Tipo:** unitario
+- **Dado** "Galicia pesos", en ARS, con saldo inicial de $350.000,00, y "Galicia USD", en USD,
+  con saldo inicial de 500,00, sin movimientos; y una transferencia del 10 de octubre que sale
+  de "Galicia pesos" por $120.000,00 y entra en "Galicia USD" por 100,00 USD, que es una compra
+  de dólares desde el home banking; y hoy es 15 de octubre de 2026,
+- **cuando** se calcula el saldo de las dos cuentas,
+- **entonces** "Galicia pesos" queda en $230.000,00, que es 350.000 − 120.000, y "Galicia USD"
+  en 600,00 USD, que es 500 + 100. Cada lado cuenta en la moneda de su cuenta, sin convertir.
+- **Test:** —
+
+#### C1-23 · La cuenta "Me deben" viene marcada por su tipo
+
+- **Sale de:** CA-15 · **Tipo:** integración
+- **Dado** los datos de prueba del caso C1-14, más una cuenta de Lucía "Me debe Juan", de tipo
+  "Me deben", en ARS, con saldo inicial de $0,00, que recibió una transferencia de $30.000,00
+  desde "Mercado Pago" el 10 de octubre; y Lucía tiene una sesión abierta,
+- **cuando** pide `GET /accounts`,
+- **entonces** la respuesta trae "Me debe Juan" con `type` igual a `receivable` y `balance`
+  igual a 30000.00, que es 0 + 30.000, y "Mercado Pago" con 50000.00, que es 80.000 − 30.000.
+  La pantalla usa el tipo para dejarla afuera de la lista.
+- **Test:** —
+
+#### C1-24 · Una tarjeta con gastos vencidos sin pagar queda en negativo
+
+- **Sale de:** CA-2 · **Tipo:** unitario
+- **Dado** la cuenta "Visa", de tipo tarjeta de crédito, en ARS, dada de alta con saldo inicial
+  de $0,00, con un gasto de $50.000,00 con fecha 5 de octubre, que es la del vencimiento de su
+  resumen, sin pagos, y hoy es 15 de octubre de 2026,
+- **cuando** se calcula su saldo,
+- **entonces** el saldo es −$50.000,00, que es 0 − 50.000: la misma fórmula que cualquier
+  cuenta, sin dar vuelta el signo por ser tarjeta.
+- **Test:** —
+
 ### Corte 2 — errores y estado vacío
 
 - **Aprobado por:** pendiente
@@ -448,14 +489,15 @@ No hay mensajes de WhatsApp. Los textos de la pantalla van en `frontend/src/mess
 | El saldo se calcula, no se guarda ([§ 2](../../reglas-de-dominio.md#2-cuentas-y-saldo-calculado)) | C1-01 a C1-03, C1-15 |
 | El saldo es lo que ya ocurrió, en la zona horaria del usuario | C1-04 a C1-06, C1-21 |
 | Lo borrado y lo duplicado no cuentan | C1-07 a C1-09, C1-16 |
-| El saldo nunca suma montos de monedas distintas | C1-10, C1-11 |
+| El saldo nunca suma montos de monedas distintas | C1-10, C1-11, C1-22 |
 | Un monto nunca es `float`, tampoco al responder | C1-17 |
 | Lo aportado neto de una cuenta de inversión | C1-12, C1-13, C1-20 |
 | Todo acceso se limita al usuario de la sesión | C2-03, C2-04, C2-06 |
 
 ## Sin cubrir
 
-- Los estados de la pantalla y cómo se llega a ella, CA-9 a CA-11 y CA-13: sus casos de
+- Los estados de la pantalla y cómo se llega a ella, CA-9 a CA-11 y CA-13, y que la lista deje
+  afuera las cuentas "Me deben", CA-15: sus casos de
   componente se suman cuando la pantalla esté armada.
 - Que los montos sean `Decimal` y no `float` dentro del backend: lo valida
   `scripts/verify_architecture.py`.
@@ -468,6 +510,7 @@ No hay mensajes de WhatsApp. Los textos de la pantalla van en `frontend/src/mess
   aparte del saldo.
 - El contraste mensual del saldo.
 - Los totales por moneda.
+- La sección "Me deben", con cada persona y su saldo: llega en la entrega final, con los préstamos, que son los que crean esas cuentas.
 
 ## Decisiones tomadas al especificar
 
@@ -491,3 +534,8 @@ Las preguntas que se abrieron al escribir este documento, ya resueltas.
 5. ~~El saldo inicial de una cuenta de inversión.~~ Resuelta el 13 de octubre de 2026: cuenta
    como aportado, y quedó escrito en
    [reglas de dominio § 2](../../reglas-de-dominio.md#2-cuentas-y-saldo-calculado).
+6. ~~El signo del saldo de una tarjeta.~~ Resuelta el 14 de octubre de 2026: la misma fórmula
+   que cualquier cuenta, así que una tarjeta con gastos vencidos sin pagar queda en negativo. Se
+   corrigió la frase de
+   [reglas de dominio § 13](../../reglas-de-dominio.md#13-tarjetas-de-crédito-y-transferencias)
+   que decía lo contrario. Es el C1-24.
