@@ -264,10 +264,10 @@ Toda pantalla implementa y testea los cuatro estados: cargando, con contenido, v
 En el backend el test va antes que el código
 ([ADR 0024](docs/adr/0024-tests-primero-en-el-backend.md)):
 
-- No escribas ningún test hasta que una persona haya aprobado los casos del corte en
-  `qa_plan.md`. Escribilos tal como están ahí, sin sumar ni cambiar casos. La línea de
+- No escribas ningún test hasta que una persona haya aprobado los casos del corte en el
+  `spec.md` de la funcionalidad. Escribilos tal como están ahí, sin sumar ni cambiar casos. La línea de
   aprobación la completa la persona: no la escribas vos.
-- En una tarea que no es de una historia no hay `qa_plan.md`: proponé los casos, esperá la
+- En una tarea que no es de una historia no hay `spec.md`: proponé los casos, esperá la
   aprobación, y dejalos listos para la descripción del pull request.
 - Corré los tests y confirmá que fallan antes de implementar. El commit de los tests va antes
   que el de la implementación.

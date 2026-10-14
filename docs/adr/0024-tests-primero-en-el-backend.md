@@ -31,9 +31,9 @@ integración y al menos uno de punta a punta.
 3. **Los tests de punta a punta se escriben con la pantalla ya construida,** en la entrega
    final. Uno es fijo: el flujo principal de
    [2.6](../02-arquitectura.md#26-tests). Si se suman otros, se eligen por riesgo.
-4. **Los casos de prueba los aprueba una persona.** Antes de cada corte, `qa_plan.md` lista los
-   casos de ese corte: de qué criterio de aceptación sale cada uno, con qué entrada y qué
-   resultado esperado. El asistente puede proponerlos; no escribe ningún test hasta que una
+4. **Los casos de prueba los aprueba una persona.** Antes de cada corte, el `spec.md` de la
+   funcionalidad lista los casos de ese corte: de qué criterio de aceptación sale cada uno,
+   con su estado inicial, su acción y su resultado esperado. El asistente puede proponerlos; no escribe ningún test hasta que una
    persona los aprueba, y los escribe tal como quedaron aprobados. La línea de aprobación la
    escribe la persona: el asistente no la completa nunca.
 
