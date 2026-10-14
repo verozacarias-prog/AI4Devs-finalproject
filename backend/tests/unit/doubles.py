@@ -6,7 +6,7 @@ import uuid
 from dataclasses import replace
 from datetime import datetime
 from types import TracebackType
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
 from app.domain.entities.account import Account
 from app.domain.entities.budget_period import BudgetPeriod
@@ -14,6 +14,10 @@ from app.domain.entities.family_group import FamilyGroup, GroupRole, Membership
 from app.domain.entities.financial_profile import FinancialProfile
 from app.domain.entities.session import Session
 from app.domain.entities.user import User
+
+if TYPE_CHECKING:
+    from app.domain.entities.transaction import Transaction
+    from app.domain.entities.transfer import Transfer
 
 
 class FixedClock:
@@ -48,6 +52,9 @@ class InMemoryAccounts:
 
     def add(self, account: Account) -> None:
         self.added.append(account)
+
+    def list_by_user(self, user_id: uuid.UUID) -> list[Account]:
+        return [account for account in self.added if account.user_id == user_id]
 
 
 class InMemoryBudgetPeriods:
@@ -108,6 +115,28 @@ class InMemorySessions:
         self.stored[session_id] = replace(self.stored[session_id], revoked_at=at)
 
 
+class InMemoryTransactions:
+    def __init__(self) -> None:
+        self.added: list[Transaction] = []
+
+    def add(self, transaction: Transaction) -> None:
+        self.added.append(transaction)
+
+    def list_by_user(self, user_id: uuid.UUID) -> list[Transaction]:
+        return [transaction for transaction in self.added if transaction.user_id == user_id]
+
+
+class InMemoryTransfers:
+    def __init__(self) -> None:
+        self.added: list[Transfer] = []
+
+    def add(self, transfer: Transfer) -> None:
+        self.added.append(transfer)
+
+    def list_by_user(self, user_id: uuid.UUID) -> list[Transfer]:
+        return [transfer for transfer in self.added if transfer.user_id == user_id]
+
+
 class InMemoryUnitOfWork:
     def __init__(self) -> None:
         self.users = InMemoryUsers()
@@ -116,6 +145,8 @@ class InMemoryUnitOfWork:
         self.financial_profiles = InMemoryFinancialProfiles()
         self.family_groups = InMemoryFamilyGroups()
         self.sessions = InMemorySessions()
+        self.transactions = InMemoryTransactions()
+        self.transfers = InMemoryTransfers()
         self.commits = 0
 
     def __enter__(self) -> Self:

@@ -124,7 +124,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
   ni transferencias, y hoy es 15 de octubre de 2026,
 - **cuando** se calcula su saldo,
 - **entonces** el saldo es $350.000,00: el saldo inicial, sin cambios.
-- **Test:** —
+- **Test:** `tests/unit/test_list_accounts.py::test_an_account_without_movements_keeps_its_initial_balance`
 
 #### C1-02 · Un gasto y un ingreso
 
@@ -134,7 +134,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
   hoy es 15 de octubre de 2026,
 - **cuando** se calcula su saldo,
 - **entonces** el saldo es $356.500,00: 350.000 − 3.500 + 10.000.
-- **Test:** —
+- **Test:** `tests/unit/test_list_accounts.py::test_an_expense_subtracts_and_an_income_adds`
 
 #### C1-03 · Una transferencia recibida y una enviada
 
@@ -144,7 +144,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
   "Efectivo" el 12 de octubre, sin gastos ni ingresos, y hoy es 15 de octubre de 2026,
 - **cuando** se calcula su saldo,
 - **entonces** el saldo es $365.000,00: 350.000 + 20.000 − 5.000.
-- **Test:** —
+- **Test:** `tests/unit/test_list_accounts.py::test_a_received_transfer_adds_and_a_sent_one_subtracts`
 
 #### C1-04 · Un gasto con fecha de mañana no cuenta
 
@@ -154,7 +154,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
   2026,
 - **cuando** se calcula su saldo,
 - **entonces** el saldo es $346.500,00: 350.000 − 3.500. El gasto del 16 no cuenta.
-- **Test:** —
+- **Test:** `tests/unit/test_list_accounts.py::test_an_expense_dated_tomorrow_does_not_count`
 
 #### C1-05 · "Hoy" es el día del usuario, no el del servidor
 
@@ -165,7 +165,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **cuando** se calcula su saldo,
 - **entonces** el saldo es $350.000,00: para el usuario todavía es 14, y el gasto del 15 no
   cuenta.
-- **Test:** —
+- **Test:** `tests/unit/test_list_accounts.py::test_today_is_the_day_of_the_user_not_of_the_server`
 
 #### C1-21 · El mismo gasto cuenta cuando llega su día para el usuario
 
@@ -175,7 +175,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
   Buenos Aires es 15 de octubre a las 00:00,
 - **cuando** se calcula su saldo,
 - **entonces** el saldo es $346.500,00: 350.000 − 3.500. Para el usuario ya es 15.
-- **Test:** —
+- **Test:** `tests/unit/test_list_accounts.py::test_the_same_expense_counts_once_its_day_arrives_for_the_user`
 
 #### C1-06 · Una transferencia con fecha de mañana no cuenta
 
@@ -185,7 +185,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
   es 15 de octubre de 2026,
 - **cuando** se calcula su saldo,
 - **entonces** el saldo es $350.000,00: la transferencia del 16 no cuenta.
-- **Test:** —
+- **Test:** `tests/unit/test_list_accounts.py::test_a_transfer_dated_tomorrow_does_not_count`
 
 #### C1-07 · Un gasto borrado no cuenta
 
@@ -195,7 +195,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
   octubre de 2026,
 - **cuando** se calcula su saldo,
 - **entonces** el saldo es $350.000,00: el gasto borrado no cuenta.
-- **Test:** —
+- **Test:** `tests/unit/test_list_accounts.py::test_a_deleted_expense_does_not_count`
 
 #### C1-08 · Un gasto duplicado cuenta una sola vez
 
@@ -205,7 +205,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
   octubre de 2026,
 - **cuando** se calcula su saldo,
 - **entonces** el saldo es $346.500,00: 350.000 − 3.500. El duplicado no cuenta.
-- **Test:** —
+- **Test:** `tests/unit/test_list_accounts.py::test_a_duplicated_expense_counts_once`
 
 #### C1-09 · Una transferencia borrada no cuenta
 
@@ -215,7 +215,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
   nada más, y hoy es 15 de octubre de 2026,
 - **cuando** se calcula su saldo,
 - **entonces** el saldo es $350.000,00: la transferencia borrada no cuenta.
-- **Test:** —
+- **Test:** `tests/unit/test_list_accounts.py::test_a_deleted_transfer_does_not_count`
 
 #### C1-10 · Un gasto en dólares sobre una cuenta en pesos
 
@@ -226,7 +226,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **cuando** se calcula su saldo,
 - **entonces** el saldo es $300.000,00: el gasto pesa 50 × 1.000 = 50.000 pesos, y
   350.000 − 50.000.
-- **Test:** —
+- **Test:** `tests/unit/test_list_accounts.py::test_an_expense_in_dollars_on_an_account_in_pesos_counts_converted`
 
 #### C1-11 · Cada movimiento se redondea antes de sumar
 
@@ -238,7 +238,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **entonces** el saldo es $349.975,30. Cada gasto pesa 0,01 × 1.234,5 = 12,345, que se
   redondea a $12,35; los dos suman $24,70, y 350.000 − 24,70. Si se sumara antes de redondear
   daría $24,69, un centavo menos.
-- **Test:** —
+- **Test:** `tests/unit/test_list_accounts.py::test_each_movement_is_rounded_before_adding`
 
 #### C1-12 · Una cuenta de inversión dice que su número es lo aportado
 
@@ -249,7 +249,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **cuando** se listan sus cuentas,
 - **entonces** "Galicia pesos" viene con `balance_kind` igual a `balance`, y "Balanz USD" con
   `balance_kind` igual a `net_contributed`.
-- **Test:** —
+- **Test:** `tests/unit/test_list_accounts.py::test_an_investment_account_says_its_number_is_the_net_contributed`
 
 #### C1-13 · Lo aportado neto puede ser negativo
 
@@ -259,7 +259,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
   de octubre, y hoy es 15 de octubre de 2026,
 - **cuando** se calcula su saldo,
 - **entonces** lo aportado neto es −200,00 USD: 0 + 1.000 − 1.200.
-- **Test:** —
+- **Test:** `tests/unit/test_list_accounts.py::test_the_net_contributed_can_be_negative`
 
 #### C1-20 · Lo declarado al dar de alta cuenta como aportado
 
@@ -269,7 +269,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
   hoy es 15 de octubre de 2026,
 - **cuando** se calcula su saldo,
 - **entonces** lo aportado neto es 4.000,00 USD: 3.000 + 1.000.
-- **Test:** —
+- **Test:** `tests/unit/test_list_accounts.py::test_what_was_declared_on_opening_counts_as_contributed`
 
 #### C1-14 · Lucía ve sus cuatro cuentas
 
@@ -282,7 +282,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **entonces** responde `200` con exactamente esas cuatro cuentas, cada una con su `id`, su
   `name`, su `type`, su `currency`, `balance_kind` igual a `balance`, y `balance` igual a su
   saldo inicial: 350000.00, 80000.00, 25000.00 y 500.00.
-- **Test:** —
+- **Test:** `tests/integration/test_accounts.py::test_lucia_sees_her_four_accounts`
 
 #### C1-15 · Un gasto guardado baja el saldo de su cuenta y de ninguna otra
 
@@ -292,7 +292,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **cuando** pide `GET /accounts`,
 - **entonces** "Galicia pesos" viene con 346500.00, que es 350.000 − 3.500, y las otras tres
   siguen igual: "Mercado Pago" 80000.00, "Efectivo" 25000.00 y "Galicia USD" 500.00.
-- **Test:** —
+- **Test:** `tests/integration/test_accounts.py::test_a_stored_expense_lowers_its_account_and_no_other`
 
 #### C1-16 · La consulta a la base aplica las mismas reglas que el cálculo
 
@@ -307,7 +307,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **entonces** "Galicia pesos" viene con 353500.00, que es 350.000 + 10.000 − 1.500 − 5.000, y
   "Mercado Pago" con 85000.00, que es 80.000 + 5.000. No cuentan el gasto borrado, el
   duplicado ni el de mañana.
-- **Test:** —
+- **Test:** `tests/integration/test_accounts.py::test_the_query_to_the_database_applies_the_same_rules_as_the_calculation`
 
 #### C1-17 · El monto llega con sus dígitos exactos
 
@@ -318,7 +318,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **cuando** pide `GET /accounts`,
 - **entonces** el texto de la respuesta trae `"balance": 0.30`, que es 0,10 + 0,20, con sus dos
   decimales. No trae `0.3` ni `0.30000000000000004`: el monto no pasó por punto flotante.
-- **Test:** —
+- **Test:** `tests/integration/test_accounts.py::test_the_amount_arrives_with_its_exact_digits`
 
 #### C1-18 · Las cuentas de Lucía vienen ordenadas
 
@@ -328,7 +328,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **cuando** pide `GET /accounts`,
 - **entonces** las cuentas vienen en este orden: "Efectivo", "Galicia pesos", "Mercado Pago" y
   "Galicia USD". Primero las tres en pesos, por nombre, y después la que está en dólares.
-- **Test:** —
+- **Test:** `tests/integration/test_accounts.py::test_the_accounts_of_lucia_come_in_order`
 
 #### C1-19 · El orden con otra moneda primaria y con minúsculas
 
@@ -340,7 +340,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **entonces** las cuentas vienen en este orden: "Wise", "Ahorro", "banco" y "Caja". Primero la
   de su moneda primaria, después ARS y EUR por código de moneda, y "banco" va después de
   "Ahorro" aunque empiece con minúscula.
-- **Test:** —
+- **Test:** `tests/integration/test_accounts.py::test_the_order_with_another_primary_currency_and_lowercase_names`
 
 #### C1-22 · Una compra de dólares entre cuentas propias
 
@@ -352,7 +352,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **cuando** se calcula el saldo de las dos cuentas,
 - **entonces** "Galicia pesos" queda en $230.000,00, que es 350.000 − 120.000, y "Galicia USD"
   en 600,00 USD, que es 500 + 100. Cada lado cuenta en la moneda de su cuenta, sin convertir.
-- **Test:** —
+- **Test:** `tests/unit/test_list_accounts.py::test_buying_dollars_between_own_accounts_counts_each_side_in_its_currency`
 
 #### C1-23 · La cuenta "Me deben" viene marcada por su tipo
 
@@ -364,7 +364,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **entonces** la respuesta trae "Me debe Juan" con `type` igual a `receivable` y `balance`
   igual a 30000.00, que es 0 + 30.000, y "Mercado Pago" con 50000.00, que es 80.000 − 30.000.
   La pantalla usa el tipo para dejarla afuera de la lista.
-- **Test:** —
+- **Test:** `tests/integration/test_accounts.py::test_an_account_others_owe_comes_marked_by_its_type`
 
 #### C1-24 · Una tarjeta con gastos vencidos sin pagar queda en negativo
 
@@ -375,7 +375,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **cuando** se calcula su saldo,
 - **entonces** el saldo es −$50.000,00, que es 0 − 50.000: la misma fórmula que cualquier
   cuenta, sin dar vuelta el signo por ser tarjeta.
-- **Test:** —
+- **Test:** `tests/unit/test_list_accounts.py::test_a_card_with_unpaid_expenses_already_due_is_negative`
 
 ### Corte 2 — errores y estado vacío
 
