@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardTitle } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/class-names'
 import { loadAccounts, type Account } from '../api/accounts'
 import type { Failure } from '../api/request'
 import { AMOUNT_DECIMALS, AMOUNT_LOCALE } from '../constants'

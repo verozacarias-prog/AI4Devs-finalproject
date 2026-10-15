@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/class-names'
 
 /**
  * The card of shadcn/ui (ADR 0027). It is a section, so that a screen that labels it with its

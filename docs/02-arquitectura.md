@@ -220,8 +220,9 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
   /src
     /api                 # API contract exported by the backend, the types generated from it, and the API paths
     /pages               # one file per screen, with its test next to it
-    /components/ui       # the shadcn/ui components, copied into the project and owned by it
-    /lib                 # small helpers of the components, such as joining class names
+    /components          # the pieces several screens share, such as the side menu, with their test next to them
+      /ui                # the shadcn/ui components, copied into the project and owned by it
+    /lib                 # small helpers of the components: class-names.ts joins class names
     messages.ts          # every text the dashboard shows
     design-tokens.css    # design tokens: the only place with colours, sizes and spacing
     App.tsx
