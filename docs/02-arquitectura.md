@@ -192,9 +192,9 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
       account_balance.py # the balance of an account, from what already happened in it
     /adapters
       /inbound
-        /api               # FastAPI routers — translate HTTP into use case calls
+        /api               # FastAPI routers — translate HTTP into use case calls; main.py is the entry point of the API process
         /whatsapp_webhook   # translate WhatsApp payloads into use case calls
-        /message_worker     # worker entry point: takes stored messages, calls use cases
+        /message_worker     # the worker: takes stored messages, calls use cases; main.py is the entry point of its process
         /scheduler          # scheduled jobs entry point: calls use cases, never raw SQL
         /cli                # operator commands: local test data, knowledge base load, enabling phone numbers, personal links for the demo
       /outbound
@@ -212,7 +212,6 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
     test_data.py         # the template of a test user and the test users of local
     messages.py          # every message written for a person
     settings.py          # process configuration, read from environment variables
-    main.py              # entry point of the API process
   /tests
   /migrations          # Alembic
 /frontend                # React, TypeScript and Vite (ADR 0026), Tailwind CSS and shadcn/ui (ADR 0027)
