@@ -199,7 +199,8 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
         /scheduler          # scheduled jobs entry point: calls use cases, never raw SQL
         /operator_commands  # commands an operator runs by hand: local test data, knowledge base load, enabling phone numbers, personal links for the demo
       /outbound
-        /postgres           # SQLAlchemy repositories, unit of work and connection setup
+        /postgres           # unit of work, connection setup, and queries.py with all the SQL written by hand
+          /repositories    # one file per repository, each implementing its port
         /pgvector            # VectorStorePort implementation
         /whatsapp_client      # sends outbound WhatsApp messages
         /email_reader          # IMAP/Gmail integration (could-have, not in the MVP)
