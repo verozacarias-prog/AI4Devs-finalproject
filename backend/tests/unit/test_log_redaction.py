@@ -16,7 +16,7 @@ from decimal import Decimal
 
 import pytest
 
-from app.adapters.outbound.observability.logs import REDACTED, build_handler, configure_logging
+from app.adapters.observability.logs import REDACTED, build_handler, configure_logging
 
 JsonLine = dict[str, str | int | float | bool | None]
 

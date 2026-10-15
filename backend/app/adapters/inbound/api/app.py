@@ -19,8 +19,8 @@ from app.adapters.inbound.api.routers.dev_entry import build_dev_entry_router
 from app.adapters.inbound.api.routers.health import build_health_router
 from app.adapters.inbound.api.routers.session import build_session_router
 from app.adapters.inbound.api.security_headers import add_security_headers
-from app.adapters.outbound.observability.events import Event, LoggerName
-from app.adapters.outbound.observability.logs import configure_logging
+from app.adapters.observability.events import Event, LoggerName
+from app.adapters.observability.logs import configure_logging
 from app.adapters.outbound.postgres.connection import create_db_engine
 from app.adapters.outbound.postgres.database_health import PostgresDatabaseHealth
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork

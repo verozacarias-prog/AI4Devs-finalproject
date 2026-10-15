@@ -11,13 +11,13 @@ from fastapi import Request, Response, status
 from starlette.routing import Match, Route
 
 from app.adapters.inbound.api.routes import DASHBOARD_PREFIX, REQUEST_ID_HEADER
-from app.adapters.outbound.observability.events import (
+from app.adapters.observability.events import (
     ENDPOINT_SEPARATOR,
     Event,
     Field,
     LoggerName,
 )
-from app.adapters.outbound.observability.logs import request_id_var
+from app.adapters.observability.logs import request_id_var
 from app.constants import MILLISECONDS_PER_SECOND
 
 logger = logging.getLogger(LoggerName.API)

@@ -12,8 +12,8 @@ from collections.abc import Callable, Mapping
 from typing import TextIO
 
 from app import messages
-from app.adapters.outbound.observability.errors import log_error
-from app.adapters.outbound.observability.logs import configure_logging, request_id_var
+from app.adapters.observability.errors import log_error
+from app.adapters.observability.logs import configure_logging, request_id_var
 from app.constants import (
     EXIT_FAILED,
     EXIT_OK,

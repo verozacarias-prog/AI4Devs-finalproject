@@ -12,14 +12,14 @@ import sysconfig
 import traceback
 from pathlib import Path
 
-from app.adapters.outbound.observability.events import (
+from app.adapters.observability.events import (
     IDENTIFIER_FIELD_SUFFIX,
     MAX_STACK_DEPTH,
     Event,
     Field,
     LoggerName,
 )
-from app.adapters.outbound.observability.logs import LogValue
+from app.adapters.observability.logs import LogValue
 from app.domain.errors import ContextField, DomainError, StoreRejectionError
 
 logger = logging.getLogger(LoggerName.ERRORS)

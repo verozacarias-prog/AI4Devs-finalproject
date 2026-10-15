@@ -89,7 +89,7 @@ de pre-commit. No son una recomendación: rompen el commit.
 - `backend/app/adapters/outbound/llm_client/` — cliente de LLM: clasificación, interpretación y respuestas, con el SDK del proveedor.
 - `backend/app/adapters/outbound/embedding_client/` — cliente del proveedor de embeddings.
 - `backend/app/adapters/outbound/text_splitter/` — particionado de documentos; el único lugar que importa `langchain-text-splitters`.
-- `backend/app/adapters/outbound/observability/` — envoltorios de los puertos de LLM y de embeddings, que registran cada llamada sin su contenido, y el formato JSON de los registros con su filtro.
+- `backend/app/adapters/observability/` — envoltorios de los puertos de LLM y de embeddings, que registran cada llamada sin su contenido, y el formato JSON de los registros con su filtro.
 - `backend/tests/` — tests unitarios, de integración y end-to-end.
 - `backend/migrations/` — migraciones de Alembic.
 - `frontend/` — dashboard web, en React con TypeScript y Vite ([ADR 0026](docs/adr/0026-react-typescript-y-vite-para-el-dashboard.md)), con Tailwind CSS y shadcn/ui ([ADR 0027](docs/adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md)). `src/api/` tiene el contrato exportado y los tipos generados, `src/pages/` una pantalla por archivo con su test al lado, `src/components/` las piezas que comparten las pantallas, como el menú lateral, con su test al lado, `src/components/ui/` los componentes de shadcn/ui, y `src/design-tokens.css` los tokens de diseño.
@@ -122,7 +122,7 @@ completo antes de escribir código.
   `app/messages.py` (todo mensaje para una persona), `adapters/inbound/api/routes.py` (las
   rutas de la API y los valores de sus respuestas), `adapters/inbound/api/reference.py` (los
   textos de la referencia de la API), `adapters/inbound/api/security_headers.py`
-  (los encabezados de seguridad), `adapters/outbound/observability/events.py`
+  (los encabezados de seguridad), `adapters/observability/events.py`
   (eventos, campos, nombres y reglas de los registros) y `adapters/outbound/postgres/queries.py`
   (el SQL escrito a mano). Quedan en su lugar solo las palabras que define una librería, como
   el nombre de un parámetro suyo, el SQL de cada migración, que es su contenido, y lo que

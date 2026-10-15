@@ -36,7 +36,7 @@ from contextvars import ContextVar
 from datetime import UTC, datetime
 from typing import TextIO
 
-from app.adapters.outbound.observability.events import (
+from app.adapters.observability.events import (
     CLASS_NAME_PATTERN,
     CODE_PLACE_PATTERN,
     CONSTRAINT_PATTERN,

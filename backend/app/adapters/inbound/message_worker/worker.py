@@ -12,8 +12,8 @@ from collections.abc import Callable
 from datetime import timedelta
 from typing import NoReturn, TextIO
 
-from app.adapters.outbound.observability.errors import log_error
-from app.adapters.outbound.observability.logs import configure_logging
+from app.adapters.observability.errors import log_error
+from app.adapters.observability.logs import configure_logging
 from app.adapters.outbound.postgres.connection import create_db_engine
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
 from app.constants import WORKER_IDLE_SECONDS, WORKER_LOCK_SECONDS, Environment, ProcessName
