@@ -28,7 +28,7 @@ class ProcessName(StrEnum):
     """The processes that share the image. Each log line says which one wrote it."""
 
     API = "api"
-    CLI = "cli"
+    OPERATOR_COMMAND = "operator_command"
     WORKER = "worker"
 
 

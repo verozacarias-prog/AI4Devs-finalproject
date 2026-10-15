@@ -37,7 +37,7 @@ def run_command(
     except SettingsError as error:
         out.write(str(error) + LINE_END)
         return EXIT_FAILED
-    configure_logging(log_stream or sys.stdout, settings.version, ProcessName.CLI)
+    configure_logging(log_stream or sys.stdout, settings.version, ProcessName.OPERATOR_COMMAND)
     # The identifier of this run: every line it logs carries it, and so does its error message.
     reference = uuid.uuid4().hex
     request_id_var.set(reference)
