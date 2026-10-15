@@ -1,4 +1,4 @@
-"""Entry point of the worker process: `python -m app.adapters.inbound.message_worker`."""
+"""Entry point of the worker process: `python -m app.adapters.inbound.message_worker.main`."""
 
 from __future__ import annotations
 

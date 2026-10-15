@@ -1,4 +1,4 @@
-"""Entry point of the API process: `python -m app.main`."""
+"""Entry point of the API process: `python -m app.adapters.inbound.api.main`."""
 
 from __future__ import annotations
 
