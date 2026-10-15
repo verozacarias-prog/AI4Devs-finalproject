@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 
 from app.adapters.inbound.api.app import create_app
 from app.settings import load_settings
-from tests.log_lines import LogLine, events_of
+from tests.support.log_lines import LogLine, events_of
 
 pytestmark = pytest.mark.integration
 

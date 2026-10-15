@@ -20,8 +20,8 @@ from sqlalchemy import Engine, create_engine, text
 from app.adapters.inbound.api.app import create_app
 from app.adapters.inbound.message_worker.worker import create_worker
 from app.settings import Settings, load_settings
-from tests.integration.chat_data import FIXED_REPLY, NOW, inbound, outbound, seed, user_id
-from tests.unit.doubles import FixedClock
+from tests.support.chat_data import FIXED_REPLY, NOW, inbound, outbound, seed, user_id
+from tests.support.doubles import FixedClock
 
 pytestmark = pytest.mark.integration
 

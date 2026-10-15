@@ -24,7 +24,7 @@ from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
 from app.domain.entities.user import OnboardingStatus, User
 from app.domain.errors import ConflictError, InvalidError
 from app.settings import load_settings
-from tests.log_lines import events_of
+from tests.support.log_lines import events_of
 
 pytestmark = pytest.mark.integration
 

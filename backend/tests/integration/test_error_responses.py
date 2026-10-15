@@ -20,7 +20,7 @@ from app.domain.errors import (
     NotFoundError,
 )
 from app.settings import load_settings
-from tests.log_lines import events_of
+from tests.support.log_lines import events_of
 
 pytestmark = pytest.mark.integration
 

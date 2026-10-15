@@ -21,7 +21,7 @@ from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
 from app.domain.use_cases.create_test_user import CreateTestUser
 from app.settings import load_settings
 from app.shared.clock import SystemClock
-from tests.log_lines import events_of
+from tests.support.log_lines import events_of
 
 pytestmark = pytest.mark.integration
 

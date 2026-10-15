@@ -6,7 +6,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from app.domain.use_cases.create_test_user import CreateTestUser
-from tests.unit.doubles import FixedClock, InMemoryUnitOfWork
+from tests.support.doubles import FixedClock, InMemoryUnitOfWork
 
 # 12:00 in Buenos Aires on October 12.
 NOON = datetime(2026, 10, 12, 15, tzinfo=UTC)

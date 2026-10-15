@@ -12,7 +12,7 @@ import pytest
 
 from app.adapters.inbound.operator_commands.seed_test_data import main
 from tests.conftest import UNREACHABLE_DATABASE_URL
-from tests.log_lines import LogLine, events_of, stack_of
+from tests.support.log_lines import LogLine, events_of, stack_of
 
 pytestmark = pytest.mark.integration
 

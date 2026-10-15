@@ -18,7 +18,7 @@ from app.adapters.inbound.api.app import create_app
 from app.constants import Environment
 from app.domain.errors import ConflictError
 from app.settings import load_settings
-from tests.log_lines import events_of, stack_of
+from tests.support.log_lines import events_of, stack_of
 
 pytestmark = pytest.mark.integration
 

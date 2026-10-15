@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 
 from app.domain.use_cases.create_test_user import CreateTestUser
 from app.domain.use_cases.send_chat_message import SendChatMessage
-from tests.unit.doubles import FixedClock, InMemoryUnitOfWork
+from tests.support.doubles import FixedClock, InMemoryUnitOfWork
 
 NOW = datetime(2026, 10, 15, 18, 0, 0, tzinfo=UTC)
 

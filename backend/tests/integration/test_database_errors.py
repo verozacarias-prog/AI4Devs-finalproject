@@ -23,7 +23,7 @@ from app.domain.entities.budget_period import first_period
 from app.domain.entities.user import OnboardingStatus, User
 from app.domain.errors import ConflictError
 from app.settings import load_settings
-from tests.log_lines import events_of
+from tests.support.log_lines import events_of
 
 pytestmark = pytest.mark.integration
 
