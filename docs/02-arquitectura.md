@@ -192,7 +192,8 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
       account_balance.py # the balance of an account, from what already happened in it
     /adapters
       /inbound
-        /api               # FastAPI routers — translate HTTP into use case calls; main.py is the entry point of the API process
+        /api               # the HTTP side: building the app, its middleware and error answers; main.py is the entry point of the API process
+          /routers         # one file per group of endpoints — translate HTTP into use case calls
         /whatsapp_webhook   # translate WhatsApp payloads into use case calls
         /message_worker     # the worker: takes stored messages, calls use cases; main.py is the entry point of its process
         /scheduler          # scheduled jobs entry point: calls use cases, never raw SQL

@@ -76,7 +76,7 @@ de pre-commit. No son una recomendación: rompen el commit.
 - `backend/app/domain/local_date.py` — qué día es para un usuario, en su zona horaria.
 - `backend/app/domain/account_balance.py` — el saldo de una cuenta, calculado con lo que ya ocurrió en ella.
 - `backend/app/shared/` — utilidades técnicas que usan todas las capas, solo con la librería estándar. `clock.py` tiene el protocolo del reloj y su implementación con el reloj de la máquina.
-- `backend/app/adapters/inbound/api/` — routers de FastAPI: traducen HTTP a llamadas a casos de uso. Incluye el chat web de desarrollo, que guarda el mensaje y no lo procesa.
+- `backend/app/adapters/inbound/api/` — el lado HTTP: arma la aplicación, sus controles y sus respuestas de error. En `routers/`, un archivo por grupo de endpoints, que traducen HTTP a llamadas a casos de uso. Incluye el chat web de desarrollo, que guarda el mensaje y no lo procesa.
 - `backend/app/adapters/inbound/whatsapp_webhook/` — traduce payloads de WhatsApp a llamadas a casos de uso.
 - `backend/app/adapters/inbound/message_worker/` — punto de entrada del worker: toma los mensajes guardados y los pasa a casos de uso.
 - `backend/app/adapters/inbound/scheduler/` — punto de entrada de los procesos programados: recurrentes, cierres de resumen, alertas, vencimientos, cotizaciones y borrado de cuentas, siempre por casos de uso.

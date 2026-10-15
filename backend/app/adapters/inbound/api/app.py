@@ -9,16 +9,16 @@ from typing import TextIO
 from fastapi import FastAPI
 
 from app.adapters.inbound.api import reference
-from app.adapters.inbound.api.accounts import build_accounts_router
-from app.adapters.inbound.api.chat import build_chat_router
 from app.adapters.inbound.api.dashboard import mount_dashboard
-from app.adapters.inbound.api.dev_entry import build_dev_entry_router
 from app.adapters.inbound.api.errors import install_error_handlers
-from app.adapters.inbound.api.health import build_health_router
 from app.adapters.inbound.api.origin_check import refuse_requests_from_elsewhere
 from app.adapters.inbound.api.request_logging import log_request
+from app.adapters.inbound.api.routers.accounts import build_accounts_router
+from app.adapters.inbound.api.routers.chat import build_chat_router
+from app.adapters.inbound.api.routers.dev_entry import build_dev_entry_router
+from app.adapters.inbound.api.routers.health import build_health_router
+from app.adapters.inbound.api.routers.session import build_session_router
 from app.adapters.inbound.api.security_headers import add_security_headers
-from app.adapters.inbound.api.session import build_session_router
 from app.adapters.outbound.observability.events import Event, LoggerName
 from app.adapters.outbound.observability.logs import configure_logging
 from app.adapters.outbound.postgres.connection import create_db_engine

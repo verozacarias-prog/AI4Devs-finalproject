@@ -17,8 +17,8 @@ from pydantic import BaseModel, Field
 
 from app.adapters.inbound.api import reference
 from app.adapters.inbound.api.errors import documented_errors
+from app.adapters.inbound.api.routers.session import SessionToken
 from app.adapters.inbound.api.routes import CHAT_MESSAGES, CHAT_TAG, IDEMPOTENCY_KEY_HEADER
-from app.adapters.inbound.api.session import SessionToken
 from app.domain.entities.chat_message import Direction
 from app.domain.entities.inbound_message import InboundStatus
 from app.domain.entities.outbound_message import ResponseKind

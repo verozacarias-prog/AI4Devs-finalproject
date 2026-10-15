@@ -16,8 +16,8 @@ from pydantic import BaseModel, Field, model_validator
 
 from app.adapters.inbound.api import reference
 from app.adapters.inbound.api.errors import documented_errors
+from app.adapters.inbound.api.routers.session import set_session_cookie
 from app.adapters.inbound.api.routes import DEV_SESSION, DEV_TAG, DEV_USERS
-from app.adapters.inbound.api.session import set_session_cookie
 from app.adapters.outbound.observability.events import Event, LoggerName, SessionMethod
 from app.adapters.outbound.observability.events import Field as LogField
 from app.domain.use_cases.list_test_users import ListTestUsers
