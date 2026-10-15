@@ -76,8 +76,8 @@ Los mensajes ya se guardan, por otros motivos, en `INBOUND_MESSAGE` y `OUTBOUND_
 - Cada mensaje carga la descripción de las funciones de lectura, también cuando resulta ser un
   gasto, que es lo más frecuente. Son más tokens de entrada por mensaje.
 - Una llamada que clasifica, extrae y pide datos puede clasificar peor que una que solo
-  clasifica. Lo mide la evaluación de proveedores ([ADR 0019](0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md)).
-  Si baja la calidad, se separan.
+  clasifica. Lo midió la evaluación del proveedor, y con el modelo elegido no bajó
+  ([ADR 0025](0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)). Si con otro modelo baja, se separan.
 - Clasificar un mensaje cuya cuota resulta agotada es una llamada sin resultado, y un registro
   demorado se clasifica dos veces.
 - Los mensajes de un remitente dejan de procesarse en orden estricto cuando uno queda demorado.

@@ -15,7 +15,7 @@ desde [`features/TEMPLATE/pr.md`](features/TEMPLATE/pr.md).
 ### Funcionalidad
 
 - [ ] Cumple los criterios de aceptación de la historia de usuario enlazada.
-- [ ] Si toca una pantalla, los cuatro estados están implementados y se ven en las capturas.
+- [ ] Si toca una pantalla, sus estados están implementados y se ven en las capturas: los cuatro, o tres si no muestra datos del usuario.
 - [ ] El corte está completo de punta a punta: no quedó backend sin frontend ni al revés.
 
 ### Dominio
@@ -27,6 +27,7 @@ desde [`features/TEMPLATE/pr.md`](features/TEMPLATE/pr.md).
 ### Arquitectura
 
 - [ ] `python3 scripts/verify_architecture.py` pasa sin errores.
+- [ ] `python3 scripts/verify_api_contract.py` pasa sin errores.
 - [ ] No se agregaron dependencias nuevas sin justificar por qué no alcanzaba lo instalado.
 - [ ] Si hubo una decisión de arquitectura, tiene su [ADR](adr/).
 
@@ -34,6 +35,9 @@ desde [`features/TEMPLATE/pr.md`](features/TEMPLATE/pr.md).
 
 - [ ] Tipado completo, sin `Any`.
 - [ ] Tests nuevos para el comportamiento agregado, y pasan.
+- [ ] Los casos del corte están aprobados en `spec.md`, y cada criterio de aceptación tiene al menos un caso. En una tarea que no es de una historia, los casos aprobados están en la descripción del pull request.
+- [ ] En el backend, el commit de los tests es anterior al de la implementación ([ADR 0024](adr/0024-tests-primero-en-el-backend.md)).
+- [ ] Ningún test se modificó, se deshabilitó ni se borró sin aprobación.
 - [ ] Ningún texto visible al usuario escrito en el código.
 
 ### Seguridad

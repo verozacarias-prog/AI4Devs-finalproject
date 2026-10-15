@@ -31,7 +31,10 @@ movimiento de octubre se eliminara, el motor podría volver a generarlo en una s
 3. **La aplicación no puede eliminar filas.** El rol de la aplicación no tiene permiso de
    `DELETE` sobre esas tres tablas. Solo el proceso de borrado de cuenta, que ejecuta el derecho
    de supresión con un rol propio, elimina filas de verdad: ahí la supresión prevalece sobre la
-   trazabilidad.
+   trazabilidad. El rol de la aplicación se llama `platita_app` y lo crea la migración del
+   esquema, que le da lectura, inserción y actualización sobre todas las tablas, y `DELETE`
+   sobre todas menos esas tres. Los permisos no nombran al dueño de las tablas, porque su
+   nombre lo pone cada entorno. El rol del borrado de cuenta se crea con ese proceso.
 4. **Borrar una regla recurrente corta las ocurrencias futuras.** Una regla borrada, como una
    compra con tarjeta anulada, no genera más ocurrencias. Las que ya se generaron son movimientos
    comunes y se borran una por una, porque pueden estar en un resumen ya cerrado que el banco

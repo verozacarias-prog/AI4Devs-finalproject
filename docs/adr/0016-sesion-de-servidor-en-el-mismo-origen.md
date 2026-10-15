@@ -66,7 +66,14 @@ para que la cookie de sesión funcione sin un dominio propio.
 6. **Sin CORS.** La API no habilita CORS: una página de otro origen no puede hacerle requests
    con la cookie.
 7. **CSRF.** Además de `SameSite=Strict`, toda request que modifica algo exige que el header
-   `Origin` sea el propio y que el cuerpo sea JSON. El webhook de WhatsApp queda fuera de esta
+   `Origin` sea el propio y que el cuerpo sea JSON. Un pedido sin `Origin` se rechaza igual: un
+   navegador siempre lo manda en esos pedidos. El `Origin` se compara con el `Host` del
+   pedido, sin el esquema, porque detrás del proxy del proveedor la API no ve si el navegador
+   usó `https`. La consecuencia es que una página servida por `http` en el mismo dominio
+   pasaría este control, y contra ella queda solo `SameSite=Strict`. Lo cierra el encabezado
+   `Strict-Transport-Security`, que obliga al navegador a usar siempre `https` con ese dominio
+   y que se suma con el primer despliegue. El control corre antes de leer el cuerpo del
+   pedido. El webhook de WhatsApp queda fuera de esta
    regla: no usa cookie y se autentica con su firma.
 8. **La consulta periódica no cuenta como actividad.** El chat web pregunta cada pocos segundos
    si hay mensajes nuevos ([ADR 0010](0010-webhook-asincrono-con-tabla-de-entrada.md)). Esa
@@ -76,15 +83,46 @@ para que la cookie de sesión funcione sin un dominio propio.
 9. **Tres entornos, y una entrada de desarrollo que no existe en producción.** La configuración
    declara el entorno: `local`, `demo` o `production`. En los dos primeros se pueden habilitar
    dos opciones: el chat web y la entrada de desarrollo. Con cualquiera de las dos encendida y
-   el entorno en `production`, ningún proceso arranca.
+   el entorno en `production`, ningún proceso arranca. Cada opción tiene su variable, que vale
+   `true` o `false`: la de la entrada de desarrollo es `DEV_ENTRY_ENABLED`. Sin la variable la
+   opción queda apagada, en cualquier entorno, y con otro valor el proceso no arranca: un
+   despliegue que la olvida queda cerrado.
 
-   La entrada de desarrollo reemplaza al código mientras no exista el adaptador de WhatsApp: la
-   pantalla lista los usuarios de los datos de prueba, se elige uno y el servidor crea una
-   sesión real, con la misma tabla y la misma cookie. Desde ahí todo endpoint toma al usuario de
-   la sesión, como siempre. No se construye nada del código de un solo uso hasta que haya por
-   dónde enviarlo. Es una excepción deliberada a la regla de que el usuario nunca sale del
-   request, y vale solo en un entorno con datos inventados: quien abra esa pantalla entra como
-   cualquier usuario de prueba.
+   La entrada de desarrollo reemplaza al código mientras no exista el adaptador de WhatsApp, y
+   crea una sesión real, con la misma tabla y la misma cookie. Desde ahí todo endpoint toma al
+   usuario de la sesión, como siempre. No se construye nada del código de un solo uso hasta que
+   haya por dónde enviarlo. Tiene dos formas, según el entorno:
+
+   - **En `local`, una lista.** La pantalla lista los usuarios de prueba y se elige uno. Un
+     usuario de prueba se reconoce por su teléfono inventado, que empieza con `+000`: solo esos
+     aparecen y solo con esos se puede entrar, así que una persona que hizo el alta con su
+     número real contra una base local no queda al alcance de la lista. Es una excepción deliberada a la regla de que el usuario nunca sale del request, y
+     vale solo en la máquina de quien desarrolla.
+   - **En `demo`, un enlace personal.** La lista no existe. Cada persona que prueba tiene un
+     enlace propio, con un valor aleatorio de 256 bits, y solo ese enlace abre su cuenta. Así
+     otra persona puede probar Platita siendo dueña de sus datos, sin ver los de nadie más.
+
+     Un comando de operación crea el enlace, con una etiqueta única que elige quien opera, y
+     lo devuelve. Todavía no crea ningún usuario. La primera vez que la persona abre el enlace
+     ve un **aviso de prueba**: que es un entorno de prueba, que lo que escriba lo procesa un
+     proveedor de IA, y que sus datos pueden borrarse sin aviso. Recién cuando lo acepta se
+     crea su usuario de prueba, con la etiqueta como nombre, un teléfono inventado que empieza con `+000`, la fecha y
+     la versión del aviso como consentimiento, y la misma plantilla que usa el script de datos
+     de prueba: país, moneda, cuentas con saldo, un primer período confirmado y un perfil,
+     todos inventados. Sin aceptar, no entra y no se guarda nada que haya escrito. Es la misma
+     regla del alta real: sin consentimiento no hay usuario
+     ([reglas de dominio § 11](../reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos)).
+
+     Otro comando regenera el enlace, que se identifica por su etiqueta: el anterior deja de servir y se revocan las sesiones
+     abiertas de ese usuario. Los dos comandos se niegan a correr con el entorno en
+     `production`, igual que el script de datos de prueba. La base guarda solo un HMAC del
+     valor, con la clave del servidor. El valor viaja en el fragmento de la dirección, que el
+     navegador no envía al servidor, y la página lo manda en el cuerpo del pedido. El filtro de
+     los registros lo quita como a cualquier credencial, y su test lo comprueba
+     ([ADR 0023](0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
+
+   El enlace no es el login del producto. Quien lo tiene entra como esa persona, y nada
+   verifica que el teléfono sea suyo.
 
    Si alguna de las dos opciones está encendida, cada proceso lo avisa en su registro al
    arrancar ([ADR 0023](0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
@@ -111,9 +149,19 @@ para que la cookie de sesión funcione sin un dominio propio.
 ### Negativas y costos asumidos
 
 - Mientras dure el andamio, el login por código no se muestra ni se prueba de punta a punta.
-- Un entorno de demostración desplegado con la entrada de desarrollo no tiene control de acceso.
-  Solo puede tener datos inventados, y la seguridad de producción depende de que el arranque se
-  niegue con esas opciones encendidas.
+- En el entorno de demostración, el control de acceso es el enlace personal: quien lo recibe
+  reenviado entra como esa persona, hasta que se regenera. Sigue siendo un entorno de prueba:
+  lo que se acepta ahí es un aviso de prueba y no los términos del producto, y sus datos se
+  pueden borrar, así que no es lugar para la contabilidad real de nadie. La seguridad de producción depende de que el arranque se niegue
+  con esas opciones encendidas.
+- Una tabla y dos comandos de operación que existen solo para el andamio, y se quitan con él.
+  La tabla la crea la misma migración en todos los entornos; en producción queda vacía, porque
+  ni las rutas ni los comandos existen ahí.
+- Rotar la clave del servidor invalida todos los enlaces personales, y hay que regenerarlos.
+- Un usuario de prueba no se puede borrar solo: el borrado de cuenta pide un código por
+  WhatsApp, que el andamio no tiene. Los datos de `demo` se borran reiniciando su base, y eso
+  es lo que el aviso de prueba advierte.
+- Quien prueba no ejercita el alta: recibe cuentas y un período inventados.
 
 - Una consulta a la base por request autenticada. A este volumen, sobre una clave indexada, no
   se nota.
@@ -122,9 +170,14 @@ para que la cookie de sesión funcione sin un dominio propio.
   usuarios no se nota.
 - El dashboard y la API se despliegan juntos: un cambio solo visual reinicia también el servicio
   que recibe el webhook. Meta reintenta lo que no recibió `200`, así que no se pierden mensajes.
+  El código no queda acoplado: el backend solo sabe en qué carpeta está el dashboard compilado,
+  y un cambio visual no toca ninguna línea suya. La salida a un frontend desplegado aparte está
+  prevista: cuando haya dominio propio, o más de una persona desplegando, se quita esa carpeta
+  del servicio y los mismos archivos los sirve otro servidor, sin cambiar el dashboard.
 - Como el servicio sirve HTML, también le corresponde enviar los headers de seguridad de la
   página, incluida una política de contenido (CSP), que antes eran configuración del Static
-  Site.
+  Site. La política deja cargar solo lo que viene del propio origen, sin código en línea, y
+  prohíbe que otra página embeba el dashboard.
 - Una aplicación móvil nativa no puede usar la cookie tal cual: necesitará el mismo token en un
   header `Authorization`. Se decide cuando exista la aplicación, que es también el momento de
   revisar este registro.
@@ -150,6 +203,12 @@ para que la cookie de sesión funcione sin un dominio propio.
   enviarlo: ejercita el flujo completo, pero es trabajo en algo que no es el chat, y mostrar el
   código delata qué números existen, que es lo que el
   [ADR 0017](0017-limites-del-login-y-codigos-con-proposito.md) evita.
+- **Que el comando registre el consentimiento al crear el usuario de prueba:** no hace falta la
+  pantalla del aviso, pero queda anotada una aceptación que nadie dio, de alguien cuyo texto
+  va a un proveedor externo.
+- **Una contraseña compartida para todo el entorno de demostración:** deja afuera a quien no la
+  tiene, pero adentro todos pueden entrar como cualquiera. No hace a cada persona dueña de sus
+  datos.
 - **Que el chat web mande el usuario en cada pedido, sin sesión:** menos piezas, pero todos los
   endpoints nacerían tomando al usuario del request y habría que rehacerlos.
 - **Un proveedor de identidad gestionado:** ninguno ofrece de forma nativa el código por

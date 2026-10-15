@@ -49,8 +49,8 @@ Cada cambio pasa por tres controles, de más cerca a más lejos de quien escribe
 
 | Cuándo | Qué corre | Se saltea |
 |---|---|---|
-| Antes de cada commit | Los dos verificadores propios, vía `.githooks/pre-commit` | Sí, con `--no-verify` |
-| En cada pull request | Los dos verificadores, `markdownlint-cli2`, `lychee`, la construcción del portal y `gitleaks`, que busca secretos | No |
+| Antes de cada commit | Los tres verificadores propios, vía `.githooks/pre-commit` | Sí, con `--no-verify` |
+| En cada pull request | Los tres verificadores, `markdownlint-cli2`, `lychee`, la construcción del portal y `gitleaks`, que busca secretos | No |
 | Todos los lunes | `lychee`, porque un enlace externo se rompe sin que nadie toque nada | No |
 
 El detalle de qué valida cada herramienta está en
@@ -76,10 +76,12 @@ actualiza el documento que lo describe **en ese mismo pull request**, no despué
 forma de que la documentación no se desactualice: si el cambio se aplaza, no ocurre.
 
 La lista completa está en la sección Documentación del
-[Definition of Done](07-pull-requests.md#definition-of-done). Hoy se verifica leyendo, con la
-ayuda de `/spec-drift`. La parte que es binaria —comparar el contrato generado por FastAPI contra
-[`04-api.md`](04-api.md)— se automatiza con `verify_api_contract.py` cuando exista la API, y está
-en la [hoja de ruta](hoja-de-ruta.md).
+[Definition of Done](07-pull-requests.md#definition-of-done). Se verifica leyendo, con la
+ayuda de `/spec-drift`. La parte que es binaria la automatiza
+[`scripts/verify_api_contract.py`](../scripts/verify_api_contract.py), sobre el contrato que
+genera FastAPI. Corre en el hook de pre-commit y en cada pull request, y sus reglas están en
+el encabezado del script. Que el contrato versionado sea el que
+genera el código lo comprueban un test del backend y el pipeline.
 
 ## 6. Trabajar con el portal
 
@@ -91,26 +93,53 @@ npm run dev          # servidor local
 npm run build        # construye, y regenera llms.txt
 ```
 
-El portal se publica solo, con `.github/workflows/docs.yml`, en cada push a la rama de trabajo.
+El portal se publica solo, con `.github/workflows/docs.yml`, en cada integración a la rama de la
+entrega en curso, y otra vez al cerrarla, cuando esa rama llega a `main`.
 
-## 7. El modelo de ramas condiciona el despliegue
+## 7. El modelo de ramas
 
-Este repositorio es un fork del repositorio del curso, y la entrega va como pull request al
-repositorio de origen. De ahí salen tres restricciones que no son evidentes:
+Este repositorio es un fork del repositorio del curso, y se entrega tres veces. De ahí sale un
+modelo de ramas con dos niveles:
 
-- **`main` es el espejo del repositorio del curso** y no recibe el trabajo de la entrega. Los
-  workflows se disparan con push a `feature/**`, no a `main`.
+```text
+main
+ └─ feature/entrega-2-VNZ               rama de la entrega: sale de main y vuelve a main
+     ├─ hu3-c1-registro-de-gasto        un corte de una historia
+     ├─ hu3-c2-registro-de-gasto
+     └─ tarea-scaffold-y-docker         lo que no es una historia
+```
+
+- **`main` tiene las entregas cerradas.** Cada entrega se integra a `main` cuando se cierra, y
+  la rama de la entrega siguiente sale de ahí.
+- **La rama de la entrega no recibe commits directos.** Todo cambio entra por un pull request
+  desde una rama corta, con los controles en verde. Así la rama de la entrega funciona siempre.
+- **Una rama corta por corte vertical.** Una historia se parte en tres
+  [cortes](convenciones-de-desarrollo.md#1-cortes-verticales), y cada uno es un pull request.
+  La rama se llama `hu<N>-c<corte>-<tema>`. Lo que no resuelve una historia, como el scaffold o
+  un arreglo, va en una rama `tarea-<tema>`.
+
+Los pasos, uno por uno, están en el [README](../README.md#cómo-colaborar). Tres detalles de
+GitHub condicionan el modelo y no son evidentes:
+
+- **Las ramas cortas no empiezan con `feature/`.** El flujo que publica el portal corre con cada
+  push a `main` y a `feature/entrega-*`. Una rama de trabajo con ese prefijo publicaría
+  documentación que todavía no se integró. Los controles no lo necesitan: corren al abrir el
+  pull request.
 - **En un pull request contra otro repositorio, GitHub ejecuta los workflows del repositorio
-  base**, no los de este. Por eso la validación depende del push y no del pull request.
-- **El entorno `github-pages` solo acepta despliegues desde la rama por defecto.** La rama de la
-  entrega en curso tiene que estar configurada como rama por defecto de este fork, en
-  `Settings → Branches`, o el despliegue se rechaza aunque el workflow corra entero. La
-  alternativa es autorizar la rama en `Settings → Environments → github-pages`, en
-  `Deployment branches and tags`, con el desplegable en «Selected branches and tags» y una regla
-  `feature/*`. No hace falta ninguna regla de protección de rama: es otra cosa.
+  base**, no los de este. Por eso los pull requests de trabajo se abren dentro del fork, contra
+  la rama de la entrega.
+- **El portal se publica desde la rama por defecto.** El entorno `github-pages` acepta solo las
+  ramas que tiene autorizadas, y Dependabot abre sus pull requests contra la rama por defecto.
+  Al abrir una entrega hay que poner su rama como rama por defecto del fork, en
+  `Settings → Branches`, y revisar que esté autorizada en `Settings → Environments →
+  github-pages`.
 
-Al abrir la rama de una entrega nueva hay que cambiar la rama por defecto del fork. El patrón
-`feature/**` de los disparadores evita tener que tocar los workflows además.
+**Abrir una entrega** son tres pasos: la rama nueva desde `main`, ponerla como rama por defecto
+y protegerla. **Cerrarla** es correr `/security-audit` y `/spec-drift` sobre todo el proyecto,
+dejar al día `prompts.md` e integrar la rama a `main` por pull request.
+
+Que los controles impidan un merge depende, además, de proteger la rama de la entrega con esos
+controles como obligatorios ([ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md)).
 
 Si se agrega un documento a `docs/`, hay que sumarlo a la barra lateral en `site/astro.config.mjs`
 salvo que vaya dentro de `adr/` o `features/`, que se indexan solos.

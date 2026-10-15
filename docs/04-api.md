@@ -4,6 +4,20 @@
 
 **Aislamiento entre usuarios, en todo endpoint autenticado.** El usuario sale siempre de la sesión autenticada, nunca del cuerpo, de la ruta ni de un parámetro. Toda lectura o escritura se limita a los recursos de ese usuario y de los grupos familiares a los que pertenece, según [reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad). Un recurso que existe pero es de otro usuario responde `404`, igual que uno que no existe, para no confirmar su existencia. Cada endpoint lo detalla para sus propios recursos, pero la regla vale aunque no lo diga.
 
+**Cuerpo de un error.** Toda respuesta de error es JSON y tiene la misma forma: un campo `error` con el código del error, una palabra corta en minúsculas que no cambia, como `period_overlaps`. Es el mismo código que queda en los registros. El dashboard elige qué mostrar por ese código, nunca por un texto. Un error suma otros campos, con nombre propio, solo cuando el cliente los necesita para seguir, y cada endpoint los documenta: por ejemplo `missing_fields` en `POST /transactions`. El cuerpo nunca repite lo que el cliente mandó ni describe la falla. Las rutas de salud son la única excepción: su `503` no es un error del pedido sino el estado del servicio, y responde con el mismo cuerpo que su `200`, como dice [su sección](#get-healthz-get-readyz-y-get-queuez). Lo que el servidor responde antes de llegar a un endpoint tiene la misma forma, con el nombre del estado como código: `not_found` para una ruta que no existe y `method_not_allowed`, con `405`, para un método que la ruta no acepta.
+
+| Estado | Cuándo |
+|---|---|
+| `401` | No hay sesión válida, o la firma del webhook no lo es |
+| `403` | El recurso existe para el usuario, que lo puede leer, pero no puede hacer eso |
+| `404` | El recurso no existe, es de otro usuario, o la funcionalidad está apagada |
+| `409` | El pedido choca con el estado actual |
+| `422` | Falta un dato o viola una regla. También el pedido que no tiene la forma del contrato, que responde `invalid_request` |
+| `429` | Se alcanzó un límite de intentos |
+| `500` | Un error que nadie previó. Responde `internal_error` y nada más |
+
+**Referencia de cada respuesta.** Toda respuesta, también la de un error, lleva el header `X-Request-Id` con el identificador del pedido. Es el mismo que queda en los registros ([Operación 6.3](operacion.md#63-registros)), y no dice nada del usuario ni del pedido.
+
 ### `POST /webhook/whatsapp`
 
 Recibe los mensajes entrantes desde la Cloud API de Meta. **No los procesa**: verifica la firma, los guarda y confirma la recepción. La interpretación por IA, el registro y la respuesta al usuario ocurren después, en el worker, y la respuesta viaja por WhatsApp, no en este response. El fundamento está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
@@ -83,6 +97,10 @@ responses:
           status: "pending"            # the worker processes it later
   200:
     description: The Idempotency-Key was already used by this user; nothing is stored and the body is the message stored the first time
+  401:
+    description: No valid session
+  403:
+    description: The request did not come from the page of the API itself, or it is not JSON
   404:
     description: The web chat is disabled, or quoted_message_id is not an outbound message of this user
   422:
@@ -106,8 +124,12 @@ responses:
               response_kind: "registration"
               created_at: "2026-10-04T15:00:04-03:00"
           next_cursor: "om1..."
+  401:
+    description: No valid session
   404:
     description: The web chat is disabled
+  422:
+    description: after is not a UUID
 ```
 
 ### `GET /accounts`
@@ -117,6 +139,7 @@ Lista las cuentas del usuario autenticado con su saldo calculado, para la pantal
 - Devuelve solo las cuentas del usuario de la sesión.
 - En una cuenta de inversión, `balance` es lo aportado neto y `balance_kind` lo dice, para que la pantalla no lo sume a ningún total.
 - Las cuentas "Me deben" vienen marcadas por su `type`, para mostrarlas en su sección.
+- Vienen ordenadas: primero las de la moneda primaria del usuario, después las demás monedas por su código, y dentro de cada moneda por nombre, sin distinguir mayúsculas. El dashboard las muestra en ese orden.
 
 ```yaml
 responses:
@@ -345,7 +368,7 @@ responses:
     content:
       application/json:
         example:
-          detail: "missing required fields"
+          error: "missing_fields"
           missing_fields: ["account_id", "budget_period_id"]
   404:
     description: account_id, budget_period_id or category_id does not belong to the authenticated user (category_id may also be from the base catalog)
@@ -408,7 +431,7 @@ responses:
 
 El login del dashboard, sin contraseñas: el usuario pide un código, lo recibe por WhatsApp y lo canjea por una sesión. Los dos endpoints del código se construyen junto con el adaptador de WhatsApp; hasta entonces el andamio entra por `POST /dev/session`, más abajo. El fundamento está en el [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md), los límites en el [ADR 0017](adr/0017-limites-del-login-y-codigos-con-proposito.md), y las restricciones del código y de la sesión en [LOGIN_CODE, SESSION y AUTH_THROTTLE](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
 
-**Cómo viaja la sesión.** En una cookie `__Host-sid` con `HttpOnly`, `Secure`, `SameSite=Strict` y `Path=/`, sin `Domain`. El dashboard se sirve desde el mismo origen que la API, bajo `/app`, y la API no habilita CORS. Un `POST`, `PUT`, `PATCH` o `DELETE` responde `403` si su `Origin` no es el de Platita o si su `Content-Type` no es `application/json`. `/webhook/whatsapp` está exceptuado, porque Meta lo llama sin cookie y firma cada pedido. Una request con una sesión inexistente, revocada o vencida responde `401`.
+**Cómo viaja la sesión.** En una cookie `__Host-sid` con `HttpOnly`, `Secure`, `SameSite=Strict` y `Path=/`, sin `Domain`. El dashboard se sirve desde el mismo origen que la API, bajo `/app`, y la API no habilita CORS. Un `POST`, `PUT`, `PATCH` o `DELETE` responde `403` si su `Origin` no es el de Platita, si no trae `Origin`, o si su `Content-Type` no es `application/json`. El `Origin` se compara con el `Host` del pedido, sin el esquema: detrás de un proxy la API no ve el que usó el navegador. El control corre antes de leer el cuerpo, así que un pedido de otro sitio responde `403` también con un cuerpo mal formado. Un pedido a una ruta que no existe, o con un método que la ruta no acepta, responde su `404` o su `405`. La excepción es el dashboard, bajo `/app`: ahí un pedido de otro origen que modifica algo responde `403`, cualquiera sea su método. `/webhook/whatsapp` está exceptuado, porque Meta lo llama sin cookie y firma cada pedido. Una request con una sesión inexistente, revocada o vencida responde `401`.
 
 `POST /auth/code` pide un código para un número. Responde `202` **siempre igual**, exista o no un usuario con ese número, para no revelar quién usa Platita; solo si existe se genera y se envía un código de propósito `login`. Admite como mucho 3 pedidos por número cada 15 minutos y 20 por IP por hora, contados exista o no el usuario: pasado cualquiera de los dos responde `429` y no envía nada, porque cada envío es un mensaje de plantilla que se paga y que el dueño del número recibe.
 
@@ -453,30 +476,100 @@ responses:
     description: Current session (logout) or every session of the user (logout-all) revoked; the cookie is cleared
   401:
     description: No valid session
+  403:
+    description: The request did not come from the page of the API itself, or it is not JSON
 ```
 
 ### `GET /dev/users` y `POST /dev/session`
 
-La entrada de desarrollo: abre una sesión sin código, mientras no exista por dónde enviarlo. Existen solo con la entrada de desarrollo habilitada, en los entornos `local` y `demo`; con el entorno en `production` el servidor no arranca si está habilitada ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Apagada, las dos rutas responden `404`.
+La entrada de desarrollo: abre una sesión sin código, mientras no exista por dónde enviarlo. Existe solo con la entrada de desarrollo habilitada, en los entornos `local` y `demo`; con el entorno en `production` el servidor no arranca si está habilitada ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Apagada, las dos rutas responden `404`.
 
-- `GET /dev/users` lista los usuarios de los datos de prueba, con su nombre, para elegir uno. No pide sesión.
-- `POST /dev/session` crea una sesión para el usuario elegido y la devuelve en la misma cookie `__Host-sid` que el login real. Es la única ruta en la que el usuario sale del pedido y no de una sesión. Desde ahí, todo endpoint lo toma de la sesión.
+- `GET /dev/users` lista los usuarios de prueba, para elegir uno: los que tienen un teléfono inventado, que empieza con `+000`. Un usuario con un teléfono real no aparece, aunque esté en la base. Responde un objeto con la lista `users`, ordenada por nombre, y de cada usuario trae solo `id` y `name`, nunca el teléfono. Sin usuarios de prueba responde `200` con la lista vacía. No pide sesión. **Existe solo en `local`**; en `demo` responde `404`.
+- `POST /dev/session` crea una sesión y la devuelve en la misma cookie `__Host-sid` que el login real. Desde ahí, todo endpoint toma al usuario de la sesión. Se entra de una de dos formas, con `access_token` o con `user_id`:
+  - `access_token`: el valor de un enlace personal. Es la única forma de entrar en `demo`. La página lo lee del fragmento de la dirección, lo manda en el cuerpo y lo borra de la barra del navegador.
+  - `accept_test_notice`: opcional. La primera vez, el enlace todavía no tiene usuario: sin este campo la respuesta es `409` con la versión del aviso de prueba, y la página lo muestra. Cuando la persona lo acepta, la página repite el pedido con `accept_test_notice` y esa versión; ahí se crea el usuario de prueba, con la plantilla de los datos de prueba y con la fecha y la versión del aviso como consentimiento, y se abre la sesión. Las veces siguientes el campo no hace falta.
+  - `user_id`: el usuario elegido de la lista. **Solo en `local`**; en `demo` un pedido que lo trae responde `404`, venga o no con un `access_token`. Es el único caso en que el usuario sale del pedido y no de una sesión. Un `user_id` que no existe, o que es de un usuario con un teléfono real, responde el mismo `404`.
+
+Un pedido sin `user_id` ni `access_token`, o con un `user_id` que no es un UUID, responde `422`.
+
+Un enlace que no existe o que ya se regeneró responde el mismo `404` que la entrada apagada.
 
 ```yaml
+# GET /dev/users
+responses:
+  200:
+    description: The test users of the local environment, ordered by name; empty when there are none
+    content:
+      application/json:
+        example:
+          users:
+            - id: "u-lucia..."
+              name: "Lucía"
+            - id: "u-pablo..."
+              name: "Pablo"
+  404:
+    description: The development entry is disabled, or the environment is not local
+
 # POST /dev/session
 requestBody:
   content:
     application/json:
-      example:
-        user_id: "u-lucia..."
+      examples:
+        demo:
+          value:
+            access_token: "<random value from the personal link>"
+        demo_first_time:
+          value:
+            access_token: "<random value from the personal link>"
+            accept_test_notice: "demo-1"   # the notice version the person accepted
+        local:
+          value:
+            user_id: "u-lucia..."
 responses:
   204:
-    description: Session created for that seed user
+    description: Session created for that test user
     headers:
       Set-Cookie:
         example: "__Host-sid=<random token>; HttpOnly; Secure; SameSite=Strict; Path=/"
+  409:
+    description: The link has no user yet and the test notice was not accepted, or the accepted version is not the current one
+    content:
+      application/json:
+        example:
+          error: "test_notice_required"
+          notice_version: "demo-1"
+  403:
+    description: The request did not come from the page of the API itself, or it is not JSON
   404:
-    description: The development entry is disabled, or the user does not exist
+    description: The development entry is disabled, the link is unknown or was regenerated, user_id was sent outside local, or user_id is not a test user
+  422:
+    description: Neither user_id nor access_token was sent, or user_id is not a UUID
+```
+
+### `GET /me`
+
+Dice de quién es la sesión del pedido. Es lo que consulta el dashboard al cargar, porque la
+cookie es `HttpOnly` y la página no la puede leer. Existe en todos los entornos y no depende
+de la entrada de desarrollo. Cuenta como actividad de la sesión.
+
+Devuelve solo `id` y `name`. Se amplía cuando una pantalla necesite otro dato del usuario.
+
+```yaml
+# GET /me
+responses:
+  200:
+    description: The user of the session
+    content:
+      application/json:
+        example:
+          id: "u-lucia..."
+          name: "Lucía"
+  401:
+    description: No valid session — missing, unknown, revoked or expired, same response for all
+    content:
+      application/json:
+        example:
+          error: "unauthorized"
 ```
 
 ### `GET /family-groups`, `POST /family-groups`, `POST /family-groups/{family_group_id}/invitations` y `DELETE /family-groups/{family_group_id}/invitations/{invitation_id}`

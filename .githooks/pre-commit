@@ -1,5 +1,5 @@
 #!/bin/sh
-# Verifica documentación y arquitectura antes de cada commit.
+# Verifica documentación, arquitectura y contrato de la API antes de cada commit.
 # Se activa con:  git config core.hooksPath .githooks
 # Para saltearlo puntualmente:  git commit --no-verify
 
@@ -41,10 +41,18 @@ if echo "$staged" | grep -qE '\.md$|^scripts/verify_docs\.py$'; then
     run scripts/verify_docs.py
 fi
 
-# Arquitectura: cuando cambia código de backend/frontend o el propio verificador.
-if echo "$staged" | grep -qE '^(backend|frontend)/|^scripts/verify_architecture\.py$'; then
+# Arquitectura: cuando cambia código de backend/frontend, el árbol de carpetas de la
+# arquitectura o el propio verificador.
+if echo "$staged" | grep -qE '^(backend|frontend)/|^docs/02-arquitectura\.md$|^scripts/verify_architecture\.py$'; then
     echo ""
     run scripts/verify_architecture.py
+fi
+
+# Contrato de la API: cuando cambia el contrato versionado, su especificación, la API o el
+# propio verificador.
+if echo "$staged" | grep -qE '^frontend/src/api/openapi\.json$|^docs/04-api\.md$|^backend/app/adapters/inbound/api/|^scripts/verify_api_contract\.py$'; then
+    echo ""
+    run scripts/verify_api_contract.py
 fi
 
 if [ "$status" -ne 0 ]; then

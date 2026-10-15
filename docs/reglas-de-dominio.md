@@ -13,12 +13,12 @@ Antes de escribir código para cualquier ticket de dominio, leer este documento 
 
 ## 1. Registro de un movimiento: qué se asume y qué se confirma
 
-**Qué se asume y qué se confirma**: para que cargar un gasto sea un solo mensaje, el asistente completa solo lo que puede resolver sin adivinar — la **fecha** es la de hoy salvo que el mensaje diga otra cosa, la **moneda** es la de la cuenta que el mensaje nombra, o la primaria del usuario si no nombra ninguna, salvo que se indique otra, y la **categoría** se ubica entre las existentes, sugiriendo crear una nueva solo si no encaja en ninguna. Todo eso aparece explícito en el mensaje de confirmación, donde el usuario corrige cualquiera de esos valores con una respuesta corta. En cambio hay datos que **requieren confirmación del usuario**: el **monto**, si es **gasto o ingreso** cuando el mensaje no lo deja claro, la **cuenta** (imputarla mal rompe el saldo calculado) y **a qué presupuesto se imputa el gasto** — la fecha acota los períodos posibles, pero elegir si el gasto pesa sobre el presupuesto individual o el familiar es una decisión del usuario, no algo que el sistema pueda deducir. El asistente propone lo más probable y el usuario confirma. Lo ya interpretado queda guardado mientras tanto, así se responde solo lo que falta y no se repite el mensaje entero.
+**Qué se asume y qué se confirma**: para que cargar un gasto sea un solo mensaje, el asistente completa solo lo que puede resolver sin adivinar — la **fecha** es la de hoy salvo que el mensaje diga otra cosa, la **moneda** es la de la cuenta que el mensaje nombra, o la primaria del usuario si no nombra ninguna, salvo que se indique otra, y la **categoría** se ubica entre las existentes, sugiriendo crear una nueva solo si no encaja en ninguna. Todo eso aparece explícito en el mensaje de confirmación, donde el usuario corrige cualquiera de esos valores con una respuesta corta. En cambio hay datos que **requieren confirmación del usuario**: el **monto**, si es **gasto o ingreso** cuando el mensaje no lo deja claro, la **cuenta** (imputarla mal rompe el saldo calculado) y **a qué presupuesto se imputa el gasto** — la fecha acota los períodos posibles, pero elegir si el gasto pesa sobre el presupuesto individual o el familiar es una decisión del usuario, no algo que el sistema pueda deducir. El asistente propone lo más probable y el usuario confirma. Si hay un solo presupuesto posible, no hay nada que decidir y no se pregunta (ver abajo). Lo ya interpretado queda guardado mientras tanto, así se responde solo lo que falta y no se repite el mensaje entero.
 
 **Campos obligatorios de un movimiento.** Una fila en `TRANSACTION` solo existe con todos estos datos presentes: `amount`, `currency`, `type`, `transaction_date`, `category_id`, `account_id` y `budget_period_id` — todos `NOT NULL` en la base de datos, así que ninguna vía de carga puede insertar un movimiento a medias. Lo que cambia entre ellos es **de dónde sale el valor**, no si es obligatorio:
 
 - **Resueltos por el sistema, sin preguntar:** `transaction_date` (hoy en la zona horaria del usuario, salvo que el mensaje indique otra fecha), `currency` (la de la cuenta que el mensaje nombra, o la primaria del usuario si no nombra ninguna, salvo indicación contraria) y `category_id` (resuelto contra las categorías existentes; si ninguna encaja, se sugiere crear una). Quedan visibles en el mensaje de confirmación, que es donde el usuario los corrige.
-- **Pedidos o confirmados por el usuario:** `amount`, `type` si el mensaje no lo deja claro, `account_id` siempre que no se mencione una cuenta, y `budget_period_id` **siempre**. Con el presupuesto el sistema no decide solo: `transaction_date` acota los períodos candidatos (y si el usuario pertenece a un grupo familiar, esa fecha cae dentro de su período individual y del familiar a la vez), pero cuál de ellos absorbe el gasto es una decisión del usuario, no algo derivable. El asistente propone el candidato más probable y el usuario confirma o elige otro; ninguna transacción se imputa a un presupuesto sin ese visto bueno. Hay dos excepciones a que ese visto bueno lo dé el propio usuario en el momento: las reglas recurrentes (§ 8) y el dueño de un grupo familiar que saca a un miembro con pendientes abiertos (§ 10).
+- **Pedidos o confirmados por el usuario:** `amount`, `type` si el mensaje no lo deja claro, `account_id` siempre que no se mencione una cuenta, y `budget_period_id` cuando hay más de un período posible. Con el presupuesto el sistema no decide solo: `transaction_date` acota los períodos candidatos (y si el usuario pertenece a un grupo familiar, esa fecha cae dentro de su período individual y del familiar a la vez), pero cuál de ellos absorbe el gasto es una decisión del usuario, no algo derivable. El asistente propone el candidato más probable y el usuario confirma o elige otro; ninguna transacción se imputa a un presupuesto sin ese visto bueno, salvo cuando hay uno solo posible (ver abajo). Hay dos excepciones a que ese visto bueno lo dé el propio usuario en el momento: las reglas recurrentes (§ 8) y el dueño de un grupo familiar que saca a un miembro con pendientes abiertos (§ 10).
 
 Si falta o queda sin confirmar alguno de los campos que dependen del usuario, el movimiento no se registra: queda como `PENDING_TRANSACTION` hasta que responda. La misma regla aplicará a los movimientos detectados por el parser de emails cuando se implemente (could-have): traen monto, fecha y normalmente cuenta, pero nunca el presupuesto, así que quedarán pendientes de confirmación igual que los manuales incompletos.
 
@@ -27,6 +27,19 @@ Del alcance técnico del Ticket 1:
 - Aplicación de defaults derivables antes de decidir si falta algo: `transaction_date` = hoy si no viene, `currency` = la de la cuenta mencionada si no viene, o la primaria del usuario si tampoco se menciona una cuenta.
 - Resolución de cuenta por nombre si se menciona — **sin fallback ni cuenta por defecto**: si no se menciona, se pregunta.
 - Mensaje de confirmación que lista también los valores resueltos por defecto (fecha, moneda, categoría) y acepta una corrección posterior sobre cualquiera de ellos.
+
+**Con un solo presupuesto posible, no se pregunta.** La confirmación del presupuesto existe
+porque quien tiene un grupo puede imputar el mismo gasto a su presupuesto o al del grupo, y eso
+el sistema no lo puede deducir. Quien tiene un solo presupuesto donde ese movimiento puede ir no
+tiene nada que elegir, y preguntarle igual sería un mensaje de más en cada gasto. La regla es
+exacta: se cuentan los períodos que cubren la fecha del movimiento, el individual del usuario y
+el de cada grupo del que es miembro vigente, estén confirmados o en borrador. Si hay exactamente
+uno y está confirmado, el movimiento se imputa a ese sin preguntar, y el mensaje de confirmación
+dice a qué presupuesto fue, igual que dice la fecha, la moneda y la categoría. Si hay más de uno,
+se pregunta siempre, aunque uno parezca más probable. Si el único está en borrador, el movimiento
+queda pendiente como cualquier otro que cae en un período sin confirmar (§ 3). No es una
+elección del sistema: con un solo candidato no hay entre qué elegir. Cuando el usuario se suma a
+un grupo, o crea uno, vuelve a tener dos candidatos y se le vuelve a preguntar.
 
 **Hoy es el día en que el usuario escribió.** La fecha por defecto de un movimiento es el día en
 que el usuario mandó el mensaje, en su zona horaria, no el día en que Platita lo procesa. Al
@@ -114,7 +127,9 @@ un agente de bolsa, se mueve solo con transferencias desde y hacia otras cuentas
 aportar es transferirle plata, y retirar es transferir desde ella. No lleva gastos, ingresos ni
 reglas recurrentes, y la base lo impone. Lo que pasa adentro, como comprar CEDEARs, cobrar
 dividendos o la suba y baja de los precios, no se registra. Por eso su saldo es lo aportado
-neto: lo transferido menos lo retirado. Puede quedar negativo, si el usuario retiró más de lo que
+neto: lo que el usuario declaró tener ahí al dar de alta la cuenta, más lo transferido, menos lo
+retirado. Lo declarado al alta cuenta como aportado, igual que el saldo inicial de cualquier
+otra cuenta. Puede quedar negativo, si el usuario retiró más de lo que
 aportó, y el dashboard lo muestra como "aportado neto" y no como saldo. Platita no sabe cuánto
 vale la cartera, y la cuenta no entra en el contraste mensual.
 
@@ -271,7 +286,7 @@ presupuesto que el usuario todavía no aprobó.
 
 Del alcance técnico del Ticket 1:
 
-- Resolución de `budget_period_id`: a partir de `transaction_date` se arman los períodos candidatos del usuario (individual y de sus grupos familiares) y se propone el más probable — **nunca se asigna sin confirmación explícita del usuario**.
+- Resolución de `budget_period_id`: a partir de `transaction_date` se arman los períodos candidatos del usuario (individual y de sus grupos familiares) y se propone el más probable — **nunca se asigna sin confirmación explícita del usuario**, salvo que el candidato sea uno solo (§ 1).
 
 Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-principales) · [restricción XOR en 3.2](03-modelo-de-datos.md#budget_period) · [BUDGET_PERIOD en 3.2](03-modelo-de-datos.md#budget_period) · [HU2](05-historias-de-usuario.md).
 
@@ -291,6 +306,9 @@ mantiene los rubros legibles.
 |---|---|
 | Gasto | Supermercado · Comida afuera y delivery · Vivienda (alquiler y expensas) · Servicios (luz, gas, agua, internet y celular) · Transporte · Salud · Educación · Ropa · Hogar · Salidas y ocio · Suscripciones · Mascotas · Regalos · Impuestos y trámites · Insumos |
 | Ingreso | Sueldo · Aguinaldo · Honorarios · Ventas · Jubilación y pensión · Otros ingresos |
+
+Lo que va entre paréntesis aclara qué incluye la categoría y no es parte de su nombre: se
+llaman "Vivienda" y "Servicios".
 
 Las categorías especiales las usa el sistema en flujos concretos, y el usuario las ve igual que
 las demás:
@@ -395,7 +413,7 @@ Cada pendiente pertenece a un lote (`PENDING_BATCH`), y un gasto suelto es un lo
 campos que el modelo había interpretado cambió el usuario antes de confirmar: el monto, el tipo,
 la fecha, la moneda, la categoría o la cuenta que el mensaje nombraba. Suma uno por cada campo
 que una respuesta cambia. No cuenta completar un dato que faltaba ni elegir el presupuesto, que
-se pregunta siempre. El contador no cambia nada de lo que ve el usuario: lo lee solo la métrica
+se pregunta cuando hay más de uno posible. El contador no cambia nada de lo que ve el usuario: lo lee solo la métrica
 de calidad ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
 
 Ver también: [PENDING_TRANSACTION y PENDING_BATCH en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [HU3](05-historias-de-usuario.md).
@@ -455,7 +473,7 @@ Si aparece una candidata, **la fila nueva se guarda igual**, con `duplicate_of` 
 
 Lo que no se duplica es el dinero: **una fila con `duplicate_of` no nulo no entra en ninguna agregación** — ni en el saldo de la cuenta (§ 2), ni en el gastado de un presupuesto, ni en las alertas. Cuenta el original; la fila enlazada queda como evidencia de la otra vía y como el lugar donde el usuario deshace el enlace si el sistema se equivocó y en realidad eran dos gastos distintos.
 
-`TRANSACTION.duplicate_of` referencia otra `TRANSACTION` del mismo usuario cuando el sistema detecta que probablemente describen el mismo gasto real (mismo monto y moneda, fecha cercana, un origen manual y el otro automático). La columna se crea desde la migración inicial, pero la lógica que la puebla depende de la carga por email, que es could-have (ver [1.2](01-producto.md#12-características-y-funcionalidades-principales)).
+`TRANSACTION.duplicate_of` referencia otra `TRANSACTION` del mismo usuario cuando el sistema detecta que probablemente describen el mismo gasto real (mismo monto y moneda, fecha cercana, un origen manual y el otro automático). La columna se crea desde la migración del esquema, pero la lógica que la puebla depende de la carga por email, que es could-have (ver [1.2](01-producto.md#12-características-y-funcionalidades-principales)).
 
 **Entre miembros de un grupo, se pregunta antes de confirmar.** Dos miembros pueden cargar el
 mismo gasto al presupuesto del grupo, por ejemplo el super que pagó uno. Antes de confirmar un
@@ -708,9 +726,9 @@ grupo siguen imputados ahí: siguen pesando en el gastado del presupuesto famili
 visibles para los miembros del grupo. Salir no reescribe la historia del presupuesto.
 
 **No se sale con pendientes abiertos.** Un usuario no puede salir de un grupo mientras tenga
-alguna `PENDING_TRANSACTION` abierta, sea cual sea el presupuesto al que apunte: como el período
-nunca se asigna sin confirmación (§ 1), cualquier pendiente podría terminar en el presupuesto
-familiar. Primero confirma o rechaza cada uno. Rechazar es un cierre explícito del pendiente, no
+alguna `PENDING_TRANSACTION` abierta, sea cual sea el presupuesto al que apunte: como quien tiene un
+grupo confirma siempre el presupuesto (§ 1), cualquier pendiente podría terminar en el
+presupuesto familiar. Primero confirma o rechaza cada uno. Rechazar es un cierre explícito del pendiente, no
 un vencimiento (§ 5).
 
 **Los recurrentes hacia el grupo se pausan.** Al salir, cada `RECURRING_RULE` del usuario con
@@ -751,6 +769,19 @@ usuario, lo primero es pedirle que acepte los términos y la política de privac
 guarda nada más que el mensaje recibido, y no se procesa con IA. Se registra cuándo aceptó y qué
 versión de los términos.
 
+**En el entorno de pruebas, el consentimiento es un aviso de prueba.** Quien prueba Platita por
+el chat web, con un enlace personal, no hace el alta: recibe una cuenta de prueba ya armada. La
+primera vez que abre su enlace ve un aviso: que es un entorno de prueba, que lo que escriba lo
+procesa un proveedor de IA y que sus datos pueden borrarse sin aviso. Hasta que lo acepta no
+existe su usuario ni se guarda nada que haya escrito. Lo único que hay antes es el enlace, con
+una etiqueta que eligió quien opera Platita, igual que de un número habilitado se guarda su HMAC.
+Al aceptar se registran la fecha y la versión del aviso, en los mismos campos que el
+consentimiento real, y se crea su usuario con la plantilla de los datos de prueba: país, moneda,
+cuentas con saldo, un primer período confirmado y un perfil, todos inventados. No son valores
+por defecto de un registro: son datos de prueba, y la persona los ve y los usa como punto de
+partida. El mecanismo está en el
+[ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md).
+
 **El alta tiene una parte obligatoria y corta.** Es lo mínimo para registrar el primer gasto:
 
 1. Consentimiento de términos y política de privacidad.
@@ -768,8 +799,9 @@ primer período de presupuesto, ya confirmado (§ 3).
 
 **El alta corre por el chat.** Desde el segundo paso es la misma conversación por WhatsApp y por
 el chat web de desarrollo. El primero, el consentimiento, depende del canal: en WhatsApp es la
-respuesta al primer mensaje, y cómo llega al chat web una persona que todavía no es usuario está
-sin decidir ([hoja de ruta](hoja-de-ruta.md#decisiones-abiertas)).
+respuesta al primer mensaje. Cómo hace el alta por el chat web una persona que todavía no es
+usuaria está sin decidir ([hoja de ruta](hoja-de-ruta.md#decisiones-abiertas)): en el entorno de
+pruebas no la hace, porque su cuenta de prueba ya viene armada.
 
 **El primer mensaje no se pierde.** Si lo primero que escribió fue un gasto, queda guardado y,
 al terminar la parte obligatoria, se retoma como un pendiente normal (§ 5), sin pedirle que lo
@@ -1036,7 +1068,9 @@ tarjetas. Pagado con tarjeta, es una compra con tarjeta sobre esa cuenta. La res
 cambiar después.
 
 **Saldo, deuda y comprometido.** Como en cualquier cuenta (§ 2), el saldo de la tarjeta cuenta
-solo lo que ya ocurrió: los gastos ya vencidos menos los pagos recibidos. Lo facturado en un
+solo lo que ya ocurrió, con la misma fórmula que cualquier cuenta: los pagos recibidos menos
+los gastos ya vencidos. Una tarjeta con gastos vencidos sin pagar tiene saldo negativo, como
+−$50.000, que es lo que el usuario debe de lo ya vencido. Lo facturado en un
 resumen que todavía no venció no es saldo, es deuda: se muestra aparte como lo que hay que pagar
 en el próximo vencimiento, que es el total del resumen del banco. Un pago cancela primero lo
 vencido y después esa deuda, así que pagar antes del vencimiento la reduce en el momento. Lo

@@ -29,6 +29,7 @@ erDiagram
     APP_USER ||--o| FINANCIAL_PROFILE : "describes"
     APP_USER ||--o{ LOGIN_CODE : "requests"
     APP_USER ||--o{ SESSION : "opens"
+    APP_USER ||--o| DEV_ACCESS_LINK : "enters the demo with"
     APP_USER ||--o{ LLM_USAGE : "consumes"
     ACCOUNT ||--o{ RECURRING_RULE : "is charged by"
     ACCOUNT ||--o{ CARD_STATEMENT : "closes (credit card)"
@@ -72,6 +73,7 @@ erDiagram
     APP_USER ||--o| FINANCIAL_PROFILE : "describes"
     APP_USER ||--o{ LOGIN_CODE : "requests"
     APP_USER ||--o{ SESSION : "opens"
+    APP_USER ||--o| DEV_ACCESS_LINK : "enters the demo with"
     APP_USER ||--o{ LLM_USAGE : "consumes"
     ADVICE_DOCUMENT ||--o{ ADVICE_CHUNK : "is split into"
 
@@ -80,7 +82,7 @@ erDiagram
         string name "NULLABLE until onboarding is completed"
         string whatsapp_phone "UNIQUE, NULLABLE only once the account is deleted"
         string email "NULLABLE"
-        boolean email_connected "DEFAULT FALSE"
+        boolean email_connected "NOT NULL, DEFAULT FALSE"
         string country "NULLABLE until onboarding is completed"
         string time_zone "NULLABLE until onboarding is completed, IANA name, e.g. America/Argentina/Buenos_Aires"
         string primary_currency "NULLABLE until onboarding is completed, FK to CURRENCY"
@@ -92,13 +94,13 @@ erDiagram
         string onboarding_status "NOT NULL, CHECK IN ('in_progress','completed'), DEFAULT 'in_progress'"
         string account_status "NOT NULL, CHECK IN ('active','deactivated','deleted'), DEFAULT 'active'"
         timestamptz deactivated_at "NULLABLE — start of the grace period before deletion"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     FAMILY_GROUP {
         uuid id PK
         string name "NOT NULL"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     USER_GROUP {
@@ -118,12 +120,12 @@ erDiagram
         uuid used_by FK "NULLABLE — the user who joined with it"
         timestamptz used_at "NULLABLE — set together with used_by"
         timestamptz revoked_at "NULLABLE — set when the owner revokes it"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     FINANCIAL_PROFILE {
         uuid user_id PK "FK to APP_USER — at most one profile per user"
-        string income_range "NULLABLE, CHECK IN a fixed set of ranges"
+        string income_range "NULLABLE, CHECK IN ('range_1','range_2','range_3','range_4','range_5') — a range code; the amounts of each range live in the configuration"
         int dependents "NULLABLE, CHECK (dependents >= 0)"
         boolean has_debts "NULLABLE"
         decimal emergency_fund_months "NUMERIC(4,1), NULLABLE, CHECK (emergency_fund_months >= 0)"
@@ -148,7 +150,7 @@ erDiagram
         timestamptz expires_at "NOT NULL — created_at + 5 minutes"
         int attempts "NOT NULL, DEFAULT 0, CHECK (attempts BETWEEN 0 AND 5)"
         timestamptz used_at "NULLABLE — set on the one successful exchange"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     SESSION {
@@ -159,6 +161,14 @@ erDiagram
         timestamptz last_seen_at "NOT NULL, DEFAULT now() — idle expiry counts from here"
         timestamptz expires_at "NOT NULL — created_at + 12 hours, absolute"
         timestamptz revoked_at "NULLABLE — set on logout, logout-all or account deletion request"
+    }
+
+    DEV_ACCESS_LINK {
+        uuid id PK
+        string label "NOT NULL, UNIQUE — tag chosen by the operator; identifies the link in the commands and becomes the name of the test user"
+        uuid user_id FK "NULLABLE, UNIQUE — null until the person accepts the test notice, which is when the test user is created"
+        string token_hash "NOT NULL, UNIQUE — HMAC-SHA256 of the random link value with a server key, never the value"
+        timestamptz created_at "NOT NULL, DEFAULT now() — reset when the link is regenerated"
     }
 
     AUTH_THROTTLE {
@@ -244,7 +254,7 @@ erDiagram
         string primary_currency "NOT NULL, FK to CURRENCY — fixed once confirmed"
         decimal estimated_income "NUMERIC(20,2), NOT NULL, DEFAULT 0"
         string status "NOT NULL, CHECK IN ('draft','confirmed'), DEFAULT 'draft'"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     BUDGET {
@@ -252,14 +262,14 @@ erDiagram
         uuid budget_period_id FK "NOT NULL"
         uuid category_id FK "NOT NULL, UNIQUE (budget_period_id, category_id)"
         decimal limit_amount "NUMERIC(20,2), NOT NULL, > 0"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     CATEGORY {
         uuid id PK
         string name "NOT NULL"
         uuid user_id FK "NULLABLE, NULL = system base category"
-        boolean is_base "DEFAULT FALSE"
+        boolean is_base "NOT NULL, DEFAULT FALSE"
         string kind "NOT NULL, CHECK IN ('expense','income'), UNIQUE (id, kind)"
     }
 
@@ -282,7 +292,7 @@ erDiagram
         string description "NULLABLE"
         date transaction_date "NOT NULL"
         uuid client_request_id "NULLABLE — Idempotency-Key of the dashboard request that created it; UNIQUE (user_id, client_request_id)"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
         timestamptz updated_at "NULLABLE — last change; null while never modified; set by trigger"
         uuid updated_by FK "NULLABLE — user who made the last change; null if never modified or changed by a scheduled process"
         timestamptz deleted_at "NULLABLE — set when the user deletes it; the row stays and leaves every aggregate"
@@ -305,7 +315,7 @@ erDiagram
         int threshold "NOT NULL, CHECK (threshold BETWEEN 1 AND 100), percentage, UNIQUE (budget_id, threshold, user_id)"
         uuid user_id FK "NOT NULL — who received it; in a family budget, one row per member"
         uuid outbound_message_id FK "NOT NULL — the alert that was queued"
-        timestamptz sent_at "DEFAULT now()"
+        timestamptz sent_at "NOT NULL, DEFAULT now()"
     }
 ```
 
@@ -337,7 +347,7 @@ erDiagram
         int closing_day "NULLABLE, 1 to 31 — only for credit_card"
         int due_day "NULLABLE, 1 to 31 — only for credit_card"
         boolean uses_linked_cards "NULLABLE — only for digital_wallet; null until asked whether the user pays with cards linked to it"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     CARD_STATEMENT {
@@ -363,7 +373,7 @@ erDiagram
         string description "NULLABLE"
         string source "NOT NULL, CHECK IN ('manual','automatic')"
         uuid client_request_id "NULLABLE — Idempotency-Key of the dashboard request that created it; UNIQUE (user_id, client_request_id)"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
         timestamptz updated_at "NULLABLE — last change; null while never modified; set by trigger"
         uuid updated_by FK "NULLABLE — user who made the last change; null if never modified or changed by a scheduled process"
         timestamptz deleted_at "NULLABLE — set when the user deletes it; the row stays and leaves every aggregate"
@@ -388,8 +398,8 @@ erDiagram
         date next_execution "NOT NULL — date of the next occurrence; for yearly rules it is the only source of the date"
         int occurrences "NULLABLE, CHECK (occurrences >= 1) — total occurrences, e.g. the number of installments; null when it has no end"
         int generated_occurrences "NOT NULL, DEFAULT 0 — advanced together with next_execution; never above occurrences; starts above 0 for a card purchase whose first installments were paid before the card was added"
-        boolean active "DEFAULT TRUE — false pauses it"
-        timestamptz created_at "DEFAULT now()"
+        boolean active "NOT NULL, DEFAULT TRUE — false pauses it"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
         timestamptz updated_at "NULLABLE — last change; null while never modified; set by trigger"
         uuid updated_by FK "NULLABLE — user who made the last change; null if never modified or changed by a scheduled process"
         timestamptz deleted_at "NULLABLE — set when the user deletes it; no further occurrences are generated"
@@ -424,7 +434,7 @@ erDiagram
         uuid user_id FK "NOT NULL"
         string intent "NOT NULL, CHECK IN ('transaction','transfer','recurring_rule','change'), DEFAULT 'transaction' — what it becomes once complete; a card purchase becomes a recurring_rule; change: a correction, deletion or restoration of a confirmed movement"
         jsonb parsed_data "NOT NULL — whatever was successfully extracted so far"
-        string missing_fields "NOT NULL — array of required fields still unanswered"
+        string[] missing_fields "NOT NULL — array of required fields still unanswered"
         string source "NOT NULL, CHECK IN ('manual','automatic')"
         uuid batch_id FK "NOT NULL, FK (batch_id, source) to PENDING_BATCH (id, source)"
         int position "NOT NULL, 1 to 10 — number shown to the user inside the batch"
@@ -438,7 +448,7 @@ erDiagram
         uuid resolved_by FK "NULLABLE — user who promoted or rejected it; differs from user_id only when a family group owner resolved it"
         timestamptz expires_at "NULLABLE — discarded if never completed; null only for pendings of a recurring rule, which never expire"
         int corrected_fields_count "NOT NULL, DEFAULT 0, CHECK (corrected_fields_count >= 0) — fields interpreted by the model that the user changed before confirming; read only by the quality metric"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     PENDING_BATCH {
@@ -450,7 +460,7 @@ erDiagram
         uuid confirmation_message_id FK "NULLABLE — outbound message that confirmed the batch once closed; indexed; quoting it targets the batch's movements"
         string status "NOT NULL, CHECK IN ('open','closed'), DEFAULT 'open'"
         timestamptz reminded_at "NULLABLE — set when the one reminder before expiry was sent"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     INBOUND_MESSAGE {
@@ -468,7 +478,7 @@ erDiagram
         timestamptz next_attempt_at "NOT NULL, DEFAULT now()"
         timestamptz locked_until "NULLABLE — lease while a worker processes it"
         timestamptz processed_at "NULLABLE"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     OUTBOUND_MESSAGE {
@@ -484,7 +494,7 @@ erDiagram
         timestamptz next_attempt_at "NOT NULL, DEFAULT now()"
         string provider_message_id "NULLABLE — set once the provider accepts it; always null on web; UNIQUE (provider, provider_message_id)"
         timestamptz sent_at "NULLABLE"
-        timestamptz created_at "DEFAULT now()"
+        timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 
     LLM_CALL {
@@ -521,11 +531,21 @@ erDiagram
   `account`). La tabla de usuarios es `app_user` y no `user`, porque `user` es palabra reservada
   en PostgreSQL y obligaría a escribirla entre comillas en todo SQL escrito a mano. La entidad del
   dominio sigue siendo `User`.
+- **Esquema**: todas las tablas viven en `public`, el esquema por defecto de PostgreSQL. No hay
+  un esquema propio: con una sola base y una sola aplicación no separa nada, y una consulta
+  nombra la tabla sola, como `SELECT * FROM currency`.
 
 ### **3.2. Descripción de entidades principales:**
 
 Cada tabla lleva su descripción y, si las tiene, sus restricciones de integridad. Están agrupadas
 por área, en el mismo orden que los diagramas de [3.1](#31-diagrama-del-modelo-de-datos).
+
+Toda restricción lleva nombre, con un prefijo según su tipo: `pk_` para una clave primaria,
+`uq_` para una clave o un índice único, `fk_` para una clave foránea, `ck_` para un `CHECK` y
+`ex_` para una exclusión. El prefijo no es decorativo. PostgreSQL informa igual una clave
+primaria repetida y una clave única repetida, y el backend las distingue por el nombre: la
+primera es una falla del código, y la segunda, un conflicto que el dominio prevé
+([ADR 0001](adr/0001-arquitectura-hexagonal.md)).
 
 #### Usuarios, acceso y educación financiera
 
@@ -558,7 +578,7 @@ Invitación de un solo uso para sumarse a un grupo. El dueño la genera y compar
 
 ##### FINANCIAL_PROFILE
 
-Respuestas opcionales del usuario que permiten que un consejo se cruce con su situación real, más allá de sus gastos. Todo es nulable porque cada pregunta se puede saltear, y `updated_at` indica si el dato puede haber quedado viejo. El ingreso se guarda por rango y no exacto. Son datos sensibles, por lo que la política de privacidad tiene que cubrirlos explícitamente. Las preguntas están en [reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos).
+Respuestas opcionales del usuario que permiten que un consejo se cruce con su situación real, más allá de sus gastos. Todo es nulable porque cada pregunta se puede saltear, y `updated_at` indica si el dato puede haber quedado viejo. El ingreso se guarda por rango y no exacto: la base guarda solo el código del tramo, de `range_1` a `range_5`, y los montos de cada tramo viven en la configuración, así actualizarlos por inflación no exige una migración. Son datos sensibles, por lo que la política de privacidad tiene que cubrirlos explícitamente. Las preguntas están en [reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos).
 
 ##### LOGIN_CODE
 
@@ -575,6 +595,15 @@ Sesión del dashboard, creada al canjear un código de login. El token viaja en 
 **Restricciones:**
 
 - En `SESSION`, `UNIQUE (token_hash)`, y `expires_at` posterior a `created_at` (`CHECK`). Una sesión vale mientras `revoked_at` sea nulo, no haya pasado `expires_at` y `last_seen_at` tenga menos de 30 minutos.
+
+##### DEV_ACCESS_LINK
+
+El enlace personal con que una persona entra a probar al entorno `demo`, mientras no exista el login por código ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). El comando que lo crea guarda solo una etiqueta que elige quien opera; no guarda nada que la persona haya escrito. `user_id` queda nulo hasta que la persona abre el enlace y acepta el aviso de prueba: recién ahí se crea su usuario, con la etiqueta como nombre, un teléfono inventado, el aviso como consentimiento y la plantilla de los datos de prueba, así que `APP_USER` sigue sin tener filas de nadie que no haya aceptado. Guarda un HMAC del valor del enlace, nunca el valor: quien lea la tabla no puede entrar como nadie. Regenerar el enlace reemplaza el HMAC, y el enlace anterior deja de servir. Regenerarlo revoca además las sesiones abiertas de ese usuario. Es parte del andamio: la tabla la crea la misma migración en todos los entornos, pero en `production` queda vacía, porque ahí no existen ni la ruta ni los comandos que la usan. Se quita junto con la entrada de desarrollo.
+
+**Restricciones:**
+
+- En `DEV_ACCESS_LINK`, `UNIQUE (user_id)` y `UNIQUE (token_hash)`: `UNIQUE (label)`: cada usuario de prueba tiene un solo enlace, un enlace abre una sola cuenta, y la etiqueta alcanza para decirle a un comando cuál regenerar. Los enlaces y sus usuarios se borran reiniciando la base de `demo`; no hay borrado por cuenta mientras no exista el código por WhatsApp.
+- En `APP_USER`, el usuario de prueba guarda en `terms_version` la versión del aviso de prueba, como `demo-1`, y no la de los términos del producto.
 
 ##### AUTH_THROTTLE
 
@@ -602,7 +631,7 @@ Base de conocimiento de educación financiera curada por el equipo del producto 
 
 **Restricciones:**
 
-- `ADVICE_DOCUMENT` y `ADVICE_CHUNK` no se crean en la migración inicial. Van en una migración posterior, cuando se elija el modelo de embeddings, porque la columna `embedding` necesita la dimensión de ese modelo. La extensión pgvector sí se habilita en la primera.
+- `ADVICE_DOCUMENT` y `ADVICE_CHUNK` no se crean en la migración del esquema. Van en una migración posterior, cuando se elija el modelo de embeddings, porque la columna `embedding` necesita la dimensión de ese modelo. La extensión pgvector sí se habilita en la primera.
 - En `ADVICE_DOCUMENT`, `UNIQUE (slug)`: cargar dos veces el mismo archivo actualiza el documento en vez de duplicarlo.
 
 ##### ADVICE_CHUNK
@@ -625,7 +654,7 @@ Historial de indicadores de mercado que usan los consejos: en el MVP, la tasa pr
 
 ##### CURRENCY
 
-Catálogo de monedas ISO 4217, cargado como dato de referencia en una migración y compartido por todos los usuarios. Existe para que la moneda no sea texto libre: toda columna de moneda la referencia.
+Catálogo de las monedas nacionales en uso de ISO 4217, sin los códigos de fondos ni de metales, cargado como dato de referencia en una migración y compartido por todos los usuarios. Existe para que la moneda no sea texto libre: toda columna de moneda la referencia.
 
 ##### EXCHANGE_RATE
 
@@ -681,14 +710,14 @@ Gasto o ingreso ya completo y válido — si está en esta tabla, tiene cuenta, 
 - La categoría de un movimiento es del mismo tipo que el movimiento: `TRANSACTION (category_id, type)` es una clave foránea compuesta contra `CATEGORY (id, kind)`, apoyada en el `UNIQUE (id, kind)`. Los valores de `type` y de `kind` son los mismos (`expense`, `income`) para que la clave funcione. Lo mismo vale para `RECURRING_RULE (category_id, type)`: una regla de ingreso usa una categoría de ingreso.
 - En `TRANSACTION`, `UNIQUE (user_id, client_request_id)`: un pedido repetido del dashboard, con la misma `Idempotency-Key`, no crea un segundo movimiento ([la API](04-api.md)). Las filas con `client_request_id` nulo, las que no vienen del dashboard, no entran en la restricción.
 - `TRANSACTION.amount` lleva `CHECK (amount > 0)`: guarda la magnitud, nunca el signo. Si el movimiento resta o suma lo dice `type`, que es el único lugar donde vive esa distinción — un monto negativo con `type = 'expense'` sumaría al saldo en vez de restar.
-- La cuenta de un movimiento es del mismo usuario, y la base lo impone: `TRANSACTION (account_id, user_id)` es una clave foránea compuesta contra `ACCOUNT (id, user_id)`, apoyada en un `UNIQUE (id, user_id)` en `ACCOUNT`. Así un error al resolver una cuenta por nombre no puede imputar un gasto a la cuenta de otro usuario. En `RECURRING_RULE` la clave es `(account_id, user_id, currency)` contra `ACCOUNT (id, user_id, currency)`, porque una regla va siempre en la moneda de su cuenta. Que el período familiar sea de un grupo al que el usuario pertenece, y que la categoría sea suya o del catálogo base, no se puede expresar con una clave foránea: lo valida la aplicación dentro de la misma transacción. La regla está en [reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado).
+- La cuenta de un movimiento es del mismo usuario, y la base lo impone: `TRANSACTION (account_id, user_id)` es una clave foránea compuesta contra `ACCOUNT (id, user_id)`, apoyada en un `UNIQUE (id, user_id)` en `ACCOUNT`. Así un error al resolver una cuenta por nombre no puede imputar un gasto a la cuenta de otro usuario. En `RECURRING_RULE` la clave es `(account_id, user_id, currency)` contra `ACCOUNT (id, user_id, currency)`, porque una regla va siempre en la moneda de su cuenta. El período individual de un movimiento también es del mismo usuario: el trigger `BEFORE INSERT OR UPDATE` de `TRANSACTION` rechaza uno imputado al período individual de otro. Que el período familiar sea de un grupo al que el usuario pertenece, y que la categoría sea suya o del catálogo base, no se puede expresar con una clave foránea ni con ese trigger: lo valida la aplicación dentro de la misma transacción. La regla está en [reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado).
 - **Una sola cotización por movimiento.** Intervienen tres monedas: la del movimiento (`currency`), la de su cuenta y la de su período. Un trigger `BEFORE INSERT OR UPDATE` en `TRANSACTION` lee la moneda de la cuenta y la del período, porque un `CHECK` no puede mirar otra tabla, y rechaza la fila si entre las tres hay más de dos monedas distintas, si falta `exchange_rate` cuando alguna difiere, o si viene informada cuando las tres coinciden. `exchange_rate > 0` (`CHECK`). El fundamento está en el [ADR 0011](adr/0011-cotizaciones-con-adaptador-generico-configurable.md).
 - Los montos convertidos no se guardan: se calculan con la cotización guardada y se redondean a 2 decimales fila por fila, antes de sumar. Lo que se mueve en la cuenta es `amount` si `currency` es la de la cuenta, y `ROUND(amount × exchange_rate, 2)` si no; lo que pesa en el presupuesto se calcula igual contra la moneda del período. Como la cotización queda en la fila, el cálculo da siempre lo mismo. Es la cotización que el usuario vio y confirmó ([reglas de dominio § 6](reglas-de-dominio.md#6-multimoneda-y-cotización)), y la que el dashboard muestra junto al movimiento ([HU4](05-historias-de-usuario.md)).
 - En `TRANSACTION`, `recurring_rule_id` y `occurrence_date` van los dos nulos o los dos informados (`CHECK`), con `UNIQUE (recurring_rule_id, occurrence_date)`: una regla recurrente genera como mucho un movimiento por ocurrencia. Si el proceso programado corre dos veces o se reintenta, el segundo insert choca con la clave en vez de duplicar el cargo. La clave va sobre `occurrence_date` y no sobre `transaction_date` porque en una tarjeta el movimiento lleva la fecha de vencimiento del resumen, que puede ser la misma para dos ocurrencias. Las filas con `recurring_rule_id` nulo no entran en la restricción.
 - En `TRANSACTION`, `TRANSFER` y `RECURRING_RULE`, `updated_at` y `updated_by` los fija un trigger `BEFORE UPDATE`: la hora del cambio, y el usuario que la aplicación indicó con `SET LOCAL app.actor_id`, o nulo si el cambio lo hace un proceso programado. `updated_by` informado exige `updated_at` informado (`CHECK`). No se guarda el valor anterior; la decisión está en el [ADR 0014](adr/0014-marca-de-edicion-en-movimientos.md).
-- En `TRANSACTION`, `TRANSFER` y `RECURRING_RULE`, borrar es fijar `deleted_at`, y el mismo trigger completa `deleted_by`. `deleted_by` informado exige `deleted_at` informado (`CHECK`). El rol de la aplicación no tiene permiso de `DELETE` sobre ellas: solo el proceso de borrado de cuenta elimina filas. El fundamento está en el [ADR 0015](adr/0015-borrado-logico-de-movimientos.md).
+- En `TRANSACTION`, `TRANSFER` y `RECURRING_RULE`, borrar es fijar `deleted_at`, y el mismo trigger completa `deleted_by`. `deleted_by` informado exige `deleted_at` informado (`CHECK`). El rol de la aplicación, `platita_app`, que crea la migración del esquema, no tiene permiso de `DELETE` sobre ellas: solo el proceso de borrado de cuenta elimina filas. El fundamento está en el [ADR 0015](adr/0015-borrado-logico-de-movimientos.md).
 - `TRANSACTION.refund_of` referencia el gasto que el movimiento devuelve, **del mismo usuario**: clave foránea compuesta `(user_id, refund_of)` contra `(user_id, id)`, igual que `duplicate_of`. Solo un ingreso puede tenerla (`CHECK (refund_of IS NULL OR type = 'income')`), y el movimiento al que apunta tiene que ser un gasto: como un `CHECK` no puede mirar otra fila, lo valida el trigger `BEFORE INSERT OR UPDATE` que ya revisa la cotización. Un ingreso con `refund_of` no suma como ingreso del período: resta del gastado de la categoría del gasto al que apunta, en el período del propio ingreso ([reglas de dominio § 16](reglas-de-dominio.md#16-reintegros-devoluciones-y-plata-que-te-deben)).
-- `TRANSACTION.paired_with` enlaza las dos mitades de un retiro o de un aporte del titular: un gasto y un ingreso con el mismo monto, moneda, fecha y, si la llevan, la misma `exchange_rate`, uno en un período de grupo y el otro en el período individual del usuario, en cualquiera de los dos sentidos. Cada mitad puede ir sobre la misma cuenta o sobre cuentas distintas del usuario. Es una clave foránea compuesta `(user_id, paired_with)` contra `(user_id, id)`, y cada mitad apunta a la otra. El trigger `BEFORE INSERT OR UPDATE` de `TRANSACTION` rechaza un par que no cumpla esas condiciones, que no sea un gasto y un ingreso, o cuyas dos mitades estén en períodos de grupo o las dos en el individual. Las dos mitades se insertan en la misma transacción, con la restricción diferida hasta el commit ([reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad)).
+- `TRANSACTION.paired_with` enlaza las dos mitades de un retiro o de un aporte del titular: un gasto y un ingreso con el mismo monto, moneda, fecha y, si la llevan, la misma `exchange_rate`, uno en un período de grupo y el otro en el período individual del usuario, en cualquiera de los dos sentidos. Cada mitad puede ir sobre la misma cuenta o sobre cuentas distintas del usuario. Es una clave foránea compuesta `(user_id, paired_with)` contra `(user_id, id)`, y cada mitad apunta a la otra. Un trigger de restricción propio de `TRANSACTION`, distinto del que valida la cotización, rechaza un par que no cumpla esas condiciones, que no sea un gasto y un ingreso, cuyas dos mitades estén en períodos de grupo o las dos en el individual, cuya mitad individual esté en el período de otro usuario, o en el que una mitad no apunte de vuelta a la otra. Las dos mitades se insertan en la misma transacción, así que ese trigger y la clave foránea quedan diferidos hasta el commit. `paired_with` no cambia una vez puesto: el trigger `BEFORE UPDATE` de `TRANSACTION` rechaza el cambio, porque un retiro o un aporte se borra marcando las dos mitades y el vínculo queda ([reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad)).
 - `TRANSACTION.duplicate_of` referencia otra `TRANSACTION` **del mismo usuario** cuando ambas describen probablemente el mismo gasto real. Esa pertenencia se impone en la base: la autorreferencia es una clave foránea compuesta `(user_id, duplicate_of)` contra `(user_id, id)`, apoyada en un `UNIQUE (user_id, id)` en `TRANSACTION`; la columna sigue siendo nullable. Sin eso un movimiento podría enlazarse al de otro usuario. El criterio de detección, y cuándo se puebla la columna, están en [reglas de dominio § 7](reglas-de-dominio.md#7-chequeo-de-duplicados-entre-origen-manual-y-automático).
 
 #### Cuentas, tarjeta de crédito, transferencias y reglas recurrentes
@@ -751,6 +780,7 @@ Movimiento a medio completar, todavía no registrado. Puede terminar siendo un g
 **Restricciones:**
 
 - En `PENDING_TRANSACTION`, `status = 'promoted'` si y solo si está informada la columna de resultado que corresponde a su `intent` —`resulting_transaction_id`, `resulting_transfer_id` o `resulting_recurring_rule_id`—, y las otras dos son siempre nulas (`CHECK`). Un pendiente con `intent = 'change'` no tiene columna de resultado: las tres son siempre nulas, porque no crea una fila sino que cambia una existente. Un pendiente generado por una regla recurrente, incluida una cuota de tarjeta, tiene `intent = 'transaction'` (`CHECK`), porque lo que genera es un gasto o un ingreso. Un pendiente `open` es el que bloquea la salida de un grupo familiar.
+- En `PENDING_TRANSACTION`, cada columna de resultado lleva su `UNIQUE`: dos pendientes no quedan enlazados al mismo movimiento, a la misma transferencia ni a la misma regla. Los nulos no chocan, así que los pendientes sin promover no entran en la restricción.
 - En `PENDING_TRANSACTION`, un pendiente tiene el mismo `source` que su lote: clave foránea compuesta `(batch_id, source)` contra `PENDING_BATCH (id, source)`, así un lote nunca mezcla manuales y automáticos. `UNIQUE (batch_id, position)` y `CHECK (position BETWEEN 1 AND 10)` garantizan que cada número que ve el usuario señala un solo pendiente, y que un lote no pasa de 10. La regla de lotes está en [reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración).
 - En `PENDING_TRANSACTION`, `expires_at` es nulo si y solo si `recurring_rule_id` está informado (`CHECK`): los pendientes de un recurrente, incluidas las cuotas de tarjeta, no vencen, y todos los demás sí. `recurring_rule_id` y `occurrence_date` van los dos nulos o los dos informados (`CHECK`), con `UNIQUE (recurring_rule_id, occurrence_date)`: una regla recurrente genera como mucho un pendiente por ocurrencia, igual que como mucho un movimiento.
 
@@ -775,7 +805,7 @@ Todo mensaje que llega por el webhook de WhatsApp o por el chat web de desarroll
 - En `INBOUND_MESSAGE` y `OUTBOUND_MESSAGE`, el contenido y el teléfono (`payload` y `from_phone` en la entrada, `content` y `to_phone` en la salida) son nulos si y solo si `purged_at` está informado (`CHECK`): la purga borra los dos a la vez, como pide [reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos). Solo se purgan mensajes ya procesados, así que el worker, que identifica al remitente por `from_phone` cuando no hay `user_id`, nunca encuentra un pendiente sin teléfono.
 - En `INBOUND_MESSAGE`, `UNIQUE (provider, provider_message_id)`: un mensaje del proveedor se guarda una sola vez, así un reintento del webhook no genera un segundo procesamiento. En un mensaje web el identificador es el usuario de la sesión seguido del código que generó el navegador: el servidor pone la parte del usuario, así la clave es única por usuario y un reenvío del navegador no duplica. El fundamento está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
 - En `INBOUND_MESSAGE`, un mensaje con `provider = 'web'` tiene `user_id` informado (`CHECK`), porque viene de una sesión. Su `from_phone` es el teléfono de ese usuario, así que la restricción de la purga no cambia.
-- El mensaje citado es del mismo usuario, y la base lo impone: `INBOUND_MESSAGE (quoted_outbound_message_id, user_id)` es una clave foránea compuesta contra `OUTBOUND_MESSAGE (id, user_id)`, apoyada en un `UNIQUE (id, user_id)`. Así nadie puede citar la confirmación de otro para corregir sus movimientos. Si el mensaje citado no se encuentra, la columna queda nula y el mensaje se procesa como si no citara nada ([reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)).
+- El mensaje citado es del mismo usuario, y la base lo impone: `INBOUND_MESSAGE (quoted_outbound_message_id, user_id)` es una clave foránea compuesta contra `OUTBOUND_MESSAGE (id, user_id)`, apoyada en un `UNIQUE (id, user_id)`. Como esa clave no se evalúa cuando `user_id` es nulo, un mensaje que cita otro tiene `user_id` informado (`CHECK`). Así nadie puede citar la confirmación de otro para corregir sus movimientos. Si el mensaje citado no se encuentra, la columna queda nula y el mensaje se procesa como si no citara nada ([reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)).
 
 ##### OUTBOUND_MESSAGE
 

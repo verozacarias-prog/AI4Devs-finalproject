@@ -47,7 +47,9 @@ dejó, en síntesis:
 | Validación del diseño por casos de uso | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Recorrer casos cotidianos de usuarios argentinos sobre la especificación, fijar quién accede a la base y dibujar el recorrido completo |
 | Validación contra el módulo de RAG y alcance de la entrega 2 | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Contrastar once definiciones de diseño contra la especificación en modo de solo lectura, resolver cada conflicto con la autora y escribir el resultado en `docs/`, en tres ADR nuevos y en el verificador de arquitectura |
 | Validación contra los módulos de DevSecOps y de observabilidad | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Contrastar seis definiciones de infraestructura, pipeline, revisión de código, seguridad de la capa de IA y observabilidad contra la especificación en modo de solo lectura, resolver los conflictos con la autora y escribir el resultado en `docs/`, en tres ADR nuevos, en un agente revisor y en un command |
-| Código, tests y despliegue | *(pendiente — Entrega 2)* | | |
+| Elección del modelo de lenguaje | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`). Modelos evaluados: GPT-5.4 mini, GPT-5.4 nano y Claude Haiku 5.5 | Armar con la autora los casos y sus resultados esperados, escribir y correr la evaluación contra los tres modelos, y registrar la elección en un ADR |
+| Migración del esquema inicial, con tests primero | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`). El agente `pr-reviewer` corrió dos veces, en un contexto separado | Proponer los casos de test y esperar la aprobación de la autora, escribir los tests y verlos fallar, escribir la migración, y cerrar con `/spec-drift` y el agente revisor |
+| Resto del código, tests y despliegue | *(pendiente — Entrega 2)* | | |
 
 La auditoría de repos de referencia (ver §1, Prompt 2) recomendó configurar y versionar las rules antes de empezar a codear, porque **ninguno de los dos proyectos de ejemplo del curso lo había hecho**. Esa recomendación se siguió al cierre de la Entrega 1. La configuración resultante —contratos, skill, commands, verificadores y hook— está descrita en [`docs/flujo-de-trabajo-con-ia.md`](docs/flujo-de-trabajo-con-ia.md) y no se repite acá.
 
@@ -281,6 +283,34 @@ Se aplicó ahora lo que no depende del código: el agente `pr-reviewer`, el comm
 
 ---
 
+**Prompt 3** — *Claude Code · elección del modelo de lenguaje con una evaluación, y un cambio de elección a mitad de camino*
+
+> "bueno, sigamos con la elección del proveedor de LLM"
+>
+> *(sobre de dónde sacar los precios, y lo que viene después)* "no te sirve buscar en alguna pagina comparadora de modelos como openrouter, o no es para eso la pagina? tene en cuenta que vamos a necesitar usar rag mas adelante"
+>
+> *(sobre el proveedor de embeddings)* "que implica tener un segundo proveedor para embeddings? en el curso de ai4devs no recomiendan que siempre sea el mismo proveedor ?"
+>
+> *(sobre la retención de los datos en el proveedor)* "que se podria revisar? es aceptar eso o tenes peor calidad en las respuestas de platita, me parece que hay que priorizar que el modelo responda bien o no?"
+
+*Qué devolvió y qué se decidió:* la especificación ya decía cómo elegir: unos 20 casos de la validación por casos de uso y casos de inyección, contra dos candidatos, con un filtro de privacidad. La IA propuso los candidatos, armó la tabla de resultados esperados para que la autora la aprobara antes de correr nada, y escribió el programa que corre los casos contra los modelos, que quedó en [`scripts/llm_eval/`](scripts/llm_eval/run_eval.py) junto con el prompt que recibe cada modelo. Fueron 30 casos, tres corridas y tres modelos: GPT-5.4 mini, GPT-5.4 nano y Claude Haiku 5.5. Todo costó menos de un dólar.
+
+La elección cambió una vez, y el motivo es lo que vale registrar:
+
+- **Primero se eligió Claude Haiku 5.5.** Con los primeros 27 casos empataba en calidad con GPT-5.4 mini y costaba casi cinco veces menos. La IA lo recomendó, avisando que es un modelo de Anthropic y que la recomendación llevaba ese sesgo.
+- **El agente revisor encontró que faltaban dos casos** que el ADR 0013 exigía: una orden escondida en la descripción de un movimiento y otra en un documento. La IA los había pasado por alto al armar la lista.
+- **Con esos dos casos la elección se dio vuelta.** Ningún modelo obedeció la orden, pero Haiku dejó de responder: volvía a pedir los mismos datos. Un caso de control, con los mismos datos sin la orden, confirmó que la causa era la orden. La autora eligió GPT-5.4 mini.
+
+Tres decisiones de la autora quedaron escritas en la especificación:
+
+- **La calidad pesa más que la retención.** OpenAI guarda los pedidos hasta 30 días y la alternativa no los retiene. La regla del ADR 0013 pedía "el menor tiempo posible"; pasó a decir que no entrenar con los datos es obligatorio y que la retención se pesa con la calidad y el costo, con un máximo de 30 días.
+- **Un intermediario sirve para consultar precios, no para llamar a los modelos:** sería una empresa más recibiendo los mensajes.
+- **El proveedor de embeddings se elige aparte,** con su propia evaluación. El curso no pide que sea el mismo: pide usar el mismo modelo de embeddings para indexar y para consultar.
+
+Salió el [ADR 0025](docs/adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md), que declara también los límites de la evaluación: es chica, las respuestas en prosa las revisó la IA en una sola corrida, y los pedidos a funciones se midieron con salida estructurada y no con llamadas a herramientas reales. El agente revisor hizo tres pasadas y contrastó cada cifra del ADR contra los archivos de resultados; en la segunda encontró dos afirmaciones de la IA que no coincidían con ellos.
+
+---
+
 ### 2.5. Seguridad
 
 **Prompt 1** — *Claude (claude.ai) · requisitos de seguridad y alcance*
@@ -396,6 +426,32 @@ La corrección citada arriba muestra el ajuste más importante de la sesión. La
 La revisión de `TRANSACTION` la llevó la autora. La IA defendió primero las ocho columnas de monto con un argumento que solo valía si la cotización no se guardaba: que recalcular con la cotización del día cambiaría presupuestos ya cerrados. La autora propuso guardar una sola cotización y calcular los dos montos convertidos, a la cuenta y al presupuesto. Quedaron tres columnas, con un límite de dos monedas por movimiento. Para validar la cotización, la IA recomendó copiar en la fila la moneda de la cuenta y la del período, que permite hacerlo con un `CHECK`. La autora eligió un trigger y fijó que esas monedas no cambian. La decisión quedó en el [ADR 0011](docs/adr/0011-cotizaciones-con-adaptador-generico-configurable.md).
 
 La IA la había registrado primero en un ADR nuevo, porque la convención declaraba inmutables a todos los ADR. La autora cambió la regla: un ADR se corrige en su archivo hasta que su funcionalidad está en producción, lo que se indica con la marca `En producción desde`, y desde ahí es inmutable. El ADR nuevo se fusionó en el 0011 y se eliminó.
+
+---
+
+**Prompt 6** — *Claude Code · la migración del esquema, con los casos aprobados antes de cada test*
+
+> "abrí tarea-esquema y pasame los casos"
+>
+> *(ante la propuesta de un rol de base sin permiso de borrado)* ""sin DELETE sobre esas tres tablas;" cuales son esas tres tablas, y porque el usuario mas poderoso no podria borrar registros de esa tabla?"
+>
+> *(con la lista de 135 casos a la vista)* "apruebo los cuatro bloques, sumá el D, actualiza adrs y el ticket 3"
+>
+> *(al revisar los tests)* "Recorda que en sesiones anteriores, sino buscar el pr, te hice poner un monton de variables que habias puesto hardcodeada, si paso lo mismo ahora, corregilo e incluilo como normal para no que vuelva a pasar"
+>
+> "lo que va a pasar mucho con TDD es que primero van a existir las constantes en el test y despues en el codigo pero las variables tienen que vivir en la aplicacion y los test pueden usar esas constantes, no al revez, que una constante exista en los test y de ahi la use la aplicacion, asi que si se crean primero las constantes en el test y despues se necesitan en la aplicacion hay que moverlas"
+>
+> *(ante las seis diferencias de `/spec-drift`)* "coincido con todos los "cual parece estar mal""
+>
+> *(sobre si un par de retiro o aporte se puede desarmar)* "apruebo los casos, paired_with no cambia una vez puesto"
+
+*Qué devolvió y qué se decidió:* es la primera tarea con código de dominio, y la primera hecha con la regla de tests primero del [ADR 0024](docs/adr/0024-tests-primero-en-el-backend.md). La IA propuso 135 casos sacados de los criterios del [Ticket 3](docs/06-tickets.md) y del [modelo de datos](docs/03-modelo-de-datos.md), y no escribió ningún test hasta la aprobación. Al armarlos apareció que los criterios del ticket eran más cortos que el modelo: veinte restricciones estaban declaradas y nadie las iba a probar. La autora las sumó al ticket.
+
+Los tests se escribieron contra una base todavía sin tablas, fallaron los 197, y recién entonces se escribió la migración: 28 tablas con sus restricciones y triggers, el catálogo de monedas y de categorías, y el rol `platita_app`, que no puede eliminar movimientos ([ADR 0015](docs/adr/0015-borrado-logico-de-movimientos.md)). Cada rechazo comprueba el nombre de la restricción que respondió, para que un test no pase por un error distinto del que busca.
+
+Las decisiones que la especificación no traía las tomó la autora, de a una: cómo se llama el rol y quién lo crea, que el ingreso del perfil se guarda como código de tramo, que las categorías se llaman "Vivienda" y "Servicios", que el catálogo son las monedas nacionales en uso, y que el vínculo de un par no cambia una vez puesto.
+
+El cierre encontró más que la escritura. `/spec-drift` comparó la migración con el modelo columna por columna y dio seis diferencias; dos eran del código, que dejaba pasar lo que el modelo decía que la base impide. El agente revisor, en dos corridas, encontró que un `UPDATE` podía romper un par, que un gasto común se podía imputar al período individual de otro usuario, siete restricciones sin test y una moneda faltante. La tarea terminó en 146 casos y 283 tests, en el [pull request #30](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/30).
 
 ---
 
@@ -587,6 +643,14 @@ La validación por casos de uso no se tocó: es un registro que se regenera, y s
 | 48 | Una especificación en la que cualquier número podía empezar un alta, con el abuso del proveedor como decisión abierta | La autora pidió que solo escriban los números que ella habilita. La IA propuso un comando de operación en vez de una pantalla, que exigía un rol de administrador que no existe |
 | 49 | Pedirle a la autora "el prompt de auditoría del módulo", como si fuera un texto que ella tenía | La autora no supo de qué se le hablaba: la frase venía de su propia tarea y describía un comportamiento, no un texto. La IA explicó de dónde la había sacado y lo redactó desde la descripción |
 | 50 | Otra vez un informe con todo junto: seis decisiones y ocho ajustes, aunque esta vez separados y con una recomendación cada uno | El informe lo pedía la tarea. La IA ofreció además ir de a una, con la escena de uso; la autora contestó una y aprobó el resto según lo recomendado |
+| 51 | Elegir Claude Haiku 5.5 con 27 casos, sin los dos de inyección que el ADR 0013 exigía | El agente revisor marcó la falta. Con esos dos casos Haiku dejó de responder ante datos con una orden escondida, y la autora cambió la elección a GPT-5.4 mini |
+| 52 | Escribir en el ADR que mini omitió un total "en dos de tres corridas" y que un control "respondió bien", sin que los archivos de resultados lo respaldaran | El revisor contrastó cada cifra contra los resultados. Una era un error del control automático de la IA, que no aceptaba "34,0%", y la otra una prueba hecha a mano que no había quedado guardada. Se corrigió la cifra y el control pasó a ser un caso más |
+| 53 | Recomendar GPT-5.4 mini sin pesar que retiene los pedidos 30 días, y avisarlo recién después de que la autora eligió | La autora lo resolvió con un criterio: priorizar que el modelo responda bien. El revisor pidió que ese criterio quedara en la especificación y no solo en la conversación, y se reescribió el punto 4 del ADR 0013 |
+| 54 | Tests con los mismos textos repetidos decenas de veces: nombres de tablas, monedas, tipos de movimiento | La autora recordó que ya lo había corregido en el scaffold. Pasaron a un archivo de constantes de los tests, y la regla quedó escrita en las convenciones de desarrollo |
+| 55 | Escribir en esa regla que un test nunca importa una constante de la aplicación | Era lo contrario de lo que la autora quería. Las constantes viven en la aplicación; con los tests primero suelen nacer en los tests, y se mueven en cuanto la aplicación las necesita |
+| 56 | Permitir desarmar un par de retiro o aporte si se cambiaban las dos mitades juntas | La autora eligió la regla más simple: el vínculo no cambia una vez puesto, porque un par se borra marcando las dos mitades |
+| 57 | Dar por terminada la migración con una regla implementada que no estaba entre los casos aprobados, y con siete restricciones sin test | Lo marcó el agente revisor. Los tests se sumaron después de la implementación, así que no pasaron por rojo; el pull request lo declara como falta contra el ADR 0024 |
+| 58 | Indicar `docker compose up migrations` para actualizar la base local, y dar la tarea por cerrada | El comando usaba la imagen vieja. La IA lo encontró al comprobar la base antes de explicar cómo verla: seguía en la migración anterior. Faltaba `--build` |
 
 El patrón que se repite: la IA tiende a **resolver la ambigüedad por su cuenta** eligiendo un valor por defecto razonable, y a **justificar decisiones técnicas por el esfuerzo** que ahorran en vez de por sus propiedades de diseño. Las dos cosas hay que detectarlas leyendo, porque el resultado siempre suena defendible.
 
@@ -609,6 +673,13 @@ producto, y nombraba cada problema por su tabla o su restricción. De a una, y c
 uso, la autora no solo decidió: en cinco de las diecisiete encontró una solución más simple que
 la propuesta.
 
+Al escribir el primer código aparece otro: la IA **da por terminado lo que pasa sus propios
+controles**. Los tests estaban en verde y la migración coincidía con lo que la IA había leído del
+modelo. Lo que faltaba lo encontraron dos revisiones hechas con otro criterio, la comparación
+columna por columna de `/spec-drift` y el agente revisor en un contexto separado, y una
+comprobación sobre el resultado real, la base de la autora, en vez de sobre el comando que debía
+producirlo.
+
 ---
 
 ## Pendiente para las próximas entregas
@@ -617,7 +688,8 @@ la propuesta.
 - ~~Montar el sistema de documentación viva del módulo 5~~ — hecho al cierre de la Entrega 1: portal, integración continua, `llms.txt` y cuatro ADR. Descrito en [documentación viva](docs/documentacion-viva.md).
 - ~~Comprobar en un navegador real que los diagramas del portal se renderizan~~ — verificado sobre el sitio publicado al cierre de la Entrega 1.
 - Revisar el MCP de GitHub, que falla al conectar por un error de header de autorización. Quedó desactivado al cierre de la Entrega 1; hay que reautenticarlo antes de usarlo para los pull requests.
-- Registrar los prompts de código, tests y despliegue a medida que se escriben, no al cierre.
+- Registrar los prompts de código, tests y despliegue a medida que se escriben, no al cierre.- Registrar el prompt del producto cuando se escriba el adaptador del LLM. El de la evaluación es un borrador y está en `scripts/llm_eval/run_eval.py`.
+
 - Resolver las decisiones D1 a D12 de la [validación por casos de uso](docs/use-case-walkthrough.md), empezando por D1, que bloquea el primer gasto de cada usuario, y volver a correr el mismo prompt para comparar contra esta corrida.
 - Verificar la sincronización entre la documentación (`docs/02-arquitectura.md` §2.3, `docs/03-modelo-de-datos.md`, `docs/04-api.md`) y el código real antes de cada entrega, aplicando la regla de precedencia de `AGENTS.md` §10: la especificación manda, lo que se corrige es el código.
 

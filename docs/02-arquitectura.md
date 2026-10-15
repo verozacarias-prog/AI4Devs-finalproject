@@ -94,11 +94,11 @@ flowchart TB
     subgraph WORKERBOX["Adaptadores de entrada — worker, procesos programados y comandos de operación"]
         MSGWK["Worker de mensajes<br/><i>procesa lo guardado</i>"]
         SCHED["Procesos programados<br/><i>recurrentes, resúmenes,<br/>alertas, vencimientos</i>"]
-        CLI["Comandos de operación<br/><i>carga de la base de conocimiento,<br/>habilitar números</i>"]
+        CLI["Comandos de operación<br/><i>carga de la base de conocimiento,<br/>habilitar números, enlaces de prueba</i>"]
     end
 
     subgraph DOMAIN["Dominio — núcleo hexagonal"]
-        UC["<b>Casos de uso</b><br/>RegisterTransaction · GetBudgetStatus<br/>CalculateAccountBalance · GenerateAlert"]
+        UC["<b>Casos de uso</b><br/>RegisterTransaction · GetBudgetStatus<br/>ListAccounts · GenerateAlert"]
         ENT["<b>Entidades</b><br/>User · Account · Budget<br/>Transaction · Category"]
         PORTS["<b>Puertos</b><br/>interfaces que el dominio declara<br/>y no implementa"]
     end
@@ -166,17 +166,19 @@ El recorrido de un usuario de punta a punta, con el tipo de llamada y las tablas
 
 ### **2.3. Descripción de alto nivel del proyecto y estructura de ficheros**
 
-`Se completa en la Entrega 2 junto con el scaffold real. Estructura prevista (arquitectura hexagonal dentro del backend, nombres de carpetas y ficheros en inglés):`
+Arquitectura hexagonal dentro del backend, con los nombres de carpetas y ficheros en inglés:
 
 ```text
 /backend
   /app
     /domain
-      /entities         # User, Account, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk
-      /use_cases         # RegisterTransaction, GetBudgetStatus, CalculateAccountBalance, GenerateProactiveAlert...
+      /entities         # User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk, InboundMessage, OutboundMessage, ChatMessage
+      /use_cases         # one folder per feature, such as sessions/, messages/ or accounts/: CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, ListAccounts, SendChatMessage, ListChatMessages, ClaimNextMessage, ProcessNextMessage, ValidateSession, CheckReadiness, GenerateProactiveAlert...
       /ports             # interfaces the domain depends on but does not implement
         - transaction_repository_port.py
         - account_repository_port.py
+        - session_repository_port.py
+        - unit_of_work_port.py
         - vector_store_port.py
         - whatsapp_gateway_port.py
         - exchange_rate_port.py
@@ -184,15 +186,21 @@ El recorrido de un usuario de punta a punta, con el tipo de llamada y las tablas
         - embedding_port.py
         - text_splitter_port.py
         - llm_call_log_port.py
+        - database_health_port.py
+      errors.py          # the errors a business rule foresees, each with a stable code and a category
+      local_date.py      # which day it is for a user, in the time zone of that user
+      account_balance.py # the balance of an account, from what already happened in it
     /adapters
       /inbound
-        /api               # FastAPI routers — translate HTTP into use case calls
+        /api               # the HTTP side: building the app, its middleware and error answers; main.py is the entry point of the API process
+          /routers         # one file per group of endpoints — translate HTTP into use case calls
         /whatsapp_webhook   # translate WhatsApp payloads into use case calls
-        /message_worker     # worker entry point: takes stored messages, calls use cases
+        /message_worker     # the worker: takes stored messages, calls use cases; main.py is the entry point of its process
         /scheduler          # scheduled jobs entry point: calls use cases, never raw SQL
-        /cli                # operator commands: knowledge base load, enabling phone numbers
+        /operator_commands  # commands an operator runs by hand: local test data, knowledge base load, enabling phone numbers, personal links for the demo
       /outbound
-        /postgres           # SQLAlchemy repositories, unit of work and connection setup
+        /postgres           # unit of work, connection setup, and queries.py with all the SQL written by hand
+          /repositories    # one file per repository, each implementing its port
         /pgvector            # VectorStorePort implementation
         /whatsapp_client      # sends outbound WhatsApp messages
         /email_reader          # IMAP/Gmail integration (could-have, not in the MVP)
@@ -200,11 +208,25 @@ El recorrido de un usuario de punta a punta, con el tipo de llamada y las tablas
         /llm_client              # LLM client: classification, interpretation and answers, provider SDK only
         /embedding_client         # embeddings provider client
         /text_splitter             # the only place that imports langchain-text-splitters
-      /observability              # wrappers of the LLM and embedding ports that record each call
+      /observability              # wrappers of the LLM and embedding ports that record each call, and the JSON log format with its redaction filter
+    /shared              # small technical utilities, standard library only: clock.py is the first
+    constants.py         # environments, environment variable names and default values
+    test_data.py         # the template of a test user and the test users of local
+    messages.py          # every message written for a person
+    settings.py          # process configuration, read from environment variables
   /tests
   /migrations          # Alembic
-/frontend
-  ...
+/frontend                # React, TypeScript and Vite (ADR 0026), Tailwind CSS and shadcn/ui (ADR 0027)
+  /src
+    /api                 # API contract exported by the backend, the types generated from it, and the API paths
+    /pages               # one file per screen, with its test next to it
+    /components          # the pieces several screens share, such as the side menu, with their test next to them
+      /ui                # the shadcn/ui components, copied into the project and owned by it
+    /lib                 # small helpers of the components: class-names.ts joins class names
+    messages.ts          # every text the dashboard shows
+    design-tokens.css    # design tokens: the only place with colours, sizes and spacing
+    App.tsx
+    main.tsx
 docs/
   01-producto.md
   02-arquitectura.md
@@ -224,7 +246,7 @@ prompts.md
 llms.txt                    # descripción del proyecto para agentes de IA
 ```
 
-`/backend` y `/frontend` son la estructura prevista para la Entrega 2; el resto es la estructura real del repositorio hoy.
+`/backend` y `/frontend` existen desde el scaffold, con las carpetas que ya tienen código; las demás se crean con lo primero que va en ellas.
 
 ### **2.4. Infraestructura y despliegue**
 
@@ -280,6 +302,8 @@ flowchart TB
 
 **En local, todo se levanta con un comando.** Docker Compose arranca la base, las migraciones, la API y el worker, con una sola imagen para los tres últimos; el orden repite el del despliegue: primero migra un proceso, después arranca el resto ([ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md)).
 
+**Qué rama despliega qué.** La rama de la entrega despliega el entorno `demo`, que hace de entorno de pruebas, y `main` despliega `production` cuando exista, cada uno con su propia base ([ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md)).
+
 Cómo se opera —entornos, pipeline de la aplicación, vuelta atrás de un despliegue, copias de respaldo y observabilidad— está en [Operación](operacion.md), que separa lo ya decidido de lo que sigue como propuesta.
 
 ### **2.5. Seguridad**
@@ -291,7 +315,7 @@ Cómo se opera —entornos, pipeline de la aplicación, vuelta atrás de un desp
 - **Cada llamada al modelo queda registrada sin contenido**: propósito, modelo, tokens, duración, costo y resultado, nunca el texto. No se usa una plataforma externa de observabilidad de LLM, porque recibiría los prompts y las respuestas ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
 - **Retención limitada**: el texto de los mensajes se borra pasado un plazo configurable, y al proveedor de LLM nunca se le envían identificadores ([reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos), [ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md)).
 - **Configuración en YAML versionado**: el plazo de retención de mensajes (`message_retention_days`, 60 por defecto), el plazo de gracia del borrado de cuenta (`account_deletion_grace_days`, 7 por defecto), las cuotas de uso del asistente y el tope diario total, los dos valores de la memoria de conversación (3 intercambios y 30 minutos), los parámetros de partición y de recuperación de la base de conocimiento, los precios por modelo con que se estima el costo de cada llamada, los umbrales de las alertas de presupuesto y las fuentes de cotización viven en archivos YAML del repositorio, no en el código ni en la base.
-- **Entorno declarado y andamios que no arrancan en producción**: la configuración dice si el entorno es `local`, `demo` o `production`. El chat web y la entrada de desarrollo, que abre una sesión sin código, se habilitan solo en los dos primeros; con alguno encendido en `production`, ningún proceso arranca ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
+- **Entorno declarado y andamios que no arrancan en producción**: la configuración dice si el entorno es `local`, `demo` o `production`. El chat web y la entrada de desarrollo, que abre una sesión sin código, se habilitan solo en los dos primeros; con alguno encendido en `production`, ningún proceso arranca. En `demo` se entra solo con un enlace personal, y la primera vez hay que aceptar un aviso de prueba; cada persona que prueba ve únicamente sus datos ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 - **Inyección de prompts**: la defensa principal es que el modelo no puede escribir ni pedir datos de otro usuario. Además, todo dato que entra al prompt va delimitado, y la salida se valida en código antes de enviarla ([ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md)).
 - **El prompt de sistema se escribe como si fuera público**: no lleva secretos ni datos de ningún usuario ([ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md)).
 - **La respuesta del modelo se muestra como texto**: el chat web nunca la interpreta como HTML ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
@@ -303,6 +327,15 @@ Cómo se opera —entornos, pipeline de la aplicación, vuelta atrás de un desp
 
 ### **2.6. Tests**
 
-`Se define con detalle en la Entrega final. Estrategia prevista: tests unitarios sobre los casos de uso del dominio (conversión de moneda, cálculo de saldo por cuenta, categorización, presupuesto ajustado por inflación) usando dobles de prueba en lugar de los adaptadores reales — la ventaja directa de tener puertos —, tests de integración sobre los adaptadores (Postgres, pgvector) y los endpoints principales, y al menos un test end-to-end del flujo principal (registrar un gasto por WhatsApp → verlo reflejado en el saldo de la cuenta y en el presupuesto del dashboard).`
+Cuatro niveles, cada uno con su momento ([ADR 0024](adr/0024-tests-primero-en-el-backend.md)):
+
+| Nivel | Qué prueba | Contra qué | Cuándo se escribe |
+|---|---|---|---|
+| Unitario | El dominio y los casos de uso: conversión de moneda, saldo por cuenta, categorización, pendientes, presupuesto | Dobles de los puertos, incluido el del LLM. Es la ventaja directa de tener puertos | Antes que el código |
+| De integración | Los adaptadores, las restricciones de la base y los endpoints | PostgreSQL real con pgvector, con las migraciones aplicadas desde cero | Antes que el código |
+| De componente | Los estados de cada pantalla: los cuatro, o tres si no muestra datos del usuario | El dashboard, con la API simulada | En el mismo corte que la pantalla |
+| De punta a punta | Al menos el flujo principal: registrar un gasto por WhatsApp y verlo reflejado en el saldo de la cuenta y en el presupuesto del dashboard | El sistema levantado completo | En la entrega final, con la pantalla ya construida |
+
+El método, con quién aprueba los casos y cómo queda a la vista el orden, está en las [convenciones de desarrollo](convenciones-de-desarrollo.md#1-cortes-verticales).
 
 Los escenarios de los recorridos de usuario, con sus montos y resultados esperados, están en la [validación por casos de uso](use-case-walkthrough.md#anexo-a-uso-de-los-casos-en-las-pruebas).

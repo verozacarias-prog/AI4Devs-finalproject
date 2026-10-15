@@ -11,7 +11,7 @@ conversación en la que se hizo: partís de cero, y eso es a propósito.
 
 La rama, o el rango de commits, a revisar. Si no te lo dicen, compará la rama actual contra la
 rama de la entrega con `git diff` y `git log`. Usá Bash solo para leer: `git diff`, `git log`,
-`git show` y los dos verificadores.
+`git show` y los tres verificadores.
 
 ## Qué leés antes de opinar
 
@@ -28,19 +28,39 @@ rama de la entrega con `git diff` y `git log`. Usá Bash solo para leer: `git di
    monto con un nombre que el verificador no reconoce y tipado como `float`.
 2. **Reglas de dominio.** Que el cambio no contradiga `docs/reglas-de-dominio.md`. En especial
    las siete invariantes de `AGENTS.md`, sección 5: ninguna cuenta por defecto, ningún
-   presupuesto sin confirmación, ningún default fuera de fecha, moneda y categoría.
+   presupuesto sin confirmación salvo que sea el único posible, ningún default fuera de fecha,
+   moneda y categoría.
 3. **Datos identificatorios.** Que nada identificatorio viaje al proveedor de LLM o de
    embeddings ni termine en un registro: teléfono, nombre, ids internos, montos y texto del
    usuario (ADR 0013 y ADR 0023).
-4. **Tests.** Que el cambio traiga los suyos. Un endpoint o un caso de uso que toca datos de un
+4. **Tests primero.** En el backend, que el commit de los tests esté antes que el de la
+   implementación (miralo con `git log`), que los casos del corte figuren aprobados en
+   `spec.md` —o, en una rama `tarea-…`, en la descripción del pull request—, que cada test diga de qué criterio de aceptación sale, y que ningún test se
+   haya modificado, deshabilitado o borrado después de su commit sin que el pull request diga
+   quién lo aprobó (ADR 0024). Cualquiera de estas faltas es bloqueante. La descripción del
+   pull request no está en git: si no te la pasaron, pedila o decí que no pudiste comprobar los
+   casos de la tarea. Una tarea que declara "sin lógica que probar" es válida si el cambio de
+   verdad no tiene lógica.
+5. **Tests.** Que el cambio traiga los suyos. Un endpoint o un caso de uso que toca datos de un
    usuario tiene un test en el que otro usuario recibe `404`. Una pantalla tiene los cuatro
-   estados testeados.
-5. **Documentación.** Que `docs/` refleje lo que cambió, en este mismo cambio: endpoints,
+   estados testeados, salvo la que no muestra datos del usuario, que no tiene estado vacío
+   (`docs/convenciones-de-desarrollo.md`, sección 2).
+6. **Documentación.** Que `docs/` refleje lo que cambió, en este mismo cambio: endpoints,
    esquema y reglas de negocio. Si el código y la especificación difieren, es una divergencia:
-   reportala, no elijas un lado (`AGENTS.md`, sección 10).
-6. **Uso del modelo.** Si el cambio toca un prompt, una función de lectura, la base de
+   reportala, no elijas un lado (`AGENTS.md`, sección 10). En un endpoint,
+   `scripts/verify_api_contract.py` compara del contrato hacia `04-api.md`. Vos mirás la
+   otra dirección, que no ve: un estado o una regla que `04-api.md` promete y el contrato
+   no documenta, y un texto de la referencia que diga algo que el código no hace.
+7. **Uso del modelo.** Si el cambio toca un prompt, una función de lectura, la base de
    conocimiento o la validación de salida, que la tabla de `docs/seguridad-llm.md` esté
    actualizada.
+8. **Orden y nombres.** `scripts/verify_architecture.py` chequea dónde va cada tipo de
+   archivo, que ninguno tenga un nombre general como `utils`, y que toda carpeta esté en el
+   árbol de `docs/02-arquitectura.md`. Vos mirás lo que no ve: que cada carpeta y archivo nuevo
+   diga para qué sirve y no cómo se ejecuta (como `cli` en lugar de `operator_commands`), que
+   esté donde lo pone el árbol y no solo nombrado ahí, y que un archivo que crece junte cosas
+   de una sola funcionalidad. Es una observación, salvo que contradiga el árbol, que es una
+   divergencia.
 
 ## Qué entregás
 

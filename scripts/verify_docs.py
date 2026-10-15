@@ -24,6 +24,7 @@ DOCS_DIR = 'docs'
 ADR_DIR = os.path.join(DOCS_DIR, 'adr')
 COMMANDS_DIR = os.path.join('.claude', 'commands')
 SKILLS_DIR = os.path.join('.claude', 'skills')
+AGENTS_DIR = os.path.join('.claude', 'agents')
 CANONICAL = {'README.md', 'CLAUDE.md', 'AGENTS.md', 'LICENSE', 'prompts.md'}
 
 README_SOFT_LIMIT = 95        # ficha (0.1-0.5) + una línea por documento + enlaces
@@ -48,6 +49,10 @@ def read(path):
     return io.open(path, encoding='utf-8').read()
 
 
+def _agent_files():
+    return sorted(glob.glob(os.path.join(AGENTS_DIR, '**', '*.md'), recursive=True))
+
+
 def markdown_files():
     out = [README]
     for name in ('CLAUDE.md', 'AGENTS.md', 'prompts.md'):
@@ -64,6 +69,8 @@ def markdown_files():
             if n.endswith('.md'):
                 out.append(os.path.join(COMMANDS_DIR, n))
     for p in sorted(glob.glob(os.path.join(SKILLS_DIR, '*', 'SKILL.md'))):
+        out.append(p)
+    for p in _agent_files():
         out.append(p)
     return out
 
@@ -240,7 +247,7 @@ def check_fences(files):
 # --- 5. nombres de archivo sin acentos, ñ ni espacios ---------------------------
 def check_names():
     for root, dirs, names in os.walk('.'):
-        if any(p in root for p in ('/.git', 'node_modules', '__pycache__')):
+        if any(p in root for p in ('/.git', 'node_modules', '__pycache__', '.venv')):
             continue
         for n in names + dirs:
             if n.startswith('.'):
@@ -292,7 +299,7 @@ def check_adrs():
     return found
 
 
-# --- 9. commands y skills tienen frontmatter válido -------------------------------
+# --- 9. commands, skills y agentes tienen frontmatter válido -------------------------------
 def _check_frontmatter(path, label, required):
     """Un frontmatter roto no avisa: el command no se carga y el skill pierde todos
     sus campos, cayendo al nombre del directorio y a la primera línea del cuerpo."""
@@ -315,15 +322,41 @@ def _check_frontmatter(path, label, required):
         fail('%s %s no tiene instrucciones debajo del frontmatter' % (label, n))
 
 
+def _declared_name(path):
+    """El `name` del frontmatter, sin comillas. Un `name:` en el cuerpo no cuenta."""
+    lines = read(path).split('\n')
+    if not lines or lines[0].strip() != '---':
+        return None
+    for line in lines[1:]:
+        if line.strip() == '---':
+            return None
+        m = re.match(r'name:\s*(\S.*)', line)
+        if m:
+            return m.group(1).strip().strip('"\'')
+    return None
+
+
 def check_skills():
     found = sorted(glob.glob(os.path.join(SKILLS_DIR, '*', 'SKILL.md')))
     for p in found:
         _check_frontmatter(p, 'el skill', ('name', 'description'))
-        declared = re.search(r'^name:\s*(\S+)', read(p), re.M)
+        declared = _declared_name(p)
         folder = os.path.basename(os.path.dirname(p))
-        if declared and declared.group(1).strip() != folder:
+        if declared and declared != folder:
             fail('el skill %s declara name "%s" pero vive en el directorio "%s"'
-                 % (os.path.relpath(p), declared.group(1).strip(), folder))
+                 % (os.path.relpath(p), declared, folder))
+    return found
+
+
+def check_agents():
+    found = _agent_files()
+    for p in found:
+        _check_frontmatter(p, 'el agente', ('name', 'description'))
+        declared = _declared_name(p)
+        stem = os.path.splitext(os.path.basename(p))[0]
+        if declared and declared != stem:
+            fail('el agente %s declara name "%s" pero el archivo se llama "%s.md"'
+                 % (os.path.relpath(p), declared, stem))
     return found
 
 
@@ -367,6 +400,7 @@ def main():
     adrs = check_adrs()
     commands = check_commands()
     skills = check_skills()
+    agents = check_agents()
 
     print('Verificación de documentación')
     print('  archivos markdown revisados : %d' % len(files))
@@ -375,6 +409,7 @@ def main():
     print('  ADR                         : %d' % len(adrs))
     print('  commands                    : %d' % len(commands))
     print('  skills                      : %d' % len(skills))
+    print('  agentes                     : %d' % len(agents))
     print('  %s                   : %d líneas' % (README, readme_lines))
     print('')
 

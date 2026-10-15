@@ -19,7 +19,7 @@ formato, `lychee` para los enlaces y `Vale` para el estilo de la prosa.
 ## Decisión
 
 Se agrega el flujo `.github/workflows/docs-quality.yml`, que corre en cada pull request, en cada
-integración a la rama principal, y todos los lunes. Repite los dos verificadores propios y suma
+integración a la rama principal, y todos los lunes. Repite los verificadores propios, que hoy son tres, y suma
 dos herramientas:
 
 - `lychee`, para los enlaces externos. Cubre exactamente el hueco que el verificador propio deja

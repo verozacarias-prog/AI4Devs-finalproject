@@ -1,0 +1,827 @@
+{
+  "components": {
+    "schemas": {
+      "AccountItem": {
+        "properties": {
+          "balance": {
+            "description": "The computed balance, in the currency of the account, with its two decimals exactly as computed. In an investment account it is the net contributed.",
+            "title": "Balance",
+            "type": "number"
+          },
+          "balance_kind": {
+            "$ref": "#/components/schemas/BalanceKind",
+            "description": "`balance`, or `net_contributed` in an investment account: what was declared on opening, plus transfers in, minus transfers out. Never added to any total."
+          },
+          "currency": {
+            "description": "The currency of the account, as an ISO 4217 code. Its balance is in it.",
+            "title": "Currency",
+            "type": "string"
+          },
+          "id": {
+            "description": "The identifier of the account.",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the account, unique for its user.",
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/AccountType",
+            "description": "What kind of account it is."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "currency",
+          "balance",
+          "balance_kind"
+        ],
+        "title": "AccountItem",
+        "type": "object"
+      },
+      "AccountList": {
+        "properties": {
+          "accounts": {
+            "description": "The accounts, in the order the dashboard shows them.",
+            "items": {
+              "$ref": "#/components/schemas/AccountItem"
+            },
+            "title": "Accounts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "accounts"
+        ],
+        "title": "AccountList",
+        "type": "object"
+      },
+      "AccountType": {
+        "enum": [
+          "bank_account",
+          "digital_wallet",
+          "broker",
+          "cash",
+          "credit_card",
+          "receivable"
+        ],
+        "title": "AccountType",
+        "type": "string"
+      },
+      "BalanceKind": {
+        "description": "What the number of an account is: its balance, or what was put in an investment.",
+        "enum": [
+          "balance",
+          "net_contributed"
+        ],
+        "title": "BalanceKind",
+        "type": "string"
+      },
+      "ChatConversation": {
+        "properties": {
+          "messages": {
+            "description": "The messages, in the order they happened.",
+            "items": {
+              "$ref": "#/components/schemas/ChatMessageItem"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the next read starts: the last message, or the same cursor when nothing is new. Null only when the conversation is empty.",
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "messages",
+          "next_cursor"
+        ],
+        "title": "ChatConversation",
+        "type": "object"
+      },
+      "ChatMessageItem": {
+        "properties": {
+          "created_at": {
+            "description": "When it was received or written, in the time zone of the user.",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/Direction",
+            "description": "`inbound` if the user wrote it, `outbound` if Platita did."
+          },
+          "id": {
+            "description": "The identifier of the message.",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "quoted_message_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The reply of Platita the user is answering to, if any.",
+            "title": "Quoted Message Id"
+          },
+          "response_kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResponseKind"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What kind of reply it is. Only in a message of Platita."
+          },
+          "text": {
+            "description": "What the user wrote.",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "direction",
+          "text",
+          "quoted_message_id",
+          "response_kind",
+          "created_at"
+        ],
+        "title": "ChatMessageItem",
+        "type": "object"
+      },
+      "ChatMessageRequest": {
+        "properties": {
+          "quoted_message_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The reply of Platita the user is answering to, if any.",
+            "title": "Quoted Message Id"
+          },
+          "text": {
+            "description": "What the user wrote.",
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "ChatMessageRequest",
+        "type": "object"
+      },
+      "DevSessionRequest": {
+        "properties": {
+          "access_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The value of a personal link. Not built yet: it answers `404`.",
+            "title": "Access Token"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The test user to enter as, from the list. Only in the local environment.",
+            "title": "User Id"
+          }
+        },
+        "title": "DevSessionRequest",
+        "type": "object"
+      },
+      "DevUser": {
+        "properties": {
+          "id": {
+            "description": "The identifier of the user.",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name the user is shown with.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "DevUser",
+        "type": "object"
+      },
+      "DevUsers": {
+        "properties": {
+          "users": {
+            "description": "The test users, ordered by name.",
+            "items": {
+              "$ref": "#/components/schemas/DevUser"
+            },
+            "title": "Users",
+            "type": "array"
+          }
+        },
+        "required": [
+          "users"
+        ],
+        "title": "DevUsers",
+        "type": "object"
+      },
+      "Direction": {
+        "description": "Who wrote a message of the conversation: the user, or Platita.",
+        "enum": [
+          "inbound",
+          "outbound"
+        ],
+        "title": "Direction",
+        "type": "string"
+      },
+      "ErrorBody": {
+        "description": "The body of every error. An endpoint adds a field only when the client needs it.",
+        "properties": {
+          "error": {
+            "description": "The code of the error: a short lowercase word that never changes.",
+            "title": "Error",
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "title": "ErrorBody",
+        "type": "object"
+      },
+      "HealthState": {
+        "description": "The only two answers of a health route.",
+        "enum": [
+          "ok",
+          "unavailable"
+        ],
+        "title": "HealthState",
+        "type": "string"
+      },
+      "HealthStatus": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/HealthState",
+            "description": "`ok`, or `unavailable` when the database does not answer."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "HealthStatus",
+        "type": "object"
+      },
+      "InboundStatus": {
+        "enum": [
+          "pending",
+          "processing",
+          "processed",
+          "failed"
+        ],
+        "title": "InboundStatus",
+        "type": "string"
+      },
+      "Me": {
+        "properties": {
+          "id": {
+            "description": "The identifier of the user.",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name the user is shown with.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "Me",
+        "type": "object"
+      },
+      "ResponseKind": {
+        "description": "What kind of reply a message was (docs/03-modelo-de-datos.md, OUTBOUND_MESSAGE).",
+        "enum": [
+          "registration",
+          "query",
+          "advice_information",
+          "advice_education",
+          "advice_decision",
+          "advice_limit_explained",
+          "advice_limit_fixed",
+          "fixed_text",
+          "proactive"
+        ],
+        "title": "ResponseKind",
+        "type": "string"
+      },
+      "StoredChatMessage": {
+        "properties": {
+          "id": {
+            "description": "The identifier of the message.",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/InboundStatus",
+            "description": "`pending` until the worker takes it."
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "StoredChatMessage",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "SessionCookie": {
+        "description": "The token of the session. The API sets it when a session is opened, and the browser sends it by itself.",
+        "in": "cookie",
+        "name": "__Host-sid",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "description": "The API of Platita, a personal and family finance assistant. The dashboard is its only client, and both are served from one origin.\n\n**Session.** It travels in the cookie `__Host-sid`, which the page cannot read. An operation that asks for a session is marked as such, and answers `401` without a valid one.\n\n**Requests that change something.** A `POST`, `PUT`, `PATCH` or `DELETE` must come from the page of the API itself and be JSON: with another `Origin`, without one, or with another `Content-Type`, it answers `403`.\n\n**Errors.** Every error has the same body: its code in `error`, a short lowercase word that never changes. Every response carries the header `X-Request-Id`, the reference to look for in the logs.",
+    "title": "Platita",
+    "version": "dev"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/accounts": {
+      "get": {
+        "description": "The accounts of the user of the session, each with its balance computed from its movements and transfers dated up to today, in the time zone of the user. The balance is never stored. They come first in the primary currency of the user, then in the other currencies by code, and within each currency by name. An account of type `receivable` is money others owe the user: the dashboard does not list it with the others.",
+        "operationId": "accounts_accounts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountList"
+                }
+              }
+            },
+            "description": "The accounts of the user. An empty list when there are none."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "List the accounts and their balance",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "description": "Revokes the session of the request, and only that one, and clears its cookie. The body of the request is ignored.",
+        "operationId": "logout_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "The session was revoked and its cookie cleared."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read."
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Close this session",
+        "tags": [
+          "session"
+        ]
+      }
+    },
+    "/chat/messages": {
+      "get": {
+        "description": "The messages of the web chat of the user of the session, what the user wrote and what Platita replied, in the order they happened. With `after`, only the ones that come after that message: it is what the dashboard asks every few seconds. It does not count as activity of the session.",
+        "operationId": "conversation_chat_messages_get",
+        "parameters": [
+          {
+            "description": "The `next_cursor` of the previous answer. Without it, the whole conversation.",
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The `next_cursor` of the previous answer. Without it, the whole conversation.",
+              "title": "After"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatConversation"
+                }
+              }
+            },
+            "description": "The conversation. An empty list when there is nothing (new)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`after` is not a UUID."
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Read the conversation",
+        "tags": [
+          "chat"
+        ]
+      },
+      "post": {
+        "description": "Stores the message as written by the user of the session, and answers at once without processing it. The reply of Platita is not here: it shows up later in `GET /chat/messages`. The time of the message is the one the server received it at.",
+        "operationId": "send_chat_messages_post",
+        "parameters": [
+          {
+            "description": "A UUID the browser generates once per message, and sends again unchanged if it repeats the request.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "description": "A UUID the browser generates once per message, and sends again unchanged if it repeats the request.",
+              "format": "uuid",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoredChatMessage"
+                }
+              }
+            },
+            "description": "The message was stored, pending. The worker processes it later."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The text is empty, or the header `Idempotency-Key` is missing."
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Write to Platita",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/dev/session": {
+      "post": {
+        "description": "Opens a real session without a login code and returns it in the session cookie. In the local environment the user is chosen from the list, with `user_id`. A personal link, with `access_token`, is the way in of the demo environment and is not built yet: it answers `404`. One of the two is required.",
+        "operationId": "enter_dev_session_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DevSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The session was opened. Its token is in the cookie, and the body is empty."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The development entry is disabled, the user does not exist or is not a test user, `user_id` was sent outside the local environment, or the personal link is unknown. The same answer for all of them."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Neither `user_id` nor `access_token` was sent, or `user_id` is not a UUID."
+          }
+        },
+        "summary": "Enter as a test user",
+        "tags": [
+          "dev"
+        ]
+      }
+    },
+    "/dev/users": {
+      "get": {
+        "description": "The users anyone may enter as: the ones with an invented phone, which starts with `+000`. A user with a real phone is never listed. It asks for no session. It exists only in the local environment.",
+        "operationId": "users_dev_users_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DevUsers"
+                }
+              }
+            },
+            "description": "The test users, ordered by name. An empty list when there are none."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The development entry is disabled, or the environment is not local."
+          }
+        },
+        "summary": "List the test users",
+        "tags": [
+          "dev"
+        ]
+      }
+    },
+    "/healthz": {
+      "get": {
+        "description": "Answers as long as the process runs. It does not touch the database.",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            },
+            "description": "The process is alive."
+          }
+        },
+        "summary": "Is the process alive",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/me": {
+      "get": {
+        "description": "The user of the session of the request. The dashboard asks this when it loads, because it cannot read the cookie. It counts as activity of the session.",
+        "operationId": "me_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "The user of the session."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Who is behind this session",
+        "tags": [
+          "session"
+        ]
+      }
+    },
+    "/readyz": {
+      "get": {
+        "description": "Asks the database the cheapest question there is. It is what a deployment waits for before sending requests.",
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            },
+            "description": "The database answers."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            },
+            "description": "The database does not answer. The body has the same shape as the `200`."
+          }
+        },
+        "summary": "Can the API reach the database",
+        "tags": [
+          "health"
+        ]
+      }
+    }
+  },
+  "tags": [
+    {
+      "description": "Whether the service is up. They ask for no session and return nobody's data.",
+      "name": "health"
+    },
+    {
+      "description": "Who is behind the session of a request, and closing it.",
+      "name": "session"
+    },
+    {
+      "description": "The accounts of the user of the session, with their computed balance.",
+      "name": "accounts"
+    },
+    {
+      "description": "The chat of the dashboard, for development and demonstration. A message goes the same way as one of WhatsApp: it is stored, and the worker answers it later. These routes exist only when the web chat is enabled, and never in production.",
+      "name": "chat"
+    },
+    {
+      "description": "The development entry: a real session without a login code, for a test user. These routes exist only when the entry is enabled, and never in production.",
+      "name": "dev"
+    }
+  ]
+}

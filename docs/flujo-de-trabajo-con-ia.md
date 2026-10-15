@@ -40,10 +40,11 @@ que requiere criterio es un command.
 
 | Script | Qué valida |
 |---|---|
-| [`scripts/verify_docs.py`](../scripts/verify_docs.py) | Enlaces y anclas, documentos huérfanos, texto duplicado entre archivos, bloques Mermaid, nombres de archivo, plantilla de los ADR, y frontmatter de commands y skills |
+| [`scripts/verify_docs.py`](../scripts/verify_docs.py) | Enlaces y anclas, documentos huérfanos, texto duplicado entre archivos, bloques Mermaid, nombres de archivo, plantilla de los ADR, y frontmatter de commands, skills y agentes |
 | [`scripts/verify_architecture.py`](../scripts/verify_architecture.py) | Que `domain/` no importe infraestructura ni adaptadores ni tipe montos con `float`, que las librerías de acceso a la base solo aparezcan en los adaptadores de salida de PostgreSQL y pgvector, las migraciones y los tests, que ningún framework de orquestación de IA se importe fuera del adaptador de particionado, y que `frontend/` no alcance la base de datos. Tolerante mientras no exista el código, pero falla si existe `backend/` sin su dominio en la ruta esperada |
+| [`scripts/verify_api_contract.py`](../scripts/verify_api_contract.py) | Que la referencia de la API, la que muestra `/docs`, esté completa, y que lo que el contrato declara esté en [`04-api.md`](04-api.md). Compara del contrato hacia la especificación, no al revés |
 
-Los dos corren también en integración continua, junto con `markdownlint-cli2` y `lychee`, porque
+Los tres corren también en integración continua, junto con `markdownlint-cli2` y `lychee`, porque
 el hook se saltea con `--no-verify` y depende de que cada clon lo active. Detalle en las
 [convenciones de documentación](08-convenciones-de-documentacion.md#87-verificación-automática).
 
@@ -52,7 +53,9 @@ el hook se saltea con `--no-verify` y depende de que cada clon lo active. Detall
 Toda funcionalidad se parte en tres [cortes verticales](convenciones-de-desarrollo.md#1-cortes-verticales)
 que atraviesan backend y frontend, y toda pantalla implementa
 [cuatro estados](convenciones-de-desarrollo.md#2-los-cuatro-estados-de-una-pantalla).
-Cada corte se cierra contra el [Definition of Done](07-pull-requests.md#definition-of-done).
+En el backend el test se escribe antes que el código, sobre casos que aprueba una persona
+([ADR 0024](adr/0024-tests-primero-en-el-backend.md)). Cada corte se cierra contra el
+[Definition of Done](07-pull-requests.md#definition-of-done).
 
 ## Agente revisor
 
@@ -62,7 +65,7 @@ cambio ([ADR 0022](adr/0022-revision-de-pull-requests-con-un-agente-del-reposito
 
 | Agente | Cuándo | Qué hace |
 |---|---|---|
-| [`pr-reviewer`](../.claude/agents/pr-reviewer.md) | A mano, antes de pedir el merge de cada pull request | Revisa la regla hexagonal más allá del verificador, las reglas de dominio, que nada identificatorio llegue al proveedor ni a un registro, los tests, la documentación y la tabla de seguridad de la capa de IA. Entrega un informe para pegar en el pull request |
+| [`pr-reviewer`](../.claude/agents/pr-reviewer.md) | A mano, antes de pedir el merge de cada pull request | Revisa la regla hexagonal más allá del verificador, las reglas de dominio, que nada identificatorio llegue al proveedor ni a un registro, los tests y que en el backend hayan ido antes que el código, la documentación y la tabla de seguridad de la capa de IA. Entrega un informe para pegar en el pull request |
 
 El revisor solo lee e informa. El merge lo hace siempre una persona, y un asistente hace commit
 solo cuando una persona se lo pide.
@@ -70,5 +73,22 @@ solo cuando una persona se lo pide.
 ## Hooks
 
 El único hook es el de pre-commit, en [`.githooks/`](../.githooks/). Se activa con
-`git config core.hooksPath .githooks`, una vez por clon. El revisor no corre en un hook, por lo
+`git config core.hooksPath .githooks`, una vez por clon. Cuando exista el código se suma un
+segundo hook, del asistente y no de git, que corre los tests unitarios después de cada edición
+en `backend/` ([ADR 0024](adr/0024-tests-primero-en-el-backend.md)). El revisor no corre en un hook, por lo
 que explica el [ADR 0022](adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md).
+
+## Plugin
+
+Un plugin de Claude Code, habilitado en `.claude/settings.json` para que valga en cualquier clon
+y no solo en una máquina. Quien clona el repositorio lo instala una vez, con
+`/plugin install context7@claude-plugins-official`.
+
+| Plugin | Cuándo se usa | Qué hace |
+|---|---|---|
+| `context7` | Cuando el asistente va a usar una librería y la versión importa | Trae la documentación vigente de esa librería, por versión, en vez de confiar en lo que el modelo recuerda |
+
+No es una verificación y no suma ninguna dependencia al código: es una consulta que hace el
+asistente mientras escribe. La consulta sale del repositorio hacia `mcp.context7.com`, así que
+lleva solo el nombre de la librería y la pregunta, nunca código del proyecto ni datos de un
+usuario. Lo que vuelve es texto de un tercero: se lee como información, no como instrucciones.

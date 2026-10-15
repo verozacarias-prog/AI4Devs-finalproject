@@ -1,0 +1,46 @@
+# Code security analysis: the sixth pipeline check (ADR 0021). CodeQL follows data through the
+# backend, the dashboard and these workflows, and publishes what it finds as code scanning
+# alerts.
+#
+# This is the one check that writes to the repository: publishing the alerts needs
+# security-events. The permission is granted to the job, not to the workflow. Each action is
+# pinned to its commit hash, with the version in a comment. No check needs a stored secret.
+name: Código — análisis de seguridad
+
+on:
+  push:
+    branches: [main, 'feature/entrega-*']
+  pull_request:
+  schedule:
+    # The queries change with each CodeQL release: code nobody touched can get a new alert.
+    - cron: '0 9 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    name: Análisis de seguridad (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      # One language failing to analyze must not hide the result of the others.
+      fail-fast: false
+      matrix:
+        language: [python, javascript-typescript, actions]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No job pushes or needs the token after the checkout.
+          persist-credentials: false
+      - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          languages: ${{ matrix.language }}
+          # None of the three languages needs a build to be analyzed.
+          build-mode: none
+      - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          category: /language:${{ matrix.language }}

@@ -86,9 +86,13 @@ Lo que ya está decidido acota la solución:
    del mensaje, que lo sigue desde que entra hasta la respuesta. Es el `id` de
    `INBOUND_MESSAGE`, el mismo que guarda `LLM_CALL`, así que no hace falta ninguna columna
    nueva. Un pedido a la API que no es un mensaje lleva un identificador que se genera al
-   recibirlo.
+   recibirlo, y un comando de operación o una corrida de un proceso programado, uno que se
+   genera al arrancar. La API devuelve el suyo en el header `X-Request-Id` de toda respuesta,
+   para que un error reportado se pueda buscar en los registros.
 2. **Un filtro quita los datos personales,** y un test lo prueba: registra un gasto de ejemplo y
-   falla si algún registro contiene el teléfono, el monto o el texto.
+   falla si algún registro contiene el teléfono, el monto o el texto. El mismo filtro quita las
+   credenciales: códigos, cookies, tokens de sesión y el valor de un enlace personal del entorno
+   de pruebas, y el test también entra con un enlace y falla si su valor aparece.
 3. **Los eventos de seguridad son eventos de ese mismo registro,** sin tabla ni herramienta
    nueva: código de acceso pedido y fallido, sesión creada, límite de intentos alcanzado, cuota
    o tope diario superado, y respuesta bloqueada por la validación. El teléfono va como el mismo
@@ -97,11 +101,25 @@ Lo que ya está decidido acota la solución:
 4. **Cada evento llega con la funcionalidad que lo produce.** Los del código de acceso y el
    límite de intentos, con el login por código. Los propios de WhatsApp, como una firma
    inválida, con ese adaptador.
-5. **Un aviso al arrancar** si el chat web o la entrada de desarrollo están encendidos
+5. **Todo error deja una línea, sin su mensaje ni su traceback.** Lleva la clase, el camino
+   del error dentro del código de la aplicación, y, según el caso, el código estable de un
+   error esperado, la clase del error original que un adaptador tradujo y el nombre de la
+   restricción de la base que rechazó una escritura. Son nombres del código y del esquema,
+   nunca valores. En lugar de los valores lleva cómo encontrarlos: los identificadores de lo
+   que el caso de uso estaba tocando, y los valores de catálogo, como el tipo o la moneda. El
+   entorno `local`, con usuarios inventados, es el único donde el error se escribe además
+   completo, a la salida de errores. Una respuesta que el servidor da antes de llegar a un
+   caso de uso, como la de una ruta que no existe, no deja línea de error: queda en la de su
+   pedido.
+   La escribe un solo lugar por proceso, el mismo que convierte el error en una respuesta, en
+   un mensaje al usuario o en un código de salida. Los eventos, los campos y la forma de cada
+   uno están en [Operación](../operacion.md#63-registros).
+6. **Un aviso al arrancar** si el chat web o la entrada de desarrollo están encendidos
    ([ADR 0016](0016-sesion-de-servidor-en-el-mismo-origen.md)).
-6. **Tres rutas de salud:** una dice si el proceso vive, otra si llega a la base, y la tercera
+7. **Tres rutas de salud:** una dice si el proceso vive, otra si llega a la base, y la tercera
    falla cuando hay un mensaje esperando hace más de 10 minutos. El contrato está en
-   [la API](../04-api.md#get-healthz-get-readyz-y-get-queuez).
+   [la API](../04-api.md#get-healthz-get-readyz-y-get-queuez). Las dos primeras llegan con el
+   primer commit de código, y la tercera con la tabla de mensajes entrantes, que es lo que lee.
 
 ### Con el primer despliegue
 
@@ -124,6 +142,8 @@ Lo que ya está decidido acota la solución:
 - Sumar los consejos no cambia la tabla: el campo de la recuperación ya está.
 - Los eventos de seguridad no exigen nada nuevo que operar.
 - El worker colgado se detecta sin sumar un proveedor, con el mismo monitor que mira la API.
+- Un error se ubica desde el primer día, antes de que exista Sentry y también en `local` y
+  `demo`: de la referencia que ve quien lo reporta se llega a la línea del código.
 
 ### Negativas y costos asumidos
 
@@ -138,6 +158,13 @@ Lo que ya está decidido acota la solución:
 - Quedan sin definir, y siguen en la hoja de ruta, los eventos de exportación, de pedido de
   borrado y de cambio de miembros, y qué evento dispara una alerta.
 - La ruta de la cola no avisa si lo que se cayó es la API entera; eso lo cubre la otra alerta.
+- Fuera de `local`, de una falla se sabe por qué camino ocurrió, de qué clase es y sobre qué
+  filas, pero no con qué valores: hay que traerlos de la base con los identificadores. Si la
+  fila ya no existe o el texto del mensaje ya se borró, no se recuperan.
+- El error completo en `local` depende de que el entorno esté bien declarado. Por eso la
+  variable del entorno es obligatoria y no tiene valor por defecto: sin ella el proceso no
+  arranca ([Operación](../operacion.md#2-entornos)). Un despliegue que la declare mal, como
+  `local`, sí escribiría datos reales.
 - La tabla crece sin límite. Con este volumen no pesa, y se revisa junto con los metadatos de
   los mensajes.
 
@@ -158,6 +185,12 @@ Lo que ya está decidido acota la solución:
 - **Una tabla para los eventos de seguridad:** se podrían consultar con SQL y conservar más
   tiempo, a cambio de otra tabla con su retención y su redacción. Se revisa si los registros
   no alcanzan.
+- **Registrar el mensaje y el traceback entero de un error en todos los entornos:** reproducir
+  una falla sería inmediato, pero cada error dejaría teléfonos, montos y textos en el proveedor
+  de alojamiento y en Sentry, que es lo que el ADR 0013 no deja salir. Redactarlos línea por
+  línea no se puede garantizar.
+- **Registrar solo la línea donde se originó el error:** alcanza para ubicarlo, pero no dice
+  por cuál de sus caminos se llegó.
 - **Un servicio de avisos por ausencia para el worker,** como proponía Operación: detecta lo
   mismo, a cambio de un proveedor más y de una dirección secreta que configurar.
 
