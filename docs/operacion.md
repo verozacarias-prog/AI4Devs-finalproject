@@ -104,8 +104,10 @@ que es el entorno donde un error se escribe con sus datos ([6.3](#63-registros))
 `docker-compose.yml` del repositorio levanta solo el entorno local, y por eso es el único lugar
 que la declara como `local` cuando nadie la definió.
 
-La entrada de desarrollo se enciende con `DEV_ENTRY_ENABLED=true`, y sin la variable queda
-apagada ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
+La entrada de desarrollo se enciende con `DEV_ENTRY_ENABLED=true`, y el chat web con
+`WEB_CHAT_ENABLED=true`. Sin la variable, cada una queda apagada, y con cualquiera de las dos
+encendida en `production` ningún proceso arranca
+([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 
 | Entorno | Para qué | En qué se diferencia | Cómo se promueve |
 |---|---|---|---|
