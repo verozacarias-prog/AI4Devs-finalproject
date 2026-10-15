@@ -14,6 +14,7 @@ from app.domain.entities.family_group import FamilyGroup, GroupRole, Membership
 from app.domain.entities.financial_profile import FinancialProfile
 from app.domain.entities.session import Session
 from app.domain.entities.user import User
+from app.domain.errors import ConflictError, ErrorCode
 
 if TYPE_CHECKING:
     from app.domain.entities.chat_message import ChatMessage
@@ -150,8 +151,15 @@ class InMemoryInboundMessages:
         # in the database, where leaving the block without a commit undoes it.
         self.marked: list[uuid.UUID] = []
         self.marked_uncommitted: list[uuid.UUID] = []
+        # Another request with the same key, stored between the search for the key and the
+        # next add, which the store then rejects as a repeated key.
+        self.stored_meanwhile: InboundMessage | None = None
 
     def add(self, message: InboundMessage) -> None:
+        if self.stored_meanwhile is not None:
+            self.added.append(self.stored_meanwhile)
+            self.stored_meanwhile = None
+            raise ConflictError(ErrorCode.CONFLICT)
         self.added.append(message)
 
     def find_web(self, provider_message_id: str) -> InboundMessage | None:

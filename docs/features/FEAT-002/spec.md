@@ -391,7 +391,8 @@ se comprueba es cuál de los dos usa la pantalla.
 ### Corte 2 — errores y estado vacío
 
 - **Aprobado por:** Veronica Zacarias 15/10/2026
-- **Total:** 28 casos, 2 unitarios, 19 de integración y 7 de componente.
+- **C2-29 y C2-30, sumados con la revisión de pr-reviewer, y el C2-08 con un reloj distinto para cada worker:** Veronica Zacarias 15/10/2026
+- **Total:** 30 casos, 3 unitarios, 19 de integración y 8 de componente.
 
 Salvo que el caso diga otra cosa, valen las condiciones del corte 1: los datos de prueba de
 `local`, el chat encendido, Lucía con una sesión abierta y el reloj en las 18:00:00 UTC del 15
@@ -427,6 +428,8 @@ de octubre de 2026.
 | C2-26 | Con el chat apagado, el menú no lo ofrece | Componente | CA-17 |
 | C2-27 | Si la sesión venció, vuelve la entrada | Componente | CA-16 |
 | C2-28 | Un mensaje no se ve dos veces mientras su envío sigue en curso | Componente | CA-10 |
+| C2-29 | Un envío que vence después de guardarse queda una sola vez al reintentarlo | Componente | CA-10, CA-11 y CA-23 |
+| C2-30 | Dos pedidos a la vez con la misma clave responden el mensaje original | Unitario | CA-3 |
 
 #### C2-01 · La misma clave dos veces deja un mensaje y responde el original
 
@@ -499,9 +502,10 @@ de octubre de 2026.
 - **Sale de:** CA-9 · **Tipo:** integración
 - **Dado** que un worker tomó "gasté 3500 en el súper" con `attempts = 1`, se demoró más que su
   lock, y otro worker lo volvió a tomar con `attempts = 2`,
-- **cuando** los dos terminan de procesarlo, primero el de `attempts = 1` y después el otro,
-- **entonces** `OUTBOUND_MESSAGE` tiene una sola respuesta a ese mensaje, la del segundo, y el
-  mensaje queda `processed`.
+- **cuando** los dos terminan de procesarlo, primero el de `attempts = 1`, a las 18:03:10, y
+  después el otro, a las 18:03:20,
+- **entonces** `OUTBOUND_MESSAGE` tiene una sola respuesta a ese mensaje, la del segundo, con
+  `created_at` 18:03:20, y el mensaje queda `processed`.
 - **Test:** `tests/integration/test_message_worker_errors.py::test_two_workers_finish_the_same_message_and_only_one_reply_is_left`
 
 #### C2-09 · Preguntar no renueva la sesión
@@ -684,6 +688,28 @@ simulada, como en el corte 1.
 - **cuando** llega esa consulta,
 - **entonces** el mensaje se ve una sola vez, también antes de que responda el `POST`.
 - **Test:** `src/pages/ChatPage.test.tsx` › "case C2-28: a message is not shown twice while its send is still on its way"
+
+#### C2-29 · Un envío que vence después de guardarse queda una sola vez al reintentarlo
+
+- **Sale de:** CA-10, CA-11 y CA-23 · **Tipo:** componente
+- **Dado** que Lucía envió "gasté 3500 en el súper", el servidor lo guardó como `im1`, pero el
+  `POST` no respondió a tiempo, así que se ve "No enviado"; y que después una consulta trajo
+  `im1`,
+- **cuando** Lucía aprieta Reintentar, el `POST` responde `200` con `im1`, y la consulta
+  siguiente trae la respuesta de Platita,
+- **entonces** "gasté 3500 en el súper" se ve una sola vez, "No enviado" desaparece, la
+  respuesta de Platita aparece debajo, y "Platita está procesando…" desaparece.
+- **Test:** —
+
+#### C2-30 · Dos pedidos a la vez con la misma clave responden el mensaje original
+
+- **Sale de:** CA-3 · **Tipo:** unitario
+- **Dado** que al buscar la clave de Lucía todavía no hay ningún mensaje, pero al guardarlo
+  la base lo rechaza porque otro pedido con la misma clave lo guardó un instante antes,
+- **cuando** Lucía manda "gasté 3500 en el súper" con esa clave,
+- **entonces** el caso de uso devuelve el mensaje que guardó el otro pedido, como uno que ya
+  existía, y no termina con un error.
+- **Test:** —
 
 ### Corte 3 — observabilidad y accesibilidad
 

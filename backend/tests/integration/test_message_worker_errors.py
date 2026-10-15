@@ -82,13 +82,16 @@ def test_two_workers_finish_the_same_message_and_only_one_reply_is_left(engine: 
     assert first is not None and second is not None
     assert (first.attempts, second.attempts) == (1, 2)
 
-    AnswerMessage(SqlAlchemyUnitOfWork(engine), FixedClock(later)).execute(first)
-    AnswerMessage(SqlAlchemyUnitOfWork(engine), FixedClock(later)).execute(second)
+    first_ends = later + timedelta(seconds=10)
+    second_ends = later + timedelta(seconds=20)
+    AnswerMessage(SqlAlchemyUnitOfWork(engine), FixedClock(first_ends)).execute(first)
+    AnswerMessage(SqlAlchemyUnitOfWork(engine), FixedClock(second_ends)).execute(second)
 
     with engine.connect() as connection:
         replies = connection.execute(
-            text("SELECT count(*) FROM outbound_message WHERE inbound_message_id = :id"),
+            text("SELECT created_at FROM outbound_message WHERE inbound_message_id = :id"),
             {"id": message},
-        ).scalar_one()
-    assert replies == 1
+        ).all()
+    # One reply, written when the second worker finished: the first one wrote nothing.
+    assert [reply.created_at for reply in replies] == [second_ends]
     assert status_of(engine, message) == ("processed", 2)
