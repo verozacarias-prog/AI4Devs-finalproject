@@ -9,7 +9,7 @@ from app.domain.entities.inbound_message import (
     Provider,
     web_message_id,
 )
-from app.domain.errors import ErrorCode, NotFoundError, UnauthenticatedError
+from app.domain.errors import ConflictError, ErrorCode, NotFoundError, UnauthenticatedError
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
 from app.shared.clock import Clock
 
@@ -68,6 +68,23 @@ class SendChatMessage:
                 locked_until=None,
                 processed_at=None,
             )
-            unit_of_work.inbound_messages.add(message)
-            unit_of_work.commit()
+            try:
+                unit_of_work.inbound_messages.add(message)
+                unit_of_work.commit()
+            except ConflictError:
+                # Another request with the same key stored it a moment ago: that one counts.
+                # It is read after this block ends, since the rejected write left it unusable.
+                taken_meanwhile = True
+            else:
+                taken_meanwhile = False
+        if taken_meanwhile:
+            return self._stored_meanwhile(provider_message_id)
         return SentChatMessage(message=message, created=True)
+
+    def _stored_meanwhile(self, provider_message_id: str) -> SentChatMessage:
+        with self._unit_of_work as unit_of_work:
+            stored = unit_of_work.inbound_messages.find_web(provider_message_id)
+        if stored is None:
+            # The conflict was not the key of this message: nothing foresees it.
+            raise ConflictError(ErrorCode.CONFLICT)
+        return SentChatMessage(message=stored, created=False)

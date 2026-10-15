@@ -173,7 +173,7 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
   /app
     /domain
       /entities         # User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk, InboundMessage, OutboundMessage, ChatMessage
-      /use_cases         # one folder per feature, such as sessions/, messages/ or accounts/: CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, ListAccounts, SendChatMessage, ListChatMessages, ClaimNextMessage, ProcessNextMessage, ValidateSession, CheckReadiness, GenerateProactiveAlert...
+      /use_cases         # one folder per feature, such as sessions/, messages/ or accounts/: CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, ListAccounts, SendChatMessage, ListChatMessages, ClaimNextMessage, AnswerMessage, ProcessNextMessage, ValidateSession, CheckReadiness, GenerateProactiveAlert...
       /ports             # interfaces the domain depends on but does not implement
         - transaction_repository_port.py
         - account_repository_port.py

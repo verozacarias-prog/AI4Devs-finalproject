@@ -1,5 +1,5 @@
 /**
- * Cases C1-11 to C1-21 and C2-22 to C2-28 of FEAT-002 (docs/features/FEAT-002/spec.md): the web chat. The whole
+ * Cases C1-11 to C1-21 and C2-22 to C2-29 of FEAT-002 (docs/features/FEAT-002/spec.md): the web chat. The whole
  * dashboard is rendered, with Lucía already in and the API simulated at the network level.
  * The chat asks for new messages five times as often as it does for real: every 100 ms while
  * it waits for a reply instead of every half second, and every 600 ms instead of every 3 seconds.
@@ -424,4 +424,36 @@ test('case C2-28: a message is not shown twice while its send is still on its wa
   expect(screen.getAllByText('gasté 3500 en el súper')).toHaveLength(1)
   await new Promise((resolve) => setTimeout(resolve, SEVERAL_INTERVALS_MS))
   expect(screen.getAllByText('gasté 3500 en el súper')).toHaveLength(1)
+})
+
+test('case C2-29: a send that timed out after being stored is shown once after its retry', async () => {
+  let posts = 0
+  apiWithLuciaIn(
+    http.get(CHAT, ({ request }) => {
+      const after = new URL(request.url).searchParams.get('after')
+      if (after === 'im1') return posts > 1 ? conversation([REPLY], 'om1') : conversation([], 'im1')
+      if (after === 'om1') return conversation([], 'om1')
+      return posts > 0 ? conversation([SUPERMARKET], 'im1') : conversation([], null)
+    }),
+    http.post(CHAT, () => {
+      posts += 1
+      // The first one is stored but its answer never arrives; the retry finds it stored.
+      if (posts === 1) return HttpResponse.error()
+      return HttpResponse.json({ id: 'im1', status: 'pending' }, { status: 200 })
+    }),
+  )
+  await openChat()
+  const input = await screen.findByLabelText('Tu mensaje')
+  fireEvent.change(input, { target: { value: 'gasté 3500 en el súper' } })
+  fireEvent.keyDown(input, { key: 'Enter' })
+  await screen.findByText('No enviado')
+  // A read brings the stored message while the failed one is still on screen.
+  await waitFor(() => expect(screen.getAllByText('gasté 3500 en el súper')).toHaveLength(2))
+
+  fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
+
+  await screen.findByText('Recibí tu mensaje. Todavía no puedo procesarlo.')
+  await waitFor(() => expect(screen.queryByText('Platita está procesando…')).toBeNull())
+  expect(screen.getAllByText('gasté 3500 en el súper')).toHaveLength(1)
+  expect(screen.queryByText('No enviado')).toBeNull()
 })

@@ -699,7 +699,7 @@ simulada, como en el corte 1.
   siguiente trae la respuesta de Platita,
 - **entonces** "gasté 3500 en el súper" se ve una sola vez, "No enviado" desaparece, la
   respuesta de Platita aparece debajo, y "Platita está procesando…" desaparece.
-- **Test:** —
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C2-29: a send that timed out after being stored is shown once after its retry"
 
 #### C2-30 · Dos pedidos a la vez con la misma clave responden el mensaje original
 
@@ -709,7 +709,7 @@ simulada, como en el corte 1.
 - **cuando** Lucía manda "gasté 3500 en el súper" con esa clave,
 - **entonces** el caso de uso devuelve el mensaje que guardó el otro pedido, como uno que ya
   existía, y no termina con un error.
-- **Test:** —
+- **Test:** `tests/unit/test_send_chat_message.py::test_two_requests_at_once_with_the_same_key_answer_the_original_message`
 
 ### Corte 3 — observabilidad y accesibilidad
 

@@ -48,8 +48,13 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
   // Where the next read starts. A ref, so the polling does not start over with each answer.
   const cursor = useRef<string | null>(null)
   const statusLine = useRef<HTMLParagraphElement>(null)
+  // The ids the conversation already brought. A send whose answer never arrived may be stored
+  // anyway, and a read brings it: its retry answers with that id, which must not show twice.
+  const shown = useRef(new Set<string>())
+
   const arrived = useCallback((loaded: ChatMessage[]) => {
     if (loaded.length === 0) return
+    for (const message of loaded) shown.current.add(message.id)
     setMessages((current) => {
       const known = new Set(current.map((message) => message.id))
       return [...current, ...loaded.filter((message) => !known.has(message.id))]
@@ -72,6 +77,7 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
         return
       }
       cursor.current = loaded.nextCursor
+      shown.current = new Set(loaded.messages.map((message) => message.id))
       setMessages(loaded.messages)
       setState({ kind: 'ready' })
     })
@@ -127,6 +133,11 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
         if (sent.kind === 'cancelled') return
         if (sent.kind === 'no-session') {
           onNoSession()
+          return
+        }
+        if (sent.kind === 'sent' && shown.current.has(sent.id)) {
+          // The conversation already brought it: it is there, and only there.
+          setOutgoing((current) => current.filter((candidate) => candidate.key !== message.key))
           return
         }
         setOutgoing((current) =>
