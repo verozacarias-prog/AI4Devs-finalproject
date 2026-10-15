@@ -15,7 +15,9 @@ const ACCOUNTS = [
 ]
 const noSession = () => HttpResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-const api = setupServer()
+// The web chat is off here: its route answers 404, as the API does when it is turned off.
+const chatOff = http.get('*/chat/messages', () => HttpResponse.json({ error: 'not_found' }, { status: 404 }))
+const api = setupServer(chatOff)
 
 beforeAll(() => api.listen({ onUnhandledFrame: 'error' }))
 afterEach(() => {

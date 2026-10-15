@@ -31,9 +31,9 @@ Todos salen de `frontend/src/design-tokens.css`. No se crea ningún token para e
 | Fondo, texto, borde y radio de la tarjeta | `--color-card`, `--color-card-foreground`, `--color-border`, `--radius-xl`, `--shadow-sm` |
 | Burbuja del usuario | `--color-primary`, `--color-primary-foreground`, `--radius-lg` |
 | Burbuja de Platita | `--color-muted`, `--color-foreground`, `--radius-lg` |
-| Hora de cada mensaje y "Platita está procesando…" | `--color-muted-foreground`, `--text-xs` |
+| Hora de cada mensaje y "Platita está procesando…" | `--color-muted-foreground`, `--text-xs`. En la burbuja del usuario, la hora usa `--color-primary-foreground` con transparencia: el gris no se lee sobre `--color-primary` |
 | Campo para escribir | `--color-input`, `--color-border`, `--radius-md` |
-| Error, y un envío que falló | `--color-destructive` |
+| Error, y un envío que falló | `--color-destructive`. "No enviado" va sobre `--color-card`, dentro de la burbuja del usuario |
 | Foco del teclado | `--color-ring`, `--focus-ring-width` |
 
 ## Máquina de estados
@@ -90,6 +90,7 @@ Van en `frontend/src/messages.ts`, bajo `chat`, salvo los compartidos, bajo `com
 | `loading` | Abriendo la conversación… |
 | `empty` | Todavía no le escribiste a Platita |
 | `emptyDetail` | Contale un gasto como se lo contarías a alguien, por ejemplo: "gasté 3500 en el súper con Galicia". |
+| `conversation` | Conversación con Platita: el nombre con que un lector de pantalla anuncia la lista de mensajes |
 | `inputLabel` | Tu mensaje |
 | `send` | Enviar |
 | `processing` | Platita está procesando… |

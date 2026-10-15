@@ -1,4 +1,4 @@
-import { Activity, LogOut, Wallet } from 'lucide-react'
+import { Activity, LogOut, MessageCircle, Wallet } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { Failure } from '@/api/request'
 import type { SessionUser } from '@/api/session'
@@ -7,7 +7,7 @@ import { cn } from '@/lib/class-names'
 import { MESSAGES } from '@/messages'
 
 /** The screens of the menu. The menu is a state of the page, without a router (ADR 0027). */
-export type Screen = 'accounts' | 'status'
+export type Screen = 'accounts' | 'chat' | 'status'
 
 export type LogoutFailure = Exclude<Failure['kind'], 'cancelled'>
 
@@ -20,6 +20,7 @@ export function AppShell({
   onSelect,
   onLogout,
   logoutFailure,
+  chatAvailable,
   children,
 }: {
   user: SessionUser
@@ -28,6 +29,8 @@ export function AppShell({
   onLogout: () => void
   // Why closing the session failed: the session is still alive, so the menu stays.
   logoutFailure: LogoutFailure | null
+  // The web chat is a scaffold: its option exists only while the API has it on (ADR 0002).
+  chatAvailable: boolean
   children: ReactNode
 }) {
   return (
@@ -45,6 +48,11 @@ export function AppShell({
               {NAV.testing}
             </p>
             <ul aria-labelledby="nav-testing" className="flex gap-1 md:flex-col">
+              {chatAvailable && (
+                <NavItem current={screen === 'chat'} onSelect={() => onSelect('chat')} icon={<MessageCircle />}>
+                  {NAV.chat}
+                </NavItem>
+              )}
               <NavItem current={screen === 'status'} onSelect={() => onSelect('status')} icon={<Activity />}>
                 {NAV.status}
               </NavItem>

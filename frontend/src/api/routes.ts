@@ -13,6 +13,7 @@ export const API_ROUTES = {
   devUsers: '/dev/users',
   devSession: '/dev/session',
   accounts: '/accounts',
+  chatMessages: '/chat/messages',
 } as const satisfies Record<string, keyof paths>
 
 /** The answer of a health route when everything is fine. */

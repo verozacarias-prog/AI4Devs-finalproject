@@ -123,7 +123,8 @@ las 15:00:00 en Buenos Aires.
 ### Corte 1 — camino feliz
 
 - **Aprobado por:** Veronica Zacarias 14/10/2026
-- **Total:** 10 casos, 1 unitario y 9 de integración.
+- **Los de la pantalla, C1-11 a C1-18, escritos ya armada:** Veronica Zacarias 15/10/2026
+- **Total:** 18 casos, 1 unitario, 9 de integración y 8 de componente.
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
@@ -137,6 +138,14 @@ las 15:00:00 en Buenos Aires.
 | C1-07 | Con un cursor, vienen solo los mensajes posteriores | Integración | CA-12 |
 | C1-08 | Con un cursor y nada nuevo, la lista viene vacía | Integración | CA-12 |
 | C1-09 | Escribir, procesar y leer la respuesta | Integración | CA-1, CA-5 y CA-10 |
+| C1-11 | Mientras se abre la conversación, lo dice y no deja escribir | Componente | CA-10 |
+| C1-12 | La conversación de Lucía, cada mensaje de su lado y con su hora | Componente | CA-10 |
+| C1-13 | Sin respuesta al último mensaje, Platita está procesando | Componente | CA-11 |
+| C1-14 | Escribir y enviar con Enter | Componente | CA-1 |
+| C1-15 | La respuesta aparece sola, preguntando desde el último mensaje | Componente | CA-5 y CA-12 |
+| C1-16 | Con otra pantalla abierta, no pregunta | Componente | CA-12 |
+| C1-17 | Un mensaje con etiquetas se ve como texto | Componente | CA-13 |
+| C1-18 | Con el chat encendido, el menú lleva a la conversación | Componente | CA-17 |
 
 #### C1-01 · Lucía escribe y su mensaje queda guardado, pendiente
 
@@ -256,6 +265,88 @@ las 15:00:00 en Buenos Aires.
 - **entonces** la conversación tiene dos mensajes: el suyo, `inbound`, y después "Recibí tu
   mensaje. Todavía no puedo procesarlo.", `outbound`, con `response_kind = "fixed_text"`.
 - **Test:** `tests/integration/test_chat_messages.py::test_write_process_and_read_the_reply`
+
+En los casos de componente se arma el dashboard entero, con la API simulada a nivel de red,
+y Lucía ya entró. La pantalla pregunta por mensajes nuevos cada pocos segundos; los tests le
+pasan un intervalo corto.
+
+#### C1-11 · Mientras se abre la conversación, lo dice y no deja escribir
+
+- **Sale de:** CA-10 · **Tipo:** componente
+- **Dado** que `GET /chat/messages` todavía no respondió,
+- **cuando** Lucía abre el chat,
+- **entonces** se ve "Abriendo la conversación…", y no se ve ningún mensaje ni el campo para
+  escribir.
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C1-11: while the conversation opens, it says so and there is nowhere to write"
+
+#### C1-12 · La conversación de Lucía, cada mensaje de su lado y con su hora
+
+- **Sale de:** CA-10 · **Tipo:** componente
+- **Dado** que `GET /chat/messages` responde "gasté 3500 en el súper", de Lucía, a las 14:58,
+  y "Recibí tu mensaje. Todavía no puedo procesarlo.", de Platita, a las 14:58, con la hora de
+  Buenos Aires,
+- **cuando** Lucía abre el chat,
+- **entonces** se ven los dos en ese orden: el suyo a la derecha y el de Platita a la
+  izquierda, cada uno con "14:58" y con quién lo escribió dicho en palabras, "Vos" y "Platita",
+  para un lector de pantalla.
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C1-12: the conversation of Lucía, each message on its side and with its time"
+
+#### C1-13 · Sin respuesta al último mensaje, Platita está procesando
+
+- **Sale de:** CA-11 · **Tipo:** componente
+- **Dado** que `GET /chat/messages` responde un solo mensaje, "gasté 3500 en el súper", de
+  Lucía, todavía sin respuesta,
+- **cuando** Lucía abre el chat,
+- **entonces** se ve "Platita está procesando…".
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C1-13: with no reply to the last message, Platita is processing"
+
+#### C1-14 · Escribir y enviar con Enter
+
+- **Sale de:** CA-1 · **Tipo:** componente
+- **Dado** que la conversación de Lucía está vacía, y `POST /chat/messages` responde `202`,
+- **cuando** escribe "gasté 3500 en el súper" y aprieta Enter,
+- **entonces** se manda un solo `POST` con ese texto y un header `Idempotency-Key` que es un
+  UUID; el mensaje aparece de su lado, el campo para escribir queda vacío, y se ve "Platita
+  está procesando…".
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C1-14: write and send with Enter"
+
+#### C1-15 · La respuesta aparece sola, preguntando desde el último mensaje
+
+- **Sale de:** CA-5 y CA-12 · **Tipo:** componente
+- **Dado** que el chat de Lucía muestra "gasté 3500 en el súper", con `next_cursor` en ese
+  mensaje, y que la siguiente consulta trae la respuesta de Platita,
+- **cuando** pasa el intervalo de la consulta,
+- **entonces** la consulta lleva `after` con el `id` de "gasté 3500 en el súper", la respuesta
+  aparece debajo sin recargar la pantalla, y "Platita está procesando…" desaparece.
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C1-15: the reply shows up by itself, asking from the last message"
+
+#### C1-16 · Con otra pantalla abierta, no pregunta
+
+- **Sale de:** CA-12 · **Tipo:** componente
+- **Dado** que Lucía tiene el chat abierto, que ya preguntó al menos una vez,
+- **cuando** elige "Cuentas" en el menú y pasan varios intervalos,
+- **entonces** no llega ningún otro pedido a `GET /chat/messages`.
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C1-16: with another screen open, it does not ask"
+
+#### C1-17 · Un mensaje con etiquetas se ve como texto
+
+- **Sale de:** CA-13 · **Tipo:** componente
+- **Dado** que `GET /chat/messages` responde un mensaje de Platita con el texto
+  `<script>alert(1)</script><b>hola</b>`,
+- **cuando** Lucía abre el chat,
+- **entonces** ese texto se ve tal cual, con sus etiquetas como caracteres, y la página no
+  tiene ningún elemento `script` ni `b` que venga de él.
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C1-17: a message with tags is shown as text"
+
+#### C1-18 · Con el chat encendido, el menú lleva a la conversación
+
+- **Sale de:** CA-17 · **Tipo:** componente
+- **Dado** que `GET /chat/messages` responde `200`, porque el chat está encendido,
+- **cuando** Lucía entra,
+- **entonces** la sección "Pruebas" del menú tiene "Chat", antes de "Estado del sistema", y
+  elegirlo muestra "Chat con Platita" y lo marca como la pantalla actual. Que no aparezca con
+  el chat apagado es del corte 2.
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C1-18: with the chat on, the menu leads to the conversation"
 
 ### Corte 2 — errores y estado vacío
 

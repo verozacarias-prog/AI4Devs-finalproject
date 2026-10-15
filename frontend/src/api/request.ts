@@ -20,6 +20,8 @@ type Call = Options & {
   method?: 'GET' | 'POST'
   /** Sent as JSON. A POST without it still declares JSON, which the API requires. */
   body?: unknown
+  /** Headers the call needs besides the ones every call sends, such as Idempotency-Key. */
+  headers?: Record<string, string>
 }
 
 /**
@@ -29,7 +31,7 @@ type Call = Options & {
  */
 export async function request(
   path: string,
-  { method = 'GET', body, timeoutMs = API_TIMEOUT_MS, signal }: Call = {},
+  { method = 'GET', body, headers: extra = {}, timeoutMs = API_TIMEOUT_MS, signal }: Call = {},
 ): Promise<Answer> {
   const timeout = AbortSignal.timeout(timeoutMs)
   const stop = AbortSignal.any(signal ? [timeout, signal] : [timeout])
@@ -46,7 +48,7 @@ export async function request(
     return null
   }
 
-  const headers: Record<string, string> = { Accept: JSON_CONTENT_TYPE }
+  const headers: Record<string, string> = { ...extra, Accept: JSON_CONTENT_TYPE }
   if (method === 'POST') headers['Content-Type'] = JSON_CONTENT_TYPE
 
   let response: Response
