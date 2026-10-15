@@ -48,13 +48,8 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
   // Where the next read starts. A ref, so the polling does not start over with each answer.
   const cursor = useRef<string | null>(null)
   const statusLine = useRef<HTMLParagraphElement>(null)
-  // The ids the conversation already brought. A send that answers after a read brought its
-  // message must not show it a second time.
-  const shown = useRef(new Set<string>())
-
   const arrived = useCallback((loaded: ChatMessage[]) => {
     if (loaded.length === 0) return
-    for (const message of loaded) shown.current.add(message.id)
     setMessages((current) => {
       const known = new Set(current.map((message) => message.id))
       return [...current, ...loaded.filter((message) => !known.has(message.id))]
@@ -77,7 +72,6 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
         return
       }
       cursor.current = loaded.nextCursor
-      shown.current = new Set(loaded.messages.map((message) => message.id))
       setMessages(loaded.messages)
       setState({ kind: 'ready' })
     })
@@ -91,11 +85,15 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
     ready &&
     (outgoing.some((message) => message.status !== 'failed') ||
       (outgoing.length === 0 && lastMessage?.direction === 'inbound'))
+  // While a send is on its way, no read: one could bring the message before the send answers
+  // with its id, and it would show twice.
+  const sending = outgoing.some((message) => message.status === 'sending')
+
   // The read it repeats while the screen is open. Each one starts when the previous ended. It
   // starts over when a reply becomes pending, or stops being, so the new interval applies at
   // once instead of after the wait already set.
   useEffect(() => {
-    if (state.kind !== 'ready') return
+    if (state.kind !== 'ready' || sending) return
     const intervalMs = processing ? CHAT_WAITING_POLL_MS : CHAT_POLL_MS
     const abandon = new AbortController()
     let timer: ReturnType<typeof setTimeout>
@@ -121,7 +119,7 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
       abandon.abort()
       clearTimeout(timer)
     }
-  }, [state.kind, processing, timeoutMs, onNoSession, arrived])
+  }, [state.kind, processing, sending, timeoutMs, onNoSession, arrived])
 
   const deliver = useCallback(
     (message: Outgoing) => {
@@ -129,11 +127,6 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
         if (sent.kind === 'cancelled') return
         if (sent.kind === 'no-session') {
           onNoSession()
-          return
-        }
-        if (sent.kind === 'sent' && shown.current.has(sent.id)) {
-          // A read already brought it: it is in the conversation, and only there.
-          setOutgoing((current) => current.filter((candidate) => candidate.key !== message.key))
           return
         }
         setOutgoing((current) =>

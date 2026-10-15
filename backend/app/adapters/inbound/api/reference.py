@@ -137,7 +137,16 @@ SEND_CHAT_MESSAGE_DESCRIPTION = (
     "`GET /chat/messages`. The time of the message is the one the server received it at."
 )
 SEND_CHAT_MESSAGE_ACCEPTED = "The message was stored, pending. The worker processes it later."
-SEND_CHAT_MESSAGE_INVALID = "The text is empty, or the header `Idempotency-Key` is missing."
+SEND_CHAT_MESSAGE_INVALID = (
+    "The text is empty or only spaces, or the header `Idempotency-Key` is missing."
+)
+SEND_CHAT_MESSAGE_REPEATED = (
+    "This user already sent a message with that `Idempotency-Key`: nothing is stored, and the "
+    "body is the message stored the first time."
+)
+SEND_CHAT_MESSAGE_NOT_FOUND = (
+    "The web chat is disabled, or `quoted_message_id` is not a reply of Platita to this user."
+)
 IDEMPOTENCY_KEY = (
     "A UUID the browser generates once per message, and sends again unchanged if it repeats "
     "the request."
@@ -155,6 +164,9 @@ LIST_CHAT_MESSAGES_DESCRIPTION = (
 )
 LIST_CHAT_MESSAGES_OK = "The conversation. An empty list when there is nothing (new)."
 LIST_CHAT_MESSAGES_INVALID = "`after` is not a UUID."
+LIST_CHAT_MESSAGES_NOT_FOUND = (
+    "The web chat is disabled, or `after` is not a message of the conversation of this user."
+)
 CHAT_AFTER = "The `next_cursor` of the previous answer. Without it, the whole conversation."
 CHAT_MESSAGES = "The messages, in the order they happened."
 CHAT_NEXT_CURSOR = (

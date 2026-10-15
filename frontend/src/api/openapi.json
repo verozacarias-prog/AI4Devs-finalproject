@@ -522,6 +522,16 @@
             },
             "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The web chat is disabled, or `after` is not a message of the conversation of this user."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -571,6 +581,16 @@
           "required": true
         },
         "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoredChatMessage"
+                }
+              }
+            },
+            "description": "This user already sent a message with that `Idempotency-Key`: nothing is stored, and the body is the message stored the first time."
+          },
           "202": {
             "content": {
               "application/json": {
@@ -601,6 +621,16 @@
             },
             "description": "The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read."
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The web chat is disabled, or `quoted_message_id` is not a reply of Platita to this user."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -609,7 +639,7 @@
                 }
               }
             },
-            "description": "The text is empty, or the header `Idempotency-Key` is missing."
+            "description": "The text is empty or only spaces, or the header `Idempotency-Key` is missing."
           }
         },
         "security": [

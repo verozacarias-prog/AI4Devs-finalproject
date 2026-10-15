@@ -12,8 +12,8 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Header, Query, status
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Header, Query, Response, status
+from pydantic import BaseModel, Field, field_validator
 
 from app.adapters.inbound.api import reference
 from app.adapters.inbound.api.errors import documented_errors
@@ -32,6 +32,14 @@ class ChatMessageRequest(BaseModel):
     quoted_message_id: uuid.UUID | None = Field(
         default=None, description=reference.CHAT_QUOTED_MESSAGE_ID
     )
+
+    @field_validator("text")
+    @classmethod
+    def _says_something(cls, text: str) -> str:
+        # A text of only spaces is as empty as no text (docs/04-api.md).
+        if not text.strip():
+            raise ValueError
+        return text
 
 
 class StoredChatMessage(BaseModel):
@@ -67,16 +75,24 @@ def build_chat_router(
         summary=reference.SEND_CHAT_MESSAGE_SUMMARY,
         description=reference.SEND_CHAT_MESSAGE_DESCRIPTION,
         response_description=reference.SEND_CHAT_MESSAGE_ACCEPTED,
-        responses=documented_errors(
-            {
-                status.HTTP_401_UNAUTHORIZED: reference.NO_SESSION,
-                status.HTTP_403_FORBIDDEN: reference.FOREIGN_REQUEST,
-                status.HTTP_422_UNPROCESSABLE_CONTENT: reference.SEND_CHAT_MESSAGE_INVALID,
-            }
-        ),
+        responses={
+            status.HTTP_200_OK: {
+                "model": StoredChatMessage,
+                "description": reference.SEND_CHAT_MESSAGE_REPEATED,
+            },
+            **documented_errors(
+                {
+                    status.HTTP_401_UNAUTHORIZED: reference.NO_SESSION,
+                    status.HTTP_403_FORBIDDEN: reference.FOREIGN_REQUEST,
+                    status.HTTP_404_NOT_FOUND: reference.SEND_CHAT_MESSAGE_NOT_FOUND,
+                    status.HTTP_422_UNPROCESSABLE_CONTENT: reference.SEND_CHAT_MESSAGE_INVALID,
+                }
+            ),
+        },
     )
     def send(
         body: ChatMessageRequest,
+        response: Response,
         token: SessionToken,
         idempotency_key: Annotated[
             uuid.UUID, Header(alias=IDEMPOTENCY_KEY_HEADER, description=reference.IDEMPOTENCY_KEY)
@@ -84,13 +100,16 @@ def build_chat_router(
     ) -> StoredChatMessage:
         # Writing counts as activity of the session (ADR 0016).
         user = authenticate_session().execute(token)
-        stored = send_chat_message().execute(
+        sent = send_chat_message().execute(
             user_id=user.id,
             text=body.text,
             idempotency_key=str(idempotency_key),
             quoted_message_id=body.quoted_message_id,
         )
-        return StoredChatMessage(id=stored.id, status=stored.status)
+        if not sent.created:
+            # The browser repeated a message it had already sent: nothing new was stored.
+            response.status_code = status.HTTP_200_OK
+        return StoredChatMessage(id=sent.message.id, status=sent.message.status)
 
     @router.get(
         CHAT_MESSAGES,
@@ -100,6 +119,7 @@ def build_chat_router(
         responses=documented_errors(
             {
                 status.HTTP_401_UNAUTHORIZED: reference.NO_SESSION,
+                status.HTTP_404_NOT_FOUND: reference.LIST_CHAT_MESSAGES_NOT_FOUND,
                 status.HTTP_422_UNPROCESSABLE_CONTENT: reference.LIST_CHAT_MESSAGES_INVALID,
             }
         ),

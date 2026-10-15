@@ -1,8 +1,8 @@
 /**
- * Cases C1-11 to C1-22 of FEAT-002 (docs/features/FEAT-002/spec.md): the web chat. The whole
+ * Cases C1-11 to C1-21 and C2-22 to C2-28 of FEAT-002 (docs/features/FEAT-002/spec.md): the web chat. The whole
  * dashboard is rendered, with Lucía already in and the API simulated at the network level.
- * The chat asks for new messages ten times as often as it does for real: every 50 ms while it
- * waits for a reply instead of every half second, and every 300 ms instead of every 3 seconds.
+ * The chat asks for new messages five times as often as it does for real: every 100 ms while
+ * it waits for a reply instead of every half second, and every 600 ms instead of every 3 seconds.
  */
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { delay, http, HttpResponse } from 'msw'
@@ -10,7 +10,7 @@ import { setupServer } from 'msw/node'
 import { afterAll, afterEach, beforeAll, expect, test, vi } from 'vitest'
 import App from '../App'
 
-const INTERVAL = vi.hoisted(() => ({ waitingMs: 50, normalMs: 300 }))
+const INTERVAL = vi.hoisted(() => ({ waitingMs: 100, normalMs: 600 }))
 
 vi.mock('../constants', async (original) => ({
   ...(await original<object>()),
@@ -19,8 +19,8 @@ vi.mock('../constants', async (original) => ({
 }))
 
 /** One and two seconds of the cases, at the same scale as the intervals. */
-const ONE_SECOND_MS = 100
-const TWO_SECONDS_MS = 200
+const ONE_SECOND_MS = 200
+const TWO_SECONDS_MS = 400
 /** Several of the longer intervals, for a screen that should no longer ask. */
 const SEVERAL_INTERVALS_MS = 3 * INTERVAL.normalMs
 
@@ -289,26 +289,128 @@ test('case C1-21: writing in an answered conversation brings the next read forwa
   expect(polledAt.some((at) => at > sentAt)).toBe(true)
 })
 
-test('case C1-22: the message a read brought before the send answered is shown once', async () => {
-  let posted = false
-  let postAnswered = false
-  let readBroughtIt: () => void = () => {}
-  const broughtByARead = new Promise<void>((resolve) => {
-    readBroughtIt = resolve
-  })
+test('case C2-22: with no messages, an invitation and not an error', async () => {
+  apiWithLuciaIn(http.get(CHAT, () => conversation([], null)))
+
+  await openChat()
+
+  await screen.findByText('Todavía no le escribiste a Platita')
+  screen.getByText(/gasté 3500 en el súper con Galicia/)
+  screen.getByLabelText('Tu mensaje')
+  expect(screen.queryByRole('alert')).toBeNull()
+})
+
+test('case C2-23: if the first read fails, it says why and it is retried', async () => {
+  let reads = 0
+  apiWithLuciaIn(
+    http.get(CHAT, () => {
+      reads += 1
+      // The first read is the dashboard asking whether the chat is on.
+      if (reads === 2) return HttpResponse.json({ error: 'internal_error' }, { status: 500 })
+      return conversation(reads === 1 ? [] : [SUPERMARKET], reads === 1 ? null : 'im1')
+    }),
+  )
+
+  await openChat()
+
+  const failed = await screen.findByRole('alert')
+  within(failed).getByText('No se pudo abrir la conversación')
+  within(failed).getByText('La API respondió con un error.')
+  expect(screen.queryByLabelText('Tu mensaje')).toBeNull()
+  fireEvent.click(within(failed).getByRole('button', { name: 'Reintentar' }))
+  await screen.findByText('gasté 3500 en el súper')
+})
+
+test('case C2-24: a send that fails is retried with the same key', async () => {
+  const keys: (string | null)[] = []
+  apiWithLuciaIn(
+    http.get(CHAT, () => conversation([], null)),
+    http.post(CHAT, ({ request }) => {
+      keys.push(request.headers.get('Idempotency-Key'))
+      if (keys.length === 1) return HttpResponse.json({ error: 'internal_error' }, { status: 500 })
+      return HttpResponse.json({ id: 'im1', status: 'pending' }, { status: 202 })
+    }),
+  )
+  await openChat()
+  const input = await screen.findByLabelText('Tu mensaje')
+  fireEvent.change(input, { target: { value: 'gasté 3500 en el súper' } })
+  fireEvent.keyDown(input, { key: 'Enter' })
+  await screen.findByText('No enviado')
+
+  fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
+
+  await waitFor(() => expect(keys).toHaveLength(2))
+  expect(keys[1]).toBe(keys[0])
+  await waitFor(() => expect(screen.queryByText('No enviado')).toBeNull())
+  expect(screen.getAllByText('gasté 3500 en el súper')).toHaveLength(1)
+})
+
+test('case C2-25: if a periodic read fails, the conversation stays', async () => {
+  let polls = 0
   apiWithLuciaIn(
     http.get(CHAT, ({ request }) => {
-      const after = new URL(request.url).searchParams.get('after')
-      if (after === 'im1') return postAnswered ? conversation([REPLY], 'om1') : conversation([], 'im1')
-      if (after === 'om1') return conversation([], 'om1')
-      if (!posted) return conversation([], null)
-      readBroughtIt()
-      return conversation([SUPERMARKET], 'im1')
+      if (!new URL(request.url).searchParams.has('after')) return conversation([SUPERMARKET, REPLY], 'om1')
+      polls += 1
+      if (polls === 1) return HttpResponse.json({ error: 'internal_error' }, { status: 500 })
+      return conversation([], 'om1')
     }),
+  )
+  await openChat()
+
+  await screen.findByText('No se pudo buscar mensajes nuevos. Se reintenta en unos segundos.')
+  screen.getByText('gasté 3500 en el súper')
+  screen.getByText('Recibí tu mensaje. Todavía no puedo procesarlo.')
+
+  await waitFor(() =>
+    expect(screen.queryByText('No se pudo buscar mensajes nuevos. Se reintenta en unos segundos.')).toBeNull(),
+  )
+  screen.getByText('gasté 3500 en el súper')
+})
+
+test('case C2-26: with the chat off, the menu does not offer it', async () => {
+  apiWithLuciaIn(http.get(CHAT, () => HttpResponse.json({ error: 'not_found' }, { status: 404 })))
+  render(<App />)
+  const nav = await screen.findByRole('navigation', { name: 'Menú principal' })
+  // Until the answer about the chat arrives, the menu could not tell yet.
+  await new Promise((resolve) => setTimeout(resolve, TWO_SECONDS_MS))
+
+  const testing = within(nav).getByRole('list', { name: 'Pruebas' })
+  expect(within(testing).getAllByRole('button').map((option) => option.textContent)).toEqual([
+    'Estado del sistema',
+  ])
+})
+
+test('case C2-27: if the session expired, the entry comes back', async () => {
+  let sessionOver = false
+  apiWithLuciaIn(
+    http.get(CHAT, ({ request }) => {
+      if (!new URL(request.url).searchParams.has('after')) return conversation([SUPERMARKET, REPLY], 'om1')
+      sessionOver = true
+      return HttpResponse.json({ error: 'unauthorized' }, { status: 401 })
+    }),
+  )
+  api.use(
+    http.get('*/me', () =>
+      sessionOver ? HttpResponse.json({ error: 'unauthorized' }, { status: 401 }) : HttpResponse.json(LUCIA),
+    ),
+    http.get('*/dev/users', () => HttpResponse.json({ users: [LUCIA] })),
+  )
+  await openChat()
+  await screen.findByText('gasté 3500 en el súper')
+
+  await screen.findByRole('button', { name: 'Entrar como Lucía' })
+  expect(screen.queryByRole('navigation')).toBeNull()
+  expect(screen.queryByRole('heading', { name: 'Chat con Platita' })).toBeNull()
+})
+
+test('case C2-28: a message is not shown twice while its send is still on its way', async () => {
+  let posted = false
+  apiWithLuciaIn(
+    // Once the message is stored, every read brings it, as the API would.
+    http.get(CHAT, () => (posted ? conversation([SUPERMARKET], 'im1') : conversation([], null))),
     http.post(CHAT, async () => {
       posted = true
-      await broughtByARead
-      postAnswered = true
+      await delay(SEVERAL_INTERVALS_MS)
       return HttpResponse.json({ id: 'im1', status: 'pending' }, { status: 202 })
     }),
   )
@@ -317,8 +419,9 @@ test('case C1-22: the message a read brought before the send answered is shown o
 
   fireEvent.change(input, { target: { value: 'gasté 3500 en el súper' } })
   fireEvent.keyDown(input, { key: 'Enter' })
+  await new Promise((resolve) => setTimeout(resolve, TWO_SECONDS_MS))
 
-  await screen.findByText('Recibí tu mensaje. Todavía no puedo procesarlo.')
   expect(screen.getAllByText('gasté 3500 en el súper')).toHaveLength(1)
-  await waitFor(() => expect(screen.queryByText('Platita está procesando…')).toBeNull())
+  await new Promise((resolve) => setTimeout(resolve, SEVERAL_INTERVALS_MS))
+  expect(screen.getAllByText('gasté 3500 en el súper')).toHaveLength(1)
 })

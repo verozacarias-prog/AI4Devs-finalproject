@@ -109,8 +109,11 @@ El webhook solo recibe y confirma; el procesamiento ocurre después, en un proce
 9. **El mensaje citado se guarda resuelto.** `INBOUND_MESSAGE` tiene una columna con el mensaje
    de salida que el usuario citó. El chat web manda ese identificador directo. En WhatsApp, el
    caso de uso que guarda el mensaje lo resuelve desde el identificador de Meta del mensaje
-   citado. En los dos casos se valida que el mensaje citado sea del mismo usuario; si no se
-   encuentra, la columna queda nula y el mensaje se procesa como si no citara nada.
+   citado. En los dos casos se valida que el mensaje citado sea una respuesta de Platita al mismo
+   usuario. En WhatsApp, si no se encuentra, la columna queda nula y el mensaje se procesa como si
+   no citara nada: Meta manda lo que el usuario citó, y no es un error del pedido. En el chat web
+   el identificador lo manda el dashboard, así que uno ajeno o inexistente es un pedido inválido:
+   responde `404` y no se guarda nada ([la API](../04-api.md)).
 
 Los procesos programados (gastos recurrentes, alertas de presupuesto, expiración de pendientes)
 siguen siendo cron jobs separados. Esta decisión no los cambia, salvo que envían por la tabla de

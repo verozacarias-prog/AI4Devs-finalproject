@@ -56,8 +56,9 @@ Dentro de "Con contenido" hay tres situaciones, que no son estados de la pantall
 
 Mientras la pantalla está abierta, pregunta por mensajes nuevos con el `next_cursor` de la
 última respuesta. Lo hace cada medio segundo mientras espera una respuesta de Platita, es decir,
-cuando el último mensaje es del usuario o hay uno enviándose, y cada 3 segundos el resto del
-tiempo. Así la respuesta aparece enseguida, y una pestaña abierta sin conversación no carga la
+cuando el último mensaje es del usuario o hay uno enviado sin respuesta, y cada 3 segundos el
+resto del tiempo. Mientras un envío está en curso no pregunta: una consulta podría traer el
+mensaje antes de que el envío responda, y se vería dos veces. Así la respuesta aparece enseguida, y una pestaña abierta sin conversación no carga la
 API. Al cambiar de pantalla deja de preguntar.
 
 Una sesión que venció tampoco es un estado: ante un `401`, de la consulta o del envío, el

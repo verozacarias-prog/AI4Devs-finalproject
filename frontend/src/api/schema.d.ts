@@ -477,6 +477,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
+            /** @description The web chat is disabled, or `after` is not a message of the conversation of this user. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
             /** @description `after` is not a UUID. */
             422: {
                 headers: {
@@ -504,6 +513,15 @@ export interface operations {
             };
         };
         responses: {
+            /** @description This user already sent a message with that `Idempotency-Key`: nothing is stored, and the body is the message stored the first time. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoredChatMessage"];
+                };
+            };
             /** @description The message was stored, pending. The worker processes it later. */
             202: {
                 headers: {
@@ -531,7 +549,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description The text is empty, or the header `Idempotency-Key` is missing. */
+            /** @description The web chat is disabled, or `quoted_message_id` is not a reply of Platita to this user. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description The text is empty or only spaces, or the header `Idempotency-Key` is missing. */
             422: {
                 headers: {
                     [name: string]: unknown;

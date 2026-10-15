@@ -13,6 +13,13 @@ class PostgresChatMessageRepository:
     def __init__(self, connection: Connection) -> None:
         self._connection = connection
 
+    def contains(self, user_id: uuid.UUID, message_id: uuid.UUID) -> bool:
+        exists: bool = self._connection.execute(
+            text(queries.CHAT_MESSAGE_OF_USER_EXISTS),
+            {"message_id": message_id, "user_id": user_id},
+        ).scalar_one()
+        return exists
+
     def list_by_user(self, user_id: uuid.UUID, after: uuid.UUID | None) -> list[ChatMessage]:
         rows = self._connection.execute(
             text(queries.SELECT_CHAT_MESSAGES_BY_USER),

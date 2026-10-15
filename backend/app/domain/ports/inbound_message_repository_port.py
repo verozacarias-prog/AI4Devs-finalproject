@@ -10,11 +10,16 @@ from app.domain.entities.inbound_message import InboundMessage
 class InboundMessageRepositoryPort(Protocol):
     def add(self, message: InboundMessage) -> None: ...
 
+    def find_web(self, provider_message_id: str) -> InboundMessage | None:
+        """The message of the web chat stored under that identifier, if any."""
+        ...
+
     def claim_next(self, now: datetime, locked_until: datetime) -> InboundMessage | None:
         """Takes the next message to process, if any, and leaves it in process until then.
 
-        It is the earliest pending message of a sender that has no message in process with
-        its lock in force, and no earlier one pending. Two workers never take the same one.
+        A message is available when it is pending, or in process with its lock ended: the
+        worker that took it fell. It is the earliest available message of a sender that has no
+        message in process with its lock in force. Two workers never take the same one.
         """
         ...
 
