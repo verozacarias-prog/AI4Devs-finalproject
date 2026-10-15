@@ -32,7 +32,10 @@ antes de la rama de consejos, con la evaluación del
 | La tabla de llamadas al modelo con su envoltorio y el script de métricas, los registros en JSON con su filtro y su test, los eventos de seguridad y las tres rutas de salud | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) |
 | Datos de prueba: una plantilla de usuario con el alta completa, cuentas, su primer período confirmado y perfil financiero. En `local` el script de datos de prueba crea varios usuarios con ella, con el consentimiento registrado y al menos uno con un grupo | [Reglas de dominio § 3 y § 11](reglas-de-dominio.md) |
 
-| Queda para la entrega final | Por qué |
+Cuáles de estos tramos entran en la entrega final y cuáles pasan a una segunda versión lo dice
+la [línea de corte de la entrega final](#alcance-de-la-entrega-final).
+
+| Queda fuera de la entrega 2 | Por qué |
 |---|---|
 | El adaptador de WhatsApp, el login por código, los números habilitados y el alta conversacional | Dependen del canal real. El procesamiento ya queda probado por el chat web |
 | Preguntas sobre los propios datos y consejos con RAG, con la carga de la base de conocimiento y sus dos tablas | Son ramas aparte de la clasificación. La de consejos espera al modelo de embeddings |
@@ -57,6 +60,34 @@ tabla, el asistente no llama al modelo otra vez ni cobra cuota:
 
 **Si el tiempo no alcanza, se cae lo último de esta lista y no lo primero:** el camino feliz de
 un gasto y de un ingreso con la pantalla de cuentas; y los pendientes y la categoría nueva.
+
+## Alcance de la entrega final
+
+Decidido el 15 de octubre de 2026, a partir de la devolución de la entrega 1. El núcleo es el
+registro conversacional con confirmación, las cuentas con su saldo, el presupuesto y el
+dashboard, todo por el chat web. WhatsApp no entra: el chat web recorre el mismo camino
+([ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md)), y el canal real depende de la
+configuración de Meta, que no suma a lo que se evalúa.
+
+| Entra en la entrega final, además de la entrega 2 | Dónde está la regla |
+|---|---|
+| El entorno `demo` desplegado, con el enlace personal de cada persona y el aviso de prueba | [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md) |
+| La pantalla de presupuesto y `GET /budgets/{budget_id}`: cuánto se lleva gastado contra el tope | [HU4](05-historias-de-usuario.md), [la API](04-api.md) |
+| Armar y confirmar el presupuesto de un período individual desde el dashboard: cadencia, día de inicio, ingreso estimado y tope por categoría, en borrador hasta confirmarlo | [HU2](05-historias-de-usuario.md), [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio), [la API](04-api.md) |
+| Varios movimientos en un mensaje, con respuestas por número | [Reglas de dominio § 1 y § 5](reglas-de-dominio.md) |
+| Corregir, borrar y restaurar un movimiento confirmado, con el botón de responder un mensaje | [Reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado) |
+| Preguntas sobre los propios datos | [Reglas de dominio § 17](reglas-de-dominio.md#17-preguntas-sobre-los-propios-datos) |
+
+**Si el tiempo no alcanza, se cae lo último de esa tabla y no lo primero.** Las preguntas sobre
+los propios datos van al final. De la HU2 quedan afuera el borrador que se arma solo y el
+recordatorio antes del inicio, que son procesos programados, y los montos recurrentes.
+
+Pasa a una segunda versión, con su diseño ya escrito en `docs/`: el adaptador de WhatsApp, el
+login por código, los números habilitados y el alta conversacional; los consejos con RAG y la
+base de conocimiento; los grupos familiares y la elección entre el presupuesto individual y el
+de un grupo; la multimoneda, los reintegros, las transferencias, las compras con tarjeta y las
+reglas recurrentes; los procesos programados, entre ellos las alertas y el vencimiento de los
+pendientes; y la sección "Me deben".
 
 El entorno `demo` llega en la entrega final. Se despliega desde la rama de la entrega y hace de
 entorno de pruebas: cada persona que prueba tiene su usuario y su enlace. Dónde se aloja depende

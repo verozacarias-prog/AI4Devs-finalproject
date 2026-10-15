@@ -4,7 +4,7 @@
 
 **Título:** Implementar webhook de recepción de mensajes de WhatsApp e interpretación por IA
 **HU relacionada:** [HU3](05-historias-de-usuario.md)
-**Entrega:** el worker, la clasificación y el registro entran en la entrega 2, con el chat web como entrada. El webhook de WhatsApp, `GET /budgets/{budget_id}`, varios movimientos en un mensaje, la elección entre el presupuesto individual y el de un grupo, y la corrección, el borrado y la restauración van en la entrega final. El reparto completo está en la [hoja de ruta](hoja-de-ruta.md#alcance-de-la-entrega-2).
+**Entrega:** el worker, la clasificación y el registro entran en la entrega 2, con el chat web como entrada. `GET /budgets/{budget_id}`, varios movimientos en un mensaje, y la corrección, el borrado y la restauración van en la entrega final. El webhook de WhatsApp y la elección entre el presupuesto individual y el de un grupo pasan a una segunda versión. El reparto completo está en la [hoja de ruta](hoja-de-ruta.md#alcance-de-la-entrega-final).
 **Descripción:** Endpoint `POST /webhook/whatsapp` (adaptador de entrada) que verifica y guarda el mensaje, y un worker de mensajes (otro proceso) que lo toma después y lo pasa al caso de uso `RegisterTransaction`, el cual extrae los datos y exige los que dependen del usuario. La respuesta no vuelve en la respuesta HTTP del webhook: se encola en `OUTBOUND_MESSAGE` y el worker la envía.
 **Alcance técnico:**
 
