@@ -18,7 +18,7 @@ export const AMOUNT_DECIMALS = 2
 
 /** The command that creates the test users of the local environment (docs/operacion.md). */
 export const SEED_TEST_DATA_COMMAND =
-  'docker compose exec api python -m app.adapters.inbound.cli.seed_test_data'
+  'docker compose exec api python -m app.adapters.inbound.operator_commands.seed_test_data'
 
 /** The address of the API while developing. Deployed, both share one origin (ADR 0016). */
 export const DEV_API_ORIGIN = 'http://127.0.0.1:8000'

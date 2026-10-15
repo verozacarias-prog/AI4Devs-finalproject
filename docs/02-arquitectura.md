@@ -196,7 +196,7 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
         /whatsapp_webhook   # translate WhatsApp payloads into use case calls
         /message_worker     # the worker: takes stored messages, calls use cases; main.py is the entry point of its process
         /scheduler          # scheduled jobs entry point: calls use cases, never raw SQL
-        /cli                # operator commands: local test data, knowledge base load, enabling phone numbers, personal links for the demo
+        /operator_commands  # commands an operator runs by hand: local test data, knowledge base load, enabling phone numbers, personal links for the demo
       /outbound
         /postgres           # SQLAlchemy repositories, unit of work and connection setup
         /pgvector            # VectorStorePort implementation

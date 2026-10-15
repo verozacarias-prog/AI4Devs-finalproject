@@ -187,7 +187,7 @@ cuentas, su primer período y un grupo. Se puede correr las veces que haga falta
 en el entorno `local`:
 
 ```sh
-docker compose exec api python -m app.adapters.inbound.cli.seed_test_data
+docker compose exec api python -m app.adapters.inbound.operator_commands.seed_test_data
 ```
 
 Qué trae cada usuario está en [operación](docs/operacion.md#2-entornos).

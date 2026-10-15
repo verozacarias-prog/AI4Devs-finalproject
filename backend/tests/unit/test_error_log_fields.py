@@ -47,7 +47,7 @@ def _logged(logger: logging.Logger, stream: io.StringIO, field: str, value: Valu
         (
             "error_stack",
             [
-                "app.adapters.inbound.cli.seed_test_data:main:34",
+                "app.adapters.inbound.operator_commands.seed_test_data:main:34",
                 "app.domain.use_cases.seed_test_data:execute:56",
             ],
         ),

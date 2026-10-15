@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy import Engine, text
 
-from app.adapters.inbound.cli.seed_test_data import main as seed_test_data
+from app.adapters.inbound.operator_commands.seed_test_data import main as seed_test_data
 
 # The clock of every case, unless the case says otherwise: 15:00:00 in Buenos Aires.
 NOW = datetime(2026, 10, 15, 18, 0, 0, tzinfo=UTC)

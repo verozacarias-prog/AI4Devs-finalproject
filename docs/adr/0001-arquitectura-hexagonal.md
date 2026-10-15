@@ -25,7 +25,7 @@ la API: son los tres procesos que comparten el código del dominio.
 2. **Adentro, cuatro puntos de entrada y un solo camino.** La API (`adapters/inbound/api/` y
    `adapters/inbound/whatsapp_webhook/`), el worker de mensajes
    (`adapters/inbound/message_worker/`), los procesos programados
-   (`adapters/inbound/scheduler/`) y los comandos de operación (`adapters/inbound/cli/`) son
+   (`adapters/inbound/scheduler/`) y los comandos de operación (`adapters/inbound/operator_commands/`) son
    adaptadores de entrada: traducen su disparador (un request, un mensaje guardado, una hora,
    un comando que corre quien opera Platita) a llamadas a casos de uso, y los casos de uso usan
    los repositorios a través de puertos. Ninguno escribe SQL propio. Los comandos de operación

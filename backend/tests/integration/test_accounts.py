@@ -24,7 +24,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine, text
 
 from app.adapters.inbound.api.app import create_app
-from app.adapters.inbound.cli.seed_test_data import main as seed_test_data
+from app.adapters.inbound.operator_commands.seed_test_data import main as seed_test_data
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
 from app.domain.use_cases.create_test_user import CreateTestUser
 from app.settings import load_settings

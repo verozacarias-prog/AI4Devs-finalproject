@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 import pytest
 from sqlalchemy import Engine, create_engine, text
 
-from app.adapters.inbound.cli.seed_test_data import main
+from app.adapters.inbound.operator_commands.seed_test_data import main
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
 from app.constants import Environment
 from app.domain.entities.family_group import FamilyGroup, Membership

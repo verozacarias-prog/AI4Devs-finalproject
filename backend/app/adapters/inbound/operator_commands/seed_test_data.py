@@ -1,6 +1,6 @@
 """Creates the test users of the local environment.
 
-Run it with `python -m app.adapters.inbound.cli.seed_test_data`.
+Run it with `python -m app.adapters.inbound.operator_commands.seed_test_data`.
 
 It refuses to run in any other environment, and running it again changes nothing
 (docs/operacion.md, section 2).
@@ -14,7 +14,7 @@ from collections.abc import Mapping
 from typing import TextIO
 
 from app import messages
-from app.adapters.inbound.cli.runner import run_command
+from app.adapters.inbound.operator_commands.runner import run_command
 from app.adapters.outbound.postgres.connection import create_db_engine
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
 from app.domain.use_cases.create_test_user import CreateTestUser

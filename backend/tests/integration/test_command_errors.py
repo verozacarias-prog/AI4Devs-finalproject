@@ -10,7 +10,7 @@ import io
 
 import pytest
 
-from app.adapters.inbound.cli.seed_test_data import main
+from app.adapters.inbound.operator_commands.seed_test_data import main
 from tests.conftest import UNREACHABLE_DATABASE_URL
 from tests.log_lines import LogLine, events_of, stack_of
 
@@ -46,7 +46,7 @@ def test_a_refused_command_leaves_its_line_and_gives_the_reference(database_url:
     assert line["error_code"] == "test_data_not_allowed"
     assert _reference(line) in output
     stack = stack_of(line)
-    assert stack[0].startswith("app.adapters.inbound.cli.")
+    assert stack[0].startswith("app.adapters.inbound.operator_commands.")
     assert stack[-1].startswith("app.domain.use_cases.seed_test_data:execute:")
 
 
