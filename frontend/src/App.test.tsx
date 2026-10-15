@@ -3,7 +3,7 @@
  * appears once someone enters, and goes away when the session ends. The whole dashboard is rendered, with the API simulated at the
  * network level.
  */
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { afterAll, afterEach, beforeAll, expect, test } from 'vitest'
@@ -23,7 +23,7 @@ afterEach(() => {
 })
 afterAll(() => api.close())
 
-test('case C1-31: choosing Lucía in the entry shows her accounts before anything else', async () => {
+test('case C1-31: choosing Lucía in the entry shows the menu and her accounts first', async () => {
   let signedIn = false
   api.use(
     http.get('*/healthz', () => HttpResponse.json({ status: 'ok' })),
@@ -43,12 +43,11 @@ test('case C1-31: choosing Lucía in the entry shows her accounts before anythin
   expect(screen.queryByRole('heading', { name: 'Tus cuentas' })).toBeNull()
   ;(await screen.findByRole('button', { name: 'Entrar como Lucía' })).click()
 
-  const accounts = await screen.findByRole('heading', { name: 'Tus cuentas' })
+  const nav = await screen.findByRole('navigation', { name: 'Menú principal' })
+  await screen.findByRole('heading', { name: 'Tus cuentas' })
   await screen.findByText('Efectivo', { selector: '.account__name' })
-  const status = screen.getByRole('heading', { name: 'Estado del sistema' })
-  const entry = screen.getByRole('heading', { name: 'Entrada de desarrollo' })
-  expect(accounts.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-  expect(accounts.compareDocumentPosition(entry) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(within(nav).getByRole('button', { name: 'Cuentas' }).getAttribute('aria-current')).toBe('page')
+  expect(screen.queryByRole('heading', { name: 'Entrada de desarrollo' })).toBeNull()
 })
 
 test('case C2-11: when the session expired, the entry comes back', async () => {

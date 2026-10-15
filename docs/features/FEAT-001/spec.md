@@ -438,8 +438,12 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **Sale de:** CA-13 · **Tipo:** componente
 - **Dado** el dashboard abierto sin sesión, con la entrada de desarrollo encendida y la respuesta de `GET /accounts` del caso C1-26,
 - **cuando** se elige a Lucía en la entrada,
-- **entonces** aparece "Tus cuentas" con sus cuentas, antes que el estado del sistema y que la entrada.
-- **Test:** `src/App.test.tsx` › "case C1-31: choosing Lucía in the entry shows her accounts before anything else"
+- **entonces** aparecen el menú y "Tus cuentas" con sus cuentas, "Cuentas" queda marcada como la
+  pantalla actual, y la entrada deja de verse. El caso se reescribió el 14 de octubre de 2026,
+  con la aprobación de Vero, cuando llegó el menú lateral
+  ([ADR 0027](../../adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md)): antes decía que las
+  cuentas aparecían antes que el estado del sistema y que la entrada, en la misma página.
+- **Test:** `src/App.test.tsx` › "case C1-31: choosing Lucía in the entry shows the menu and her accounts first"
 
 ### Corte 2 — errores y estado vacío
 
@@ -650,9 +654,11 @@ Las preguntas que se abrieron al escribir este documento, ya resueltas.
 3. ~~En qué orden vienen las cuentas.~~ Resuelta el 13 de octubre de 2026. Es el CA-12, y el
    orden lo da la respuesta de [`GET /accounts`](../../04-api.md).
 4. ~~Cómo se llega a la pantalla de cuentas.~~ Resuelta el 13 de octubre de 2026: es lo que se
-   ve al entrar, sin menú. Es el CA-13. La navegación entre pantallas se decide cuando exista
-   la segunda pantalla del dashboard. El chat web no es una de ellas: es un andamio de
-   desarrollo, que no entra en el menú del producto
+   ve al entrar, sin elegir nada. Es el CA-13. La navegación entre pantallas se decidió el 14 de
+   octubre de 2026, con el menú lateral
+   ([ADR 0027](../../adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md)): "Cuentas" es la
+   primera opción y la que queda marcada al entrar. El chat web va en la sección "Pruebas" del
+   menú, aparte de las pantallas del producto
    ([ADR 0002](../../adr/0002-whatsapp-como-canal-principal.md)).
 5. ~~El saldo inicial de una cuenta de inversión.~~ Resuelta el 13 de octubre de 2026: cuenta
    como aportado, y quedó escrito en

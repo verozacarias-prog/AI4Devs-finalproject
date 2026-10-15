@@ -4,6 +4,16 @@
  */
 export const MESSAGES = {
   appTitle: 'Platita',
+  appTagline: 'Tu plata, en orden',
+  nav: {
+    label: 'Menú principal',
+    accounts: 'Cuentas',
+    testing: 'Pruebas',
+    status: 'Estado del sistema',
+    signedInAs: 'Sesión de',
+    logout: 'Cerrar sesión',
+    logoutFailed: 'No se pudo cerrar la sesión',
+  },
   /** Shared by every screen that asks the API for something. */
   common: {
     retry: 'Reintentar',
