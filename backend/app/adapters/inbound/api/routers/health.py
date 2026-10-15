@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from app.adapters.inbound.api import reference
 from app.adapters.inbound.api.routes import HEALTH_TAG, HEALTHZ, READYZ, HealthState
-from app.domain.use_cases.check_readiness import CheckReadiness
+from app.domain.use_cases.health.check_readiness import CheckReadiness
 
 
 class HealthStatus(BaseModel):

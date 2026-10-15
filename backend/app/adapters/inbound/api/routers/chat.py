@@ -22,9 +22,9 @@ from app.adapters.inbound.api.routes import CHAT_MESSAGES, CHAT_TAG, IDEMPOTENCY
 from app.domain.entities.chat_message import Direction
 from app.domain.entities.inbound_message import InboundStatus
 from app.domain.entities.outbound_message import ResponseKind
-from app.domain.use_cases.authenticate_session import AuthenticateSession, ValidateSession
-from app.domain.use_cases.list_chat_messages import ListChatMessages
-from app.domain.use_cases.send_chat_message import SendChatMessage
+from app.domain.use_cases.messages.list_chat_messages import ListChatMessages
+from app.domain.use_cases.messages.send_chat_message import SendChatMessage
+from app.domain.use_cases.sessions.authenticate_session import AuthenticateSession, ValidateSession
 
 
 class ChatMessageRequest(BaseModel):

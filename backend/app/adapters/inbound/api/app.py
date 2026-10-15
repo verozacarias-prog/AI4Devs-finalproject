@@ -25,14 +25,14 @@ from app.adapters.outbound.postgres.connection import create_db_engine
 from app.adapters.outbound.postgres.database_health import PostgresDatabaseHealth
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
 from app.constants import APP_TITLE, Environment
-from app.domain.use_cases.authenticate_session import AuthenticateSession, ValidateSession
-from app.domain.use_cases.check_readiness import CheckReadiness
-from app.domain.use_cases.close_session import CloseSession
-from app.domain.use_cases.list_accounts import ListAccounts
-from app.domain.use_cases.list_chat_messages import ListChatMessages
-from app.domain.use_cases.list_test_users import ListTestUsers
-from app.domain.use_cases.open_dev_session import OpenDevSession
-from app.domain.use_cases.send_chat_message import SendChatMessage
+from app.domain.use_cases.accounts.list_accounts import ListAccounts
+from app.domain.use_cases.health.check_readiness import CheckReadiness
+from app.domain.use_cases.messages.list_chat_messages import ListChatMessages
+from app.domain.use_cases.messages.send_chat_message import SendChatMessage
+from app.domain.use_cases.sessions.authenticate_session import AuthenticateSession, ValidateSession
+from app.domain.use_cases.sessions.close_session import CloseSession
+from app.domain.use_cases.sessions.open_dev_session import OpenDevSession
+from app.domain.use_cases.test_data.list_test_users import ListTestUsers
 from app.settings import Settings
 from app.shared.clock import Clock, SystemClock
 

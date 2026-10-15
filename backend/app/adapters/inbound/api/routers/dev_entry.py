@@ -20,8 +20,8 @@ from app.adapters.inbound.api.routers.session import set_session_cookie
 from app.adapters.inbound.api.routes import DEV_SESSION, DEV_TAG, DEV_USERS
 from app.adapters.observability.events import Event, LoggerName, SessionMethod
 from app.adapters.observability.events import Field as LogField
-from app.domain.use_cases.list_test_users import ListTestUsers
-from app.domain.use_cases.open_dev_session import OpenDevSession
+from app.domain.use_cases.sessions.open_dev_session import OpenDevSession
+from app.domain.use_cases.test_data.list_test_users import ListTestUsers
 
 logger = logging.getLogger(LoggerName.API)
 

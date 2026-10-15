@@ -17,8 +17,8 @@ from app import messages
 from app.adapters.inbound.operator_commands.runner import run_command
 from app.adapters.outbound.postgres.connection import create_db_engine
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
-from app.domain.use_cases.create_test_user import CreateTestUser
-from app.domain.use_cases.seed_test_data import SeedTestData
+from app.domain.use_cases.test_data.create_test_user import CreateTestUser
+from app.domain.use_cases.test_data.seed_test_data import SeedTestData
 from app.settings import Settings
 from app.shared.clock import SystemClock
 

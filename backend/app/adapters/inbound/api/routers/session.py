@@ -23,8 +23,8 @@ from app.adapters.inbound.api.routes import (
     SESSION_COOKIE_SAME_SITE,
     SESSION_TAG,
 )
-from app.domain.use_cases.authenticate_session import AuthenticateSession
-from app.domain.use_cases.close_session import CloseSession
+from app.domain.use_cases.sessions.authenticate_session import AuthenticateSession
+from app.domain.use_cases.sessions.close_session import CloseSession
 
 # Reads the token of the session cookie, and tells the reference which operations ask for
 # a session. A missing cookie is not refused here: the use case answers for every case.

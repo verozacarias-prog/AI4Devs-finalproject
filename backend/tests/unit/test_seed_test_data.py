@@ -6,8 +6,8 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from app.constants import Environment
-from app.domain.use_cases.create_test_user import CreateTestUser
-from app.domain.use_cases.seed_test_data import SeedTestData
+from app.domain.use_cases.test_data.create_test_user import CreateTestUser
+from app.domain.use_cases.test_data.seed_test_data import SeedTestData
 from tests.support.doubles import FixedClock, InMemoryUnitOfWork
 
 # 12:00 in Buenos Aires on October 12.

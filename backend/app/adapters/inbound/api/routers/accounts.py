@@ -16,8 +16,8 @@ from app.adapters.inbound.api.exact_json import ExactJSONResponse
 from app.adapters.inbound.api.routers.session import SessionToken
 from app.adapters.inbound.api.routes import ACCOUNTS, ACCOUNTS_TAG
 from app.domain.entities.account import AccountType, BalanceKind
-from app.domain.use_cases.authenticate_session import AuthenticateSession
-from app.domain.use_cases.list_accounts import ListAccounts
+from app.domain.use_cases.accounts.list_accounts import ListAccounts
+from app.domain.use_cases.sessions.authenticate_session import AuthenticateSession
 
 # An amount travels as a JSON number with its exact digits, never as a string.
 ExactAmount = Annotated[Decimal, WithJsonSchema({"type": "number"})]

@@ -17,7 +17,7 @@ from sqlalchemy import Engine, create_engine, text
 
 from app.adapters.inbound.message_worker.worker import create_worker
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
-from app.domain.use_cases.claim_next_message import ClaimNextMessage
+from app.domain.use_cases.messages.claim_next_message import ClaimNextMessage
 from app.settings import load_settings
 from tests.support.chat_data import FIXED_REPLY, NOW, inbound, seed, status_of, user_id
 from tests.support.doubles import FixedClock

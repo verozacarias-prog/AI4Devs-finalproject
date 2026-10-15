@@ -17,7 +17,7 @@ from app.adapters.observability.logs import configure_logging
 from app.adapters.outbound.postgres.connection import create_db_engine
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
 from app.constants import WORKER_IDLE_SECONDS, WORKER_LOCK_SECONDS, Environment, ProcessName
-from app.domain.use_cases.process_next_message import ProcessNextMessage
+from app.domain.use_cases.messages.process_next_message import ProcessNextMessage
 from app.settings import Settings
 from app.shared.clock import Clock, SystemClock
 

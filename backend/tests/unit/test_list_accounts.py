@@ -16,7 +16,7 @@ from app.domain.entities.account import Account, AccountType, BalanceKind
 from app.domain.entities.transaction import Transaction, TransactionType
 from app.domain.entities.transfer import Transfer
 from app.domain.entities.user import OnboardingStatus, User
-from app.domain.use_cases.list_accounts import AccountBalance, ListAccounts
+from app.domain.use_cases.accounts.list_accounts import AccountBalance, ListAccounts
 from tests.support.doubles import FixedClock, InMemoryUnitOfWork
 
 BUENOS_AIRES = "America/Argentina/Buenos_Aires"

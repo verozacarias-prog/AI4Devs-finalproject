@@ -11,7 +11,7 @@ from app.domain.entities.user import User
 from app.domain.errors import TestDataNotAllowedError
 from app.domain.local_date import local_today
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
-from app.domain.use_cases.create_test_user import CreateTestUser
+from app.domain.use_cases.test_data.create_test_user import CreateTestUser
 from app.shared.clock import Clock
 
 

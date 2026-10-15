@@ -5,7 +5,7 @@ from datetime import timedelta
 from app import messages
 from app.domain.entities.outbound_message import ResponseKind, reply_to
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
-from app.domain.use_cases.claim_next_message import ClaimNextMessage
+from app.domain.use_cases.messages.claim_next_message import ClaimNextMessage
 from app.shared.clock import Clock
 
 

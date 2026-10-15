@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
-from app.domain.use_cases.authenticate_session import valid_session
+from app.domain.use_cases.sessions.authenticate_session import valid_session
 from app.shared.clock import Clock
 
 

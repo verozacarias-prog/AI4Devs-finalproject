@@ -47,7 +47,7 @@ def test_a_refused_command_leaves_its_line_and_gives_the_reference(database_url:
     assert _reference(line) in output
     stack = stack_of(line)
     assert stack[0].startswith("app.adapters.inbound.operator_commands.")
-    assert stack[-1].startswith("app.domain.use_cases.seed_test_data:execute:")
+    assert stack[-1].startswith("app.domain.use_cases.test_data.seed_test_data:execute:")
 
 
 def test_a_command_that_fails_says_so_without_the_traceback_or_the_database_url() -> None:
