@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardTitle } from '@/components/ui/card'
 import { checkReadiness, type Readiness } from '../api/health'
 import { MESSAGES } from '../messages'
 
@@ -57,28 +59,29 @@ export function StatusPage({ timeoutMs }: Props) {
   }
 
   return (
-    <section className="card" aria-labelledby="status-heading">
-      <h2 id="status-heading" className="card__heading">
-        {TEXT.heading}
-      </h2>
+    <Card aria-labelledby="status-heading">
+      <CardTitle id="status-heading">{TEXT.heading}</CardTitle>
       <p
         ref={statusLine}
         role="status"
         tabIndex={-1}
-        className={state.kind === 'content' ? 'status status--ok' : 'card__text'}
+        className={
+          state.kind === 'content'
+            ? 'flex items-center gap-2 font-semibold text-success outline-none'
+            : 'text-sm text-muted-foreground outline-none'
+        }
       >
+        {state.kind === 'content' && <span aria-hidden="true" className="size-2 rounded-full bg-success" />}
         {STATUS_TEXT[state.kind]}
       </p>
-      {state.kind === 'content' && <p className="card__text">{TEXT.connectedDetail}</p>}
+      {state.kind === 'content' && <p className="text-sm text-muted-foreground">{TEXT.connectedDetail}</p>}
       {state.kind === 'error' && (
-        <div role="alert">
-          <p className="status status--error">{TEXT.disconnected}</p>
-          <p className="card__text">{ERROR_MESSAGES[state.cause]}</p>
-          <button type="button" className="button" onClick={retry}>
-            {MESSAGES.common.retry}
-          </button>
+        <div role="alert" className="flex flex-col items-start gap-2">
+          <p className="font-semibold text-destructive">{TEXT.disconnected}</p>
+          <p className="text-sm text-muted-foreground">{ERROR_MESSAGES[state.cause]}</p>
+          <Button onClick={retry}>{MESSAGES.common.retry}</Button>
         </div>
       )}
-    </section>
+    </Card>
   )
 }

@@ -34,7 +34,8 @@ La especificación no decía con qué se construye, pero ya fijaba cuatro condic
 4. **Los tokens de diseño son variables CSS en un solo archivo,** `frontend/src/design-tokens.css`.
    Ningún componente usa un color, un tamaño o un espaciado suelto.
 5. **Sin librerías de rutas, de estado ni de componentes todavía.** Cada una se suma con la
-   primera pantalla que la necesite, con su justificación.
+   primera pantalla que la necesite, con su justificación. La primera fue la de componentes, con
+   el menú lateral y el chat ([ADR 0027](0027-tailwind-y-shadcn-ui-para-el-dashboard.md)).
 6. **El linter es `oxlint`,** el que trae la plantilla de Vite. La verificación de tipos la hace
    el compilador de TypeScript.
 7. **TypeScript 5, no 6.** La herramienta que genera los tipos todavía no admite la versión 6.

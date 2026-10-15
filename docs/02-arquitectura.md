@@ -215,10 +215,12 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
     main.py              # entry point of the API process
   /tests
   /migrations          # Alembic
-/frontend                # React, TypeScript and Vite (ADR 0026)
+/frontend                # React, TypeScript and Vite (ADR 0026), Tailwind CSS and shadcn/ui (ADR 0027)
   /src
     /api                 # API contract exported by the backend, the types generated from it, and the API paths
     /pages               # one file per screen, with its test next to it
+    /components/ui       # the shadcn/ui components, copied into the project and owned by it
+    /lib                 # small helpers of the components, such as joining class names
     messages.ts          # every text the dashboard shows
     design-tokens.css    # design tokens: the only place with colours, sizes and spacing
     App.tsx

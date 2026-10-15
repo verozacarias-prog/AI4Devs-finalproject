@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardDescription, CardTitle } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 import { loadAccounts, type Account } from '../api/accounts'
 import type { Failure } from '../api/request'
 import { AMOUNT_DECIMALS, AMOUNT_LOCALE } from '../constants'
@@ -57,58 +60,69 @@ export function AccountsPage({ onNoSession, timeoutMs }: Props) {
   }
 
   return (
-    <section className="card" aria-labelledby="accounts-heading">
-      <h2 id="accounts-heading" className="card__heading">
+    <Card aria-labelledby="accounts-heading">
+      <CardTitle id="accounts-heading" className="text-xl">
         {TEXT.heading}
-      </h2>
-      <p ref={statusLine} role="status" tabIndex={-1} className="card__text">
+      </CardTitle>
+      <p ref={statusLine} role="status" tabIndex={-1} className="text-sm text-muted-foreground outline-none empty:hidden">
         {state.kind === 'loading' ? TEXT.loading : state.kind === 'empty' ? TEXT.empty : ''}
       </p>
       {state.kind === 'content' && (
-        <>
+        <div className="flex flex-col gap-6">
           {state.groups.map((group) => (
-            <section key={group.currency} className="account-group" aria-labelledby={`group-${group.currency}`}>
-              <h3 id={`group-${group.currency}`} className="account-group__heading">
-                {TEXT.currencyGroup(group.currency)}
-              </h3>
+            <section key={group.currency} aria-labelledby={`group-${group.currency}`}>
+              <GroupHeading id={`group-${group.currency}`}>{TEXT.currencyGroup(group.currency)}</GroupHeading>
               <AccountRows accounts={group.accounts} />
             </section>
           ))}
           {state.investments.length > 0 && (
-            <section className="account-group" aria-labelledby="group-investments">
-              <h3 id="group-investments" className="account-group__heading">
-                {TEXT.investmentsHeading}
-              </h3>
-              <p className="card__text">{TEXT.investmentsDetail}</p>
+            <section aria-labelledby="group-investments">
+              <GroupHeading id="group-investments">{TEXT.investmentsHeading}</GroupHeading>
+              <CardDescription className="mb-2">{TEXT.investmentsDetail}</CardDescription>
               <AccountRows accounts={state.investments} />
             </section>
           )}
-        </>
-      )}
-      {state.kind === 'empty' && <p className="card__text">{TEXT.emptyDetail}</p>}
-      {state.kind === 'error' && (
-        <div role="alert">
-          <p className="status status--error">{TEXT.failed}</p>
-          <p className="card__text">{ERROR_MESSAGES[state.cause]}</p>
-          <button type="button" className="button" onClick={retry}>
-            {MESSAGES.common.retry}
-          </button>
         </div>
       )}
-    </section>
+      {state.kind === 'empty' && <CardDescription>{TEXT.emptyDetail}</CardDescription>}
+      {state.kind === 'error' && (
+        <div role="alert" className="flex flex-col items-start gap-2">
+          <p className="font-semibold text-destructive">{TEXT.failed}</p>
+          <p className="text-sm text-muted-foreground">{ERROR_MESSAGES[state.cause]}</p>
+          <Button onClick={retry}>{MESSAGES.common.retry}</Button>
+        </div>
+      )}
+    </Card>
   )
 }
 
+function GroupHeading({ id, children }: { id: string; children: string }) {
+  return (
+    <h3 id={id} className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+      {children}
+    </h3>
+  )
+}
+
+/**
+ * The `account…` class names have no style of their own: the tests of this screen find a row,
+ * its name and its amount by them. Do not remove them as unused.
+ */
 function AccountRows({ accounts }: { accounts: Account[] }) {
   return (
-    <ul className="accounts">
+    <ul className="divide-y rounded-lg border">
       {accounts.map((account) => (
-        <li key={account.id} className="account">
-          <span className="account__name">{account.name}</span>
-          <span className="account__type">
+        <li key={account.id} className="account flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
+          <span className="account__name font-medium">{account.name}</span>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
             {account.balance_kind === 'net_contributed' ? TEXT.netContributed : TEXT.types[account.type]}
           </span>
-          <span className={account.balance < 0 ? 'account__amount account__amount--negative' : 'account__amount'}>
+          <span
+            className={cn(
+              'account__amount ml-auto font-semibold tabular-nums',
+              account.balance < 0 && 'account__amount--negative text-destructive',
+            )}
+          >
             {formatAmount(account.balance, account.currency)}
           </span>
         </li>

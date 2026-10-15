@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardTitle } from '@/components/ui/card'
 import type { Failure } from '../api/request'
 import { enterAs, loadEntry, logout, type DevUser, type SessionUser } from '../api/session'
 import { SEED_TEST_DATA_COMMAND } from '../constants'
@@ -97,62 +99,56 @@ export function DevEntryPage({ onSessionChange, timeoutMs }: Props) {
   if (state.kind === 'unavailable') return null
 
   return (
-    <section className="card" aria-labelledby="dev-entry-heading">
-      <h2 id="dev-entry-heading" className="card__heading">
-        {TEXT.heading}
-      </h2>
+    <Card aria-labelledby="dev-entry-heading">
+      <CardTitle id="dev-entry-heading">{TEXT.heading}</CardTitle>
       <p
         ref={statusLine}
         role="status"
         tabIndex={-1}
-        className={state.kind === 'signed-in' ? 'status status--ok' : 'card__text'}
+        className={
+          state.kind === 'signed-in'
+            ? 'font-semibold text-success outline-none'
+            : 'text-sm text-muted-foreground outline-none'
+        }
       >
         {statusText(state)}
       </p>
       {state.kind === 'choose' && (
-        <ul className="choices">
+        <ul className="flex flex-wrap gap-2">
           {state.users.map((user) => (
             <li key={user.id}>
-              <button
-                type="button"
-                className="button"
-                onClick={() => start({ kind: 'enter', userId: user.id })}
-              >
+              <Button variant="outline" onClick={() => start({ kind: 'enter', userId: user.id })}>
                 {TEXT.enterAs(user.name)}
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
       )}
       {state.kind === 'signed-in' && (
-        <>
-          <p className="card__text">{TEXT.signedInDetail}</p>
-          <button type="button" className="button" onClick={() => start({ kind: 'logout' })}>
+        <div className="flex flex-col items-start gap-2">
+          <p className="text-sm text-muted-foreground">{TEXT.signedInDetail}</p>
+          <Button variant="outline" onClick={() => start({ kind: 'logout' })}>
             {TEXT.logout}
-          </button>
-        </>
-      )}
-      {state.kind === 'empty' && (
-        <>
-          <p className="card__text">{TEXT.emptyDetail}</p>
-          <pre className="command">
-            <code>{SEED_TEST_DATA_COMMAND}</code>
-          </pre>
-          <button type="button" className="button" onClick={() => start({ kind: 'load' })}>
-            {MESSAGES.common.retry}
-          </button>
-        </>
-      )}
-      {state.kind === 'error' && (
-        <div role="alert">
-          <p className="status status--error">{TEXT.failed}</p>
-          <p className="card__text">{ERROR_MESSAGES[state.cause]}</p>
-          <button type="button" className="button" onClick={() => start({ kind: 'load' })}>
-            {MESSAGES.common.retry}
-          </button>
+          </Button>
         </div>
       )}
-    </section>
+      {state.kind === 'empty' && (
+        <div className="flex flex-col items-start gap-2">
+          <p className="text-sm text-muted-foreground">{TEXT.emptyDetail}</p>
+          <pre className="w-full overflow-x-auto rounded-md border bg-muted p-3 font-mono text-sm">
+            <code>{SEED_TEST_DATA_COMMAND}</code>
+          </pre>
+          <Button onClick={() => start({ kind: 'load' })}>{MESSAGES.common.retry}</Button>
+        </div>
+      )}
+      {state.kind === 'error' && (
+        <div role="alert" className="flex flex-col items-start gap-2">
+          <p className="font-semibold text-destructive">{TEXT.failed}</p>
+          <p className="text-sm text-muted-foreground">{ERROR_MESSAGES[state.cause]}</p>
+          <Button onClick={() => start({ kind: 'load' })}>{MESSAGES.common.retry}</Button>
+        </div>
+      )}
+    </Card>
   )
 }
 

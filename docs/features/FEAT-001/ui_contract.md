@@ -12,25 +12,30 @@ Por qué este contrato vive separado de los componentes está en las
 
 | Componente | ¿Existe o es nuevo? | Para qué |
 |---|---|---|
-| Tarjeta (`card`) | Existe | El marco de la pantalla, igual que el estado del sistema y la entrada |
+| `Card` y `CardTitle` de shadcn/ui | Existen, desde el [ADR 0027](../../adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md) | El marco de la pantalla, igual que el estado del sistema y la entrada. Es una sección con el título como nombre, así que un lector de pantalla la anuncia como "Tus cuentas" |
+| `Button` de shadcn/ui | Existe, desde el ADR 0027 | Reintentar |
 | Línea de estado (`role="status"`) | Existe, como en la entrada de desarrollo | Anuncia cargando y vacío, y recibe el foco al reintentar |
-| Alerta de error (`role="alert"`) con botón Reintentar | Existe, como en la entrada de desarrollo | El estado de error |
-| Grupo de cuentas (`account-group`) | Nuevo | Un título por moneda, y otro para las inversiones. Ninguno de los existentes agrupa |
-| Fila de cuenta (`account`) | Nuevo | Nombre, tipo y saldo de una cuenta en una línea. No había ninguna lista de montos |
+| Alerta de error (`role="alert"`) | Existe, como en la entrada de desarrollo | El estado de error |
+| Grupo de cuentas | Nuevo, en `AccountsPage` | Un título por moneda, y otro para las inversiones. Ningún componente existente agrupa |
+| Fila de cuenta | Nuevo, en `AccountsPage` | Nombre, una etiqueta con el tipo y el saldo de una cuenta, en una línea |
 
 ## Tokens del Design System
 
-Todos salen de `frontend/src/design-tokens.css`. No se creó ninguno nuevo.
+Todos salen de `frontend/src/design-tokens.css`, que es el tema entero de Tailwind, con las dos
+excepciones que admite el [ADR 0027](../../adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md): las
+clases fijas, como `rounded-full` en la etiqueta del tipo, y la transparencia sobre un color del
+tema. No se creó ningún token para esta pantalla.
 
 | Uso | Token |
 |---|---|
-| Fondo y borde de la tarjeta | `--color-surface`, `--color-border`, `--radius-medium` |
-| Separación entre filas | `--border-width`, `--color-border`, `--space-2` |
-| Título de cada grupo y tipo de cuenta | `--color-text-muted`, `--font-size-small`, `--font-weight-strong` |
-| Nombre de la cuenta | `--font-weight-strong` |
-| Saldo negativo, como el de una tarjeta con gastos vencidos | `--color-danger` |
-| Error | `--color-danger` |
-| Foco del teclado | `--focus-ring` |
+| Fondo, texto, borde y radio de la tarjeta | `--color-card`, `--color-card-foreground`, `--color-border`, `--radius-xl`, `--shadow-sm` |
+| Título "Tus cuentas" | `--text-xl`, `--font-weight-semibold` |
+| Lista de cuentas: borde y separación entre filas | `--color-border`, `--radius-lg`, `--spacing` |
+| Título de cada grupo y etiqueta del tipo | `--color-muted-foreground`, `--color-muted`, `--text-xs`, `--font-weight-semibold`, `--tracking-wide` |
+| Nombre de la cuenta y saldo | `--font-weight-medium`, `--font-weight-semibold` |
+| Saldo negativo, como el de una tarjeta con gastos vencidos | `--color-destructive` |
+| Error | `--color-destructive` |
+| Foco del teclado | `--color-ring`, `--focus-ring-width` |
 
 ## Máquina de estados
 
@@ -41,8 +46,8 @@ Todos salen de `frontend/src/design-tokens.css`. No se creó ninguno nuevo.
 | Vacío | `GET /accounts` trae una lista vacía, o solo cuentas "Me deben" | "Todavía no tenés cuentas" y que se dan de alta conversando con Platita, sin alerta | — |
 | Error | La API responde con un error, no responde a tiempo o no se llega a ella | "No se pudieron consultar tus cuentas", la causa y Reintentar, sin ningún saldo | Reintentar vuelve a Cargando |
 
-Sin sesión no es un estado de esta pantalla. Si `GET /accounts` responde `401`, la pantalla
-desaparece y se vuelve a mostrar la entrada.
+Sin sesión no es un estado de esta pantalla. Si `GET /accounts` responde `401`, la pantalla y el
+menú desaparecen, y se vuelve a mostrar la entrada.
 
 ## Datos que consume
 
@@ -54,8 +59,9 @@ llega, con el formato de su moneda. Usa `type` solo para dejar afuera las cuenta
 ## Accesibilidad
 
 - [x] Todo control tiene nombre accesible: el único es Reintentar.
-- [x] El contraste cumple el mínimo de la guía del Design System: usa los mismos colores que las
-  otras dos tarjetas.
+- [x] El contraste cumple el mínimo de WCAG AA, 4,5:1 para texto normal: se calculó para cada
+  color de texto contra su fondo, y el más bajo es el verde de "conectado" sobre la tarjeta
+  blanca, con 5,19:1.
 - [x] La pantalla se puede operar sólo con teclado: el único control es un botón.
 - [x] Los montos se anuncian con su moneda: cada saldo se escribe con el formato de su moneda,
   como "$ 25.000,00" o "US$ 400,00", nunca como número suelto.
