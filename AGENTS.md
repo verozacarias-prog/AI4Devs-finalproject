@@ -205,7 +205,9 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   importe fuera del adaptador de particionado, y el aislamiento del frontend. No detecta un
   monto con otro nombre, una llamada HTTP de un proceso del backend a la API, ni el SDK de un
   proveedor de IA que no esté en su lista. Valida que un módulo de `app/shared/` importe solo
-  la librería estándar y no se llame como un módulo general. No valida que los errores se
+  la librería estándar y no se llame como un módulo general, y que ningún adaptador de entrada
+  importe a otro: la API, el worker, los comandos y los procesos programados llegan cada uno a
+  los casos de uso por su cuenta. No valida que los errores se
   traduzcan en un solo lugar, ni que un caso de uso no lea la hora por su cuenta.
   Tolerante mientras `backend/` y `frontend/` no
   existan, pero falla si `backend/` existe y el dominio no está en `backend/app/domain/`.

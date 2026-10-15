@@ -10,6 +10,9 @@ Enforces the structural rules of ADR 0001 and ADR 0020, declared in AGENTS.md:
      outbound adapters, the migrations and the tests.
   4. Inside backend/, no AI orchestration framework is imported. The only exception is the
      text splitting package, and only in the text splitter outbound adapter and the tests.
+  5. An inbound adapter never imports another one: the API, the message worker, the
+     commands and the scheduled processes each reach the use cases on their own, so any of
+     them can be replaced or deployed apart without dragging the others.
 
 Tolerant by design: while backend/ or frontend/ do not exist yet, the matching
 checks are skipped instead of failing, so the net is in place before the first
@@ -49,6 +52,8 @@ AI_SPLITTER_ALLOWED = [
 
 # ADR 0001 — app/shared/ tiene utilidades técnicas: sólo librería estándar, nada del resto de
 # app/, y un módulo por tema. Estos nombres son los de un módulo general.
+INBOUND_DIR = os.path.join(BACKEND_DIR, 'app', ADAPTERS_PKG, 'inbound')
+INBOUND_PACKAGE = 'app.%s.inbound' % ADAPTERS_PKG
 SHARED_DIR = os.path.join(BACKEND_DIR, 'app', 'shared')
 SHARED_GENERAL_NAMES = {'helpers.py', 'helper.py', 'utils.py', 'util.py', 'common.py', 'misc.py'}
 STDLIB_MODULES = set(getattr(sys, 'stdlib_module_names', ())) | {'__future__'}
@@ -314,6 +319,44 @@ def check_ai_frameworks():
                               % (path, line, head))
 
 
+def inbound_adapter_of(module):
+    """El adaptador de entrada al que apunta un módulo importado, o None si no es uno."""
+    prefix = INBOUND_PACKAGE + '.'
+    if not module.startswith(prefix):
+        return None
+    return module[len(prefix):].split('.')[0]
+
+
+def check_inbound_adapters():
+    """Regla 5: un adaptador de entrada no importa a otro. Cada uno llega a los casos de uso
+    por su cuenta, así que cualquiera se puede reemplazar o desplegar aparte."""
+    if not os.path.isdir(INBOUND_DIR):
+        return
+    for path in walk(INBOUND_DIR, ('.py',)):
+        relative = os.path.relpath(path, INBOUND_DIR).split(os.sep)
+        if len(relative) < 2:
+            # Un archivo suelto en inbound/, como su __init__.py: no es de ningún adaptador.
+            continue
+        own = relative[0]
+        try:
+            tree = ast.parse(read(path), filename=path)
+        except SyntaxError as exc:
+            errors.append('%s:%s no se pudo parsear (%s)' % (path, exc.lineno, exc.msg))
+            continue
+        targets = [(inbound_adapter_of(module), line) for module, line in imported_modules(tree)]
+        # `from app.adapters.inbound import api` names the adapter in the imported names.
+        targets += [
+            (alias.name, node.lineno)
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module == INBOUND_PACKAGE
+            for alias in node.names
+        ]
+        for other, line in targets:
+            if other is not None and other != own:
+                errors.append('%s:%d el adaptador de entrada %s importa de %s — cada uno llega a '
+                              'los casos de uso por su cuenta (ADR 0001)' % (path, line, own, other))
+
+
 def check_frontend_isolation():
     """Regla 2: el frontend habla con el backend sólo por la API REST."""
     if not os.path.isdir(FRONTEND_DIR):
@@ -342,6 +385,7 @@ def main():
     backend_files = check_database_access()
     check_ai_frameworks()
     check_shared_utilities()
+    check_inbound_adapters()
     frontend_files = check_frontend_isolation()
 
     print('Verificación de arquitectura')
