@@ -37,7 +37,9 @@ de una pantalla, tiene un solo commit.
 | 3 | Enmascarado de logs, multimoneda, accesibilidad y observabilidad | `test(xxx): casos de observabilidad y accesibilidad` | `feat(xxx): agregar observabilidad y accesibilidad` |
 
 **Formato del mensaje de commit.** `tipo(alcance): qué cambia`, en español. Los tipos son
-`feat`, `fix`, `docs`, `test` y `chore`. El alcance es la funcionalidad, y se puede omitir
+`feat`, `fix`, `docs`, `test`, `refactor` y `chore`. `refactor` reordena código sin cambiar lo
+que hace: los tests que pasaban siguen pasando, y si alguno se toca es solo para seguir al
+código que se movió. El alcance es la funcionalidad, y se puede omitir
 cuando el cambio no es de una sola, como `docs: guía para colaborar`.
 
 Los tres cortes de una funcionalidad son los tres pull requests que pide
