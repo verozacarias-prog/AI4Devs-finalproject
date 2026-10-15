@@ -1,6 +1,6 @@
 # 4. Especificación de la API
 
-> Los endpoints principales del flujo descrito en esta entrega. El contrato completo (OpenAPI autogenerado por FastAPI en `/docs`) se agrega en la Entrega 2.
+> Los endpoints principales del flujo y las reglas de cada uno. El contrato completo es el OpenAPI que genera FastAPI desde el código: versionado en [`frontend/src/api/openapi.json`](../frontend/src/api/openapi.json), del que salen los tipos del dashboard, y navegable en `/docs` con la API corriendo. El pipeline falla si el contrato versionado no coincide con el código, y `scripts/verify_api_contract.py` comprueba que cada operación y cada estado que responde estén en este documento.
 
 **Aislamiento entre usuarios, en todo endpoint autenticado.** El usuario sale siempre de la sesión autenticada, nunca del cuerpo, de la ruta ni de un parámetro. Toda lectura o escritura se limita a los recursos de ese usuario y de los grupos familiares a los que pertenece, según [reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad). Un recurso que existe pero es de otro usuario responde `404`, igual que uno que no existe, para no confirmar su existencia. Cada endpoint lo detalla para sus propios recursos, pero la regla vale aunque no lo diga.
 

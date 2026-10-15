@@ -57,6 +57,14 @@ En el backend el test se escribe antes que el código, sobre casos que aprueba u
 ([ADR 0024](adr/0024-tests-primero-en-el-backend.md)). Cada corte se cierra contra el
 [Definition of Done](07-pull-requests.md#definition-of-done).
 
+## Despliegue
+
+El asistente escribe la imagen, Docker Compose y el pipeline
+([ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md)), con los mismos
+controles que el resto del código. Antes de cada entrega corre `/security-audit`, que audita el
+backend contra las dos listas de OWASP. El despliegue del entorno `demo`, en la entrega final,
+lo escribe el asistente y lo aprueba una persona: ningún asistente despliega ni hace merge.
+
 ## Agente revisor
 
 Un subagente, versionado en `.claude/agents/`. Es un agente y no un command porque tiene que

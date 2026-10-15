@@ -2,6 +2,8 @@
 
 > Siete historias de usuario: seis **must-have**, que componen el flujo end-to-end comprometido para el MVP, y una **should-have**. El orden sigue la secuencia real de uso, salvo la HU6 y la HU7, que se sumaron después y conservan su número para no renumerar las referencias existentes: en el uso real, la HU6 va primera, porque es el alta, y la HU7 va antes de armar un presupuesto de grupo. Después configuro mis cuentas, después armo el presupuesto del período, ahí empiezo a registrar movimientos, los reviso en el dashboard, y el sistema me avisa si me estoy pasando.
 
+**Alcance de la entrega final.** Las historias describen el producto completo. En la entrega final todo pasa por el chat web y no por WhatsApp, y entran la HU1 (sin el alta de cuentas por conversación), la HU2 para un período individual, sin el borrador automático, el recordatorio ni los montos recurrentes, la HU3 y la HU4. La HU5 (sus alertas salen por WhatsApp), la HU6 y la HU7 pasan a una segunda versión. El detalle está en la [hoja de ruta](hoja-de-ruta.md#alcance-de-la-entrega-final).
+
 **Historia de Usuario 1** · *must-have*
 
 **Como** usuario que maneja varias cuentas y billeteras

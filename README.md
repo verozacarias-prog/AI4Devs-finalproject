@@ -26,7 +26,7 @@ Platita es un asistente financiero personal y familiar que funciona por WhatsApp
 
 ### 0.4. URL del proyecto:
 
-https://github.com/verozacarias-prog/AI4Devs-finalproject
+Pendiente: llega con el despliegue del entorno `demo`, en la entrega final.
 
 ### 0.5. URL o archivo comprimido del repositorio
 
