@@ -21,6 +21,7 @@ class EnvVar(StrEnum):
     APP_VERSION = "APP_VERSION"
     DASHBOARD_DIR = "DASHBOARD_DIR"
     DEV_ENTRY_ENABLED = "DEV_ENTRY_ENABLED"
+    WEB_CHAT_ENABLED = "WEB_CHAT_ENABLED"
 
 
 class ProcessName(StrEnum):
@@ -28,6 +29,7 @@ class ProcessName(StrEnum):
 
     API = "api"
     CLI = "cli"
+    WORKER = "worker"
 
 
 # How a variable that turns something on or off is written. Nothing else is accepted.
@@ -63,6 +65,12 @@ LINE_END = "\n"
 # Where the API listens inside its container. Compose publishes it on localhost only.
 API_HOST = "0.0.0.0"  # noqa: S104
 API_PORT = 8000
+
+# The message worker (ADR 0010). The lock is how long a message stays taken by one worker: if
+# the worker falls, the message is free again when it ends. The pause is how long it waits
+# before asking again when there was nothing to take.
+WORKER_LOCK_SECONDS = 120
+WORKER_IDLE_SECONDS = 1.0
 
 # What an operation command returns to the shell.
 EXIT_OK = 0

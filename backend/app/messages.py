@@ -35,3 +35,8 @@ NAIVE_INSTANT = "An instant needs its time zone to say which day it is"
 
 # The identifier to look for in the logs.
 ERROR_REFERENCE = "Reference: {reference}"
+
+# For the end user, in Spanish.
+
+# What the worker answers every message while there is no model (FEAT-002).
+FIXED_REPLY = "Recibí tu mensaje. Todavía no puedo procesarlo."

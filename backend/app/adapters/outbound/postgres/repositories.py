@@ -6,6 +6,7 @@ in `queries.py`.
 
 from __future__ import annotations
 
+import json
 import uuid
 from dataclasses import asdict
 from datetime import datetime
@@ -16,8 +17,11 @@ from app.adapters.outbound.postgres import queries
 from app.adapters.outbound.postgres.rejections import execute_write
 from app.domain.entities.account import Account, AccountType
 from app.domain.entities.budget_period import BudgetPeriod
+from app.domain.entities.chat_message import ChatMessage, Direction
 from app.domain.entities.family_group import FamilyGroup, GroupRole, Membership
 from app.domain.entities.financial_profile import FinancialProfile
+from app.domain.entities.inbound_message import InboundMessage, InboundStatus, Provider
+from app.domain.entities.outbound_message import OutboundMessage, ResponseKind
 from app.domain.entities.session import Session
 from app.domain.entities.transaction import Transaction, TransactionType
 from app.domain.entities.transfer import Transfer
@@ -206,3 +210,81 @@ class PostgresFamilyGroupRepository:
             {"owner_id": owner_id, "owner_role": GroupRole.OWNER, "name": name},
         ).one_or_none()
         return None if row is None else FamilyGroup(id=row.id, name=row.name)
+
+
+class PostgresInboundMessageRepository:
+    def __init__(self, connection: Connection) -> None:
+        self._connection = connection
+
+    def add(self, message: InboundMessage) -> None:
+        parameters: dict[str, object] = asdict(message)
+        parameters["payload"] = json.dumps({queries.MESSAGE_TEXT_KEY: parameters.pop("text")})
+        execute_write(self._connection, queries.INSERT_INBOUND_MESSAGE, parameters)
+
+    def claim_next(self, now: datetime, locked_until: datetime) -> InboundMessage | None:
+        row = self._connection.execute(
+            text(queries.CLAIM_NEXT_INBOUND_MESSAGE), {"now": now, "locked_until": locked_until}
+        ).one_or_none()
+        if row is None:
+            return None
+        return InboundMessage(
+            id=row.id,
+            provider=Provider(row.provider),
+            provider_message_id=row.provider_message_id,
+            user_id=row.user_id,
+            from_phone=row.from_phone,
+            text=row.text,
+            quoted_outbound_message_id=row.quoted_outbound_message_id,
+            sent_at=row.sent_at,
+            status=InboundStatus(row.status),
+            attempts=row.attempts,
+            locked_until=row.locked_until,
+            processed_at=row.processed_at,
+        )
+
+    def mark_processed(self, message_id: uuid.UUID, attempts: int, at: datetime) -> bool:
+        row = self._connection.execute(
+            text(queries.MARK_INBOUND_MESSAGE_PROCESSED),
+            {"message_id": message_id, "attempts": attempts, "at": at},
+        ).one_or_none()
+        return row is not None
+
+
+class PostgresOutboundMessageRepository:
+    def __init__(self, connection: Connection) -> None:
+        self._connection = connection
+
+    def add(self, message: OutboundMessage) -> None:
+        parameters: dict[str, object] = asdict(message)
+        parameters["content"] = json.dumps(
+            {
+                queries.MESSAGE_TEXT_KEY: parameters.pop("text"),
+                queries.RESPONSE_KIND_KEY: parameters.pop("response_kind"),
+            }
+        )
+        execute_write(self._connection, queries.INSERT_OUTBOUND_MESSAGE, parameters)
+
+
+class PostgresChatMessageRepository:
+    def __init__(self, connection: Connection) -> None:
+        self._connection = connection
+
+    def list_by_user(self, user_id: uuid.UUID, after: uuid.UUID | None) -> list[ChatMessage]:
+        rows = self._connection.execute(
+            text(queries.SELECT_CHAT_MESSAGES_BY_USER), {"user_id": user_id, "after": after}
+        ).all()
+        return [
+            ChatMessage(
+                id=row.id,
+                direction=Direction(row.direction),
+                text=row.text,
+                quoted_message_id=row.quoted_message_id,
+                response_kind=_response_kind_from(row.response_kind),
+                created_at=row.created_at,
+            )
+            for row in rows
+        ]
+
+
+def _response_kind_from(value: str | None) -> ResponseKind | None:
+    return None if value is None else ResponseKind(value)

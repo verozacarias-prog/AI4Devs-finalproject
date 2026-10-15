@@ -22,8 +22,8 @@ def valid_session(unit_of_work: UnitOfWorkPort, token: str | None, now: datetime
 class AuthenticateSession:
     """Says who is behind a request, from the token of its cookie, and counts the activity.
 
-    The periodic read of the web chat must not count as activity (ADR 0016): it will validate
-    the session without going through here.
+    The periodic read of the web chat must not count as activity (ADR 0016): it goes through
+    `ValidateSession` instead.
     """
 
     def __init__(self, unit_of_work: UnitOfWorkPort, clock: Clock) -> None:
@@ -39,4 +39,24 @@ class AuthenticateSession:
                 raise UnauthenticatedError
             unit_of_work.sessions.touch(session.id, now)
             unit_of_work.commit()
+        return user
+
+
+class ValidateSession:
+    """Says who is behind a request without counting it as activity (ADR 0016).
+
+    For the read the web chat repeats every few seconds: if it counted, an open tab would keep
+    the session alive forever.
+    """
+
+    def __init__(self, unit_of_work: UnitOfWorkPort, clock: Clock) -> None:
+        self._unit_of_work = unit_of_work
+        self._clock = clock
+
+    def execute(self, token: str | None) -> User:
+        with self._unit_of_work as unit_of_work:
+            session = valid_session(unit_of_work, token, self._clock.now())
+            user = unit_of_work.users.find_by_id(session.user_id)
+        if user is None:
+            raise UnauthenticatedError
         return user

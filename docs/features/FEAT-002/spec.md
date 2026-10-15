@@ -349,3 +349,13 @@ Las preguntas que se abrieron al escribir este documento, ya resueltas.
    ningún mensaje recibe respuesta y el corte 1 no llegaría a la pantalla.
 5. ~~El botón "Responder".~~ Resuelta el 14 de octubre de 2026: entrega final, con corregir,
    borrar y restaurar ([Alcance](#alcance)).
+6. ~~Dónde está el texto de un mensaje en `payload`.~~ Resuelta el 15 de octubre de 2026: un
+   mensaje web guarda `{"text": "..."}`, y el worker y la conversación leen el texto de esa
+   clave. Un mensaje de Meta lo trae en `text.body`, así que el adaptador de WhatsApp tiene que
+   hacer que la lectura del texto dependa del canal, en el repositorio, con un test sobre un
+   mensaje real de Meta. Se deja para entonces porque hoy no habría con qué probarlo.
+7. ~~El índice de la cola.~~ Resuelta el 15 de octubre de 2026: la consulta que toma el
+   siguiente mensaje identifica al remitente por su usuario, o por su teléfono si no tiene,
+   como pide el [ADR 0010](../../adr/0010-webhook-asincrono-con-tabla-de-entrada.md). Por eso no
+   usa el índice `ix_inbound_message_sender_queue`, que es por teléfono. Con el volumen
+   previsto no se nota; si llega a pesar, se suma otro índice en una migración nueva.

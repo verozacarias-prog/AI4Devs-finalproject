@@ -176,10 +176,11 @@ Qué queda levantado:
 | `127.0.0.1:5433` | PostgreSQL, con el usuario, la clave y la base de `.env` |
 
 En los registros, cada línea empieza con el nombre de su contenedor:
-`platita-api-and-dashboard`, `platita-database` o `platita-migrations`.
+`platita-api-and-dashboard`, `platita-worker`, `platita-database` o `platita-migrations`.
 
 Si ya tenías un `.env` de antes, comparalo con `.env.example`: una variable nueva no llega
-sola. La que enciende la entrada de desarrollo es `DEV_ENTRY_ENABLED=true`.
+sola. La que enciende la entrada de desarrollo es `DEV_ENTRY_ENABLED=true`, y la que enciende
+el chat web, `WEB_CHAT_ENABLED=true`.
 
 Para tener con qué probar, el script de datos de prueba crea tres usuarios inventados, con sus
 cuentas, su primer período y un grupo. Se puede correr las veces que haga falta, y solo corre

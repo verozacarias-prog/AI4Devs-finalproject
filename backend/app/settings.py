@@ -30,6 +30,8 @@ class Settings:
     dashboard_dir: Path | None = None
     # The development entry, which opens a session without a login code (ADR 0016).
     dev_entry_enabled: bool = False
+    # The chat of the dashboard, for development and demonstration (ADR 0002, ADR 0016).
+    web_chat_enabled: bool = False
 
 
 def _read(environ: Mapping[str, str], name: EnvVar, default: str = "") -> str:
@@ -43,6 +45,18 @@ def _read_switch(environ: Mapping[str, str], name: EnvVar) -> bool:
         allowed = LIST_SEPARATOR.join((ENABLED, DISABLED))
         raise SettingsError(messages.INVALID_ENV_VAR.format(name=name, allowed=allowed))
     return value == ENABLED
+
+
+def _read_scaffold_switch(
+    environ: Mapping[str, str], name: EnvVar, environment: Environment
+) -> bool:
+    """A part of the scaffold: with it on, no process starts in production (ADR 0016)."""
+    enabled = _read_switch(environ, name)
+    if enabled and environment is Environment.PRODUCTION:
+        raise SettingsError(
+            messages.NOT_ALLOWED_IN_ENVIRONMENT.format(name=name, environment=environment)
+        )
+    return enabled
 
 
 def load_settings(environ: Mapping[str, str]) -> Settings:
@@ -60,13 +74,8 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
         raise SettingsError(
             messages.INVALID_ENV_VAR.format(name=EnvVar.APP_ENV, allowed=allowed)
         ) from None
-    dev_entry_enabled = _read_switch(environ, EnvVar.DEV_ENTRY_ENABLED)
-    if dev_entry_enabled and environment is Environment.PRODUCTION:
-        raise SettingsError(
-            messages.NOT_ALLOWED_IN_ENVIRONMENT.format(
-                name=EnvVar.DEV_ENTRY_ENABLED, environment=environment
-            )
-        )
+    dev_entry_enabled = _read_scaffold_switch(environ, EnvVar.DEV_ENTRY_ENABLED, environment)
+    web_chat_enabled = _read_scaffold_switch(environ, EnvVar.WEB_CHAT_ENABLED, environment)
     dashboard_dir = _read(environ, EnvVar.DASHBOARD_DIR)
     return Settings(
         database_url=database_url,
@@ -74,4 +83,5 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
         version=_read(environ, EnvVar.APP_VERSION) or DEFAULT_VERSION,
         dashboard_dir=Path(dashboard_dir) if dashboard_dir else None,
         dev_entry_enabled=dev_entry_enabled,
+        web_chat_enabled=web_chat_enabled,
     )

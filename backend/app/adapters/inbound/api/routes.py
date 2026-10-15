@@ -30,6 +30,11 @@ SESSION_COOKIE_SAME_SITE: Literal["strict"] = "strict"
 ACCOUNTS = "/accounts"
 ACCOUNTS_TAG = "accounts"
 
+# The web chat. It exists only when it is enabled, and never in production (ADR 0016).
+CHAT_MESSAGES = "/chat/messages"
+CHAT_TAG = "chat"
+IDEMPOTENCY_KEY_HEADER = "Idempotency-Key"
+
 # The development entry. It exists only when it is enabled, and never in production.
 DEV_USERS = "/dev/users"
 DEV_SESSION = "/dev/session"

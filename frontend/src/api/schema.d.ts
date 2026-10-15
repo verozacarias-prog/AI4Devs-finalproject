@@ -44,6 +44,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/chat/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the conversation
+         * @description The messages of the web chat of the user of the session, what the user wrote and what Platita replied, in the order they happened. With `after`, only the ones that come after that message: it is what the dashboard asks every few seconds. It does not count as activity of the session.
+         */
+        get: operations["conversation_chat_messages_get"];
+        put?: never;
+        /**
+         * Write to Platita
+         * @description Stores the message as written by the user of the session, and answers at once without processing it. The reply of Platita is not here: it shows up later in `GET /chat/messages`. The time of the message is the one the server received it at.
+         */
+        post: operations["send_chat_messages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dev/session": {
         parameters: {
             query?: never;
@@ -195,6 +219,61 @@ export interface components {
          * @enum {string}
          */
         BalanceKind: "balance" | "net_contributed";
+        /** ChatConversation */
+        ChatConversation: {
+            /**
+             * Messages
+             * @description The messages, in the order they happened.
+             */
+            messages: components["schemas"]["ChatMessageItem"][];
+            /**
+             * Next Cursor
+             * @description Where the next read starts: the last message, or the same cursor when nothing is new. Null only when the conversation is empty.
+             */
+            next_cursor: string | null;
+        };
+        /** ChatMessageItem */
+        ChatMessageItem: {
+            /**
+             * Created At
+             * Format: date-time
+             * @description When it was received or written, in the time zone of the user.
+             */
+            created_at: string;
+            /** @description `inbound` if the user wrote it, `outbound` if Platita did. */
+            direction: components["schemas"]["Direction"];
+            /**
+             * Id
+             * Format: uuid
+             * @description The identifier of the message.
+             */
+            id: string;
+            /**
+             * Quoted Message Id
+             * @description The reply of Platita the user is answering to, if any.
+             */
+            quoted_message_id: string | null;
+            /** @description What kind of reply it is. Only in a message of Platita. */
+            response_kind: components["schemas"]["ResponseKind"] | null;
+            /**
+             * Text
+             * @description What the user wrote.
+             */
+            text: string;
+        };
+        /** ChatMessageRequest */
+        ChatMessageRequest: {
+            /**
+             * Quoted Message Id
+             * @description The reply of Platita the user is answering to, if any.
+             */
+            quoted_message_id?: string | null;
+            /**
+             * Text
+             * @description What the user wrote.
+             */
+            text: string;
+        };
         /** DevSessionRequest */
         DevSessionRequest: {
             /**
@@ -231,6 +310,12 @@ export interface components {
             users: components["schemas"]["DevUser"][];
         };
         /**
+         * Direction
+         * @description Who wrote a message of the conversation: the user, or Platita.
+         * @enum {string}
+         */
+        Direction: "inbound" | "outbound";
+        /**
          * ErrorBody
          * @description The body of every error. An endpoint adds a field only when the client needs it.
          */
@@ -252,6 +337,11 @@ export interface components {
             /** @description `ok`, or `unavailable` when the database does not answer. */
             status: components["schemas"]["HealthState"];
         };
+        /**
+         * InboundStatus
+         * @enum {string}
+         */
+        InboundStatus: "pending" | "processing" | "processed" | "failed";
         /** Me */
         Me: {
             /**
@@ -265,6 +355,23 @@ export interface components {
              * @description The name the user is shown with.
              */
             name: string;
+        };
+        /**
+         * ResponseKind
+         * @description What kind of reply a message was (docs/03-modelo-de-datos.md, OUTBOUND_MESSAGE).
+         * @enum {string}
+         */
+        ResponseKind: "registration" | "query" | "advice_information" | "advice_education" | "advice_decision" | "advice_limit_explained" | "advice_limit_fixed" | "fixed_text" | "proactive";
+        /** StoredChatMessage */
+        StoredChatMessage: {
+            /**
+             * Id
+             * Format: uuid
+             * @description The identifier of the message.
+             */
+            id: string;
+            /** @description `pending` until the worker takes it. */
+            status: components["schemas"]["InboundStatus"];
         };
     };
     responses: never;
@@ -331,6 +438,101 @@ export interface operations {
             };
             /** @description The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    conversation_chat_messages_get: {
+        parameters: {
+            query?: {
+                /** @description The `next_cursor` of the previous answer. Without it, the whole conversation. */
+                after?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The conversation. An empty list when there is nothing (new). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatConversation"];
+                };
+            };
+            /** @description There is no valid session: missing, unknown, revoked or expired, told apart nowhere. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description `after` is not a UUID. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    send_chat_messages_post: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description A UUID the browser generates once per message, and sends again unchanged if it repeats the request. */
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description The message was stored, pending. The worker processes it later. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoredChatMessage"];
+                };
+            };
+            /** @description There is no valid session: missing, unknown, revoked or expired, told apart nowhere. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description The text is empty, or the header `Idempotency-Key` is missing. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

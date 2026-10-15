@@ -16,7 +16,9 @@ from app.domain.entities.session import Session
 from app.domain.entities.user import User
 
 if TYPE_CHECKING:
+    from app.domain.entities.chat_message import ChatMessage
     from app.domain.entities.inbound_message import InboundMessage
+    from app.domain.entities.outbound_message import OutboundMessage
     from app.domain.entities.transaction import Transaction
     from app.domain.entities.transfer import Transfer
 
@@ -145,6 +147,28 @@ class InMemoryInboundMessages:
     def add(self, message: InboundMessage) -> None:
         self.added.append(message)
 
+    def claim_next(self, now: datetime, locked_until: datetime) -> InboundMessage | None:
+        # The order and the wait per sender are rules of the query: the integration tests
+        # check them against PostgreSQL. No unit test claims a message yet.
+        raise NotImplementedError
+
+    def mark_processed(self, message_id: uuid.UUID, attempts: int, at: datetime) -> bool:
+        raise NotImplementedError
+
+
+class InMemoryOutboundMessages:
+    def __init__(self) -> None:
+        self.added: list[OutboundMessage] = []
+
+    def add(self, message: OutboundMessage) -> None:
+        self.added.append(message)
+
+
+class InMemoryChatMessages:
+    def list_by_user(self, user_id: uuid.UUID, after: uuid.UUID | None) -> list[ChatMessage]:
+        # The conversation is put together by the query: the integration tests check it.
+        raise NotImplementedError
+
 
 class InMemoryUnitOfWork:
     def __init__(self) -> None:
@@ -157,6 +181,8 @@ class InMemoryUnitOfWork:
         self.transactions = InMemoryTransactions()
         self.transfers = InMemoryTransfers()
         self.inbound_messages = InMemoryInboundMessages()
+        self.outbound_messages = InMemoryOutboundMessages()
+        self.chat_messages = InMemoryChatMessages()
         self.commits = 0
 
     def __enter__(self) -> Self:
