@@ -125,7 +125,8 @@ las 15:00:00 en Buenos Aires.
 - **Aprobado por:** Veronica Zacarias 14/10/2026
 - **Los de la pantalla, C1-11 a C1-18, escritos ya armada:** Veronica Zacarias 15/10/2026
 - **C1-19 y C1-20, el intervalo de la consulta según haya o no una respuesta pendiente:** Veronica Zacarias 15/10/2026
-- **Total:** 20 casos, 1 unitario, 9 de integración y 10 de componente.
+- **C1-21 y C1-22, sumados con la revisión de pr-reviewer:** Veronica Zacarias 15/10/2026
+- **Total:** 22 casos, 1 unitario, 9 de integración y 12 de componente.
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
@@ -149,6 +150,8 @@ las 15:00:00 en Buenos Aires.
 | C1-18 | Con el chat encendido, el menú lleva a la conversación | Componente | CA-17 |
 | C1-19 | Mientras espera una respuesta, pregunta cada medio segundo | Componente | CA-5 y CA-12 |
 | C1-20 | Con la conversación respondida, pregunta cada 3 segundos | Componente | CA-12 |
+| C1-21 | Al escribir en una conversación respondida, la consulta se adelanta | Componente | CA-5 y CA-12 |
+| C1-22 | El mensaje que la consulta trajo antes que el envío se ve una sola vez | Componente | CA-10 y CA-11 |
 
 #### C1-01 · Lucía escribe y su mensaje queda guardado, pendiente
 
@@ -373,6 +376,28 @@ se comprueba es cuál de los dos usa la pantalla.
 - **entonces** la pantalla no preguntó ninguna vez por mensajes nuevos: la primera consulta
   llega a los 3 segundos.
 - **Test:** `src/pages/ChatPage.test.tsx` › "case C1-20: with the conversation answered, it asks every 3 seconds"
+
+#### C1-21 · Al escribir en una conversación respondida, la consulta se adelanta
+
+- **Sale de:** CA-5 y CA-12 · **Tipo:** componente
+- **Dado** que la conversación de Lucía termina en la respuesta de Platita, así que la pantalla
+  pregunta cada 3 segundos, y que `POST /chat/messages` responde `202`,
+- **cuando** escribe "y 1200 de nafta" y aprieta Enter,
+- **entonces** antes de que pase 1 segundo desde el envío la pantalla ya preguntó por mensajes
+  nuevos: pasa a preguntar cada medio segundo apenas hay un mensaje esperando respuesta, sin
+  esperar los 3 segundos que tenía programados.
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C1-21: writing in an answered conversation brings the next read forward"
+
+#### C1-22 · El mensaje que la consulta trajo antes que el envío se ve una sola vez
+
+- **Sale de:** CA-10 y CA-11 · **Tipo:** componente
+- **Dado** que Lucía envió "gasté 3500 en el súper", y que una consulta periódica ya trajo ese
+  mensaje, guardado con el `id` `im1`, antes de que llegara la respuesta del envío,
+- **cuando** el envío responde `202` con el `id` `im1`, y la consulta siguiente trae la
+  respuesta de Platita,
+- **entonces** "gasté 3500 en el súper" se ve una sola vez, la respuesta de Platita aparece
+  debajo, y "Platita está procesando…" desaparece.
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C1-22: the message a read brought before the send answered is shown once"
 
 ### Corte 2 — errores y estado vacío
 

@@ -1,5 +1,5 @@
 /**
- * Cases C1-11 to C1-18 of FEAT-002 (docs/features/FEAT-002/spec.md): the web chat. The whole
+ * Cases C1-11 to C1-22 of FEAT-002 (docs/features/FEAT-002/spec.md): the web chat. The whole
  * dashboard is rendered, with Lucía already in and the API simulated at the network level.
  * The chat asks for new messages ten times as often as it does for real: every 50 ms while it
  * waits for a reply instead of every half second, and every 300 ms instead of every 3 seconds.
@@ -10,14 +10,19 @@ import { setupServer } from 'msw/node'
 import { afterAll, afterEach, beforeAll, expect, test, vi } from 'vitest'
 import App from '../App'
 
+const INTERVAL = vi.hoisted(() => ({ waitingMs: 50, normalMs: 300 }))
+
 vi.mock('../constants', async (original) => ({
   ...(await original<object>()),
-  CHAT_WAITING_POLL_MS: 50,
-  CHAT_POLL_MS: 300,
+  CHAT_WAITING_POLL_MS: INTERVAL.waitingMs,
+  CHAT_POLL_MS: INTERVAL.normalMs,
 }))
 
-/** Two seconds of the cases, at the same scale as the intervals. */
+/** One and two seconds of the cases, at the same scale as the intervals. */
+const ONE_SECOND_MS = 100
 const TWO_SECONDS_MS = 200
+/** Several of the longer intervals, for a screen that should no longer ask. */
+const SEVERAL_INTERVALS_MS = 3 * INTERVAL.normalMs
 
 const CHAT = '*/chat/messages'
 const LUCIA = { id: '4379d06b-46d3-4f2e-a59e-addcb32388f8', name: 'Lucía' }
@@ -195,7 +200,7 @@ test('case C1-16: with another screen open, it does not ask', async () => {
   fireEvent.click(within(nav).getByRole('button', { name: 'Cuentas' }))
   await screen.findByRole('heading', { name: 'Tus cuentas' })
   const pollsWhenLeaving = polls
-  await new Promise((resolve) => setTimeout(resolve, 300))
+  await new Promise((resolve) => setTimeout(resolve, SEVERAL_INTERVALS_MS))
 
   expect(polls).toBe(pollsWhenLeaving)
 })
@@ -259,4 +264,61 @@ test('case C1-20: with the conversation answered, it asks every 3 seconds', asyn
   await new Promise((resolve) => setTimeout(resolve, TWO_SECONDS_MS))
 
   expect(counted.polls).toBe(0)
+})
+
+test('case C1-21: writing in an answered conversation brings the next read forward', async () => {
+  const polledAt: number[] = []
+  apiWithLuciaIn(
+    http.get(CHAT, ({ request }) => {
+      const asksForNew = new URL(request.url).searchParams.has('after')
+      if (asksForNew) polledAt.push(performance.now())
+      return conversation(asksForNew ? [] : [SUPERMARKET, REPLY], 'om1')
+    }),
+    http.post(CHAT, () => HttpResponse.json({ id: 'im2', status: 'pending' }, { status: 202 })),
+  )
+  await openChat()
+  const input = await screen.findByLabelText('Tu mensaje')
+  // Right after a read, so the next one, every 3 seconds, is as far as it gets.
+  await waitFor(() => expect(polledAt.length).toBeGreaterThan(0))
+
+  const sentAt = performance.now()
+  fireEvent.change(input, { target: { value: 'y 1200 de nafta' } })
+  fireEvent.keyDown(input, { key: 'Enter' })
+  await new Promise((resolve) => setTimeout(resolve, ONE_SECOND_MS))
+
+  expect(polledAt.some((at) => at > sentAt)).toBe(true)
+})
+
+test('case C1-22: the message a read brought before the send answered is shown once', async () => {
+  let posted = false
+  let postAnswered = false
+  let readBroughtIt: () => void = () => {}
+  const broughtByARead = new Promise<void>((resolve) => {
+    readBroughtIt = resolve
+  })
+  apiWithLuciaIn(
+    http.get(CHAT, ({ request }) => {
+      const after = new URL(request.url).searchParams.get('after')
+      if (after === 'im1') return postAnswered ? conversation([REPLY], 'om1') : conversation([], 'im1')
+      if (after === 'om1') return conversation([], 'om1')
+      if (!posted) return conversation([], null)
+      readBroughtIt()
+      return conversation([SUPERMARKET], 'im1')
+    }),
+    http.post(CHAT, async () => {
+      posted = true
+      await broughtByARead
+      postAnswered = true
+      return HttpResponse.json({ id: 'im1', status: 'pending' }, { status: 202 })
+    }),
+  )
+  await openChat()
+  const input = await screen.findByLabelText('Tu mensaje')
+
+  fireEvent.change(input, { target: { value: 'gasté 3500 en el súper' } })
+  fireEvent.keyDown(input, { key: 'Enter' })
+
+  await screen.findByText('Recibí tu mensaje. Todavía no puedo procesarlo.')
+  expect(screen.getAllByText('gasté 3500 en el súper')).toHaveLength(1)
+  await waitFor(() => expect(screen.queryByText('Platita está procesando…')).toBeNull())
 })
