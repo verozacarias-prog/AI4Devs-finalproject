@@ -69,3 +69,14 @@ def test_the_development_entry_enabled_in_production_stops_startup() -> None:
     message = str(error.value)
     assert "DEV_ENTRY_ENABLED" in message
     assert "production" in message
+
+
+def test_the_web_chat_enabled_in_production_stops_startup() -> None:
+    """Case C2-18 of FEAT-002."""
+    environ = BASE_ENVIRON | {"APP_ENV": "production", "WEB_CHAT_ENABLED": "true"}
+
+    with pytest.raises(SettingsError) as error:
+        load_settings(environ)
+
+    message = str(error.value)
+    assert message == "WEB_CHAT_ENABLED cannot be enabled in the production environment"

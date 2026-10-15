@@ -126,7 +126,8 @@ las 15:00:00 en Buenos Aires.
 - **Los de la pantalla, C1-11 a C1-18, escritos ya armada:** Veronica Zacarias 15/10/2026
 - **C1-19 y C1-20, el intervalo de la consulta según haya o no una respuesta pendiente:** Veronica Zacarias 15/10/2026
 - **C1-21 y C1-22, sumados con la revisión de pr-reviewer:** Veronica Zacarias 15/10/2026
-- **Total:** 22 casos, 1 unitario, 9 de integración y 12 de componente.
+- **C1-22, borrado el 15/10/2026 por decisión de Vero:** desde el C2-28 la pantalla no pregunta mientras un envío está en curso, así que ninguna consulta puede traer el mensaje antes de que responda el envío. Su número no se reutiliza.
+- **Total:** 21 casos, 1 unitario, 9 de integración y 11 de componente.
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
@@ -151,7 +152,6 @@ las 15:00:00 en Buenos Aires.
 | C1-19 | Mientras espera una respuesta, pregunta cada medio segundo | Componente | CA-5 y CA-12 |
 | C1-20 | Con la conversación respondida, pregunta cada 3 segundos | Componente | CA-12 |
 | C1-21 | Al escribir en una conversación respondida, la consulta se adelanta | Componente | CA-5 y CA-12 |
-| C1-22 | El mensaje que la consulta trajo antes que el envío se ve una sola vez | Componente | CA-10 y CA-11 |
 
 #### C1-01 · Lucía escribe y su mensaje queda guardado, pendiente
 
@@ -388,28 +388,328 @@ se comprueba es cuál de los dos usa la pantalla.
   esperar los 3 segundos que tenía programados.
 - **Test:** `src/pages/ChatPage.test.tsx` › "case C1-21: writing in an answered conversation brings the next read forward"
 
-#### C1-22 · El mensaje que la consulta trajo antes que el envío se ve una sola vez
-
-- **Sale de:** CA-10 y CA-11 · **Tipo:** componente
-- **Dado** que Lucía envió "gasté 3500 en el súper", y que una consulta periódica ya trajo ese
-  mensaje, guardado con el `id` `im1`, antes de que llegara la respuesta del envío,
-- **cuando** el envío responde `202` con el `id` `im1`, y la consulta siguiente trae la
-  respuesta de Platita,
-- **entonces** "gasté 3500 en el súper" se ve una sola vez, la respuesta de Platita aparece
-  debajo, y "Platita está procesando…" desaparece.
-- **Test:** `src/pages/ChatPage.test.tsx` › "case C1-22: the message a read brought before the send answered is shown once"
-
 ### Corte 2 — errores y estado vacío
 
-- **Aprobado por:** pendiente
+- **Aprobado por:** Veronica Zacarias 15/10/2026
+- **C2-29 y C2-30, sumados con la revisión de pr-reviewer, y el C2-08 con un reloj distinto para cada worker:** Veronica Zacarias 15/10/2026
+- **Total:** 30 casos, 3 unitarios, 19 de integración y 8 de componente.
 
-Los casos se escriben antes de empezar el corte. Salen de CA-3, CA-4, CA-7, CA-9, CA-14 a CA-23 y
-CA-27: la clave repetida, el texto vacío, la transacción final que falla, el mensaje de un
-worker que se cayó y que se retoma cuando vence su lock, dos workers con el mismo mensaje, dos
-mensajes con la misma hora que no se pierden al preguntar con el cursor, un cursor que no es
-de la conversación del usuario, lo que llegó por WhatsApp que no aparece, la sesión que no se renueva al preguntar, Pablo que no ve lo de Lucía, la sesión que
-falta o venció, el chat apagado, la cita a un mensaje ajeno, el arranque en `production`, el
-mensaje purgado, y en la pantalla el vacío, el error y el envío que falla.
+Salvo que el caso diga otra cosa, valen las condiciones del corte 1: los datos de prueba de
+`local`, el chat encendido, Lucía con una sesión abierta y el reloj en las 18:00:00 UTC del 15
+de octubre de 2026.
+
+| Caso | Qué prueba | Tipo | Sale de |
+|---|---|---|---|
+| C2-01 | La misma clave dos veces deja un mensaje y responde el original | Integración | CA-3 |
+| C2-02 | La misma clave de otro usuario es otro mensaje | Integración | CA-3 |
+| C2-03 | Un texto vacío o de solo espacios no se guarda | Integración | CA-4 |
+| C2-04 | Sin clave, el mensaje no se guarda | Integración | CA-4 |
+| C2-05 | Si guardar la respuesta falla, el mensaje no queda procesado | Unitario | CA-7 |
+| C2-06 | Un mensaje con el lock vencido se vuelve a tomar | Integración | CA-5 |
+| C2-07 | Un mensaje con el lock vencido sigue antes que los siguientes | Integración | CA-8 |
+| C2-08 | Dos workers terminan el mismo mensaje: queda una sola respuesta | Integración | CA-9 |
+| C2-09 | Preguntar no renueva la sesión | Integración | CA-14 |
+| C2-10 | Escribir sí renueva la sesión | Integración | CA-14 |
+| C2-11 | Pablo no ve la conversación de Lucía | Integración | CA-15 |
+| C2-12 | Un cursor de la conversación de otro usuario responde 404 | Integración | CA-15 |
+| C2-13 | Sin sesión, o con una vencida, no se lee ni se escribe | Integración | CA-16 |
+| C2-14 | Con el chat apagado, los dos endpoints responden 404 | Integración | CA-17 |
+| C2-15 | Citar una respuesta de Platita a otro usuario no guarda nada | Integración | CA-18 |
+| C2-16 | Citar un mensaje que no es una respuesta de Platita no guarda nada | Integración | CA-18 |
+| C2-17 | Citar una respuesta de Platita al mismo usuario se guarda | Integración | CA-18 |
+| C2-18 | Con el chat encendido en `production`, nada arranca | Unitario | CA-19 |
+| C2-19 | Un mensaje purgado no aparece | Integración | CA-20 |
+| C2-20 | Lo que llegó por WhatsApp no aparece en el chat | Integración | CA-27 |
+| C2-21 | Dos mensajes con la misma hora no se pierden con el cursor | Integración | CA-12 |
+| C2-22 | Sin mensajes, una invitación y no un error | Componente | CA-21 |
+| C2-23 | Si la primera consulta falla, se ve por qué y se reintenta | Componente | CA-22 |
+| C2-24 | Un envío que falla se reintenta con la misma clave | Componente | CA-23 |
+| C2-25 | Si una consulta periódica falla, la conversación sigue | Componente | CA-22 |
+| C2-26 | Con el chat apagado, el menú no lo ofrece | Componente | CA-17 |
+| C2-27 | Si la sesión venció, vuelve la entrada | Componente | CA-16 |
+| C2-28 | Un mensaje no se ve dos veces mientras su envío sigue en curso | Componente | CA-10 |
+| C2-29 | Un envío que vence después de guardarse queda una sola vez al reintentarlo | Componente | CA-10, CA-11 y CA-23 |
+| C2-30 | Dos pedidos a la vez con la misma clave responden el mensaje original | Unitario | CA-3 |
+
+#### C2-01 · La misma clave dos veces deja un mensaje y responde el original
+
+- **Sale de:** CA-3 · **Tipo:** integración
+- **Dado** que Lucía ya mandó "gasté 3500 en el súper" con la clave
+  `9d2b7c1e-5a4f-4c3b-8e21-7f6a5b4c3d2e`, y recibió `202` con su `id`,
+- **cuando** repite el `POST /chat/messages` con la misma clave y el mismo texto,
+- **entonces** responde `200` con el mismo `id` y `"status": "pending"`, y `INBOUND_MESSAGE`
+  sigue teniendo una sola fila.
+- **Test:** `tests/integration/test_chat_errors.py::test_the_same_key_twice_leaves_one_message_and_answers_the_original`
+
+#### C2-02 · La misma clave de otro usuario es otro mensaje
+
+- **Sale de:** CA-3 · **Tipo:** integración
+- **Dado** que Lucía mandó un mensaje con la clave `9d2b7c1e-5a4f-4c3b-8e21-7f6a5b4c3d2e`,
+- **cuando** Pablo, con su sesión, manda "cobré 50000" con la misma clave,
+- **entonces** responde `202` con otro `id`, e `INBOUND_MESSAGE` tiene dos filas, una de cada
+  uno.
+- **Test:** `tests/integration/test_chat_errors.py::test_the_same_key_of_another_user_is_another_message`
+
+#### C2-03 · Un texto vacío o de solo espacios no se guarda
+
+- **Sale de:** CA-4 · **Tipo:** integración
+- **Dado** Lucía sin mensajes,
+- **cuando** manda un `POST /chat/messages` con el texto `""`, y otro con el texto `"   "`, cada
+  uno con su clave,
+- **entonces** los dos responden `422` con `{"error": "invalid_request"}`, e
+  `INBOUND_MESSAGE` queda vacía.
+- **Test:** `tests/integration/test_chat_errors.py::test_an_empty_text_or_one_of_only_spaces_is_not_stored`
+
+#### C2-04 · Sin clave, el mensaje no se guarda
+
+- **Sale de:** CA-4 · **Tipo:** integración
+- **Dado** Lucía sin mensajes,
+- **cuando** manda "gasté 3500 en el súper" sin el header `Idempotency-Key`,
+- **entonces** responde `422` con `{"error": "invalid_request"}`, e `INBOUND_MESSAGE` queda vacía.
+- **Test:** `tests/integration/test_chat_errors.py::test_without_a_key_the_message_is_not_stored`
+
+#### C2-05 · Si guardar la respuesta falla, el mensaje no queda procesado
+
+- **Sale de:** CA-7 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía tomado por el worker, y un repositorio de respuestas que falla al
+  guardar,
+- **cuando** el worker hace la ronda,
+- **entonces** la ronda termina con el error, la unidad de trabajo no hizo commit, y el
+  mensaje no quedó marcado como procesado.
+- **Test:** `tests/unit/test_process_next_message.py::test_if_storing_the_reply_fails_the_message_is_not_left_processed`
+
+#### C2-06 · Un mensaje con el lock vencido se vuelve a tomar
+
+- **Sale de:** CA-5 · **Tipo:** integración
+- **Dado** el lock del worker en 2 minutos, y "gasté 3500 en el súper", de Lucía, con
+  `status = 'processing'`, `attempts = 1` y `locked_until` 2026-10-15T17:59:00Z, que ya pasó: el
+  worker que lo tomó se cayó,
+- **cuando** el worker toma el siguiente mensaje,
+- **entonces** toma ese: queda con `attempts = 2` y `locked_until` 2026-10-15T18:02:00Z.
+- **Test:** `tests/integration/test_message_worker_errors.py::test_a_message_whose_lock_ended_is_taken_again`
+
+#### C2-07 · Un mensaje con el lock vencido sigue antes que los siguientes
+
+- **Sale de:** CA-8 · **Tipo:** integración
+- **Dado** "gasté 3500 en el súper", de Lucía, en proceso con el lock vencido como en C2-06, y
+  "y 1200 de nafta", suyo, pendiente y posterior,
+- **cuando** el worker toma el siguiente mensaje,
+- **entonces** toma "gasté 3500 en el súper", y "y 1200 de nafta" sigue `pending`.
+- **Test:** `tests/integration/test_message_worker_errors.py::test_a_message_whose_lock_ended_still_goes_before_the_next_ones`
+
+#### C2-08 · Dos workers terminan el mismo mensaje: queda una sola respuesta
+
+- **Sale de:** CA-9 · **Tipo:** integración
+- **Dado** que un worker tomó "gasté 3500 en el súper" con `attempts = 1`, se demoró más que su
+  lock, y otro worker lo volvió a tomar con `attempts = 2`,
+- **cuando** los dos terminan de procesarlo, primero el de `attempts = 1`, a las 18:03:10, y
+  después el otro, a las 18:03:20,
+- **entonces** `OUTBOUND_MESSAGE` tiene una sola respuesta a ese mensaje, la del segundo, con
+  `created_at` 18:03:20, y el mensaje queda `processed`.
+- **Test:** `tests/integration/test_message_worker_errors.py::test_two_workers_finish_the_same_message_and_only_one_reply_is_left`
+
+#### C2-09 · Preguntar no renueva la sesión
+
+- **Sale de:** CA-14 · **Tipo:** integración
+- **Dado** que la sesión de Lucía registró su última actividad a las 17:50,
+- **cuando** a las 18:00 pide `GET /chat/messages`,
+- **entonces** responde `200`, y la última actividad de la sesión sigue en las 17:50.
+- **Test:** `tests/integration/test_chat_errors.py::test_asking_does_not_renew_the_session`
+
+#### C2-10 · Escribir sí renueva la sesión
+
+- **Sale de:** CA-14 · **Tipo:** integración
+- **Dado** que la sesión de Lucía registró su última actividad a las 17:50,
+- **cuando** a las 18:00 manda un mensaje,
+- **entonces** responde `202`, y la última actividad de la sesión pasa a las 18:00.
+- **Test:** `tests/integration/test_chat_errors.py::test_writing_renews_the_session`
+
+#### C2-11 · Pablo no ve la conversación de Lucía
+
+- **Sale de:** CA-15 · **Tipo:** integración
+- **Dado** que Lucía tiene "gasté 3500 en el súper" y su respuesta, y Pablo no tiene mensajes,
+- **cuando** Pablo pide `GET /chat/messages`,
+- **entonces** responde `200` con la lista vacía y `next_cursor` nulo.
+- **Test:** `tests/integration/test_chat_errors.py::test_pablo_does_not_see_the_conversation_of_lucia`
+
+#### C2-12 · Un cursor de la conversación de otro usuario responde 404
+
+- **Sale de:** CA-15 · **Tipo:** integración
+- **Dado** que Lucía tiene "gasté 3500 en el súper",
+- **cuando** Pablo pide `GET /chat/messages` con `after` igual al `id` de ese mensaje, y después
+  con un UUID que no es de ningún mensaje,
+- **entonces** los dos responden `404` con `{"error": "not_found"}`: un cursor ajeno y uno que no
+  existe no se distinguen.
+- **Test:** `tests/integration/test_chat_errors.py::test_a_cursor_of_the_conversation_of_another_user_answers_404`
+
+#### C2-13 · Sin sesión, o con una vencida, no se lee ni se escribe
+
+- **Sale de:** CA-16 · **Tipo:** integración
+- **Dado** un pedido sin cookie de sesión, y otro con una sesión de Lucía creada hace 12 horas,
+- **cuando** cada uno pide `GET /chat/messages` y `POST /chat/messages`,
+- **entonces** los cuatro responden `401` con `{"error": "unauthorized"}`, e `INBOUND_MESSAGE`
+  queda vacía.
+- **Test:** `tests/integration/test_chat_errors.py::test_without_a_session_or_with_an_expired_one_nothing_is_read_or_written`
+
+#### C2-14 · Con el chat apagado, los dos endpoints responden 404
+
+- **Sale de:** CA-17 · **Tipo:** integración
+- **Dado** la API arrancada sin `WEB_CHAT_ENABLED`, y Lucía con una sesión abierta,
+- **cuando** pide `GET /chat/messages` y `POST /chat/messages`,
+- **entonces** los dos responden `404` con `{"error": "not_found"}`.
+- **Test:** `tests/integration/test_chat_errors.py::test_with_the_chat_off_both_endpoints_answer_404`
+
+#### C2-15 · Citar una respuesta de Platita a otro usuario no guarda nada
+
+- **Sale de:** CA-18 · **Tipo:** integración
+- **Dado** una respuesta de Platita a Pablo,
+- **cuando** Lucía manda un mensaje con `quoted_message_id` igual al `id` de esa respuesta,
+- **entonces** responde `404` con `{"error": "not_found"}`, y Lucía no tiene ningún mensaje
+  guardado.
+- **Test:** `tests/integration/test_chat_errors.py::test_quoting_a_reply_of_platita_to_another_user_stores_nothing`
+
+#### C2-16 · Citar un mensaje que no es una respuesta de Platita no guarda nada
+
+- **Sale de:** CA-18 · **Tipo:** integración
+- **Dado** que Lucía ya mandó "gasté 3500 en el súper",
+- **cuando** manda otro mensaje con `quoted_message_id` igual al `id` de ese mensaje suyo, y
+  otro con un UUID que no es de ningún mensaje,
+- **entonces** los dos responden `404`, y Lucía sigue teniendo un solo mensaje guardado.
+- **Test:** `tests/integration/test_chat_errors.py::test_quoting_a_message_that_is_not_a_reply_of_platita_stores_nothing`
+
+#### C2-17 · Citar una respuesta de Platita al mismo usuario se guarda
+
+- **Sale de:** CA-18 · **Tipo:** integración
+- **Dado** una respuesta de Platita a Lucía,
+- **cuando** Lucía manda "era con Galicia" con `quoted_message_id` igual al `id` de esa
+  respuesta,
+- **entonces** responde `202`, y el mensaje guardado tiene `quoted_outbound_message_id` igual a
+  ese `id`.
+- **Test:** `tests/integration/test_chat_errors.py::test_quoting_a_reply_of_platita_to_the_same_user_is_stored`
+
+#### C2-18 · Con el chat encendido en `production`, nada arranca
+
+- **Sale de:** CA-19 · **Tipo:** unitario
+- **Dado** el entorno con `APP_ENV=production` y `WEB_CHAT_ENABLED=true`,
+- **cuando** se lee la configuración,
+- **entonces** falla con un mensaje que nombra `WEB_CHAT_ENABLED` y el entorno, y no dice
+  ningún otro valor.
+- **Test:** `tests/unit/test_settings.py::test_the_web_chat_enabled_in_production_stops_startup`
+
+#### C2-19 · Un mensaje purgado no aparece
+
+- **Sale de:** CA-20 · **Tipo:** integración
+- **Dado** que Lucía tiene "gasté 3500 en el súper", con su contenido purgado, y "y 1200 de
+  nafta", sin purgar,
+- **cuando** pide `GET /chat/messages`,
+- **entonces** responde solo "y 1200 de nafta".
+- **Test:** `tests/integration/test_chat_errors.py::test_a_purged_message_does_not_show_up`
+
+#### C2-20 · Lo que llegó por WhatsApp no aparece en el chat
+
+- **Sale de:** CA-27 · **Tipo:** integración
+- **Dado** que Lucía tiene un mensaje por WhatsApp, con `provider = 'meta'`, y una alerta de
+  Platita por WhatsApp, y en el chat web "gasté 3500 en el súper",
+- **cuando** pide `GET /chat/messages`,
+- **entonces** responde solo "gasté 3500 en el súper".
+- **Test:** `tests/integration/test_chat_errors.py::test_what_came_by_whatsapp_does_not_show_up_in_the_chat`
+
+#### C2-21 · Dos mensajes con la misma hora no se pierden con el cursor
+
+- **Sale de:** CA-12 · **Tipo:** integración
+- **Dado** que Lucía tiene "gasté 3500 en el súper" y "y 1200 de nafta", los dos con la misma
+  hora, las 17:59:00,
+- **cuando** pide `GET /chat/messages` con `after` igual al primero de los dos en el orden que
+  devolvió la conversación completa,
+- **entonces** responde el otro: ninguno de los dos se pierde ni se repite.
+- **Test:** `tests/integration/test_chat_errors.py::test_two_messages_at_the_same_time_are_not_lost_with_the_cursor`
+
+Los casos que siguen son de la pantalla, con el dashboard entero, Lucía adentro y la API
+simulada, como en el corte 1.
+
+#### C2-22 · Sin mensajes, una invitación y no un error
+
+- **Sale de:** CA-21 · **Tipo:** componente
+- **Dado** que `GET /chat/messages` responde la lista vacía,
+- **cuando** Lucía abre el chat,
+- **entonces** ve "Todavía no le escribiste a Platita", el ejemplo de gasto y el campo para
+  escribir, sin ninguna alerta.
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C2-22: with no messages, an invitation and not an error"
+
+#### C2-23 · Si la primera consulta falla, se ve por qué y se reintenta
+
+- **Sale de:** CA-22 · **Tipo:** componente
+- **Dado** que la primera consulta responde `500`, y la siguiente trae "gasté 3500 en el súper",
+- **cuando** Lucía abre el chat, ve el error y aprieta Reintentar,
+- **entonces** primero ve "No se pudo abrir la conversación" con "La API respondió con un
+  error.", sin el campo para escribir, y después del reintento ve la conversación.
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C2-23: if the first read fails, it says why and it is retried"
+
+#### C2-24 · Un envío que falla se reintenta con la misma clave
+
+- **Sale de:** CA-23 · **Tipo:** componente
+- **Dado** que el primer `POST /chat/messages` responde `500` y el segundo `202`,
+- **cuando** Lucía envía "gasté 3500 en el súper", ve "No enviado" y aprieta Reintentar,
+- **entonces** los dos pedidos llevaron la misma `Idempotency-Key`, el mensaje se ve una sola
+  vez, y "No enviado" desaparece.
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C2-24: a send that fails is retried with the same key"
+
+#### C2-25 · Si una consulta periódica falla, la conversación sigue
+
+- **Sale de:** CA-22 · **Tipo:** componente
+- **Dado** que el chat de Lucía muestra su conversación, y una consulta periódica responde `500`
+  antes de que la siguiente vuelva a responder bien,
+- **cuando** pasan las dos consultas,
+- **entonces** mientras falla se ve "No se pudo buscar mensajes nuevos. Se reintenta en unos
+  segundos." con la conversación en pantalla, y con la consulta buena el aviso desaparece.
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C2-25: if a periodic read fails, the conversation stays"
+
+#### C2-26 · Con el chat apagado, el menú no lo ofrece
+
+- **Sale de:** CA-17 · **Tipo:** componente
+- **Dado** que `GET /chat/messages` responde `404`,
+- **cuando** Lucía entra,
+- **entonces** la sección "Pruebas" del menú tiene solo "Estado del sistema".
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C2-26: with the chat off, the menu does not offer it"
+
+#### C2-27 · Si la sesión venció, vuelve la entrada
+
+- **Sale de:** CA-16 · **Tipo:** componente
+- **Dado** que el chat de Lucía está abierto, y la siguiente consulta responde `401`,
+- **cuando** pasa el intervalo de la consulta,
+- **entonces** el menú y el chat desaparecen, y se ve la entrada de desarrollo.
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C2-27: if the session expired, the entry comes back"
+
+#### C2-28 · Un mensaje no se ve dos veces mientras su envío sigue en curso
+
+- **Sale de:** CA-10 · **Tipo:** componente
+- **Dado** que Lucía envió "gasté 3500 en el súper", y una consulta periódica trae ese mensaje
+  mientras el `POST` todavía no respondió,
+- **cuando** llega esa consulta,
+- **entonces** el mensaje se ve una sola vez, también antes de que responda el `POST`.
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C2-28: a message is not shown twice while its send is still on its way"
+
+#### C2-29 · Un envío que vence después de guardarse queda una sola vez al reintentarlo
+
+- **Sale de:** CA-10, CA-11 y CA-23 · **Tipo:** componente
+- **Dado** que Lucía envió "gasté 3500 en el súper", el servidor lo guardó como `im1`, pero el
+  `POST` no respondió a tiempo, así que se ve "No enviado"; y que después una consulta trajo
+  `im1`,
+- **cuando** Lucía aprieta Reintentar, el `POST` responde `200` con `im1`, y la consulta
+  siguiente trae la respuesta de Platita,
+- **entonces** "gasté 3500 en el súper" se ve una sola vez, "No enviado" desaparece, la
+  respuesta de Platita aparece debajo, y "Platita está procesando…" desaparece.
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C2-29: a send that timed out after being stored is shown once after its retry"
+
+#### C2-30 · Dos pedidos a la vez con la misma clave responden el mensaje original
+
+- **Sale de:** CA-3 · **Tipo:** unitario
+- **Dado** que al buscar la clave de Lucía todavía no hay ningún mensaje, pero al guardarlo
+  la base lo rechaza porque otro pedido con la misma clave lo guardó un instante antes,
+- **cuando** Lucía manda "gasté 3500 en el súper" con esa clave,
+- **entonces** el caso de uso devuelve el mensaje que guardó el otro pedido, como uno que ya
+  existía, y no termina con un error.
+- **Test:** `tests/unit/test_send_chat_message.py::test_two_requests_at_once_with_the_same_key_answer_the_original_message`
 
 ### Corte 3 — observabilidad y accesibilidad
 

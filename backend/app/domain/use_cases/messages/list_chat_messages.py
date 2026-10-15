@@ -5,7 +5,7 @@ from dataclasses import dataclass, replace
 from zoneinfo import ZoneInfo
 
 from app.domain.entities.chat_message import ChatMessage
-from app.domain.errors import UnauthenticatedError
+from app.domain.errors import ErrorCode, NotFoundError, UnauthenticatedError
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
 
 
@@ -27,6 +27,9 @@ class ListChatMessages:
             user = unit_of_work.users.find_by_id(user_id)
             if user is None:
                 raise UnauthenticatedError
+            if after is not None and not unit_of_work.chat_messages.contains(user_id, after):
+                # A cursor of someone else's conversation, or of none: told apart nowhere.
+                raise NotFoundError(ErrorCode.NOT_FOUND)
             messages = unit_of_work.chat_messages.list_by_user(user_id, after)
         zone = ZoneInfo(user.time_zone)
         local = [

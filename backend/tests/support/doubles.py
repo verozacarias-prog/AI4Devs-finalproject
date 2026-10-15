@@ -14,6 +14,7 @@ from app.domain.entities.family_group import FamilyGroup, GroupRole, Membership
 from app.domain.entities.financial_profile import FinancialProfile
 from app.domain.entities.session import Session
 from app.domain.entities.user import User
+from app.domain.errors import ConflictError, ErrorCode
 
 if TYPE_CHECKING:
     from app.domain.entities.chat_message import ChatMessage
@@ -143,28 +144,68 @@ class InMemoryTransfers:
 class InMemoryInboundMessages:
     def __init__(self) -> None:
         self.added: list[InboundMessage] = []
+        # What the next claims hand out, in order. The order and the wait per sender are rules
+        # of the query: the integration tests check them against PostgreSQL.
+        self.claimable: list[InboundMessage] = []
+        # Marked processed, and committed. A mark waits for the commit of its unit of work, as
+        # in the database, where leaving the block without a commit undoes it.
+        self.marked: list[uuid.UUID] = []
+        self.marked_uncommitted: list[uuid.UUID] = []
+        # Another request with the same key, stored between the search for the key and the
+        # next add, which the store then rejects as a repeated key.
+        self.stored_meanwhile: InboundMessage | None = None
 
     def add(self, message: InboundMessage) -> None:
+        if self.stored_meanwhile is not None:
+            self.added.append(self.stored_meanwhile)
+            self.stored_meanwhile = None
+            raise ConflictError(ErrorCode.CONFLICT)
         self.added.append(message)
 
+    def find_web(self, provider_message_id: str) -> InboundMessage | None:
+        return next(
+            (
+                message
+                for message in self.added
+                if message.provider_message_id == provider_message_id
+            ),
+            None,
+        )
+
     def claim_next(self, now: datetime, locked_until: datetime) -> InboundMessage | None:
-        # The order and the wait per sender are rules of the query: the integration tests
-        # check them against PostgreSQL. No unit test claims a message yet.
-        raise NotImplementedError
+        return self.claimable.pop(0) if self.claimable else None
 
     def mark_processed(self, message_id: uuid.UUID, attempts: int, at: datetime) -> bool:
-        raise NotImplementedError
+        self.marked_uncommitted.append(message_id)
+        return True
+
+    def commit(self) -> None:
+        self.marked.extend(self.marked_uncommitted)
+        self.marked_uncommitted.clear()
 
 
 class InMemoryOutboundMessages:
     def __init__(self) -> None:
         self.added: list[OutboundMessage] = []
+        # Raised by the next add instead of storing, when a case needs the store to fail.
+        self.failure: Exception | None = None
 
     def add(self, message: OutboundMessage) -> None:
+        if self.failure is not None:
+            raise self.failure
         self.added.append(message)
+
+    def exists_for_user(self, message_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+        return any(
+            message.id == message_id and message.user_id == user_id for message in self.added
+        )
 
 
 class InMemoryChatMessages:
+    def contains(self, user_id: uuid.UUID, message_id: uuid.UUID) -> bool:
+        # The conversation is put together by the queries: the integration tests check it.
+        raise NotImplementedError
+
     def list_by_user(self, user_id: uuid.UUID, after: uuid.UUID | None) -> list[ChatMessage]:
         # The conversation is put together by the query: the integration tests check it.
         raise NotImplementedError
@@ -194,7 +235,9 @@ class InMemoryUnitOfWork:
         exc: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
-        return None
+        # Leaving the block without a commit undoes what it did not commit.
+        self.inbound_messages.marked_uncommitted.clear()
 
     def commit(self) -> None:
         self.commits += 1
+        self.inbound_messages.commit()

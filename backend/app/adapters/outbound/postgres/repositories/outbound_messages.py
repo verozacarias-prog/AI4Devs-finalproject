@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+import uuid
 from dataclasses import asdict
 
-from sqlalchemy import Connection
+from sqlalchemy import Connection, text
 
 from app.adapters.outbound.postgres import queries
 from app.adapters.outbound.postgres.rejections import execute_write
@@ -23,3 +24,10 @@ class PostgresOutboundMessageRepository:
             }
         )
         execute_write(self._connection, queries.INSERT_OUTBOUND_MESSAGE, parameters)
+
+    def exists_for_user(self, message_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+        exists: bool = self._connection.execute(
+            text(queries.OUTBOUND_MESSAGE_OF_USER_EXISTS),
+            {"message_id": message_id, "user_id": user_id},
+        ).scalar_one()
+        return exists

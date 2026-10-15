@@ -150,16 +150,19 @@ INSERT_INBOUND_MESSAGE = """
 # The sender is the user when there is one, and the phone while there is not (ADR 0010).
 # The text is read where a web message keeps it; a message of Meta keeps it under text.body,
 # and the adapter of WhatsApp makes this depend on the provider (FEAT-002, decision 6).
-# A message is taken only if it is the earliest pending one of its sender, and the sender has
-# no message in process with its lock in force. The first condition also covers two workers
-# racing: the one that skips a locked message cannot take the next of the same sender.
+# A message is available when it is pending, or in process with its lock ended: the worker
+# that took it fell, and it is free again. It is taken only if it is the earliest available
+# one of its sender, and the sender has no message in process with its lock in force. The
+# first condition also covers two workers racing: the one that skips a locked message cannot
+# take the next of the same sender.
 CLAIM_NEXT_INBOUND_MESSAGE = """
     UPDATE inbound_message
        SET status = 'processing', attempts = attempts + 1, locked_until = :locked_until
      WHERE id = (
         SELECT candidate.id
           FROM inbound_message candidate
-         WHERE candidate.status = 'pending'
+         WHERE (candidate.status = 'pending'
+                OR (candidate.status = 'processing' AND candidate.locked_until <= :now))
            AND NOT EXISTS (
                 SELECT 1
                   FROM inbound_message other
@@ -167,7 +170,8 @@ CLAIM_NEXT_INBOUND_MESSAGE = """
                        = COALESCE(candidate.user_id::text, candidate.from_phone)
                    AND (
                         (other.status = 'processing' AND other.locked_until > :now)
-                        OR (other.status = 'pending'
+                        OR ((other.status = 'pending'
+                             OR (other.status = 'processing' AND other.locked_until <= :now))
                             AND (other.sent_at, other.id) < (candidate.sent_at, candidate.id))
                    )
            )
@@ -180,12 +184,27 @@ CLAIM_NEXT_INBOUND_MESSAGE = """
               attempts, locked_until, processed_at
 """
 
+SELECT_WEB_INBOUND_MESSAGE_BY_PROVIDER_ID = """
+    SELECT id, provider, provider_message_id, user_id, from_phone,
+           payload ->> :text_key AS text, quoted_outbound_message_id, sent_at, status,
+           attempts, locked_until, processed_at
+      FROM inbound_message
+     WHERE provider = 'web' AND provider_message_id = :provider_message_id
+"""
+
 # The attempts are the fencing token: only the claim that took it last completes it.
 MARK_INBOUND_MESSAGE_PROCESSED = """
     UPDATE inbound_message
        SET status = 'processed', processed_at = :at
      WHERE id = :message_id AND status = 'processing' AND attempts = :attempts
     RETURNING id
+"""
+
+# Whether a message of Platita went to that user: the only kind a message may quote.
+OUTBOUND_MESSAGE_OF_USER_EXISTS = """
+    SELECT EXISTS (
+        SELECT 1 FROM outbound_message WHERE id = :message_id AND user_id = :user_id
+    )
 """
 
 INSERT_OUTBOUND_MESSAGE = """
@@ -223,4 +242,18 @@ SELECT_CHAT_MESSAGES_BY_USER = """
             SELECT created_at, turn, id FROM conversation WHERE id = CAST(:after AS uuid)
         )
      ORDER BY created_at, turn, id
+"""
+
+# Whether a message is in the web conversation of the user: a cursor of anyone else's, or of
+# none, is not.
+CHAT_MESSAGE_OF_USER_EXISTS = """
+    SELECT EXISTS (
+        SELECT 1 FROM inbound_message
+         WHERE id = :message_id AND provider = 'web' AND user_id = :user_id
+           AND purged_at IS NULL
+        UNION ALL
+        SELECT 1 FROM outbound_message
+         WHERE id = :message_id AND provider = 'web' AND user_id = :user_id
+           AND purged_at IS NULL
+    )
 """
