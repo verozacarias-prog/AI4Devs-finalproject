@@ -4,7 +4,7 @@ import { Card, CardDescription, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/class-names'
 import { loadConversation, sendMessage, type ChatMessage } from '../api/chat'
 import type { Failure } from '../api/request'
-import { CHAT_POLL_MS, ISO_TIME_END, ISO_TIME_START } from '../constants'
+import { CHAT_POLL_MS, CHAT_WAITING_POLL_MS, ISO_TIME_END, ISO_TIME_START } from '../constants'
 import { MESSAGES } from '../messages'
 
 /**
@@ -36,11 +36,9 @@ type Props = {
   onNoSession: () => void
   /** How long to wait for the API. Tests pass a short one. */
   timeoutMs?: number
-  /** How often to ask for new messages. Tests pass a short one. */
-  pollMs?: number
 }
 
-export function ChatPage({ onNoSession, timeoutMs, pollMs = CHAT_POLL_MS }: Props) {
+export function ChatPage({ onNoSession, timeoutMs }: Props) {
   const [state, setState] = useState<State>({ kind: 'loading' })
   const [attempt, setAttempt] = useState(0)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -50,6 +48,8 @@ export function ChatPage({ onNoSession, timeoutMs, pollMs = CHAT_POLL_MS }: Prop
   // Where the next read starts. A ref, so the polling does not start over with each answer.
   const cursor = useRef<string | null>(null)
   const statusLine = useRef<HTMLParagraphElement>(null)
+  // Whether a reply is pending, read by the polling each time it waits for the next read.
+  const waiting = useRef(false)
 
   const arrived = useCallback((loaded: ChatMessage[]) => {
     if (loaded.length === 0) return
@@ -81,6 +81,18 @@ export function ChatPage({ onNoSession, timeoutMs, pollMs = CHAT_POLL_MS }: Prop
     return () => abandon.abort()
   }, [attempt, timeoutMs, onNoSession])
 
+  const ready = state.kind === 'ready'
+  const empty = ready && messages.length === 0 && outgoing.length === 0
+  const lastMessage = messages.at(-1)
+  const processing =
+    ready &&
+    (outgoing.some((message) => message.status !== 'failed') ||
+      (outgoing.length === 0 && lastMessage?.direction === 'inbound'))
+  // Before the polling below: effects run in order, and its first wait already reads this.
+  useEffect(() => {
+    waiting.current = processing
+  }, [processing])
+
   // The read it repeats while the screen is open. Each one starts when the previous ended.
   useEffect(() => {
     if (state.kind !== 'ready') return
@@ -100,15 +112,16 @@ export function ChatPage({ onNoSession, timeoutMs, pollMs = CHAT_POLL_MS }: Prop
         } else {
           setPollFailed(true)
         }
-        timer = setTimeout(ask, pollMs)
+        timer = setTimeout(ask, nextPollMs())
       })
     }
-    timer = setTimeout(ask, pollMs)
+    const nextPollMs = () => (waiting.current ? CHAT_WAITING_POLL_MS : CHAT_POLL_MS)
+    timer = setTimeout(ask, nextPollMs())
     return () => {
       abandon.abort()
       clearTimeout(timer)
     }
-  }, [state.kind, timeoutMs, pollMs, onNoSession, arrived])
+  }, [state.kind, timeoutMs, onNoSession, arrived])
 
   const deliver = useCallback(
     (message: Outgoing) => {
@@ -159,13 +172,6 @@ export function ChatPage({ onNoSession, timeoutMs, pollMs = CHAT_POLL_MS }: Prop
     statusLine.current?.focus()
   }
 
-  const ready = state.kind === 'ready'
-  const empty = ready && messages.length === 0 && outgoing.length === 0
-  const lastMessage = messages.at(-1)
-  const processing =
-    ready &&
-    (outgoing.some((message) => message.status !== 'failed') ||
-      (outgoing.length === 0 && lastMessage?.direction === 'inbound'))
 
   return (
     <Card aria-labelledby="chat-heading">

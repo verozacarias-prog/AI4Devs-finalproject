@@ -6,7 +6,11 @@ export const DASHBOARD_BASE = '/app/'
 /** How long the dashboard waits for the API before giving up. */
 export const API_TIMEOUT_MS = 10_000
 
-/** How often the chat asks for new messages while its screen is open (FEAT-002). */
+/**
+ * How often the chat asks for new messages while its screen is open (FEAT-002): more often
+ * while a reply of Platita is pending, so it shows up at once, and less the rest of the time.
+ */
+export const CHAT_WAITING_POLL_MS = 500
 export const CHAT_POLL_MS = 3_000
 /** The header that lets the API tell a repeated message from a new one (docs/04-api.md). */
 export const IDEMPOTENCY_KEY_HEADER = 'Idempotency-Key'

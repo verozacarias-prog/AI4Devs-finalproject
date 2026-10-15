@@ -54,8 +54,11 @@ Dentro de "Con contenido" hay tres situaciones, que no son estados de la pantall
 - **Consulta periódica caída.** Una consulta de mensajes nuevos falló con la conversación en
   pantalla: la conversación sigue, se ve un aviso, y se sigue preguntando.
 
-Mientras la pantalla está abierta, pregunta por mensajes nuevos cada 3 segundos, con el
-`next_cursor` de la última respuesta. Al cambiar de pantalla deja de preguntar.
+Mientras la pantalla está abierta, pregunta por mensajes nuevos con el `next_cursor` de la
+última respuesta. Lo hace cada medio segundo mientras espera una respuesta de Platita, es decir,
+cuando el último mensaje es del usuario o hay uno enviándose, y cada 3 segundos el resto del
+tiempo. Así la respuesta aparece enseguida, y una pestaña abierta sin conversación no carga la
+API. Al cambiar de pantalla deja de preguntar.
 
 Una sesión que venció tampoco es un estado: ante un `401`, de la consulta o del envío, el
 dashboard vuelve a la entrada de desarrollo.

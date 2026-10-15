@@ -124,7 +124,8 @@ las 15:00:00 en Buenos Aires.
 
 - **Aprobado por:** Veronica Zacarias 14/10/2026
 - **Los de la pantalla, C1-11 a C1-18, escritos ya armada:** Veronica Zacarias 15/10/2026
-- **Total:** 18 casos, 1 unitario, 9 de integración y 8 de componente.
+- **C1-19 y C1-20, el intervalo de la consulta según haya o no una respuesta pendiente:** Veronica Zacarias 15/10/2026
+- **Total:** 20 casos, 1 unitario, 9 de integración y 10 de componente.
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
@@ -146,6 +147,8 @@ las 15:00:00 en Buenos Aires.
 | C1-16 | Con otra pantalla abierta, no pregunta | Componente | CA-12 |
 | C1-17 | Un mensaje con etiquetas se ve como texto | Componente | CA-13 |
 | C1-18 | Con el chat encendido, el menú lleva a la conversación | Componente | CA-17 |
+| C1-19 | Mientras espera una respuesta, pregunta cada medio segundo | Componente | CA-5 y CA-12 |
+| C1-20 | Con la conversación respondida, pregunta cada 3 segundos | Componente | CA-12 |
 
 #### C1-01 · Lucía escribe y su mensaje queda guardado, pendiente
 
@@ -347,6 +350,29 @@ pasan un intervalo corto.
   elegirlo muestra "Chat con Platita" y lo marca como la pantalla actual. Que no aparezca con
   el chat apagado es del corte 2.
 - **Test:** `src/pages/ChatPage.test.tsx` › "case C1-18: with the chat on, the menu leads to the conversation"
+
+En los dos casos que siguen, los tests achican los dos intervalos en la misma proporción: lo que
+se comprueba es cuál de los dos usa la pantalla.
+
+#### C1-19 · Mientras espera una respuesta, pregunta cada medio segundo
+
+- **Sale de:** CA-5 y CA-12 · **Tipo:** componente
+- **Dado** que la conversación de Lucía termina en "gasté 3500 en el súper", suyo y todavía sin
+  respuesta, y que la API no trae nada nuevo,
+- **cuando** pasan 2 segundos con el chat abierto,
+- **entonces** la pantalla ya preguntó por mensajes nuevos al menos 3 veces, porque pregunta
+  cada medio segundo. Con 3 segundos de intervalo no habría preguntado ninguna.
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C1-19: while it waits for a reply, it asks every half second"
+
+#### C1-20 · Con la conversación respondida, pregunta cada 3 segundos
+
+- **Sale de:** CA-12 · **Tipo:** componente
+- **Dado** que la conversación de Lucía termina en la respuesta de Platita, y que la API no
+  trae nada nuevo,
+- **cuando** pasan 2 segundos con el chat abierto,
+- **entonces** la pantalla no preguntó ninguna vez por mensajes nuevos: la primera consulta
+  llega a los 3 segundos.
+- **Test:** `src/pages/ChatPage.test.tsx` › "case C1-20: with the conversation answered, it asks every 3 seconds"
 
 ### Corte 2 — errores y estado vacío
 

@@ -1,7 +1,8 @@
 /**
  * Cases C1-11 to C1-18 of FEAT-002 (docs/features/FEAT-002/spec.md): the web chat. The whole
  * dashboard is rendered, with Lucía already in and the API simulated at the network level.
- * The chat asks for new messages every few milliseconds here, instead of every few seconds.
+ * The chat asks for new messages ten times as often as it does for real: every 50 ms while it
+ * waits for a reply instead of every half second, and every 300 ms instead of every 3 seconds.
  */
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { delay, http, HttpResponse } from 'msw'
@@ -9,7 +10,14 @@ import { setupServer } from 'msw/node'
 import { afterAll, afterEach, beforeAll, expect, test, vi } from 'vitest'
 import App from '../App'
 
-vi.mock('../constants', async (original) => ({ ...(await original<object>()), CHAT_POLL_MS: 50 }))
+vi.mock('../constants', async (original) => ({
+  ...(await original<object>()),
+  CHAT_WAITING_POLL_MS: 50,
+  CHAT_POLL_MS: 300,
+}))
+
+/** Two seconds of the cases, at the same scale as the intervals. */
+const TWO_SECONDS_MS = 200
 
 const CHAT = '*/chat/messages'
 const LUCIA = { id: '4379d06b-46d3-4f2e-a59e-addcb32388f8', name: 'Lucía' }
@@ -219,4 +227,36 @@ test('case C1-18: with the chat on, the menu leads to the conversation', async (
 
   await screen.findByRole('heading', { name: 'Chat con Platita' })
   expect(within(nav).getByRole('button', { name: 'Chat' }).getAttribute('aria-current')).toBe('page')
+})
+
+/** An API whose conversation is always the same, and which counts the reads for new messages. */
+function countingPolls(messages: Message[], cursor: string): { polls: number } {
+  const counted = { polls: 0 }
+  apiWithLuciaIn(
+    http.get(CHAT, ({ request }) => {
+      if (new URL(request.url).searchParams.has('after')) counted.polls += 1
+      return conversation(new URL(request.url).searchParams.has('after') ? [] : messages, cursor)
+    }),
+  )
+  return counted
+}
+
+test('case C1-19: while it waits for a reply, it asks every half second', async () => {
+  const counted = countingPolls([SUPERMARKET], 'im1')
+  await openChat()
+  await screen.findByText('gasté 3500 en el súper')
+
+  await new Promise((resolve) => setTimeout(resolve, TWO_SECONDS_MS))
+
+  expect(counted.polls).toBeGreaterThanOrEqual(3)
+})
+
+test('case C1-20: with the conversation answered, it asks every 3 seconds', async () => {
+  const counted = countingPolls([SUPERMARKET, REPLY], 'om1')
+  await openChat()
+  await screen.findByText('Recibí tu mensaje. Todavía no puedo procesarlo.')
+
+  await new Promise((resolve) => setTimeout(resolve, TWO_SECONDS_MS))
+
+  expect(counted.polls).toBe(0)
 })

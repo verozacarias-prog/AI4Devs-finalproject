@@ -70,7 +70,9 @@ API_PORT = 8000
 # the worker falls, the message is free again when it ends. The pause is how long it waits
 # before asking again when there was nothing to take.
 WORKER_LOCK_SECONDS = 120
-WORKER_IDLE_SECONDS = 1.0
+# A quarter of a second keeps the reply of a fixed text under a second, and at this volume
+# four reads a second of an indexed table cost nothing.
+WORKER_IDLE_SECONDS = 0.25
 
 # What an operation command returns to the shell.
 EXIT_OK = 0
