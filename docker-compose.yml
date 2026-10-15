@@ -1,6 +1,5 @@
-# Local environment: the database, the migrations and the API, which also serves the
-# dashboard under /app, started with one command (ADR 0021). The worker joins when the
-# message tables exist.
+# Local environment: the database, the migrations, the API, which also serves the dashboard
+# under /app, and the worker that answers the messages, started with one command (ADR 0021).
 #
 #   cp .env.example .env
 #   docker compose up --build
@@ -46,10 +45,30 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       APP_ENV: ${APP_ENV:-local}
       APP_VERSION: ${APP_VERSION:-dev}
-      # Off unless .env turns it on (ADR 0016).
+      # Off unless .env turns them on (ADR 0016).
       DEV_ENTRY_ENABLED: ${DEV_ENTRY_ENABLED:-false}
+      WEB_CHAT_ENABLED: ${WEB_CHAT_ENABLED:-false}
     ports:
       - "127.0.0.1:${API_PORT:-8000}:8000"
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+
+  # Takes the stored messages and answers them (ADR 0010). Same image as the API, another
+  # entry point. It listens on no port, so the health check of the image is off here.
+  worker:
+    build: .
+    container_name: platita-worker
+    command: ["python", "-m", "app.adapters.inbound.message_worker.main"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      APP_ENV: ${APP_ENV:-local}
+      APP_VERSION: ${APP_VERSION:-dev}
+      # Read here too: with either one on in production, no process starts (ADR 0016).
+      DEV_ENTRY_ENABLED: ${DEV_ENTRY_ENABLED:-false}
+      WEB_CHAT_ENABLED: ${WEB_CHAT_ENABLED:-false}
+    healthcheck:
+      disable: true
     depends_on:
       migrations:
         condition: service_completed_successfully

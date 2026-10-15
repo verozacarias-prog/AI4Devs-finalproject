@@ -8,7 +8,7 @@ import logging
 
 import pytest
 
-from app.adapters.outbound.observability.logs import REDACTED, build_handler
+from app.adapters.observability.logs import REDACTED, build_handler
 
 Value = str | list[str]
 
@@ -47,8 +47,8 @@ def _logged(logger: logging.Logger, stream: io.StringIO, field: str, value: Valu
         (
             "error_stack",
             [
-                "app.adapters.inbound.cli.seed_test_data:main:34",
-                "app.domain.use_cases.seed_test_data:execute:56",
+                "app.adapters.inbound.operator_commands.seed_test_data:main:34",
+                "app.domain.use_cases.test_data.seed_test_data:execute:56",
             ],
         ),
     ],

@@ -1,0 +1,28 @@
+from __future__ import annotations
+
+import uuid
+from dataclasses import asdict
+
+from sqlalchemy import Connection, text
+
+from app.adapters.outbound.postgres import queries
+from app.adapters.outbound.postgres.rejections import execute_write
+from app.domain.entities.family_group import FamilyGroup, GroupRole, Membership
+
+
+class PostgresFamilyGroupRepository:
+    def __init__(self, connection: Connection) -> None:
+        self._connection = connection
+
+    def add(self, group: FamilyGroup) -> None:
+        execute_write(self._connection, queries.INSERT_FAMILY_GROUP, asdict(group))
+
+    def add_membership(self, membership: Membership) -> None:
+        execute_write(self._connection, queries.INSERT_MEMBERSHIP, asdict(membership))
+
+    def find_owned_by(self, owner_id: uuid.UUID, name: str) -> FamilyGroup | None:
+        row = self._connection.execute(
+            text(queries.SELECT_GROUP_OWNED_BY),
+            {"owner_id": owner_id, "owner_role": GroupRole.OWNER, "name": name},
+        ).one_or_none()
+        return None if row is None else FamilyGroup(id=row.id, name=row.name)

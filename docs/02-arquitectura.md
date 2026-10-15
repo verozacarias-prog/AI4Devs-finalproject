@@ -172,8 +172,8 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
 /backend
   /app
     /domain
-      /entities         # User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk
-      /use_cases         # CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, ListAccounts, GenerateProactiveAlert...
+      /entities         # User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk, InboundMessage, OutboundMessage, ChatMessage
+      /use_cases         # one folder per feature, such as sessions/, messages/ or accounts/: CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, ListAccounts, SendChatMessage, ListChatMessages, ClaimNextMessage, ProcessNextMessage, ValidateSession, CheckReadiness, GenerateProactiveAlert...
       /ports             # interfaces the domain depends on but does not implement
         - transaction_repository_port.py
         - account_repository_port.py
@@ -192,13 +192,15 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
       account_balance.py # the balance of an account, from what already happened in it
     /adapters
       /inbound
-        /api               # FastAPI routers — translate HTTP into use case calls
+        /api               # the HTTP side: building the app, its middleware and error answers; main.py is the entry point of the API process
+          /routers         # one file per group of endpoints — translate HTTP into use case calls
         /whatsapp_webhook   # translate WhatsApp payloads into use case calls
-        /message_worker     # worker entry point: takes stored messages, calls use cases
+        /message_worker     # the worker: takes stored messages, calls use cases; main.py is the entry point of its process
         /scheduler          # scheduled jobs entry point: calls use cases, never raw SQL
-        /cli                # operator commands: local test data, knowledge base load, enabling phone numbers, personal links for the demo
+        /operator_commands  # commands an operator runs by hand: local test data, knowledge base load, enabling phone numbers, personal links for the demo
       /outbound
-        /postgres           # SQLAlchemy repositories, unit of work and connection setup
+        /postgres           # unit of work, connection setup, and queries.py with all the SQL written by hand
+          /repositories    # one file per repository, each implementing its port
         /pgvector            # VectorStorePort implementation
         /whatsapp_client      # sends outbound WhatsApp messages
         /email_reader          # IMAP/Gmail integration (could-have, not in the MVP)
@@ -212,15 +214,15 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
     test_data.py         # the template of a test user and the test users of local
     messages.py          # every message written for a person
     settings.py          # process configuration, read from environment variables
-    main.py              # entry point of the API process
   /tests
   /migrations          # Alembic
 /frontend                # React, TypeScript and Vite (ADR 0026), Tailwind CSS and shadcn/ui (ADR 0027)
   /src
     /api                 # API contract exported by the backend, the types generated from it, and the API paths
     /pages               # one file per screen, with its test next to it
-    /components/ui       # the shadcn/ui components, copied into the project and owned by it
-    /lib                 # small helpers of the components, such as joining class names
+    /components          # the pieces several screens share, such as the side menu, with their test next to them
+      /ui                # the shadcn/ui components, copied into the project and owned by it
+    /lib                 # small helpers of the components: class-names.ts joins class names
     messages.ts          # every text the dashboard shows
     design-tokens.css    # design tokens: the only place with colours, sizes and spacing
     App.tsx

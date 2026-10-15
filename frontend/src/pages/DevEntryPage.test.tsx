@@ -141,7 +141,7 @@ test('case 60: without test users it is empty, with the command to create them',
   render(<DevEntryPage />)
 
   await screen.findByText('No hay usuarios de prueba')
-  screen.getByText('docker compose exec api python -m app.adapters.inbound.cli.seed_test_data')
+  screen.getByText('docker compose exec api python -m app.adapters.inbound.operator_commands.seed_test_data')
   screen.getByRole('button', { name: 'Reintentar' })
   // Empty is not an error.
   expect(screen.queryByRole('alert')).toBeNull()

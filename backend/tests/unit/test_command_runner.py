@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import io
 
-from app.adapters.inbound.cli.runner import run_command
+from app.adapters.inbound.operator_commands.runner import run_command
 from app.domain.errors import ForbiddenError
 from app.settings import Settings
 

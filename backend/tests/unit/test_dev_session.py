@@ -16,11 +16,11 @@ import pytest
 from app.constants import Environment
 from app.domain.entities.user import User
 from app.domain.errors import NotFoundError, UnauthenticatedError
-from app.domain.use_cases.authenticate_session import AuthenticateSession
-from app.domain.use_cases.close_session import CloseSession
-from app.domain.use_cases.create_test_user import CreateTestUser
-from app.domain.use_cases.open_dev_session import OpenDevSession, OpenedSession
-from tests.unit.doubles import FixedClock, InMemoryUnitOfWork
+from app.domain.use_cases.sessions.authenticate_session import AuthenticateSession
+from app.domain.use_cases.sessions.close_session import CloseSession
+from app.domain.use_cases.sessions.open_dev_session import OpenDevSession, OpenedSession
+from app.domain.use_cases.test_data.create_test_user import CreateTestUser
+from tests.support.doubles import FixedClock, InMemoryUnitOfWork
 
 BUENOS_AIRES = ZoneInfo("America/Argentina/Buenos_Aires")
 

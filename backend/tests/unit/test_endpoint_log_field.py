@@ -12,7 +12,7 @@ import logging
 
 import pytest
 
-from app.adapters.outbound.observability.logs import REDACTED, build_handler
+from app.adapters.observability.logs import REDACTED, build_handler
 
 
 def _logged_endpoint(value: object) -> object:

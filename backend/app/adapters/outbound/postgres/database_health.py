@@ -4,7 +4,7 @@ import logging
 
 from sqlalchemy import Engine, text
 
-from app.adapters.outbound.observability.events import Event, Field, LoggerName
+from app.adapters.observability.events import Event, Field, LoggerName
 from app.adapters.outbound.postgres.queries import PING
 
 logger = logging.getLogger(LoggerName.POSTGRES)

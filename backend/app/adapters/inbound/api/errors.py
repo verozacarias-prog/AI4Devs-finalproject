@@ -18,8 +18,8 @@ from starlette.exceptions import HTTPException
 from app.adapters.inbound.api import reference
 from app.adapters.inbound.api.routes import ERROR_KEY, REQUEST_ID_HEADER, ApiErrorCode
 from app.adapters.inbound.api.security_headers import security_headers_for
-from app.adapters.outbound.observability.errors import log_error
-from app.adapters.outbound.observability.logs import request_id_var
+from app.adapters.observability.errors import log_error
+from app.adapters.observability.logs import request_id_var
 from app.constants import Environment
 from app.domain.errors import DomainError, ErrorCategory
 

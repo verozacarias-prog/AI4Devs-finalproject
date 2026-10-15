@@ -8,7 +8,13 @@ docs/04-api.md, not here.
 
 from __future__ import annotations
 
-from app.adapters.inbound.api.routes import ACCOUNTS_TAG, DEV_TAG, HEALTH_TAG, SESSION_TAG
+from app.adapters.inbound.api.routes import (
+    ACCOUNTS_TAG,
+    CHAT_TAG,
+    DEV_TAG,
+    HEALTH_TAG,
+    SESSION_TAG,
+)
 
 API_DESCRIPTION = (
     "The API of Platita, a personal and family finance assistant. The dashboard is its only "
@@ -37,6 +43,13 @@ TAGS: list[dict[str, str]] = [
     {
         "name": ACCOUNTS_TAG,
         "description": "The accounts of the user of the session, with their computed balance.",
+    },
+    {
+        "name": CHAT_TAG,
+        "description": "The chat of the dashboard, for development and demonstration. A "
+        "message goes the same way as one of WhatsApp: it is stored, and the worker answers "
+        "it later. These routes exist only when the web chat is enabled, and never in "
+        "production.",
     },
     {
         "name": DEV_TAG,
@@ -115,6 +128,42 @@ ACCOUNT_BALANCE_KIND = (
     "`balance`, or `net_contributed` in an investment account: what was declared on opening, "
     "plus transfers in, minus transfers out. Never added to any total."
 )
+
+# The web chat.
+SEND_CHAT_MESSAGE_SUMMARY = "Write to Platita"
+SEND_CHAT_MESSAGE_DESCRIPTION = (
+    "Stores the message as written by the user of the session, and answers at once without "
+    "processing it. The reply of Platita is not here: it shows up later in "
+    "`GET /chat/messages`. The time of the message is the one the server received it at."
+)
+SEND_CHAT_MESSAGE_ACCEPTED = "The message was stored, pending. The worker processes it later."
+SEND_CHAT_MESSAGE_INVALID = "The text is empty, or the header `Idempotency-Key` is missing."
+IDEMPOTENCY_KEY = (
+    "A UUID the browser generates once per message, and sends again unchanged if it repeats "
+    "the request."
+)
+CHAT_TEXT = "What the user wrote."
+CHAT_QUOTED_MESSAGE_ID = "The reply of Platita the user is answering to, if any."
+CHAT_MESSAGE_ID = "The identifier of the message."
+CHAT_MESSAGE_STATUS = "`pending` until the worker takes it."
+LIST_CHAT_MESSAGES_SUMMARY = "Read the conversation"
+LIST_CHAT_MESSAGES_DESCRIPTION = (
+    "The messages of the web chat of the user of the session, what the user wrote and what "
+    "Platita replied, in the order they happened. With `after`, only the ones that come after "
+    "that message: it is what the dashboard asks every few seconds. It does not count as "
+    "activity of the session."
+)
+LIST_CHAT_MESSAGES_OK = "The conversation. An empty list when there is nothing (new)."
+LIST_CHAT_MESSAGES_INVALID = "`after` is not a UUID."
+CHAT_AFTER = "The `next_cursor` of the previous answer. Without it, the whole conversation."
+CHAT_MESSAGES = "The messages, in the order they happened."
+CHAT_NEXT_CURSOR = (
+    "Where the next read starts: the last message, or the same cursor when nothing is new. "
+    "Null only when the conversation is empty."
+)
+CHAT_DIRECTION = "`inbound` if the user wrote it, `outbound` if Platita did."
+CHAT_RESPONSE_KIND = "What kind of reply it is. Only in a message of Platita."
+CHAT_CREATED_AT = "When it was received or written, in the time zone of the user."
 
 # Development entry.
 DEV_USERS_SUMMARY = "List the test users"

@@ -41,8 +41,9 @@ if echo "$staged" | grep -qE '\.md$|^scripts/verify_docs\.py$'; then
     run scripts/verify_docs.py
 fi
 
-# Arquitectura: cuando cambia código de backend/frontend o el propio verificador.
-if echo "$staged" | grep -qE '^(backend|frontend)/|^scripts/verify_architecture\.py$'; then
+# Arquitectura: cuando cambia código de backend/frontend, el árbol de carpetas de la
+# arquitectura o el propio verificador.
+if echo "$staged" | grep -qE '^(backend|frontend)/|^docs/02-arquitectura\.md$|^scripts/verify_architecture\.py$'; then
     echo ""
     run scripts/verify_architecture.py
 fi

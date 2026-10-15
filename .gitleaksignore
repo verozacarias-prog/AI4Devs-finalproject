@@ -19,3 +19,9 @@ fae3830cddccde10c37f88d9b7e4e70b9f2915f9:backend/tests/integration/test_server_l
 # Token inventado en el test del filtro de registros: comprueba que un campo "token" salga
 # redactado. No es una credencial.
 0f9a3f21b9ab23cb846ede02fe18808227967fc8:backend/tests/unit/test_log_redaction.py:generic-api-key:70
+
+# La Idempotency-Key de ejemplo de los tests del chat web (FEAT-002): un UUID inventado, el
+# mismo del ejemplo de docs/04-api.md, que el navegador generaría para un mensaje. No es una
+# credencial.
+b8359221f7386a1768f5f940bcf755f6bc7ddaf1:backend/tests/integration/test_chat_messages.py:generic-api-key:31
+b8359221f7386a1768f5f940bcf755f6bc7ddaf1:backend/tests/unit/test_send_chat_message.py:generic-api-key:27

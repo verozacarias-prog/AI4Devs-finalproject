@@ -33,6 +33,8 @@ nombres de archivo de código están en inglés.
 - [Documentación viva](https://verozacarias-prog.github.io/AI4Devs-finalproject/documentacion-viva/)
 - [Especificación — FEAT-001 · Pantalla de cuentas](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/feat-001/spec/)
 - [Contrato de UI — FEAT-001 · Pantalla de cuentas](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/feat-001/ui_contract/)
+- [Especificación — FEAT-002 · Chat web y worker de mensajes](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/feat-002/spec/)
+- [Contrato de UI — FEAT-002 · Chat web](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/feat-002/ui_contract/)
 - [Pull request — FEAT-XXX · <título>](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/template/pr/)
 - [Especificación — FEAT-XXX · <título>](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/template/spec/)
 - [Contrato de UI — FEAT-XXX · <pantalla>](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/template/ui_contract/)

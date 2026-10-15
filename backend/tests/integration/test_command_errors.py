@@ -10,9 +10,9 @@ import io
 
 import pytest
 
-from app.adapters.inbound.cli.seed_test_data import main
+from app.adapters.inbound.operator_commands.seed_test_data import main
 from tests.conftest import UNREACHABLE_DATABASE_URL
-from tests.log_lines import LogLine, events_of, stack_of
+from tests.support.log_lines import LogLine, events_of, stack_of
 
 pytestmark = pytest.mark.integration
 
@@ -42,12 +42,12 @@ def test_a_refused_command_leaves_its_line_and_gives_the_reference(database_url:
     errors = events_of(log, "error.expected")
     assert len(errors) == 1
     line = errors[0]
-    assert line["process"] == "cli"
+    assert line["process"] == "operator_command"
     assert line["error_code"] == "test_data_not_allowed"
     assert _reference(line) in output
     stack = stack_of(line)
-    assert stack[0].startswith("app.adapters.inbound.cli.")
-    assert stack[-1].startswith("app.domain.use_cases.seed_test_data:execute:")
+    assert stack[0].startswith("app.adapters.inbound.operator_commands.")
+    assert stack[-1].startswith("app.domain.use_cases.test_data.seed_test_data:execute:")
 
 
 def test_a_command_that_fails_says_so_without_the_traceback_or_the_database_url() -> None:
@@ -60,5 +60,5 @@ def test_a_command_that_fails_says_so_without_the_traceback_or_the_database_url(
     assert "platita:platita" not in output
     errors = events_of(log, "error.unexpected")
     assert len(errors) == 1
-    assert errors[0]["process"] == "cli"
+    assert errors[0]["process"] == "operator_command"
     assert _reference(errors[0]) in output

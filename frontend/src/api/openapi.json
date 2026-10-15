@@ -82,6 +82,124 @@
         "title": "BalanceKind",
         "type": "string"
       },
+      "ChatConversation": {
+        "properties": {
+          "messages": {
+            "description": "The messages, in the order they happened.",
+            "items": {
+              "$ref": "#/components/schemas/ChatMessageItem"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the next read starts: the last message, or the same cursor when nothing is new. Null only when the conversation is empty.",
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "messages",
+          "next_cursor"
+        ],
+        "title": "ChatConversation",
+        "type": "object"
+      },
+      "ChatMessageItem": {
+        "properties": {
+          "created_at": {
+            "description": "When it was received or written, in the time zone of the user.",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/Direction",
+            "description": "`inbound` if the user wrote it, `outbound` if Platita did."
+          },
+          "id": {
+            "description": "The identifier of the message.",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "quoted_message_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The reply of Platita the user is answering to, if any.",
+            "title": "Quoted Message Id"
+          },
+          "response_kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResponseKind"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What kind of reply it is. Only in a message of Platita."
+          },
+          "text": {
+            "description": "What the user wrote.",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "direction",
+          "text",
+          "quoted_message_id",
+          "response_kind",
+          "created_at"
+        ],
+        "title": "ChatMessageItem",
+        "type": "object"
+      },
+      "ChatMessageRequest": {
+        "properties": {
+          "quoted_message_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The reply of Platita the user is answering to, if any.",
+            "title": "Quoted Message Id"
+          },
+          "text": {
+            "description": "What the user wrote.",
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "ChatMessageRequest",
+        "type": "object"
+      },
       "DevSessionRequest": {
         "properties": {
           "access_token": {
@@ -151,6 +269,15 @@
         "title": "DevUsers",
         "type": "object"
       },
+      "Direction": {
+        "description": "Who wrote a message of the conversation: the user, or Platita.",
+        "enum": [
+          "inbound",
+          "outbound"
+        ],
+        "title": "Direction",
+        "type": "string"
+      },
       "ErrorBody": {
         "description": "The body of every error. An endpoint adds a field only when the client needs it.",
         "properties": {
@@ -188,6 +315,16 @@
         "title": "HealthStatus",
         "type": "object"
       },
+      "InboundStatus": {
+        "enum": [
+          "pending",
+          "processing",
+          "processed",
+          "failed"
+        ],
+        "title": "InboundStatus",
+        "type": "string"
+      },
       "Me": {
         "properties": {
           "id": {
@@ -207,6 +344,42 @@
           "name"
         ],
         "title": "Me",
+        "type": "object"
+      },
+      "ResponseKind": {
+        "description": "What kind of reply a message was (docs/03-modelo-de-datos.md, OUTBOUND_MESSAGE).",
+        "enum": [
+          "registration",
+          "query",
+          "advice_information",
+          "advice_education",
+          "advice_decision",
+          "advice_limit_explained",
+          "advice_limit_fixed",
+          "fixed_text",
+          "proactive"
+        ],
+        "title": "ResponseKind",
+        "type": "string"
+      },
+      "StoredChatMessage": {
+        "properties": {
+          "id": {
+            "description": "The identifier of the message.",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/InboundStatus",
+            "description": "`pending` until the worker takes it."
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "StoredChatMessage",
         "type": "object"
       }
     },
@@ -300,6 +473,153 @@
         "summary": "Close this session",
         "tags": [
           "session"
+        ]
+      }
+    },
+    "/chat/messages": {
+      "get": {
+        "description": "The messages of the web chat of the user of the session, what the user wrote and what Platita replied, in the order they happened. With `after`, only the ones that come after that message: it is what the dashboard asks every few seconds. It does not count as activity of the session.",
+        "operationId": "conversation_chat_messages_get",
+        "parameters": [
+          {
+            "description": "The `next_cursor` of the previous answer. Without it, the whole conversation.",
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The `next_cursor` of the previous answer. Without it, the whole conversation.",
+              "title": "After"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatConversation"
+                }
+              }
+            },
+            "description": "The conversation. An empty list when there is nothing (new)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`after` is not a UUID."
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Read the conversation",
+        "tags": [
+          "chat"
+        ]
+      },
+      "post": {
+        "description": "Stores the message as written by the user of the session, and answers at once without processing it. The reply of Platita is not here: it shows up later in `GET /chat/messages`. The time of the message is the one the server received it at.",
+        "operationId": "send_chat_messages_post",
+        "parameters": [
+          {
+            "description": "A UUID the browser generates once per message, and sends again unchanged if it repeats the request.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "description": "A UUID the browser generates once per message, and sends again unchanged if it repeats the request.",
+              "format": "uuid",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoredChatMessage"
+                }
+              }
+            },
+            "description": "The message was stored, pending. The worker processes it later."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The text is empty, or the header `Idempotency-Key` is missing."
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Write to Platita",
+        "tags": [
+          "chat"
         ]
       }
     },
@@ -494,6 +814,10 @@
     {
       "description": "The accounts of the user of the session, with their computed balance.",
       "name": "accounts"
+    },
+    {
+      "description": "The chat of the dashboard, for development and demonstration. A message goes the same way as one of WhatsApp: it is stored, and the worker answers it later. These routes exist only when the web chat is enabled, and never in production.",
+      "name": "chat"
     },
     {
       "description": "The development entry: a real session without a login code, for a test user. These routes exist only when the entry is enabled, and never in production.",

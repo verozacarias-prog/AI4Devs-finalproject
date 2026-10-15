@@ -1,6 +1,6 @@
 import { cva, type VariantProps } from 'class-variance-authority'
 import type { ComponentProps } from 'react'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/class-names'
 
 /** The button of shadcn/ui (ADR 0027), without the variants nobody uses yet. */
 const buttonVariants = cva(

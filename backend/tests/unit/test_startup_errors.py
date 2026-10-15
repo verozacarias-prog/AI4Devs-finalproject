@@ -17,7 +17,7 @@ BACKEND_DIR = Path(__file__).resolve().parents[2]
 def test_the_api_process_without_the_database_url_ends_with_a_message_and_no_traceback() -> None:
     """Case E14."""
     result = subprocess.run(  # noqa: S603
-        [sys.executable, "-m", "app.main"],
+        [sys.executable, "-m", "app.adapters.inbound.api.main"],
         cwd=BACKEND_DIR,
         env={"PATH": os.environ["PATH"], "APP_ENV": "local"},
         capture_output=True,

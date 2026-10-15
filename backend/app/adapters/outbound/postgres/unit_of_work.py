@@ -5,20 +5,32 @@ from typing import Self
 
 from sqlalchemy import Connection, Engine
 
-from app.adapters.outbound.postgres.repositories import (
-    PostgresAccountRepository,
+from app.adapters.outbound.postgres.repositories.accounts import PostgresAccountRepository
+from app.adapters.outbound.postgres.repositories.budget_periods import (
     PostgresBudgetPeriodRepository,
-    PostgresFamilyGroupRepository,
-    PostgresFinancialProfileRepository,
-    PostgresSessionRepository,
-    PostgresTransactionRepository,
-    PostgresTransferRepository,
-    PostgresUserRepository,
 )
+from app.adapters.outbound.postgres.repositories.chat_messages import PostgresChatMessageRepository
+from app.adapters.outbound.postgres.repositories.family_groups import PostgresFamilyGroupRepository
+from app.adapters.outbound.postgres.repositories.financial_profiles import (
+    PostgresFinancialProfileRepository,
+)
+from app.adapters.outbound.postgres.repositories.inbound_messages import (
+    PostgresInboundMessageRepository,
+)
+from app.adapters.outbound.postgres.repositories.outbound_messages import (
+    PostgresOutboundMessageRepository,
+)
+from app.adapters.outbound.postgres.repositories.sessions import PostgresSessionRepository
+from app.adapters.outbound.postgres.repositories.transactions import PostgresTransactionRepository
+from app.adapters.outbound.postgres.repositories.transfers import PostgresTransferRepository
+from app.adapters.outbound.postgres.repositories.users import PostgresUserRepository
 from app.domain.ports.account_repository_port import AccountRepositoryPort
 from app.domain.ports.budget_period_repository_port import BudgetPeriodRepositoryPort
+from app.domain.ports.chat_message_repository_port import ChatMessageRepositoryPort
 from app.domain.ports.family_group_repository_port import FamilyGroupRepositoryPort
 from app.domain.ports.financial_profile_repository_port import FinancialProfileRepositoryPort
+from app.domain.ports.inbound_message_repository_port import InboundMessageRepositoryPort
+from app.domain.ports.outbound_message_repository_port import OutboundMessageRepositoryPort
 from app.domain.ports.session_repository_port import SessionRepositoryPort
 from app.domain.ports.transaction_repository_port import TransactionRepositoryPort
 from app.domain.ports.transfer_repository_port import TransferRepositoryPort
@@ -40,6 +52,9 @@ class SqlAlchemyUnitOfWork:
     sessions: SessionRepositoryPort
     transactions: TransactionRepositoryPort
     transfers: TransferRepositoryPort
+    inbound_messages: InboundMessageRepositoryPort
+    outbound_messages: OutboundMessageRepositoryPort
+    chat_messages: ChatMessageRepositoryPort
 
     def __init__(self, engine: Engine) -> None:
         self._engine = engine
@@ -57,6 +72,9 @@ class SqlAlchemyUnitOfWork:
         self.sessions = PostgresSessionRepository(connection)
         self.transactions = PostgresTransactionRepository(connection)
         self.transfers = PostgresTransferRepository(connection)
+        self.inbound_messages = PostgresInboundMessageRepository(connection)
+        self.outbound_messages = PostgresOutboundMessageRepository(connection)
+        self.chat_messages = PostgresChatMessageRepository(connection)
         return self
 
     def __exit__(

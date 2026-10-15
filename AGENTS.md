@@ -69,18 +69,18 @@ de pre-commit. No son una recomendación: rompen el commit.
 
 ## 4. Mapa de carpetas
 
-- `backend/app/domain/entities/` — User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk.
-- `backend/app/domain/use_cases/` — CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, ListAccounts, GenerateProactiveAlert.
+- `backend/app/domain/entities/` — User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk, InboundMessage, OutboundMessage, ChatMessage.
+- `backend/app/domain/use_cases/` — una carpeta por funcionalidad, como `sessions/`, `messages/` o `accounts/`, con sus casos de uso: CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, ListAccounts, SendChatMessage, ListChatMessages, ClaimNextMessage, ProcessNextMessage, ValidateSession, CheckReadiness, GenerateProactiveAlert.
 - `backend/app/domain/ports/` — interfaces que el dominio declara y no implementa.
 - `backend/app/domain/errors.py` — los errores que una regla de negocio prevé, cada uno con su código y su categoría.
 - `backend/app/domain/local_date.py` — qué día es para un usuario, en su zona horaria.
 - `backend/app/domain/account_balance.py` — el saldo de una cuenta, calculado con lo que ya ocurrió en ella.
 - `backend/app/shared/` — utilidades técnicas que usan todas las capas, solo con la librería estándar. `clock.py` tiene el protocolo del reloj y su implementación con el reloj de la máquina.
-- `backend/app/adapters/inbound/api/` — routers de FastAPI: traducen HTTP a llamadas a casos de uso. Incluye el chat web de desarrollo, que guarda el mensaje y no lo procesa.
+- `backend/app/adapters/inbound/api/` — el lado HTTP: arma la aplicación, sus controles y sus respuestas de error. En `routers/`, un archivo por grupo de endpoints, que traducen HTTP a llamadas a casos de uso. Incluye el chat web de desarrollo, que guarda el mensaje y no lo procesa.
 - `backend/app/adapters/inbound/whatsapp_webhook/` — traduce payloads de WhatsApp a llamadas a casos de uso.
 - `backend/app/adapters/inbound/message_worker/` — punto de entrada del worker: toma los mensajes guardados y los pasa a casos de uso.
 - `backend/app/adapters/inbound/scheduler/` — punto de entrada de los procesos programados: recurrentes, cierres de resumen, alertas, vencimientos, cotizaciones y borrado de cuentas, siempre por casos de uso.
-- `backend/app/adapters/inbound/cli/` — comandos de operación: datos de prueba del entorno `local`, carga de la base de conocimiento, habilitación de números, y enlaces personales del entorno `demo`, siempre por casos de uso.
+- `backend/app/adapters/inbound/operator_commands/` — comandos de operación: datos de prueba del entorno `local`, carga de la base de conocimiento, habilitación de números, y enlaces personales del entorno `demo`, siempre por casos de uso.
 - `backend/app/adapters/outbound/postgres/` — repositorios SQLAlchemy que implementan los puertos `*_repository`, la unidad de trabajo y la creación de la conexión.
 - `backend/app/adapters/outbound/pgvector/` — implementación de `VectorStorePort`.
 - `backend/app/adapters/outbound/whatsapp_client/` — envío de mensajes salientes de WhatsApp.
@@ -89,10 +89,10 @@ de pre-commit. No son una recomendación: rompen el commit.
 - `backend/app/adapters/outbound/llm_client/` — cliente de LLM: clasificación, interpretación y respuestas, con el SDK del proveedor.
 - `backend/app/adapters/outbound/embedding_client/` — cliente del proveedor de embeddings.
 - `backend/app/adapters/outbound/text_splitter/` — particionado de documentos; el único lugar que importa `langchain-text-splitters`.
-- `backend/app/adapters/outbound/observability/` — envoltorios de los puertos de LLM y de embeddings, que registran cada llamada sin su contenido, y el formato JSON de los registros con su filtro.
+- `backend/app/adapters/observability/` — envoltorios de los puertos de LLM y de embeddings, que registran cada llamada sin su contenido, y el formato JSON de los registros con su filtro.
 - `backend/tests/` — tests unitarios, de integración y end-to-end.
 - `backend/migrations/` — migraciones de Alembic.
-- `frontend/` — dashboard web, en React con TypeScript y Vite ([ADR 0026](docs/adr/0026-react-typescript-y-vite-para-el-dashboard.md)), con Tailwind CSS y shadcn/ui ([ADR 0027](docs/adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md)). `src/api/` tiene el contrato exportado y los tipos generados, `src/pages/` una pantalla por archivo con su test al lado, `src/components/ui/` los componentes de shadcn/ui, y `src/design-tokens.css` los tokens de diseño.
+- `frontend/` — dashboard web, en React con TypeScript y Vite ([ADR 0026](docs/adr/0026-react-typescript-y-vite-para-el-dashboard.md)), con Tailwind CSS y shadcn/ui ([ADR 0027](docs/adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md)). `src/api/` tiene el contrato exportado y los tipos generados, `src/pages/` una pantalla por archivo con su test al lado, `src/components/` las piezas que comparten las pantallas, como el menú lateral, con su test al lado, `src/components/ui/` los componentes de shadcn/ui, y `src/design-tokens.css` los tokens de diseño.
 - `site/` — portal de documentación (Astro Starlight). Se genera desde `docs/`; no es fuente.
 - `docs/` — la especificación del proyecto.
 
@@ -122,7 +122,7 @@ completo antes de escribir código.
   `app/messages.py` (todo mensaje para una persona), `adapters/inbound/api/routes.py` (las
   rutas de la API y los valores de sus respuestas), `adapters/inbound/api/reference.py` (los
   textos de la referencia de la API), `adapters/inbound/api/security_headers.py`
-  (los encabezados de seguridad), `adapters/outbound/observability/events.py`
+  (los encabezados de seguridad), `adapters/observability/events.py`
   (eventos, campos, nombres y reglas de los registros) y `adapters/outbound/postgres/queries.py`
   (el SQL escrito a mano). Quedan en su lugar solo las palabras que define una librería, como
   el nombre de un parámetro suyo, el SQL de cada migración, que es su contenido, y lo que
@@ -205,7 +205,13 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   importe fuera del adaptador de particionado, y el aislamiento del frontend. No detecta un
   monto con otro nombre, una llamada HTTP de un proceso del backend a la API, ni el SDK de un
   proveedor de IA que no esté en su lista. Valida que un módulo de `app/shared/` importe solo
-  la librería estándar y no se llame como un módulo general. No valida que los errores se
+  la librería estándar y no se llame como un módulo general, que ningún adaptador de entrada
+  importe a otro: la API, el worker, los comandos y los procesos programados llegan cada uno a
+  los casos de uso por su cuenta. Valida también dónde va cada tipo de archivo: los endpoints
+  en `api/routers/`, cada caso de uso en la carpeta de su funcionalidad y cada repositorio en
+  su archivo de `postgres/repositories/`; que ningún archivo de `backend/app/` ni de
+  `frontend/src/` tenga un nombre general como `utils` o `helpers`, salvo los de shadcn/ui; y
+  que toda carpeta de los dos esté en el árbol de `docs/02-arquitectura.md`. No valida que los errores se
   traduzcan en un solo lugar, ni que un caso de uso no lea la hora por su cuenta.
   Tolerante mientras `backend/` y `frontend/` no
   existan, pero falla si `backend/` existe y el dominio no está en `backend/app/domain/`.

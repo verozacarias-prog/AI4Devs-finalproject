@@ -97,6 +97,10 @@ responses:
           status: "pending"            # the worker processes it later
   200:
     description: The Idempotency-Key was already used by this user; nothing is stored and the body is the message stored the first time
+  401:
+    description: No valid session
+  403:
+    description: The request did not come from the page of the API itself, or it is not JSON
   404:
     description: The web chat is disabled, or quoted_message_id is not an outbound message of this user
   422:
@@ -120,8 +124,12 @@ responses:
               response_kind: "registration"
               created_at: "2026-10-04T15:00:04-03:00"
           next_cursor: "om1..."
+  401:
+    description: No valid session
   404:
     description: The web chat is disabled
+  422:
+    description: after is not a UUID
 ```
 
 ### `GET /accounts`
