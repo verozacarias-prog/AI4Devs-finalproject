@@ -181,7 +181,6 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
     statusLine.current?.focus()
   }
 
-
   return (
     <Card aria-labelledby="chat-heading">
       <CardTitle id="chat-heading" className="text-xl">

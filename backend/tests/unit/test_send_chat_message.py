@@ -1,6 +1,7 @@
 """A message written in the web chat, on the use case alone (FEAT-002, its spec.md).
 
 Case C1-02: the time of the message comes from the clock, because the request carries none.
+Case C2-30: two requests at once with the same key answer the message stored first.
 """
 
 from __future__ import annotations

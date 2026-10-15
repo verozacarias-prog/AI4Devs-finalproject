@@ -9,7 +9,13 @@ from app.domain.entities.inbound_message import (
     Provider,
     web_message_id,
 )
-from app.domain.errors import ConflictError, ErrorCode, NotFoundError, UnauthenticatedError
+from app.domain.errors import (
+    ConflictError,
+    ErrorCode,
+    InconsistentDataError,
+    NotFoundError,
+    UnauthenticatedError,
+)
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
 from app.shared.clock import Clock
 
@@ -85,6 +91,7 @@ class SendChatMessage:
         with self._unit_of_work as unit_of_work:
             stored = unit_of_work.inbound_messages.find_web(provider_message_id)
         if stored is None:
-            # The conflict was not the key of this message: nothing foresees it.
-            raise ConflictError(ErrorCode.CONFLICT)
+            # The store rejected a repeated key and yet holds no message with it: a failure of
+            # the code, not a conflict the client could do anything about.
+            raise InconsistentDataError
         return SentChatMessage(message=stored, created=False)
