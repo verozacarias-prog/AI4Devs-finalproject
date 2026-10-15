@@ -54,6 +54,13 @@ rama de la entrega con `git diff` y `git log`. Usá Bash solo para leer: `git di
 7. **Uso del modelo.** Si el cambio toca un prompt, una función de lectura, la base de
    conocimiento o la validación de salida, que la tabla de `docs/seguridad-llm.md` esté
    actualizada.
+8. **Orden y nombres.** `scripts/verify_architecture.py` chequea dónde va cada tipo de
+   archivo, que ninguno tenga un nombre general como `utils`, y que toda carpeta esté en el
+   árbol de `docs/02-arquitectura.md`. Vos mirás lo que no ve: que cada carpeta y archivo nuevo
+   diga para qué sirve y no cómo se ejecuta (como `cli` en lugar de `operator_commands`), que
+   esté donde lo pone el árbol y no solo nombrado ahí, y que un archivo que crece junte cosas
+   de una sola funcionalidad. Es una observación, salvo que contradiga el árbol, que es una
+   divergencia.
 
 ## Qué entregás
 

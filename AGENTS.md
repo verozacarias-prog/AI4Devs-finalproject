@@ -205,9 +205,13 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   importe fuera del adaptador de particionado, y el aislamiento del frontend. No detecta un
   monto con otro nombre, una llamada HTTP de un proceso del backend a la API, ni el SDK de un
   proveedor de IA que no esté en su lista. Valida que un módulo de `app/shared/` importe solo
-  la librería estándar y no se llame como un módulo general, y que ningún adaptador de entrada
+  la librería estándar y no se llame como un módulo general, que ningún adaptador de entrada
   importe a otro: la API, el worker, los comandos y los procesos programados llegan cada uno a
-  los casos de uso por su cuenta. No valida que los errores se
+  los casos de uso por su cuenta. Valida también dónde va cada tipo de archivo: los endpoints
+  en `api/routers/`, cada caso de uso en la carpeta de su funcionalidad y cada repositorio en
+  su archivo de `postgres/repositories/`; que ningún archivo de `backend/app/` ni de
+  `frontend/src/` tenga un nombre general como `utils` o `helpers`, salvo los de shadcn/ui; y
+  que toda carpeta de los dos esté en el árbol de `docs/02-arquitectura.md`. No valida que los errores se
   traduzcan en un solo lugar, ni que un caso de uso no lea la hora por su cuenta.
   Tolerante mientras `backend/` y `frontend/` no
   existan, pero falla si `backend/` existe y el dominio no está en `backend/app/domain/`.
