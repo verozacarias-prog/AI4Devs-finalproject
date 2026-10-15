@@ -16,6 +16,7 @@ from app.domain.entities.session import Session
 from app.domain.entities.user import User
 
 if TYPE_CHECKING:
+    from app.domain.entities.inbound_message import InboundMessage
     from app.domain.entities.transaction import Transaction
     from app.domain.entities.transfer import Transfer
 
@@ -137,6 +138,14 @@ class InMemoryTransfers:
         return [transfer for transfer in self.added if transfer.user_id == user_id]
 
 
+class InMemoryInboundMessages:
+    def __init__(self) -> None:
+        self.added: list[InboundMessage] = []
+
+    def add(self, message: InboundMessage) -> None:
+        self.added.append(message)
+
+
 class InMemoryUnitOfWork:
     def __init__(self) -> None:
         self.users = InMemoryUsers()
@@ -147,6 +156,7 @@ class InMemoryUnitOfWork:
         self.sessions = InMemorySessions()
         self.transactions = InMemoryTransactions()
         self.transfers = InMemoryTransfers()
+        self.inbound_messages = InMemoryInboundMessages()
         self.commits = 0
 
     def __enter__(self) -> Self:
