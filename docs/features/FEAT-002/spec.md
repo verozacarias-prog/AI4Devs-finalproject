@@ -1,7 +1,7 @@
 # Especificación — FEAT-002 · Chat web y worker de mensajes
 
 - **Historia de usuario:** [HU3](../../05-historias-de-usuario.md)
-- **Estado:** borrador
+- **Estado:** aprobada para el corte 1. Los casos de los cortes 2 y 3 están por escribir
 - **Fecha:** 2026-10-14
 
 ## Alcance

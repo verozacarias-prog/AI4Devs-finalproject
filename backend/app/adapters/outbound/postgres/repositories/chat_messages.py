@@ -15,7 +15,13 @@ class PostgresChatMessageRepository:
 
     def list_by_user(self, user_id: uuid.UUID, after: uuid.UUID | None) -> list[ChatMessage]:
         rows = self._connection.execute(
-            text(queries.SELECT_CHAT_MESSAGES_BY_USER), {"user_id": user_id, "after": after}
+            text(queries.SELECT_CHAT_MESSAGES_BY_USER),
+            {
+                "user_id": user_id,
+                "after": after,
+                "text_key": queries.MESSAGE_TEXT_KEY,
+                "response_kind_key": queries.RESPONSE_KIND_KEY,
+            },
         ).all()
         return [
             ChatMessage(

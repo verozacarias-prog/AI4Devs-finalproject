@@ -23,7 +23,12 @@ class PostgresInboundMessageRepository:
 
     def claim_next(self, now: datetime, locked_until: datetime) -> InboundMessage | None:
         row = self._connection.execute(
-            text(queries.CLAIM_NEXT_INBOUND_MESSAGE), {"now": now, "locked_until": locked_until}
+            text(queries.CLAIM_NEXT_INBOUND_MESSAGE),
+            {
+                "now": now,
+                "locked_until": locked_until,
+                "text_key": queries.MESSAGE_TEXT_KEY,
+            },
         ).one_or_none()
         if row is None:
             return None

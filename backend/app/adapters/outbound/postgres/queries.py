@@ -130,7 +130,8 @@ SELECT_GROUP_OWNED_BY = """
 """
 
 # The messages of the channel (ADR 0010). The text of a message lives in its JSON, under this
-# key, both in the payload of what came in and in the content of what goes out.
+# key, both in the payload of what came in and in the content of what goes out. The queries
+# that read them take the keys as parameters, so these are the only place they are written.
 MESSAGE_TEXT_KEY = "text"
 RESPONSE_KIND_KEY = "response_kind"
 
@@ -175,7 +176,7 @@ CLAIM_NEXT_INBOUND_MESSAGE = """
            FOR UPDATE SKIP LOCKED
      )
     RETURNING id, provider, provider_message_id, user_id, from_phone,
-              payload ->> 'text' AS text, quoted_outbound_message_id, sent_at, status,
+              payload ->> :text_key AS text, quoted_outbound_message_id, sent_at, status,
               attempts, locked_until, processed_at
 """
 
@@ -203,13 +204,14 @@ INSERT_OUTBOUND_MESSAGE = """
 # skips a message.
 SELECT_CHAT_MESSAGES_BY_USER = """
     WITH conversation AS (
-        SELECT id, 'inbound' AS direction, 0 AS turn, payload ->> 'text' AS text,
+        SELECT id, 'inbound' AS direction, 0 AS turn, payload ->> :text_key AS text,
                quoted_outbound_message_id AS quoted_message_id,
                NULL AS response_kind, sent_at AS created_at
           FROM inbound_message
          WHERE provider = 'web' AND user_id = :user_id AND purged_at IS NULL
         UNION ALL
-        SELECT id, 'outbound', 1, content ->> 'text', NULL, content ->> 'response_kind',
+        SELECT id, 'outbound', 1, content ->> :text_key, NULL,
+               content ->> :response_kind_key,
                created_at
           FROM outbound_message
          WHERE provider = 'web' AND user_id = :user_id AND purged_at IS NULL

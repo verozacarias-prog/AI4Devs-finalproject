@@ -36,7 +36,8 @@ class MessageWorker:
             try:
                 worked = self.run_round()
             except Exception as error:
-                # The message stays in process until its lock ends, and is taken again then.
+                # The message stays in process. Taking it again once its lock ends is still
+                # to be built (FEAT-002, corte 2); until then it holds no other message back.
                 log_error(error, in_full=self._in_full)
                 worked = False
             if not worked:
