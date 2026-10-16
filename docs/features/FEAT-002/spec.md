@@ -1,7 +1,8 @@
 # Especificación — FEAT-002 · Chat web y worker de mensajes
 
 - **Historia de usuario:** [HU3](../../05-historias-de-usuario.md)
-- **Estado:** aprobada para el corte 1. Los casos de los cortes 2 y 3 están por escribir
+- **Estado:** aprobada para los cortes 1, 2 y 3. Un caso sumado después de aprobado su corte lleva
+  su propia línea de aprobación
 - **Fecha:** 2026-10-14
 
 ## Alcance
@@ -100,7 +101,7 @@ Una conversación que todavía no empezó está vacía; una consulta que no lleg
 
 - **CA-24.** Ninguna línea de los registros lleva el texto de un mensaje ni un teléfono; el procesamiento de un mensaje se sigue por su identificador.
 - **CA-25.** `GET /queuez` responde `503` si un mensaje pendiente espera hace más de 10 minutos, y `200` si no hay ninguno.
-- **CA-26.** Con el chat web encendido, cada proceso lo avisa en su registro al arrancar.
+- **CA-26.** Con el chat web encendido, la API y el worker lo avisan en su registro al arrancar. Los comandos de operación no lo avisan.
 
 ## Casos de prueba
 
@@ -715,7 +716,8 @@ simulada, como en el corte 1.
 
 - **Aprobado por:** Veronica Zacarias 16/10/2026
 - **C3-12, sumado para probar contra la base lo que el C2-05 prueba con dobles:** Veronica Zacarias 16/10/2026
-- **Total:** 12 casos, 10 de integración y 2 de componente.
+- **C3-13 a C3-20, sumados con la revisión de spec-drift:** Veronica Zacarias 16/10/2026
+- **Total:** 20 casos, 2 unitarios, 16 de integración y 2 de componente.
 
 Valen las condiciones del corte 1. En los casos de los registros, la API y el worker escriben
 sus líneas en un registro que el test lee, y Lucía manda "gasté 3500 en el súper".
@@ -734,6 +736,14 @@ sus líneas en un registro que el test lee, y Lucía manda "gasté 3500 en el s�
 | C3-10 | Los controles del chat tienen nombre y se usan con el teclado | Componente | Accesibilidad |
 | C3-11 | Una respuesta nueva se anuncia sin mover el foco | Componente | Accesibilidad |
 | C3-12 | Si la base rechaza la respuesta, el mensaje no queda a medias | Integración | CA-7 |
+| C3-13 | Sin base, `GET /queuez` responde 503 | Integración | CA-25 |
+| C3-14 | Un worker desplazado no deja `message.answered` | Unitario | CA-24 |
+| C3-15 | La espera máxima de `/queuez` sale de una variable de entorno | Integración | CA-25 |
+| C3-16 | La duración del lock del worker sale de una variable de entorno | Integración | ADR 0010 |
+| C3-17 | Con una espera o un lock inválidos, ningún proceso arranca | Unitario | CA-25 y ADR 0010 |
+| C3-18 | El error del worker lleva el usuario del mensaje | Integración | CA-24 |
+| C3-19 | Un error previsto de un pedido con sesión lleva su usuario | Integración | CA-24 |
+| C3-20 | Un error imprevisto de un pedido con sesión lleva su usuario | Integración | CA-24 |
 
 #### C3-01 · Escribir y leer el chat no deja el texto ni el teléfono en los registros
 
@@ -849,6 +859,81 @@ sus líneas en un registro que el test lee, y Lucía manda "gasté 3500 en el s�
   tomó, y no lo marcó procesado. Cuando venza su lock, un worker lo vuelve a tomar, como en el
   C2-06.
 - **Test:** `tests/integration/test_message_worker_errors.py::test_if_the_database_rejects_the_reply_the_message_is_not_left_half_done`
+
+#### C3-13 · Sin base, `GET /queuez` responde 503
+
+- **Sale de:** CA-25 · **Tipo:** integración
+- **Dado** una API que no llega a la base,
+- **cuando** se pide `GET /queuez`, sin sesión,
+- **entonces** responde `503` con `{"status": "unavailable"}`, el mismo cuerpo que su `200`,
+  como `GET /readyz`.
+- **Test:** —
+
+#### C3-14 · Un worker desplazado no deja `message.answered`
+
+- **Sale de:** CA-24 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía que el worker tomó, y que otro worker volvió a tomar cuando venció
+  su lock, antes de que este lo respondiera,
+- **cuando** el worker termina la ronda,
+- **entonces** no guardó ninguna respuesta y no dejó ninguna línea `message.answered`: esa
+  línea la deja solo el worker que respondió.
+- **Test:** —
+
+#### C3-15 · La espera máxima de `/queuez` sale de una variable de entorno
+
+- **Sale de:** CA-25 · **Tipo:** integración
+- **Dado** la API con `QUEUE_MAX_WAIT_MINUTES=5`, y un mensaje pendiente con `next_attempt_at`
+  a las 17:54:00, que espera hace 6 minutos,
+- **cuando** se pide `GET /queuez`, con el reloj a las 18:00:00,
+- **entonces** responde `503` con `{"status": "unavailable"}`. Sin la variable, la espera es de
+  10 minutos, como en el C3-05 y el C3-06.
+- **Test:** —
+
+#### C3-16 · La duración del lock del worker sale de una variable de entorno
+
+- **Sale de:** el [ADR 0010](../../adr/0010-webhook-asincrono-con-tabla-de-entrada.md), que la
+  hace configuración · **Tipo:** integración
+- **Dado** el worker con `WORKER_LOCK_SECONDS=30`, y un mensaje pendiente de Lucía,
+- **cuando** el worker lo toma, con el reloj a las 18:00:00,
+- **entonces** el mensaje queda en `processing` con `locked_until` a las 18:00:30. Sin la
+  variable, el lock es de 120 segundos.
+- **Test:** —
+
+#### C3-17 · Con una espera o un lock inválidos, ningún proceso arranca
+
+- **Sale de:** CA-25 y el ADR 0010 · **Tipo:** unitario
+- **Dado** `QUEUE_MAX_WAIT_MINUTES` o `WORKER_LOCK_SECONDS` con un valor que no es un entero
+  mayor que cero, como `0`, `-5`, `diez` o `1.5`,
+- **cuando** se lee la configuración al arrancar,
+- **entonces** falla con un error que nombra la variable y no repite el valor, como con
+  `APP_ENV`.
+- **Test:** —
+
+#### C3-18 · El error del worker lleva el usuario del mensaje
+
+- **Sale de:** CA-24 · **Tipo:** integración
+- **Dado** un mensaje pendiente de Lucía, y una base que rechaza guardar la respuesta,
+- **cuando** el worker hace una ronda en su ciclo,
+- **entonces** la línea `error.unexpected` lleva el `user_id` de Lucía, además del
+  `message_id` del mensaje.
+- **Test:** —
+
+#### C3-19 · Un error previsto de un pedido con sesión lleva su usuario
+
+- **Sale de:** CA-24 · **Tipo:** integración
+- **Dado** Lucía con una sesión abierta, y un mensaje de Pablo,
+- **cuando** Lucía pide `GET /chat/messages?after=` con el id del mensaje de Pablo,
+- **entonces** responde `404`, y la línea `error.expected` lleva el `user_id` de Lucía.
+- **Test:** —
+
+#### C3-20 · Un error imprevisto de un pedido con sesión lleva su usuario
+
+- **Sale de:** CA-24 · **Tipo:** integración
+- **Dado** Lucía con una sesión abierta, y una base que rechaza guardar cualquier mensaje
+  entrante,
+- **cuando** Lucía manda "gasté 3500 en el súper",
+- **entonces** responde `500`, y la línea `error.unexpected` lleva el `user_id` de Lucía.
+- **Test:** —
 
 El contraste de la hora sobre cada burbuja no tiene caso: se calcula con los colores de los
 tokens y queda anotado en el [contrato de UI](ui_contract.md#accesibilidad), como en la pantalla

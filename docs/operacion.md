@@ -323,8 +323,10 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
 
 - **Formato:** JSON de una línea a la salida estándar, con la librería estándar de logging y un
   formateador propio. Campos: momento, nivel, proceso, versión desplegada, identificador del
-  mensaje, identificador interno del usuario, evento, duración y resultado. Un error suma los
-  suyos, que están más abajo. La línea de un pedido a la API, `http.request`, dice además a
+  mensaje, identificador interno del usuario, evento, duración y resultado. El identificador
+  del usuario va en toda línea escrita mientras el proceso sabe de quién es lo que atiende: un
+  pedido con sesión, o un mensaje de un usuario registrado. Un error suma los suyos, que están
+  más abajo. La línea de un pedido a la API, `http.request`, dice además a
   qué endpoint fue, en el campo `endpoint`: el método y la ruta como está declarada en el
   código, por ejemplo `GET /budget-periods/{budget_period_id}`. Nunca lleva la dirección que
   se pidió, que puede traer un identificador, parámetros con datos o lo que alguien haya
