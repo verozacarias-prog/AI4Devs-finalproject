@@ -154,6 +154,8 @@ class InMemoryInboundMessages:
         # Another request with the same key, stored between the search for the key and the
         # next add, which the store then rejects as a repeated key.
         self.stored_meanwhile: InboundMessage | None = None
+        # Another worker took the message again after this one did: marking it fails.
+        self.taken_again = False
 
     def add(self, message: InboundMessage) -> None:
         if self.stored_meanwhile is not None:
@@ -176,6 +178,8 @@ class InMemoryInboundMessages:
         return self.claimable.pop(0) if self.claimable else None
 
     def mark_processed(self, message_id: uuid.UUID, attempts: int, at: datetime) -> bool:
+        if self.taken_again:
+            return False
         self.marked_uncommitted.append(message_id)
         return True
 

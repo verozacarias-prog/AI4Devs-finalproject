@@ -148,6 +148,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/queuez": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Does the worker keep up with the messages
+         * @description Fails when a pending message has waited longer than the configured wait to be processed: 10 minutes, unless `QUEUE_MAX_WAIT_MINUTES` says otherwise. A message delayed on purpose does not count. It is what the external monitor watches, because the worker may hang while the API is healthy.
+         */
+        get: operations["queuez_queuez_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/readyz": {
         parameters: {
             query?: never;
@@ -334,7 +354,7 @@ export interface components {
         HealthState: "ok" | "unavailable";
         /** HealthStatus */
         HealthStatus: {
-            /** @description `ok`, or `unavailable` when the database does not answer. */
+            /** @description `ok`, or `unavailable` when what the route checks fails. */
             status: components["schemas"]["HealthState"];
         };
         /**
@@ -692,6 +712,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    queuez_queuez_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No pending message has waited longer than the configured wait. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthStatus"];
+                };
+            };
+            /** @description A pending message has waited longer than the configured wait, or the database does not answer. The body has the same shape as the `200`. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthStatus"];
                 };
             };
         };

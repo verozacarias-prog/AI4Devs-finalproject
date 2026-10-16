@@ -7,6 +7,7 @@ from typing import Literal
 
 HEALTHZ = "/healthz"
 READYZ = "/readyz"
+QUEUEZ = "/queuez"
 HEALTH_TAG = "health"
 
 

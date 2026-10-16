@@ -7,12 +7,13 @@ from collections.abc import Callable
 from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Request, status
 from pydantic import BaseModel, Field, WithJsonSchema
 
 from app.adapters.inbound.api import reference
 from app.adapters.inbound.api.errors import documented_errors
 from app.adapters.inbound.api.exact_json import ExactJSONResponse
+from app.adapters.inbound.api.request_logging import identify_user
 from app.adapters.inbound.api.routers.session import SessionToken
 from app.adapters.inbound.api.routes import ACCOUNTS, ACCOUNTS_TAG
 from app.domain.entities.account import AccountType, BalanceKind
@@ -51,8 +52,9 @@ def build_accounts_router(
         response_description=reference.ACCOUNTS_OK,
         responses=documented_errors({status.HTTP_401_UNAUTHORIZED: reference.NO_SESSION}),
     )
-    def accounts(token: SessionToken) -> ExactJSONResponse:
+    def accounts(request: Request, token: SessionToken) -> ExactJSONResponse:
         user = authenticate_session().execute(token)
+        identify_user(request, user.id)
         listed = AccountList(
             accounts=[
                 AccountItem(

@@ -48,6 +48,8 @@ services:
       # Off unless .env turns them on (ADR 0016).
       DEV_ENTRY_ENABLED: ${DEV_ENTRY_ENABLED:-false}
       WEB_CHAT_ENABLED: ${WEB_CHAT_ENABLED:-false}
+      # Empty means the default of the code (docs/operacion.md).
+      QUEUE_MAX_WAIT_MINUTES: ${QUEUE_MAX_WAIT_MINUTES:-}
     ports:
       - "127.0.0.1:${API_PORT:-8000}:8000"
     depends_on:
@@ -67,6 +69,8 @@ services:
       # Read here too: with either one on in production, no process starts (ADR 0016).
       DEV_ENTRY_ENABLED: ${DEV_ENTRY_ENABLED:-false}
       WEB_CHAT_ENABLED: ${WEB_CHAT_ENABLED:-false}
+      # Empty means the default of the code (docs/operacion.md).
+      WORKER_LOCK_SECONDS: ${WORKER_LOCK_SECONDS:-}
     healthcheck:
       disable: true
     depends_on:

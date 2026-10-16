@@ -124,8 +124,9 @@ para que la cookie de sesión funcione sin un dominio propio.
    El enlace no es el login del producto. Quien lo tiene entra como esa persona, y nada
    verifica que el teléfono sea suyo.
 
-   Si alguna de las dos opciones está encendida, cada proceso lo avisa en su registro al
-   arrancar ([ADR 0023](0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
+   Si alguna de las dos opciones está encendida, la API y el worker lo avisan en su registro
+   cada vez que arrancan. Los comandos de operación no lo avisan: no sirven el chat ni procesan
+   sus mensajes, y duran segundos ([ADR 0023](0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
 10. **El chat web muestra la respuesta como texto, nunca como HTML.** Lo que escribe el modelo,
     y también lo que escribió el usuario, se inserta en la página como texto plano. Si una
     respuesta trae etiquetas, se ven como caracteres y no se interpretan. Un test lo prueba con

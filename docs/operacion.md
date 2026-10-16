@@ -109,6 +109,14 @@ La entrada de desarrollo se enciende con `DEV_ENTRY_ENABLED=true`, y el chat web
 encendida en `production` ningún proceso arranca
 ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 
+Dos esperas son configuración, y cada una tiene su variable, que es opcional:
+`QUEUE_MAX_WAIT_MINUTES`, cuántos minutos puede esperar un mensaje pendiente antes de que
+`GET /queuez` falle, 10 si no se define, y `WORKER_LOCK_SECONDS`, cuántos segundos queda tomado
+un mensaje por un worker, 120 si no se define
+([ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md)). Las dos aceptan solo un número
+entero mayor que cero: con cualquier otro valor, el proceso no arranca y dice qué variable está
+mal.
+
 | Entorno | Para qué | En qué se diferencia | Cómo se promueve |
 |---|---|---|---|
 | Local | Desarrollo y pruebas manuales del flujo por WhatsApp | Docker Compose con la imagen `pgvector/pgvector:pg16`, el número de prueba gratuito de Meta detrás de un túnel, y datos semilla que se niegan a correr contra producción | Pull request |
@@ -323,8 +331,10 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
 
 - **Formato:** JSON de una línea a la salida estándar, con la librería estándar de logging y un
   formateador propio. Campos: momento, nivel, proceso, versión desplegada, identificador del
-  mensaje, identificador interno del usuario, evento, duración y resultado. Un error suma los
-  suyos, que están más abajo. La línea de un pedido a la API, `http.request`, dice además a
+  mensaje, identificador interno del usuario, evento, duración y resultado. El identificador
+  del usuario va en las líneas de lo que el proceso sabe de quién es: en la API, la línea de un
+  pedido con sesión y la de su error; en el worker, toda línea escrita mientras procesa el
+  mensaje de un usuario registrado. Un error suma los suyos, que están más abajo. La línea de un pedido a la API, `http.request`, dice además a
   qué endpoint fue, en el campo `endpoint`: el método y la ruta como está declarada en el
   código, por ejemplo `GET /budget-periods/{budget_period_id}`. Nunca lleva la dirección que
   se pidió, que puede traer un identificador, parámetros con datos o lo que alguien haya
@@ -332,7 +342,10 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   por su origen se responde antes de resolver su ruta, así que puede llevar solo el método:
   es el caso de las rutas de hoy. Uno al dashboard lleva `GET /app`, sin el
   archivo. Las páginas del contrato que sirve el framework, como `/docs` y `/openapi.json`,
-  llevan su ruta como cualquier otra. La API, el worker, los procesos programados y los comandos de
+  llevan su ruta como cualquier otra. El worker deja una línea `message.answered` por cada
+  mensaje que respondió, con la duración: el identificador del mensaje y el del usuario los
+  lleva como toda línea escrita mientras lo procesa. Un worker que otro desplazó no la deja,
+  porque no respondió. La API, el worker, los procesos programados y los comandos de
   operación registran igual, cada uno con su nombre de proceso.
 - **Correlación:** el identificador es el `id` del mensaje en la tabla de entrada. El worker lo
   pone en cada registro mientras procesa ese mensaje, y es el mismo que queda en la tabla de
@@ -446,7 +459,8 @@ Pocas, por síntoma, y cada una con qué hacer.
 mensajes entrantes, y con el
 primer despliegue Sentry en su plan gratuito, un monitor externo y las dos alertas críticas.
 `GET /healthz` dice si el proceso vive, `GET /readyz` si llega a la base, y `GET /queuez` falla
-cuando un mensaje espera hace más de 10 minutos ([la API](04-api.md#get-healthz-get-readyz-y-get-queuez)).
+cuando un mensaje espera hace más de 10 minutos, o lo que diga `QUEUE_MAX_WAIT_MINUTES`
+([2](#2-entornos)), o cuando no llega a la base ([la API](04-api.md#get-healthz-get-readyz-y-get-queuez)).
 Las dos alertas las da el monitor externo, por su propio canal de avisos.
 
 `Propuesto, sin decidir:` las otras cinco alertas, que esperan a que haya usuarios reales, el

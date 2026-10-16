@@ -1,4 +1,4 @@
-"""Cases 10 to 13, 15, 16 and 20 to 27: what the log filter lets through.
+"""Cases 10 to 13, 15, 16 and 20 to 27, and C3-22 of FEAT-002: what the log filter lets through.
 
 Only allowed fields pass, and only a fixed event name passes as the message; everything else
 is redacted (docs/operacion.md, 6.3).
@@ -16,7 +16,14 @@ from decimal import Decimal
 
 import pytest
 
-from app.adapters.observability.logs import REDACTED, build_handler, configure_logging
+from app.adapters.observability.logs import (
+    REDACTED,
+    build_handler,
+    configure_logging,
+    message_id_var,
+    request_id_var,
+    user_id_var,
+)
 
 JsonLine = dict[str, str | int | float | bool | None]
 
@@ -330,3 +337,42 @@ def test_a_number_in_range_passes(
 
     _, line = only_line(stream)
     assert line[field] == value
+
+
+def _line_with_context(
+    logger: logging.Logger, stream: io.StringIO, request_id: str, message_id: str, user_id: str
+) -> tuple[str, JsonLine]:
+    """A line written while the process holds those identifiers of the request, message and user."""
+    tokens = (
+        request_id_var.set(request_id),
+        message_id_var.set(message_id),
+        user_id_var.set(user_id),
+    )
+    try:
+        logger.info("message.answered")
+    finally:
+        request_id_var.reset(tokens[0])
+        message_id_var.reset(tokens[1])
+        user_id_var.reset(tokens[2])
+    return only_line(stream)
+
+
+def test_the_identifiers_of_the_context_also_go_through_the_filter(
+    logger: logging.Logger, stream: io.StringIO
+) -> None:
+    # Case C3-22 of FEAT-002.
+    not_identifiers = ("+000000000001", "gasté 3500 en el súper", "Lucía")
+
+    raw, line = _line_with_context(logger, stream, *not_identifiers)
+
+    assert (line["request_id"], line["message_id"], line["user_id"]) == (REDACTED,) * 3
+    for text in not_identifiers:
+        assert text not in raw
+
+    identifiers = tuple(str(uuid.uuid4()) for _ in range(3))
+    stream.truncate(0)
+    stream.seek(0)
+
+    _, line = _line_with_context(logger, stream, *identifiers)
+
+    assert (line["request_id"], line["message_id"], line["user_id"]) == identifiers

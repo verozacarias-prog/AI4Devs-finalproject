@@ -80,3 +80,17 @@ def test_the_web_chat_enabled_in_production_stops_startup() -> None:
 
     message = str(error.value)
     assert message == "WEB_CHAT_ENABLED cannot be enabled in the production environment"
+
+
+@pytest.mark.parametrize("variable", ["QUEUE_MAX_WAIT_MINUTES", "WORKER_LOCK_SECONDS"])
+@pytest.mark.parametrize("value", ["0", "-5", "diez", "1.5"])
+def test_a_wait_or_a_lock_that_is_not_a_positive_integer_stops_startup(
+    variable: str, value: str
+) -> None:
+    """Case C3-17 of FEAT-002."""
+    with pytest.raises(SettingsError) as error:
+        load_settings(BASE_ENVIRON | {variable: value})
+
+    message = str(error.value)
+    assert variable in message
+    assert value not in message

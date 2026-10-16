@@ -6,6 +6,7 @@ the use cases, and it is the single place where an error of a round becomes a lo
 
 from __future__ import annotations
 
+import logging
 import sys
 import time
 from collections.abc import Callable
@@ -13,13 +14,17 @@ from datetime import timedelta
 from typing import NoReturn, TextIO
 
 from app.adapters.observability.errors import log_error
-from app.adapters.observability.logs import configure_logging
+from app.adapters.observability.events import Event, Field, LoggerName
+from app.adapters.observability.logs import configure_logging, message_id_var, user_id_var
 from app.adapters.outbound.postgres.connection import create_db_engine
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
-from app.constants import WORKER_IDLE_SECONDS, WORKER_LOCK_SECONDS, Environment, ProcessName
-from app.domain.use_cases.messages.process_next_message import ProcessNextMessage
+from app.constants import MILLISECONDS_PER_SECOND, WORKER_IDLE_SECONDS, Environment, ProcessName
+from app.domain.entities.inbound_message import InboundMessage
+from app.domain.use_cases.messages.process_next_message import ProcessNextMessage, RoundOutcome
 from app.settings import Settings
 from app.shared.clock import Clock, SystemClock
+
+logger = logging.getLogger(LoggerName.WORKER)
 
 
 class MessageWorker:
@@ -28,19 +33,37 @@ class MessageWorker:
         self._in_full = in_full
 
     def run_round(self) -> bool:
-        """Takes and answers one message. True if there was one, so it asks again at once."""
-        return self._process_next().execute()
+        """Takes and answers one message. True if there was one, so it asks again at once.
+
+        An error ends the round and leaves its line, with the message it was processing: the
+        worker goes on with the next round.
+        """
+
+        def follow(message: InboundMessage) -> None:
+            # Every line written while it is processed says which message and whose.
+            message_id_var.set(str(message.id))
+            if message.user_id is not None:
+                user_id_var.set(str(message.user_id))
+
+        started = time.monotonic()
+        try:
+            outcome = self._process_next().execute(on_claimed=follow)
+        except Exception as error:
+            # The message stays in process until its lock ends; then a worker takes it again.
+            log_error(error, in_full=self._in_full)
+            return False
+        else:
+            if outcome is RoundOutcome.ANSWERED:
+                elapsed = round((time.monotonic() - started) * MILLISECONDS_PER_SECOND)
+                logger.info(Event.MESSAGE_ANSWERED, extra={Field.DURATION_MS: elapsed})
+            return outcome is not RoundOutcome.NOTHING_TO_TAKE
+        finally:
+            message_id_var.set(None)
+            user_id_var.set(None)
 
     def run_forever(self) -> NoReturn:
         while True:
-            try:
-                worked = self.run_round()
-            except Exception as error:
-                # The message stays in process. Taking it again once its lock ends is still
-                # to be built (FEAT-002, corte 2); until then it holds no other message back.
-                log_error(error, in_full=self._in_full)
-                worked = False
-            if not worked:
+            if not self.run_round():
                 time.sleep(WORKER_IDLE_SECONDS)
 
 
@@ -48,9 +71,12 @@ def create_worker(
     settings: Settings, clock: Clock | None = None, log_stream: TextIO | None = None
 ) -> MessageWorker:
     configure_logging(log_stream or sys.stdout, settings.version, ProcessName.WORKER)
+    if settings.dev_entry_enabled or settings.web_chat_enabled:
+        # Said at every start, so that nobody leaves it on without knowing (ADR 0016).
+        logger.warning(Event.DEV_SCAFFOLD_ENABLED)
     engine = create_db_engine(settings.database_url)
     worker_clock = clock or SystemClock()
-    lock = timedelta(seconds=WORKER_LOCK_SECONDS)
+    lock = timedelta(seconds=settings.worker_lock_seconds)
     return MessageWorker(
         lambda: ProcessNextMessage(SqlAlchemyUnitOfWork(engine), worker_clock, lock),
         in_full=settings.environment is Environment.LOCAL,

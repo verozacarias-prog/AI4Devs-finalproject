@@ -12,11 +12,12 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Header, Query, Response, status
+from fastapi import APIRouter, Header, Query, Request, Response, status
 from pydantic import BaseModel, Field, field_validator
 
 from app.adapters.inbound.api import reference
 from app.adapters.inbound.api.errors import documented_errors
+from app.adapters.inbound.api.request_logging import identify_user
 from app.adapters.inbound.api.routers.session import SessionToken
 from app.adapters.inbound.api.routes import CHAT_MESSAGES, CHAT_TAG, IDEMPOTENCY_KEY_HEADER
 from app.domain.entities.chat_message import Direction
@@ -92,6 +93,7 @@ def build_chat_router(
     )
     def send(
         body: ChatMessageRequest,
+        request: Request,
         response: Response,
         token: SessionToken,
         idempotency_key: Annotated[
@@ -100,6 +102,7 @@ def build_chat_router(
     ) -> StoredChatMessage:
         # Writing counts as activity of the session (ADR 0016).
         user = authenticate_session().execute(token)
+        identify_user(request, user.id)
         sent = send_chat_message().execute(
             user_id=user.id,
             text=body.text,
@@ -125,11 +128,13 @@ def build_chat_router(
         ),
     )
     def conversation(
+        request: Request,
         token: SessionToken,
         after: Annotated[uuid.UUID | None, Query(description=reference.CHAT_AFTER)] = None,
     ) -> ChatConversation:
         # The read the dashboard repeats does not keep the session alive (ADR 0016).
         user = validate_session().execute(token)
+        identify_user(request, user.id)
         page = list_chat_messages().execute(user.id, after)
         return ChatConversation(
             messages=[

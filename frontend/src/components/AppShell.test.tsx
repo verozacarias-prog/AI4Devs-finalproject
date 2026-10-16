@@ -9,7 +9,7 @@ import { setupServer } from 'msw/node'
 import { afterAll, afterEach, beforeAll, expect, test } from 'vitest'
 import App from '../App'
 
-const LUCIA = { id: '4379d06b-46d3-4f2e-a59e-addcb32388f8', name: 'Lucía' }
+const LUCIA = { id: crypto.randomUUID(), name: 'Lucía' }
 const ACCOUNTS = [
   { id: 'a1', name: 'Efectivo', type: 'cash', currency: 'ARS', balance: 25000, balance_kind: 'balance' },
 ]

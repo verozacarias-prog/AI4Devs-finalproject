@@ -70,7 +70,7 @@ de pre-commit. No son una recomendación: rompen el commit.
 ## 4. Mapa de carpetas
 
 - `backend/app/domain/entities/` — User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk, InboundMessage, OutboundMessage, ChatMessage.
-- `backend/app/domain/use_cases/` — una carpeta por funcionalidad, como `sessions/`, `messages/` o `accounts/`, con sus casos de uso: CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, ListAccounts, SendChatMessage, ListChatMessages, ClaimNextMessage, AnswerMessage, ProcessNextMessage, ValidateSession, CheckReadiness, GenerateProactiveAlert.
+- `backend/app/domain/use_cases/` — una carpeta por funcionalidad, como `sessions/`, `messages/` o `accounts/`, con sus casos de uso: CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, ListAccounts, SendChatMessage, ListChatMessages, ClaimNextMessage, AnswerMessage, ProcessNextMessage, ValidateSession, CheckReadiness, CheckQueue, GenerateProactiveAlert.
 - `backend/app/domain/ports/` — interfaces que el dominio declara y no implementa.
 - `backend/app/domain/errors.py` — los errores que una regla de negocio prevé, cada uno con su código y su categoría.
 - `backend/app/domain/local_date.py` — qué día es para un usuario, en su zona horaria.
@@ -232,7 +232,9 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   base de `docker compose up db`. Los seis controles del pipeline están en el
   [ADR 0021](docs/adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md), y los
   corre el flujo `.github/workflows/app-quality.yml`. El otro flujo busca secretos con
-  `gitleaks`; una excepción se anota en `.gitleaksignore`, nunca se desactiva el control.
+  `gitleaks`; una excepción se anota en `.gitleaksignore`, nunca se desactiva el control. Para
+  no provocar falsos positivos, un test genera los UUID que inventa en vez de escribirlos
+  ([convenciones de desarrollo](docs/convenciones-de-desarrollo.md#1-cortes-verticales)).
   El sexto, el análisis de seguridad con CodeQL, corre en `.github/workflows/codeql.yml` y no
   tiene comando local: una alerta que no es un problema se descarta en GitHub con su motivo.
 - Dashboard, desde `frontend/`: `npm test` corre los tests de las pantallas, `npm run lint` el

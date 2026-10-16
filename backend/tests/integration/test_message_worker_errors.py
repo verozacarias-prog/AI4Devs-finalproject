@@ -1,11 +1,13 @@
 """The message worker when something goes wrong, against PostgreSQL (FEAT-002).
 
-Cases C2-06 to C2-08, from the spec.md of FEAT-002: a worker that fell and left its message
-taken, and two workers that end up with the same message (ADR 0010).
+Cases C2-06 to C2-08, C3-12 and C3-16, from the spec.md of FEAT-002: a worker that fell and left its
+message taken, two workers that end up with the same message, and a reply the database rejects
+(ADR 0010).
 """
 
 from __future__ import annotations
 
+import io
 import uuid
 from collections.abc import Iterator
 from datetime import timedelta
@@ -13,10 +15,12 @@ from datetime import timedelta
 import pytest
 from sqlalchemy import Engine, create_engine, text
 
+from app.adapters.inbound.message_worker.worker import create_worker
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
 from app.domain.use_cases.messages.answer_message import AnswerMessage
 from app.domain.use_cases.messages.claim_next_message import ClaimNextMessage
-from tests.support.chat_data import NOW, inbound, seed, status_of
+from app.settings import load_settings
+from tests.support.chat_data import NOW, inbound, reject_every_reply, seed, status_of
 from tests.support.doubles import FixedClock
 
 pytestmark = pytest.mark.integration
@@ -27,9 +31,14 @@ FUEL = "y 1200 de nafta"
 
 
 @pytest.fixture
-def engine(fresh_database_url: str) -> Iterator[Engine]:
+def seeded_database_url(fresh_database_url: str) -> str:
     seed(fresh_database_url)
-    engine = create_engine(fresh_database_url)
+    return fresh_database_url
+
+
+@pytest.fixture
+def engine(seeded_database_url: str) -> Iterator[Engine]:
+    engine = create_engine(seeded_database_url)
     yield engine
     engine.dispose()
 
@@ -95,3 +104,53 @@ def test_two_workers_finish_the_same_message_and_only_one_reply_is_left(engine: 
     # One reply, written when the second worker finished: the first one wrote nothing.
     assert [reply.created_at for reply in replies] == [second_ends]
     assert status_of(engine, message) == ("processed", 2)
+
+
+def test_if_the_database_rejects_the_reply_the_message_is_not_left_half_done(
+    seeded_database_url: str, engine: Engine
+) -> None:
+    # Case C3-12.
+    message = inbound(engine, "Lucía", SUPERMARKET, sent_at=NOW - timedelta(seconds=5))
+    reject_every_reply(engine)
+    settings = load_settings(
+        {"DATABASE_URL": seeded_database_url, "APP_ENV": "local", "APP_VERSION": "test"}
+    )
+
+    create_worker(settings, FixedClock(NOW), log_stream=io.StringIO()).run_round()
+
+    with engine.connect() as connection:
+        replies = connection.execute(
+            text("SELECT id FROM outbound_message WHERE inbound_message_id = :id"),
+            {"id": message},
+        ).all()
+        processed_at = connection.execute(
+            text("SELECT processed_at FROM inbound_message WHERE id = :id"), {"id": message}
+        ).scalar_one()
+    assert replies == []
+    assert status_of(engine, message) == ("processing", 1)
+    assert processed_at is None
+
+
+def test_the_lock_of_the_worker_comes_from_an_environment_variable(
+    seeded_database_url: str, engine: Engine
+) -> None:
+    # Case C3-16. The reply is rejected so that the message stays as the worker took it.
+    message = inbound(engine, "Lucía", SUPERMARKET, sent_at=NOW - timedelta(seconds=5))
+    reject_every_reply(engine)
+    settings = load_settings(
+        {
+            "DATABASE_URL": seeded_database_url,
+            "APP_ENV": "local",
+            "APP_VERSION": "test",
+            "WORKER_LOCK_SECONDS": "30",
+        }
+    )
+
+    create_worker(settings, FixedClock(NOW), log_stream=io.StringIO()).run_round()
+
+    with engine.connect() as connection:
+        locked_until = connection.execute(
+            text("SELECT locked_until FROM inbound_message WHERE id = :id"), {"id": message}
+        ).scalar_one()
+    assert status_of(engine, message) == ("processing", 1)
+    assert locked_until == NOW + timedelta(seconds=30)

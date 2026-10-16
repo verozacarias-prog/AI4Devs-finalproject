@@ -7,6 +7,7 @@ data of the script, and talks to the API the way the dashboard does.
 from __future__ import annotations
 
 import io
+import uuid
 from collections.abc import Iterator
 from datetime import timedelta
 
@@ -236,7 +237,7 @@ def test_entering_twice_gives_two_tokens_and_both_work(client: TestClient, engin
 
 def test_a_user_who_does_not_exist_is_not_found(client: TestClient, engine: Engine) -> None:
     # Case 31.
-    response = _enter(client, "00000000-0000-4000-8000-000000000000")
+    response = _enter(client, str(uuid.uuid4()))
 
     assert response.status_code == 404
     assert response.json() == NOT_FOUND
@@ -561,7 +562,7 @@ def test_a_refused_entry_is_not_logged_as_a_session(
     client: TestClient, stream: io.StringIO
 ) -> None:
     # Case 52.
-    response = _enter(client, "00000000-0000-4000-8000-000000000000")
+    response = _enter(client, str(uuid.uuid4()))
 
     assert response.status_code == 404
     assert events_of(stream, "auth.session_created") == []

@@ -16,6 +16,7 @@ MISSING_ENV_VAR = "Missing required environment variable: {name}"
 INVALID_ENV_VAR = "{name} must be one of: {allowed}"
 # The scaffold never runs in production (ADR 0016).
 NOT_ALLOWED_IN_ENVIRONMENT = "{name} cannot be enabled in the {environment} environment"
+NOT_A_POSITIVE_INTEGER = "{name} must be a whole number greater than zero"
 
 # The test data script. It counts users and never names a phone or a balance.
 TEST_DATA_SEEDED = "Test data: {created} created, {existing} already existed."

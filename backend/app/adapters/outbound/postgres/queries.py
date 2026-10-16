@@ -192,6 +192,14 @@ SELECT_WEB_INBOUND_MESSAGE_BY_PROVIDER_ID = """
      WHERE provider = 'web' AND provider_message_id = :provider_message_id
 """
 
+# A message delayed on purpose has its next attempt in the future, so it does not count.
+INBOUND_MESSAGE_WAITING_SINCE_EXISTS = """
+SELECT EXISTS (
+    SELECT 1 FROM inbound_message
+    WHERE status = 'pending' AND next_attempt_at < :since
+)
+"""
+
 # The attempts are the fencing token: only the claim that took it last completes it.
 MARK_INBOUND_MESSAGE_PROCESSED = """
     UPDATE inbound_message

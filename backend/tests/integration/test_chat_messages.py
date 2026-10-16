@@ -28,7 +28,7 @@ pytestmark = pytest.mark.integration
 # The cookie is Secure, so the client talks to the API over HTTPS, as a browser does.
 BASE_URL = "https://testserver"
 SAME_ORIGIN = {"Origin": BASE_URL}
-IDEMPOTENCY_KEY = "9d2b7c1e-5a4f-4c3b-8e21-7f6a5b4c3d2e"
+IDEMPOTENCY_KEY = str(uuid.uuid4())
 SUPERMARKET = "gasté 3500 en el súper"
 FUEL = "y 1200 de nafta"
 

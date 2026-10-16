@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import json
 import logging
+import uuid
 
 import pytest
 
@@ -41,8 +42,8 @@ def _logged(logger: logging.Logger, stream: io.StringIO, field: str, value: Valu
         ("error_code", "period_overlaps"),
         ("error_cause", "IntegrityError"),
         ("constraint", "uq_app_user_whatsapp_phone"),
-        ("account_id", "0b3d5c1e-6f0a-4c57-9b1e-2f6a8d4c7e10"),
-        ("budget_period_id", "0b3d5c1e6f0a4c579b1e2f6a8d4c7e10"),
+        ("account_id", str(uuid.uuid4())),
+        ("budget_period_id", uuid.uuid4().hex),
         ("environment", "demo"),
         (
             "error_stack",

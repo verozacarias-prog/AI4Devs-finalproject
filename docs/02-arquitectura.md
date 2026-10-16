@@ -173,7 +173,7 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
   /app
     /domain
       /entities         # User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk, InboundMessage, OutboundMessage, ChatMessage
-      /use_cases         # one folder per feature, such as sessions/, messages/ or accounts/: CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, ListAccounts, SendChatMessage, ListChatMessages, ClaimNextMessage, AnswerMessage, ProcessNextMessage, ValidateSession, CheckReadiness, GenerateProactiveAlert...
+      /use_cases         # one folder per feature, such as sessions/, messages/ or accounts/: CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, ListAccounts, SendChatMessage, ListChatMessages, ClaimNextMessage, AnswerMessage, ProcessNextMessage, ValidateSession, CheckReadiness, CheckQueue, GenerateProactiveAlert...
       /ports             # interfaces the domain depends on but does not implement
         - transaction_repository_port.py
         - account_repository_port.py
@@ -187,6 +187,7 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
         - text_splitter_port.py
         - llm_call_log_port.py
         - database_health_port.py
+        - queue_health_port.py
       errors.py          # the errors a business rule foresees, each with a stable code and a category
       local_date.py      # which day it is for a user, in the time zone of that user
       account_balance.py # the balance of an account, from what already happened in it

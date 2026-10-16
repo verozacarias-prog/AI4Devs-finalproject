@@ -99,6 +99,14 @@ archivo de constantes de los tests, como `backend/tests/integration/schema/names
 tests primero una constante suele nacer ahí: en cuanto la aplicación la necesita, se mueve a la
 aplicación y los tests la importan desde ahí. La aplicación nunca importa nada de `tests/`.
 
+**Identificadores inventados en los tests.** Un UUID que el test inventa, como el id de un
+usuario de ejemplo o una clave de idempotencia, no se escribe a mano: se genera, con
+`uuid.uuid4()` en el backend y `crypto.randomUUID()` en el dashboard. Escrito como texto, y más
+si su nombre dice `key` o `token`, el control de secretos lo toma por una clave y frena el
+merge. Si el test necesita el mismo valor en varios lugares, lo genera una vez y lo guarda en
+una constante. La excepción es un valor cuya forma es lo que el test comprueba, como un
+identificador que empieza con letra: ese se escribe, y no lleva un nombre con `key` ni `token`.
+
 **Por qué el corte 2 existe por separado.** En Platita el camino no feliz *es* el producto. La
 [HU3](05-historias-de-usuario.md) es casi enteramente eso: falta la cuenta, falta confirmar el
 presupuesto, el movimiento queda como `PENDING_TRANSACTION`, el asistente pregunta, recuerda y

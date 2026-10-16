@@ -13,9 +13,9 @@ const USERS = '*/dev/users'
 const SESSION = '*/dev/session'
 const LOGOUT = '*/auth/logout'
 
-const LUCIA = { id: '4379d06b-46d3-4f2e-a59e-addcb32388f8', name: 'Lucía' }
-const PABLO = { id: '2ff46574-33dd-4cad-914d-676053204fc1', name: 'Pablo' }
-const SOFIA = { id: '10e2f2a4-fda2-4004-bad3-8b2fe4e7eb92', name: 'Sofía' }
+const LUCIA = { id: crypto.randomUUID(), name: 'Lucía' }
+const PABLO = { id: crypto.randomUUID(), name: 'Pablo' }
+const SOFIA = { id: crypto.randomUUID(), name: 'Sofía' }
 
 const noSession = () => HttpResponse.json({ error: 'unauthorized' }, { status: 401 })
 const sessionOf = (user: typeof LUCIA) => () => HttpResponse.json(user)

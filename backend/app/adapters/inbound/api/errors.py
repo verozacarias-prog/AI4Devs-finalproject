@@ -16,10 +16,11 @@ from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException
 
 from app.adapters.inbound.api import reference
+from app.adapters.inbound.api.request_logging import user_of
 from app.adapters.inbound.api.routes import ERROR_KEY, REQUEST_ID_HEADER, ApiErrorCode
 from app.adapters.inbound.api.security_headers import security_headers_for
 from app.adapters.observability.errors import log_error
-from app.adapters.observability.logs import request_id_var
+from app.adapters.observability.logs import request_id_var, user_id_var
 from app.constants import Environment
 from app.domain.errors import DomainError, ErrorCategory
 
@@ -56,12 +57,21 @@ def answer_for_status(status_code: int, headers: Mapping[str, str] | None = None
     )
 
 
+def _log(error: Exception, request: Request, *, in_full: bool) -> None:
+    """The line of the error carries the user, if the session of the request already said it."""
+    token = user_id_var.set(user_of(request))
+    try:
+        log_error(error, in_full=in_full)
+    finally:
+        user_id_var.reset(token)
+
+
 def install_error_handlers(app: FastAPI, environment: Environment) -> None:
     in_full = environment is Environment.LOCAL
 
     async def expected(request: Request, error: Exception) -> Response:
         assert isinstance(error, DomainError)  # noqa: S101
-        log_error(error, in_full=in_full)
+        _log(error, request, in_full=in_full)
         return JSONResponse(
             # The code goes last: no detail can take its place.
             {**error.details, ERROR_KEY: error.code},
@@ -83,7 +93,7 @@ def install_error_handlers(app: FastAPI, environment: Environment) -> None:
 
     async def unexpected(request: Request, error: Exception) -> Response:
         """It never passes through the middlewares, so it carries their headers itself."""
-        log_error(error, in_full=in_full)
+        _log(error, request, in_full=in_full)
         headers = security_headers_for(request.url.path)
         request_id = request_id_var.get()
         if request_id is not None:

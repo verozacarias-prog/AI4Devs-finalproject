@@ -27,7 +27,7 @@ def test_the_time_of_the_message_is_the_one_of_the_server_clock() -> None:
     SendChatMessage(unit_of_work, FixedClock(NOW)).execute(
         user_id=lucia.id,
         text="gasté 3500 en el súper",
-        idempotency_key="9d2b7c1e-5a4f-4c3b-8e21-7f6a5b4c3d2e",
+        idempotency_key=str(uuid.uuid4()),
     )
 
     assert len(unit_of_work.inbound_messages.added) == 1
@@ -43,7 +43,7 @@ def test_two_requests_at_once_with_the_same_key_answer_the_original_message() ->
     lucia = CreateTestUser(FixedClock(NOW)).execute(
         unit_of_work, name="Lucía", phone="+000000000001", terms_version="local-seed-1"
     )
-    browser_uuid = "9d2b7c1e-5a4f-4c3b-8e21-7f6a5b4c3d2e"
+    browser_uuid = str(uuid.uuid4())
     stored_by_the_other = InboundMessage(
         id=uuid.uuid4(),
         provider=Provider.WEB,

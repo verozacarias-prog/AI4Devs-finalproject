@@ -1,4 +1,4 @@
-"""Gives every API request an identifier and logs one line when it ends."""
+"""Gives every API request an identifier and logs one line when it ends, with its user."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import logging
 import time
 import uuid
 from collections.abc import Awaitable, Callable
+from typing import cast
 
 from fastapi import Request, Response, status
 from starlette.routing import Match, Route
@@ -37,6 +38,7 @@ async def log_request(
         logger.error(
             Event.HTTP_REQUEST,
             extra={
+                Field.USER_ID: user_of(request),
                 Field.ENDPOINT: _endpoint(request),
                 Field.RESULT: status.HTTP_500_INTERNAL_SERVER_ERROR,
                 Field.DURATION_MS: _elapsed_ms(started),
@@ -47,6 +49,7 @@ async def log_request(
     logger.info(
         Event.HTTP_REQUEST,
         extra={
+            Field.USER_ID: user_of(request),
             Field.ENDPOINT: _endpoint(request),
             Field.RESULT: response.status_code,
             Field.DURATION_MS: _elapsed_ms(started),
@@ -54,6 +57,19 @@ async def log_request(
     )
     response.headers[REQUEST_ID_HEADER] = request_id
     return response
+
+
+def identify_user(request: Request, user_id: uuid.UUID) -> None:
+    """Says whose request this is, once the session said it, for the line of the request.
+
+    The endpoint runs apart from this middleware, so what they share is the request.
+    """
+    setattr(request.state, Field.USER_ID, str(user_id))
+
+
+def user_of(request: Request) -> str | None:
+    """Whose request this is, if the session already said it."""
+    return cast(str | None, getattr(request.state, Field.USER_ID, None))
 
 
 def _endpoint(request: Request) -> str:

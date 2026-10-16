@@ -25,3 +25,4 @@ fae3830cddccde10c37f88d9b7e4e70b9f2915f9:backend/tests/integration/test_server_l
 # credencial.
 b8359221f7386a1768f5f940bcf755f6bc7ddaf1:backend/tests/integration/test_chat_messages.py:generic-api-key:31
 b8359221f7386a1768f5f940bcf755f6bc7ddaf1:backend/tests/unit/test_send_chat_message.py:generic-api-key:27
+8187c560ddaa006455654def9b925cc9754c5b89:backend/tests/integration/test_chat_logs.py:generic-api-key:36
