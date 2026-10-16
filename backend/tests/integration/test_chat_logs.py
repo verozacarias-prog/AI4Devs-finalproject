@@ -1,6 +1,6 @@
 """What the web chat and the worker leave in the logs, against PostgreSQL (FEAT-002, its spec.md).
 
-Cases C3-01 to C3-03 and C3-18 to C3-20: no line carries the text of a message or a phone, the
+Cases C3-01 to C3-03 and C3-18 to C3-21: no line carries the text of a message or a phone, the
 processing of a message is followed by its identifier, and a line written while the process knows
 whose it is carries the user (docs/operacion.md 6.3). The API and the worker write their lines in
 a stream the test reads.
@@ -216,3 +216,24 @@ def test_an_unforeseen_error_of_a_request_with_a_session_carries_its_user(
     assert response.status_code == 500
     [error] = events_of(stream, "error.unexpected")
     assert error["user_id"] == str(user_id(engine, "Lucía"))
+
+
+def test_closing_the_session_leaves_its_line_with_the_user(
+    settings: Settings, engine: Engine
+) -> None:
+    # Case C3-21.
+    stream = io.StringIO()
+    client = _client(settings, stream)
+    _enter_as(client, "Lucía")
+
+    response = client.post(
+        "/auth/logout", headers=SAME_ORIGIN | {"Content-Type": "application/json"}
+    )
+
+    assert response.status_code == 204
+    [line] = [
+        line
+        for line in events_of(stream, "http.request")
+        if line["endpoint"] == "POST /auth/logout"
+    ]
+    assert line["user_id"] == str(user_id(engine, "Lucía"))
