@@ -232,7 +232,9 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   base de `docker compose up db`. Los seis controles del pipeline están en el
   [ADR 0021](docs/adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md), y los
   corre el flujo `.github/workflows/app-quality.yml`. El otro flujo busca secretos con
-  `gitleaks`; una excepción se anota en `.gitleaksignore`, nunca se desactiva el control.
+  `gitleaks`; una excepción se anota en `.gitleaksignore`, nunca se desactiva el control. Para
+  no provocar falsos positivos, un test genera los UUID que inventa en vez de escribirlos
+  ([convenciones de desarrollo](docs/convenciones-de-desarrollo.md#1-cortes-verticales)).
   El sexto, el análisis de seguridad con CodeQL, corre en `.github/workflows/codeql.yml` y no
   tiene comando local: una alerta que no es un problema se descarta en GitHub con su motivo.
 - Dashboard, desde `frontend/`: `npm test` corre los tests de las pantallas, `npm run lint` el
