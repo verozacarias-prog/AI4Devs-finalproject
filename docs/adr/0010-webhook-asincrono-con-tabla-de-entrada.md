@@ -67,7 +67,10 @@ El webhook solo recibe y confirma; el procesamiento ocurre después, en un proce
 
    El tiempo máximo de la llamada al LLM, reintentos incluidos, es menor que la duración del
    `locked_until`, y los dos son configuración. Así el fencing cubre un caso excepcional, como
-   una pausa larga del proceso, y no un LLM lento de todos los días.
+   una pausa larga del proceso, y no un LLM lento de todos los días. La configuración lo valida
+   al arrancar: si el tiempo de la llamada no es menor que el lock, ningún proceso arranca. El
+   lock ya es configurable (`WORKER_LOCK_SECONDS`); la validación llega con el cliente del LLM,
+   que es el que trae su tiempo máximo.
 
    El registro de la llamada al LLM queda fuera de esa transacción final: se guarda apenas
    responde el proveedor, en una transacción corta propia. Si el fencing deshace la

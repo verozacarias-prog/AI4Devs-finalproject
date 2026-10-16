@@ -459,7 +459,8 @@ Pocas, por síntoma, y cada una con qué hacer.
 mensajes entrantes, y con el
 primer despliegue Sentry en su plan gratuito, un monitor externo y las dos alertas críticas.
 `GET /healthz` dice si el proceso vive, `GET /readyz` si llega a la base, y `GET /queuez` falla
-cuando un mensaje espera hace más de 10 minutos ([la API](04-api.md#get-healthz-get-readyz-y-get-queuez)).
+cuando un mensaje espera hace más de 10 minutos, o lo que diga `QUEUE_MAX_WAIT_MINUTES`
+([2](#2-entornos)), o cuando no llega a la base ([la API](04-api.md#get-healthz-get-readyz-y-get-queuez)).
 Las dos alertas las da el monitor externo, por su propio canal de avisos.
 
 `Propuesto, sin decidir:` las otras cinco alertas, que esperan a que haya usuarios reales, el
