@@ -18,6 +18,8 @@ from app.adapters.inbound.operator_commands.seed_test_data import main as seed_t
 # The clock of every case, unless the case says otherwise: 15:00:00 in Buenos Aires.
 NOW = datetime(2026, 10, 15, 18, 0, 0, tzinfo=UTC)
 FIXED_REPLY = "Recibí tu mensaje. Todavía no puedo procesarlo."
+# What the database says when it rejects a reply: it must not reach the logs either.
+REPLY_REJECTION = "la base rechaza la respuesta"
 
 
 def seed(database_url: str) -> None:
@@ -46,19 +48,24 @@ def inbound(
     locked_until: datetime | None = None,
     provider: str = "web",
     purged: bool = False,
+    next_attempt_at: datetime | None = None,
 ) -> uuid.UUID:
-    """A message the user wrote, by default in the web chat, in the state the case needs."""
+    """A message the user wrote, by default in the web chat, in the state the case needs.
+
+    Without `next_attempt_at`, it is the default of the table: the moment it was stored.
+    """
     with engine.begin() as connection:
         created: uuid.UUID = connection.execute(
             text(
                 "INSERT INTO inbound_message (provider, provider_message_id, user_id, "
                 "from_phone, payload, purged_at, sent_at, status, attempts, locked_until, "
-                "created_at) "
+                "next_attempt_at, created_at) "
                 "SELECT :provider, id::text || ':' || :key, id, "
                 "CASE WHEN :purged THEN NULL ELSE whatsapp_phone END, "
                 "CASE WHEN :purged THEN NULL ELSE CAST(:payload AS jsonb) END, "
                 "CASE WHEN :purged THEN :sent_at END, :sent_at, :status, :attempts, "
-                ":locked_until, :sent_at FROM app_user WHERE name = :name RETURNING id"
+                ":locked_until, COALESCE(CAST(:next_attempt_at AS timestamptz), now()), :sent_at "
+                "FROM app_user WHERE name = :name RETURNING id"
             ),
             {
                 "provider": provider,
@@ -69,6 +76,7 @@ def inbound(
                 "status": status,
                 "attempts": attempts,
                 "locked_until": locked_until,
+                "next_attempt_at": next_attempt_at,
                 "name": name,
             },
         ).scalar_one()
@@ -135,3 +143,20 @@ def messages_of(engine: Engine, name: str) -> list[tuple[str, uuid.UUID | None]]
             {"name": name},
         ).all()
     return [(row.text, row.quoted_outbound_message_id) for row in rows]
+
+
+def reject_every_reply(engine: Engine) -> None:
+    """A database that refuses to store any reply of Platita."""
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "CREATE FUNCTION reject_reply() RETURNS trigger AS $$ BEGIN "
+                f"RAISE EXCEPTION '{REPLY_REJECTION}'; END $$ LANGUAGE plpgsql"
+            )
+        )
+        connection.execute(
+            text(
+                "CREATE TRIGGER reject_reply BEFORE INSERT ON outbound_message "
+                "FOR EACH ROW EXECUTE FUNCTION reject_reply()"
+            )
+        )

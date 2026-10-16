@@ -1,5 +1,5 @@
 /**
- * Cases C1-11 to C1-21 and C2-22 to C2-29 of FEAT-002 (docs/features/FEAT-002/spec.md): the web chat. The whole
+ * Cases C1-11 to C1-21, C2-22 to C2-29 and C3-10 to C3-11 of FEAT-002 (docs/features/FEAT-002/spec.md): the web chat. The whole
  * dashboard is rendered, with Lucía already in and the API simulated at the network level.
  * The chat asks for new messages five times as often as it does for real: every 100 ms while
  * it waits for a reply instead of every half second, and every 600 ms instead of every 3 seconds.
@@ -456,4 +456,53 @@ test('case C2-29: a send that timed out after being stored is shown once after i
   await waitFor(() => expect(screen.queryByText('Platita está procesando…')).toBeNull())
   expect(screen.getAllByText('gasté 3500 en el súper')).toHaveLength(1)
   expect(screen.queryByText('No enviado')).toBeNull()
+})
+
+test('case C3-10: the controls of the chat have a name and are used with the keyboard', async () => {
+  const sent: unknown[] = []
+  apiWithLuciaIn(
+    http.get(CHAT, () => conversation([], null)),
+    http.post(CHAT, async ({ request }) => {
+      sent.push(((await request.json()) as { text: unknown }).text)
+      if (sent.length === 1) return HttpResponse.json({ error: 'internal_error' }, { status: 500 })
+      return HttpResponse.json({ id: 'im2', status: 'pending' }, { status: 202 })
+    }),
+  )
+  await openChat()
+  const input = await screen.findByRole('textbox', { name: 'Tu mensaje' })
+  fireEvent.change(input, { target: { value: 'gasté 3500 en el súper' } })
+  fireEvent.keyDown(input, { key: 'Enter' })
+  await screen.findByText('No enviado')
+  fireEvent.change(input, { target: { value: 'y 1200 de nafta' } })
+
+  // Native and enabled, with no tabindex that takes them out of the order: Tab reaches them.
+  expect(input.tabIndex).toBe(0)
+  for (const name of ['Enviar', 'Reintentar']) {
+    const button = screen.getByRole('button', { name }) as HTMLButtonElement
+    expect(button.tagName).toBe('BUTTON')
+    expect(button.disabled).toBe(false)
+    expect(button.tabIndex).toBe(0)
+  }
+  fireEvent.keyDown(input, { key: 'Enter' })
+  await waitFor(() => expect(sent).toEqual(['gasté 3500 en el súper', 'y 1200 de nafta']))
+})
+
+test('case C3-11: a new reply is announced without moving the focus', async () => {
+  apiWithLuciaIn(
+    http.get(CHAT, ({ request }) => {
+      const after = new URL(request.url).searchParams.get('after')
+      if (after === 'im1') return conversation([REPLY], 'om1')
+      if (after === 'om1') return conversation([], 'om1')
+      return conversation([SUPERMARKET], 'im1')
+    }),
+  )
+  await openChat()
+  const input = await screen.findByLabelText('Tu mensaje')
+  input.focus()
+  expect(document.activeElement).toBe(input)
+
+  const log = screen.getByRole('log', { name: 'Conversación con Platita' })
+  await within(log).findByText('Recibí tu mensaje. Todavía no puedo procesarlo.')
+
+  expect(document.activeElement).toBe(input)
 })
