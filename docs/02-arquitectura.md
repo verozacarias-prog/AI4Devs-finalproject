@@ -187,6 +187,7 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
         - text_splitter_port.py
         - llm_call_log_port.py
         - database_health_port.py
+        - queue_health_port.py
       errors.py          # the errors a business rule foresees, each with a stable code and a category
       local_date.py      # which day it is for a user, in the time zone of that user
       account_balance.py # the balance of an account, from what already happened in it

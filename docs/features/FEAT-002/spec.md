@@ -717,7 +717,8 @@ simulada, como en el corte 1.
 - **Aprobado por:** Veronica Zacarias 16/10/2026
 - **C3-12, sumado para probar contra la base lo que el C2-05 prueba con dobles:** Veronica Zacarias 16/10/2026
 - **C3-13 a C3-20, sumados con la revisión de spec-drift:** Veronica Zacarias 16/10/2026
-- **Total:** 20 casos, 2 unitarios, 16 de integración y 2 de componente.
+- **C3-21 y C3-22, sumados con la revisión de pr-reviewer:** Veronica Zacarias 16/10/2026
+- **Total:** 22 casos, 3 unitarios, 17 de integración y 2 de componente.
 
 Valen las condiciones del corte 1. En los casos de los registros, la API y el worker escriben
 sus líneas en un registro que el test lee, y Lucía manda "gasté 3500 en el súper".
@@ -744,6 +745,8 @@ sus líneas en un registro que el test lee, y Lucía manda "gasté 3500 en el s�
 | C3-18 | El error del worker lleva el usuario del mensaje | Integración | CA-24 |
 | C3-19 | Un error previsto de un pedido con sesión lleva su usuario | Integración | CA-24 |
 | C3-20 | Un error imprevisto de un pedido con sesión lleva su usuario | Integración | CA-24 |
+| C3-21 | Cerrar la sesión deja su línea con el usuario | Integración | CA-24 |
+| C3-22 | Los identificadores de la línea también pasan por el filtro | Unitario | CA-24 |
 
 #### C3-01 · Escribir y leer el chat no deja el texto ni el teléfono en los registros
 
@@ -934,6 +937,26 @@ sus líneas en un registro que el test lee, y Lucía manda "gasté 3500 en el s�
 - **cuando** Lucía manda "gasté 3500 en el súper",
 - **entonces** responde `500`, y la línea `error.unexpected` lleva el `user_id` de Lucía.
 - **Test:** `tests/integration/test_chat_logs.py::test_an_unforeseen_error_of_a_request_with_a_session_carries_its_user`
+
+#### C3-21 · Cerrar la sesión deja su línea con el usuario
+
+- **Sale de:** CA-24 · **Tipo:** integración
+- **Dado** Lucía con una sesión abierta,
+- **cuando** pide `POST /auth/logout`,
+- **entonces** responde `204`, y la línea `http.request` de `POST /auth/logout` lleva el
+  `user_id` de Lucía: el de la sesión que cerró.
+- **Test:** —
+
+#### C3-22 · Los identificadores de la línea también pasan por el filtro
+
+- **Sale de:** CA-24 · **Tipo:** unitario
+- **Dado** que lo que el proceso tiene como identificador del pedido, del mensaje y del usuario
+  no tiene forma de identificador: `+000000000001`, `gasté 3500 en el súper` y `Lucía`,
+- **cuando** se escribe una línea de registro,
+- **entonces** los campos `request_id`, `message_id` y `user_id` salen como `[redacted]`, y
+  ninguno de esos tres textos aparece en la línea. Con un UUID en cada uno, los tres pasan tal
+  cual.
+- **Test:** —
 
 El contraste de la hora sobre cada burbuja no tiene caso: se calcula con los colores de los
 tokens y queda anotado en el [contrato de UI](ui_contract.md#accesibilidad), como en la pantalla

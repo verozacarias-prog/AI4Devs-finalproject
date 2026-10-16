@@ -332,9 +332,9 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
 - **Formato:** JSON de una línea a la salida estándar, con la librería estándar de logging y un
   formateador propio. Campos: momento, nivel, proceso, versión desplegada, identificador del
   mensaje, identificador interno del usuario, evento, duración y resultado. El identificador
-  del usuario va en toda línea escrita mientras el proceso sabe de quién es lo que atiende: un
-  pedido con sesión, o un mensaje de un usuario registrado. Un error suma los suyos, que están
-  más abajo. La línea de un pedido a la API, `http.request`, dice además a
+  del usuario va en las líneas de lo que el proceso sabe de quién es: en la API, la línea de un
+  pedido con sesión y la de su error; en el worker, toda línea escrita mientras procesa el
+  mensaje de un usuario registrado. Un error suma los suyos, que están más abajo. La línea de un pedido a la API, `http.request`, dice además a
   qué endpoint fue, en el campo `endpoint`: el método y la ruta como está declarada en el
   código, por ejemplo `GET /budget-periods/{budget_period_id}`. Nunca lleva la dirección que
   se pidió, que puede traer un identificador, parámetros con datos o lo que alguien haya
@@ -342,7 +342,10 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   por su origen se responde antes de resolver su ruta, así que puede llevar solo el método:
   es el caso de las rutas de hoy. Uno al dashboard lleva `GET /app`, sin el
   archivo. Las páginas del contrato que sirve el framework, como `/docs` y `/openapi.json`,
-  llevan su ruta como cualquier otra. La API, el worker, los procesos programados y los comandos de
+  llevan su ruta como cualquier otra. El worker deja una línea `message.answered` por cada
+  mensaje que respondió, con la duración: el identificador del mensaje y el del usuario los
+  lleva como toda línea escrita mientras lo procesa. Un worker que otro desplazó no la deja,
+  porque no respondió. La API, el worker, los procesos programados y los comandos de
   operación registran igual, cada uno con su nombre de proceso.
 - **Correlación:** el identificador es el `id` del mensaje en la tabla de entrada. El worker lo
   pone en cada registro mientras procesa ese mensaje, y es el mismo que queda en la tabla de
