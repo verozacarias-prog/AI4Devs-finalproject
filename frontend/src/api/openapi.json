@@ -306,7 +306,7 @@
         "properties": {
           "status": {
             "$ref": "#/components/schemas/HealthState",
-            "description": "`ok`, or `unavailable` when the database does not answer."
+            "description": "`ok`, or `unavailable` when what the route checks fails."
           }
         },
         "required": [
@@ -796,6 +796,38 @@
         "summary": "Who is behind this session",
         "tags": [
           "session"
+        ]
+      }
+    },
+    "/queuez": {
+      "get": {
+        "description": "Fails when a pending message has waited more than 10 minutes to be processed. A message delayed on purpose does not count. It is what the external monitor watches, because the worker may hang while the API is healthy.",
+        "operationId": "queuez_queuez_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            },
+            "description": "No pending message has waited more than 10 minutes."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            },
+            "description": "A pending message has waited more than 10 minutes. The body has the same shape as the `200`."
+          }
+        },
+        "summary": "Does the worker keep up with the messages",
+        "tags": [
+          "health"
         ]
       }
     },

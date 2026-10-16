@@ -175,6 +175,10 @@ class InMemoryInboundMessages:
     def claim_next(self, now: datetime, locked_until: datetime) -> InboundMessage | None:
         return self.claimable.pop(0) if self.claimable else None
 
+    def any_pending_waiting_since(self, since: datetime) -> bool:
+        # Which messages count is a rule of the query: the integration tests check it.
+        raise NotImplementedError
+
     def mark_processed(self, message_id: uuid.UUID, attempts: int, at: datetime) -> bool:
         self.marked_uncommitted.append(message_id)
         return True

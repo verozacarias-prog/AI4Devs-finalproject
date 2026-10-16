@@ -61,13 +61,22 @@ from app.adapters.observability.events import (
 from app.constants import ProcessName
 from app.domain.errors import ContextField
 
-__all__ = ["REDACTED", "build_handler", "configure_logging", "request_id_var"]
+__all__ = [
+    "REDACTED",
+    "build_handler",
+    "configure_logging",
+    "message_id_var",
+    "request_id_var",
+]
 
 LogValue = str | int | float | bool | list[str] | None
 
 # Identifier of the API request being served. A request that is not a message gets one when
-# it arrives; the worker will set the message id the same way.
+# it arrives.
 request_id_var: ContextVar[str | None] = ContextVar(Field.REQUEST_ID, default=None)
+# Identifier of the message the worker is processing: every line written meanwhile has it, so
+# a message is followed end to end with one value (docs/operacion.md 6.3).
+message_id_var: ContextVar[str | None] = ContextVar(Field.MESSAGE_ID, default=None)
 
 _EVENT_NAME = re.compile(EVENT_NAME_PATTERN)
 _IDENTIFIER = re.compile(IDENTIFIER_PATTERN)
@@ -177,6 +186,9 @@ class JsonFormatter(logging.Formatter):
             LineKey.EVENT: event,
             Field.REQUEST_ID: request_id_var.get(),
         }
+        message_id = message_id_var.get()
+        if message_id is not None:
+            line[Field.MESSAGE_ID] = message_id
         for name in _extra_fields(record):
             line[name] = record.__dict__[name]
         if record.exc_info and record.exc_info[0] is not None:

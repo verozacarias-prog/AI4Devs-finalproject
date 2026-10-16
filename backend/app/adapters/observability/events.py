@@ -43,6 +43,8 @@ HANDLER_NAME = "platita-json"
 
 class Event(StrEnum):
     HTTP_REQUEST = "http.request"
+    # The worker answered a message: one line per message.
+    MESSAGE_ANSWERED = "message.answered"
     DATABASE_UNREACHABLE = "database.unreachable"
     # An error the domain foresees, and any other one.
     ERROR_EXPECTED = "error.expected"
@@ -94,6 +96,7 @@ class LoggerName(StrEnum):
     API = "platita.api"
     ERRORS = "platita.errors"
     POSTGRES = "platita.postgres"
+    WORKER = "platita.worker"
     # Third-party loggers the process reconfigures.
     SERVER = "uvicorn"
     SERVER_ERROR = "uvicorn.error"

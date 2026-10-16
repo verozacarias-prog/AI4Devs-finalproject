@@ -73,6 +73,8 @@ WORKER_LOCK_SECONDS = 120
 # A quarter of a second keeps the reply of a fixed text under a second, and at this volume
 # four reads a second of an indexed table cost nothing.
 WORKER_IDLE_SECONDS = 0.25
+# How long a pending message may wait before GET /queuez fails (docs/04-api.md).
+QUEUE_MAX_WAIT_MINUTES = 10
 
 # What an operation command returns to the shell.
 EXIT_OK = 0

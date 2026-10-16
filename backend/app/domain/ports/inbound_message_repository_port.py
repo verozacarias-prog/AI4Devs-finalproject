@@ -23,6 +23,10 @@ class InboundMessageRepositoryPort(Protocol):
         """
         ...
 
+    def any_pending_waiting_since(self, since: datetime) -> bool:
+        """Whether a pending message has been due to be processed since before that moment."""
+        ...
+
     def mark_processed(self, message_id: uuid.UUID, attempts: int, at: datetime) -> bool:
         """Marks it processed only if it is still in process by the claim with those attempts.
 

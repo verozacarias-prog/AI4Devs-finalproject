@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from datetime import timedelta
 from typing import TextIO
 
 from fastapi import FastAPI
@@ -24,8 +25,9 @@ from app.adapters.observability.logs import configure_logging
 from app.adapters.outbound.postgres.connection import create_db_engine
 from app.adapters.outbound.postgres.database_health import PostgresDatabaseHealth
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
-from app.constants import APP_TITLE, Environment
+from app.constants import APP_TITLE, QUEUE_MAX_WAIT_MINUTES, Environment
 from app.domain.use_cases.accounts.list_accounts import ListAccounts
+from app.domain.use_cases.health.check_queue import CheckQueue
 from app.domain.use_cases.health.check_readiness import CheckReadiness
 from app.domain.use_cases.messages.list_chat_messages import ListChatMessages
 from app.domain.use_cases.messages.send_chat_message import SendChatMessage
@@ -65,7 +67,13 @@ def create_app(
     app.middleware("http")(add_security_headers)
     install_error_handlers(app, settings.environment)
     app.middleware("http")(log_request)
-    app.include_router(build_health_router(CheckReadiness(PostgresDatabaseHealth(engine))))
+    queue_wait = timedelta(minutes=QUEUE_MAX_WAIT_MINUTES)
+    app.include_router(
+        build_health_router(
+            CheckReadiness(PostgresDatabaseHealth(engine)),
+            lambda: CheckQueue(unit_of_work(), clock, queue_wait),
+        )
+    )
     app.include_router(
         build_session_router(
             lambda: AuthenticateSession(unit_of_work(), clock),
@@ -87,9 +95,10 @@ def create_app(
                 lambda: ListChatMessages(unit_of_work()),
             )
         )
-    if settings.dev_entry_enabled:
+    if settings.dev_entry_enabled or settings.web_chat_enabled:
         # Said at every start, so that nobody leaves it on without knowing (ADR 0016).
         logger.warning(Event.DEV_SCAFFOLD_ENABLED)
+    if settings.dev_entry_enabled:
         in_local = settings.environment is Environment.LOCAL
         app.include_router(
             build_dev_entry_router(

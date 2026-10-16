@@ -87,7 +87,17 @@ READYZ_DESCRIPTION = (
 )
 READYZ_OK = "The database answers."
 READYZ_UNAVAILABLE = "The database does not answer. The body has the same shape as the `200`."
-HEALTH_STATE = "`ok`, or `unavailable` when the database does not answer."
+QUEUEZ_SUMMARY = "Does the worker keep up with the messages"
+QUEUEZ_DESCRIPTION = (
+    "Fails when a pending message has waited more than 10 minutes to be processed. A message "
+    "delayed on purpose does not count. It is what the external monitor watches, because the "
+    "worker may hang while the API is healthy."
+)
+QUEUEZ_OK = "No pending message has waited more than 10 minutes."
+QUEUEZ_UNAVAILABLE = (
+    "A pending message has waited more than 10 minutes. The body has the same shape as the `200`."
+)
+HEALTH_STATE = "`ok`, or `unavailable` when what the route checks fails."
 
 # Session.
 ME_SUMMARY = "Who is behind this session"

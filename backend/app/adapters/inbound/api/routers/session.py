@@ -9,12 +9,13 @@ import uuid
 from collections.abc import Callable
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.security import APIKeyCookie
 from pydantic import BaseModel, Field
 
 from app.adapters.inbound.api import reference
 from app.adapters.inbound.api.errors import documented_errors
+from app.adapters.inbound.api.request_logging import identify_user
 from app.adapters.inbound.api.routes import (
     AUTH_LOGOUT,
     ME,
@@ -78,8 +79,9 @@ def build_session_router(
         response_description=reference.ME_OK,
         responses=documented_errors({status.HTTP_401_UNAUTHORIZED: reference.NO_SESSION}),
     )
-    def me(token: SessionToken) -> Me:
+    def me(request: Request, token: SessionToken) -> Me:
         user = authenticate_session().execute(token)
+        identify_user(request, user.id)
         return Me(id=user.id, name=user.name)
 
     @router.post(
