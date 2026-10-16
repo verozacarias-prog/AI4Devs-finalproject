@@ -97,8 +97,8 @@ def build_session_router(
             }
         ),
     )
-    def logout(token: SessionToken) -> Response:
-        close_session().execute(token)
+    def logout(request: Request, token: SessionToken) -> Response:
+        identify_user(request, close_session().execute(token))
         response = Response(status_code=status.HTTP_204_NO_CONTENT)
         clear_session_cookie(response)
         return response

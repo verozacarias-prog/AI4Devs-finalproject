@@ -945,7 +945,7 @@ sus líneas en un registro que el test lee, y Lucía manda "gasté 3500 en el s�
 - **cuando** pide `POST /auth/logout`,
 - **entonces** responde `204`, y la línea `http.request` de `POST /auth/logout` lleva el
   `user_id` de Lucía: el de la sesión que cerró.
-- **Test:** —
+- **Test:** `tests/integration/test_chat_logs.py::test_closing_the_session_leaves_its_line_with_the_user`
 
 #### C3-22 · Los identificadores de la línea también pasan por el filtro
 
@@ -956,7 +956,7 @@ sus líneas en un registro que el test lee, y Lucía manda "gasté 3500 en el s�
 - **entonces** los campos `request_id`, `message_id` y `user_id` salen como `[redacted]`, y
   ninguno de esos tres textos aparece en la línea. Con un UUID en cada uno, los tres pasan tal
   cual.
-- **Test:** —
+- **Test:** `tests/unit/test_log_redaction.py::test_the_identifiers_of_the_context_also_go_through_the_filter`
 
 El contraste de la hora sobre cada burbuja no tiene caso: se calcula con los colores de los
 tokens y queda anotado en el [contrato de UI](ui_contract.md#accesibilidad), como en la pantalla

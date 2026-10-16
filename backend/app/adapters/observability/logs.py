@@ -166,6 +166,13 @@ class RedactionFilter(logging.Filter):
         return True
 
 
+def _context_identifier(value: str | None) -> str | None:
+    """An identifier of the context, or REDACTED if it does not have the shape of one."""
+    if value is None or _IDENTIFIER.fullmatch(value) is not None:
+        return value
+    return REDACTED
+
+
 class JsonFormatter(logging.Formatter):
     def __init__(self, version: str, process: str) -> None:
         super().__init__()
@@ -188,12 +195,16 @@ class JsonFormatter(logging.Formatter):
             LineKey.VERSION: self._version,
             LineKey.LOGGER: record.name,
             LineKey.EVENT: event,
-            Field.REQUEST_ID: request_id_var.get(),
         }
-        for field, variable in ((Field.MESSAGE_ID, message_id_var), (Field.USER_ID, user_id_var)):
+        # They come from the context, not from the record, so the filter never saw them.
+        for field, variable in (
+            (Field.REQUEST_ID, request_id_var),
+            (Field.MESSAGE_ID, message_id_var),
+            (Field.USER_ID, user_id_var),
+        ):
             value = variable.get()
-            if value is not None:
-                line[field] = value
+            if value is not None or field == Field.REQUEST_ID:
+                line[field] = _context_identifier(value)
         for name in _extra_fields(record):
             line[name] = record.__dict__[name]
         if record.exc_info and record.exc_info[0] is not None:

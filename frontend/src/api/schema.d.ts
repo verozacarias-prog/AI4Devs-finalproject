@@ -157,7 +157,7 @@ export interface paths {
         };
         /**
          * Does the worker keep up with the messages
-         * @description Fails when a pending message has waited more than 10 minutes to be processed. A message delayed on purpose does not count. It is what the external monitor watches, because the worker may hang while the API is healthy.
+         * @description Fails when a pending message has waited longer than the configured wait to be processed: 10 minutes, unless `QUEUE_MAX_WAIT_MINUTES` says otherwise. A message delayed on purpose does not count. It is what the external monitor watches, because the worker may hang while the API is healthy.
          */
         get: operations["queuez_queuez_get"];
         put?: never;
@@ -725,7 +725,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No pending message has waited more than 10 minutes. */
+            /** @description No pending message has waited longer than the configured wait. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -734,7 +734,7 @@ export interface operations {
                     "application/json": components["schemas"]["HealthStatus"];
                 };
             };
-            /** @description A pending message has waited more than 10 minutes. The body has the same shape as the `200`. */
+            /** @description A pending message has waited longer than the configured wait, or the database does not answer. The body has the same shape as the `200`. */
             503: {
                 headers: {
                     [name: string]: unknown;
