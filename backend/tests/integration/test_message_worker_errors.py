@@ -1,6 +1,6 @@
 """The message worker when something goes wrong, against PostgreSQL (FEAT-002).
 
-Cases C2-06 to C2-08 and C3-12, from the spec.md of FEAT-002: a worker that fell and left its
+Cases C2-06 to C2-08, C3-12 and C3-16, from the spec.md of FEAT-002: a worker that fell and left its
 message taken, two workers that end up with the same message, and a reply the database rejects
 (ADR 0010).
 """
@@ -129,3 +129,28 @@ def test_if_the_database_rejects_the_reply_the_message_is_not_left_half_done(
     assert replies == []
     assert status_of(engine, message) == ("processing", 1)
     assert processed_at is None
+
+
+def test_the_lock_of_the_worker_comes_from_an_environment_variable(
+    seeded_database_url: str, engine: Engine
+) -> None:
+    # Case C3-16. The reply is rejected so that the message stays as the worker took it.
+    message = inbound(engine, "Lucía", SUPERMARKET, sent_at=NOW - timedelta(seconds=5))
+    reject_every_reply(engine)
+    settings = load_settings(
+        {
+            "DATABASE_URL": seeded_database_url,
+            "APP_ENV": "local",
+            "APP_VERSION": "test",
+            "WORKER_LOCK_SECONDS": "30",
+        }
+    )
+
+    create_worker(settings, FixedClock(NOW), log_stream=io.StringIO()).run_round()
+
+    with engine.connect() as connection:
+        locked_until = connection.execute(
+            text("SELECT locked_until FROM inbound_message WHERE id = :id"), {"id": message}
+        ).scalar_one()
+    assert status_of(engine, message) == ("processing", 1)
+    assert locked_until == NOW + timedelta(seconds=30)

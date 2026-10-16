@@ -18,7 +18,7 @@ from app.adapters.inbound.operator_commands.seed_test_data import main as seed_t
 # The clock of every case, unless the case says otherwise: 15:00:00 in Buenos Aires.
 NOW = datetime(2026, 10, 15, 18, 0, 0, tzinfo=UTC)
 FIXED_REPLY = "Recibí tu mensaje. Todavía no puedo procesarlo."
-# What the database says when it rejects a reply: it must not reach the logs either.
+# What the database says when it rejects a write: it must not reach the logs either.
 REPLY_REJECTION = "la base rechaza la respuesta"
 
 
@@ -147,16 +147,25 @@ def messages_of(engine: Engine, name: str) -> list[tuple[str, uuid.UUID | None]]
 
 def reject_every_reply(engine: Engine) -> None:
     """A database that refuses to store any reply of Platita."""
+    _reject_inserts_into(engine, "outbound_message")
+
+
+def reject_every_inbound_message(engine: Engine) -> None:
+    """A database that refuses to store any message a person writes."""
+    _reject_inserts_into(engine, "inbound_message")
+
+
+def _reject_inserts_into(engine: Engine, table: str) -> None:
     with engine.begin() as connection:
         connection.execute(
             text(
-                "CREATE FUNCTION reject_reply() RETURNS trigger AS $$ BEGIN "
+                f"CREATE FUNCTION reject_{table}() RETURNS trigger AS $$ BEGIN "
                 f"RAISE EXCEPTION '{REPLY_REJECTION}'; END $$ LANGUAGE plpgsql"
             )
         )
         connection.execute(
             text(
-                "CREATE TRIGGER reject_reply BEFORE INSERT ON outbound_message "
-                "FOR EACH ROW EXECUTE FUNCTION reject_reply()"
+                f"CREATE TRIGGER reject_{table} BEFORE INSERT ON {table} "
+                f"FOR EACH ROW EXECUTE FUNCTION reject_{table}()"
             )
         )

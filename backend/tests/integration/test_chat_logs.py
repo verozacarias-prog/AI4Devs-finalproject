@@ -1,8 +1,9 @@
 """What the web chat and the worker leave in the logs, against PostgreSQL (FEAT-002, its spec.md).
 
-Cases C3-01 to C3-03: no line carries the text of a message or a phone, and the processing of a
-message is followed by its identifier (docs/operacion.md 6.3). The API and the worker write their
-lines in a stream the test reads.
+Cases C3-01 to C3-03 and C3-18 to C3-20: no line carries the text of a message or a phone, the
+processing of a message is followed by its identifier, and a line written while the process knows
+whose it is carries the user (docs/operacion.md 6.3). The API and the worker write their lines in
+a stream the test reads.
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from tests.support.chat_data import (
     NOW,
     REPLY_REJECTION,
     inbound,
+    reject_every_inbound_message,
     reject_every_reply,
     seed,
     user_id,
@@ -153,3 +155,64 @@ def test_an_error_processing_a_message_leaves_its_line_with_the_message_identifi
     assert REPLY_REJECTION not in stream.getvalue()
     # The round ended without taking the worker down: it goes on with the next one.
     assert worker.run_round() is False
+
+
+def _client(settings: Settings, stream: io.StringIO) -> TestClient:
+    return TestClient(
+        create_app(settings, log_stream=stream, clock=FixedClock(NOW)), base_url=BASE_URL
+    )
+
+
+def test_the_error_of_the_worker_carries_the_user_of_the_message(
+    settings: Settings, engine: Engine
+) -> None:
+    # Case C3-18.
+    message = inbound(engine, "Lucía", SUPERMARKET, sent_at=NOW - timedelta(seconds=5))
+    reject_every_reply(engine)
+    stream = io.StringIO()
+
+    create_worker(settings, FixedClock(NOW), log_stream=stream).run_round()
+
+    [error] = events_of(stream, "error.unexpected")
+    assert error["user_id"] == str(user_id(engine, "Lucía"))
+    assert error["message_id"] == str(message)
+
+
+def test_a_foreseen_error_of_a_request_with_a_session_carries_its_user(
+    settings: Settings, engine: Engine
+) -> None:
+    # Case C3-19.
+    of_pablo = inbound(engine, "Pablo", "y 1200 de nafta", sent_at=NOW - timedelta(minutes=1))
+    stream = io.StringIO()
+    client = _client(settings, stream)
+    _enter_as(client, "Lucía")
+
+    response = client.get("/chat/messages", params={"after": str(of_pablo)})
+
+    assert response.status_code == 404
+    [error] = events_of(stream, "error.expected")
+    assert error["user_id"] == str(user_id(engine, "Lucía"))
+
+
+def test_an_unforeseen_error_of_a_request_with_a_session_carries_its_user(
+    settings: Settings, engine: Engine
+) -> None:
+    # Case C3-20.
+    reject_every_inbound_message(engine)
+    stream = io.StringIO()
+    client = TestClient(
+        create_app(settings, log_stream=stream, clock=FixedClock(NOW)),
+        base_url=BASE_URL,
+        raise_server_exceptions=False,
+    )
+    _enter_as(client, "Lucía")
+
+    response = client.post(
+        "/chat/messages",
+        json={"text": SUPERMARKET},
+        headers={**SAME_ORIGIN, "Idempotency-Key": IDEMPOTENCY_KEY},
+    )
+
+    assert response.status_code == 500
+    [error] = events_of(stream, "error.unexpected")
+    assert error["user_id"] == str(user_id(engine, "Lucía"))
