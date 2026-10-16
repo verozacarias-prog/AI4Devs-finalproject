@@ -25,7 +25,7 @@ const TWO_SECONDS_MS = 400
 const SEVERAL_INTERVALS_MS = 3 * INTERVAL.normalMs
 
 const CHAT = '*/chat/messages'
-const LUCIA = { id: '4379d06b-46d3-4f2e-a59e-addcb32388f8', name: 'Lucía' }
+const LUCIA = { id: crypto.randomUUID(), name: 'Lucía' }
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 type Message = {

@@ -9,6 +9,7 @@ a stream the test reads.
 from __future__ import annotations
 
 import io
+import uuid
 from collections.abc import Iterator
 from datetime import timedelta
 
@@ -35,7 +36,7 @@ pytestmark = pytest.mark.integration
 
 BASE_URL = "https://testserver"
 SAME_ORIGIN = {"Origin": BASE_URL}
-IDEMPOTENCY_KEY = "9d2b7c1e-5a4f-4c3b-8e21-7f6a5b4c3d2e"
+IDEMPOTENCY_KEY = str(uuid.uuid4())
 SUPERMARKET = "gasté 3500 en el súper"
 # What no line may carry: the amount, the words, the phone and the name of Lucía.
 PERSONAL_DATA = ("3500", "súper", "+000000000001", "Lucía")

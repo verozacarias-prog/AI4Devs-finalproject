@@ -36,7 +36,7 @@ pytestmark = pytest.mark.integration
 BASE_URL = "https://testserver"
 SAME_ORIGIN = {"Origin": BASE_URL}
 # The UUID the browser generated for the message of the cases.
-MESSAGE_UUID = "9d2b7c1e-5a4f-4c3b-8e21-7f6a5b4c3d2e"
+MESSAGE_UUID = str(uuid.uuid4())
 SUPERMARKET = "gasté 3500 en el súper"
 FUEL = "y 1200 de nafta"
 NOT_FOUND = {"error": "not_found"}

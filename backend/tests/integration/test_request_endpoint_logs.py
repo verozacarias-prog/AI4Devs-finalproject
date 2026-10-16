@@ -7,6 +7,7 @@ never the address that was asked for.
 from __future__ import annotations
 
 import io
+import uuid
 from pathlib import Path
 
 import pytest
@@ -19,7 +20,7 @@ from tests.support.log_lines import LogLine, events_of
 
 pytestmark = pytest.mark.integration
 
-THING_ID = "8f3a1c2e-5b7d-4e9a-a1b2-c3d4e5f60718"
+THING_ID = str(uuid.uuid4())
 PHONE = "+5491100000000"
 
 
