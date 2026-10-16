@@ -67,6 +67,7 @@ __all__ = [
     "configure_logging",
     "message_id_var",
     "request_id_var",
+    "user_id_var",
 ]
 
 LogValue = str | int | float | bool | list[str] | None
@@ -77,6 +78,9 @@ request_id_var: ContextVar[str | None] = ContextVar(Field.REQUEST_ID, default=No
 # Identifier of the message the worker is processing: every line written meanwhile has it, so
 # a message is followed end to end with one value (docs/operacion.md 6.3).
 message_id_var: ContextVar[str | None] = ContextVar(Field.MESSAGE_ID, default=None)
+# Identifier of the user whose request or message is being served, while the process knows it:
+# every line written meanwhile has it (docs/operacion.md 6.3).
+user_id_var: ContextVar[str | None] = ContextVar(Field.USER_ID, default=None)
 
 _EVENT_NAME = re.compile(EVENT_NAME_PATTERN)
 _IDENTIFIER = re.compile(IDENTIFIER_PATTERN)
@@ -186,9 +190,10 @@ class JsonFormatter(logging.Formatter):
             LineKey.EVENT: event,
             Field.REQUEST_ID: request_id_var.get(),
         }
-        message_id = message_id_var.get()
-        if message_id is not None:
-            line[Field.MESSAGE_ID] = message_id
+        for field, variable in ((Field.MESSAGE_ID, message_id_var), (Field.USER_ID, user_id_var)):
+            value = variable.get()
+            if value is not None:
+                line[field] = value
         for name in _extra_fields(record):
             line[name] = record.__dict__[name]
         if record.exc_info and record.exc_info[0] is not None:

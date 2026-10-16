@@ -38,7 +38,7 @@ async def log_request(
         logger.error(
             Event.HTTP_REQUEST,
             extra={
-                Field.USER_ID: _user_of(request),
+                Field.USER_ID: user_of(request),
                 Field.ENDPOINT: _endpoint(request),
                 Field.RESULT: status.HTTP_500_INTERNAL_SERVER_ERROR,
                 Field.DURATION_MS: _elapsed_ms(started),
@@ -49,7 +49,7 @@ async def log_request(
     logger.info(
         Event.HTTP_REQUEST,
         extra={
-            Field.USER_ID: _user_of(request),
+            Field.USER_ID: user_of(request),
             Field.ENDPOINT: _endpoint(request),
             Field.RESULT: response.status_code,
             Field.DURATION_MS: _elapsed_ms(started),
@@ -67,7 +67,8 @@ def identify_user(request: Request, user_id: uuid.UUID) -> None:
     setattr(request.state, Field.USER_ID, str(user_id))
 
 
-def _user_of(request: Request) -> str | None:
+def user_of(request: Request) -> str | None:
+    """Whose request this is, if the session already said it."""
     return cast(str | None, getattr(request.state, Field.USER_ID, None))
 
 

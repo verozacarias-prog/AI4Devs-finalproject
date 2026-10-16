@@ -15,18 +15,12 @@ from typing import NoReturn, TextIO
 
 from app.adapters.observability.errors import log_error
 from app.adapters.observability.events import Event, Field, LoggerName
-from app.adapters.observability.logs import configure_logging, message_id_var
+from app.adapters.observability.logs import configure_logging, message_id_var, user_id_var
 from app.adapters.outbound.postgres.connection import create_db_engine
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
-from app.constants import (
-    MILLISECONDS_PER_SECOND,
-    WORKER_IDLE_SECONDS,
-    WORKER_LOCK_SECONDS,
-    Environment,
-    ProcessName,
-)
+from app.constants import MILLISECONDS_PER_SECOND, WORKER_IDLE_SECONDS, Environment, ProcessName
 from app.domain.entities.inbound_message import InboundMessage
-from app.domain.use_cases.messages.process_next_message import ProcessNextMessage
+from app.domain.use_cases.messages.process_next_message import ProcessNextMessage, RoundOutcome
 from app.settings import Settings
 from app.shared.clock import Clock, SystemClock
 
@@ -44,43 +38,33 @@ class MessageWorker:
         An error ends the round and leaves its line, with the message it was processing: the
         worker goes on with the next round.
         """
-        taken: list[InboundMessage] = []
 
         def follow(message: InboundMessage) -> None:
-            taken.append(message)
+            # Every line written while it is processed says which message and whose.
             message_id_var.set(str(message.id))
+            if message.user_id is not None:
+                user_id_var.set(str(message.user_id))
 
         started = time.monotonic()
         try:
-            worked = self._process_next().execute(on_claimed=follow)
+            outcome = self._process_next().execute(on_claimed=follow)
         except Exception as error:
             # The message stays in process until its lock ends; then a worker takes it again.
             log_error(error, in_full=self._in_full)
             return False
         else:
-            if taken:
-                logger.info(
-                    Event.MESSAGE_ANSWERED,
-                    extra={
-                        Field.USER_ID: _optional_id(taken[0]),
-                        Field.DURATION_MS: round(
-                            (time.monotonic() - started) * MILLISECONDS_PER_SECOND
-                        ),
-                    },
-                )
-            return worked
+            if outcome is RoundOutcome.ANSWERED:
+                elapsed = round((time.monotonic() - started) * MILLISECONDS_PER_SECOND)
+                logger.info(Event.MESSAGE_ANSWERED, extra={Field.DURATION_MS: elapsed})
+            return outcome is not RoundOutcome.NOTHING_TO_TAKE
         finally:
             message_id_var.set(None)
+            user_id_var.set(None)
 
     def run_forever(self) -> NoReturn:
         while True:
             if not self.run_round():
                 time.sleep(WORKER_IDLE_SECONDS)
-
-
-def _optional_id(message: InboundMessage) -> str | None:
-    # A message of a number that is not a user yet has no user.
-    return None if message.user_id is None else str(message.user_id)
 
 
 def create_worker(
@@ -92,7 +76,7 @@ def create_worker(
         logger.warning(Event.DEV_SCAFFOLD_ENABLED)
     engine = create_db_engine(settings.database_url)
     worker_clock = clock or SystemClock()
-    lock = timedelta(seconds=WORKER_LOCK_SECONDS)
+    lock = timedelta(seconds=settings.worker_lock_seconds)
     return MessageWorker(
         lambda: ProcessNextMessage(SqlAlchemyUnitOfWork(engine), worker_clock, lock),
         in_full=settings.environment is Environment.LOCAL,

@@ -19,12 +19,13 @@ class AnswerMessage:
         self._unit_of_work = unit_of_work
         self._clock = clock
 
-    def execute(self, message: InboundMessage) -> None:
+    def execute(self, message: InboundMessage) -> bool:
+        """True if this worker answered it; False if another one took it after this one."""
         now = self._clock.now()
         with self._unit_of_work as unit_of_work:
             # First, so that a worker another one displaced writes nothing at all.
             if not unit_of_work.inbound_messages.mark_processed(message.id, message.attempts, now):
-                return
+                return False
             unit_of_work.outbound_messages.add(
                 reply_to(
                     message.id,
@@ -37,3 +38,4 @@ class AnswerMessage:
                 )
             )
             unit_of_work.commit()
+        return True

@@ -24,8 +24,9 @@ from app.adapters.observability.events import Event, LoggerName
 from app.adapters.observability.logs import configure_logging
 from app.adapters.outbound.postgres.connection import create_db_engine
 from app.adapters.outbound.postgres.database_health import PostgresDatabaseHealth
+from app.adapters.outbound.postgres.queue_health import PostgresQueueHealth
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
-from app.constants import APP_TITLE, QUEUE_MAX_WAIT_MINUTES, Environment
+from app.constants import APP_TITLE, Environment
 from app.domain.use_cases.accounts.list_accounts import ListAccounts
 from app.domain.use_cases.health.check_queue import CheckQueue
 from app.domain.use_cases.health.check_readiness import CheckReadiness
@@ -67,11 +68,11 @@ def create_app(
     app.middleware("http")(add_security_headers)
     install_error_handlers(app, settings.environment)
     app.middleware("http")(log_request)
-    queue_wait = timedelta(minutes=QUEUE_MAX_WAIT_MINUTES)
+    queue_wait = timedelta(minutes=settings.queue_max_wait_minutes)
     app.include_router(
         build_health_router(
             CheckReadiness(PostgresDatabaseHealth(engine)),
-            lambda: CheckQueue(unit_of_work(), clock, queue_wait),
+            CheckQueue(PostgresQueueHealth(engine), clock, queue_wait),
         )
     )
     app.include_router(

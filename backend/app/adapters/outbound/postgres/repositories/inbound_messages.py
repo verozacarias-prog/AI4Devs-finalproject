@@ -39,12 +39,6 @@ class PostgresInboundMessageRepository:
         ).one_or_none()
         return None if row is None else _message_from(row)
 
-    def any_pending_waiting_since(self, since: datetime) -> bool:
-        waiting: bool = self._connection.execute(
-            text(queries.INBOUND_MESSAGE_WAITING_SINCE_EXISTS), {"since": since}
-        ).scalar_one()
-        return waiting
-
     def mark_processed(self, message_id: uuid.UUID, attempts: int, at: datetime) -> bool:
         row = self._connection.execute(
             text(queries.MARK_INBOUND_MESSAGE_PROCESSED),

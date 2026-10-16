@@ -867,7 +867,7 @@ sus líneas en un registro que el test lee, y Lucía manda "gasté 3500 en el s�
 - **cuando** se pide `GET /queuez`, sin sesión,
 - **entonces** responde `503` con `{"status": "unavailable"}`, el mismo cuerpo que su `200`,
   como `GET /readyz`.
-- **Test:** —
+- **Test:** `tests/integration/test_queue_health.py::test_without_the_database_queuez_is_unavailable`
 
 #### C3-14 · Un worker desplazado no deja `message.answered`
 
@@ -877,7 +877,7 @@ sus líneas en un registro que el test lee, y Lucía manda "gasté 3500 en el s�
 - **cuando** el worker termina la ronda,
 - **entonces** no guardó ninguna respuesta y no dejó ninguna línea `message.answered`: esa
   línea la deja solo el worker que respondió.
-- **Test:** —
+- **Test:** `tests/unit/test_displaced_worker.py::test_a_displaced_worker_leaves_no_answered_line`
 
 #### C3-15 · La espera máxima de `/queuez` sale de una variable de entorno
 
@@ -887,7 +887,7 @@ sus líneas en un registro que el test lee, y Lucía manda "gasté 3500 en el s�
 - **cuando** se pide `GET /queuez`, con el reloj a las 18:00:00,
 - **entonces** responde `503` con `{"status": "unavailable"}`. Sin la variable, la espera es de
   10 minutos, como en el C3-05 y el C3-06.
-- **Test:** —
+- **Test:** `tests/integration/test_queue_health.py::test_the_longest_wait_of_queuez_comes_from_an_environment_variable`
 
 #### C3-16 · La duración del lock del worker sale de una variable de entorno
 
@@ -897,7 +897,7 @@ sus líneas en un registro que el test lee, y Lucía manda "gasté 3500 en el s�
 - **cuando** el worker lo toma, con el reloj a las 18:00:00,
 - **entonces** el mensaje queda en `processing` con `locked_until` a las 18:00:30. Sin la
   variable, el lock es de 120 segundos.
-- **Test:** —
+- **Test:** `tests/integration/test_message_worker_errors.py::test_the_lock_of_the_worker_comes_from_an_environment_variable`
 
 #### C3-17 · Con una espera o un lock inválidos, ningún proceso arranca
 
@@ -907,7 +907,7 @@ sus líneas en un registro que el test lee, y Lucía manda "gasté 3500 en el s�
 - **cuando** se lee la configuración al arrancar,
 - **entonces** falla con un error que nombra la variable y no repite el valor, como con
   `APP_ENV`.
-- **Test:** —
+- **Test:** `tests/unit/test_settings.py::test_a_wait_or_a_lock_that_is_not_a_positive_integer_stops_startup`
 
 #### C3-18 · El error del worker lleva el usuario del mensaje
 
@@ -916,7 +916,7 @@ sus líneas en un registro que el test lee, y Lucía manda "gasté 3500 en el s�
 - **cuando** el worker hace una ronda en su ciclo,
 - **entonces** la línea `error.unexpected` lleva el `user_id` de Lucía, además del
   `message_id` del mensaje.
-- **Test:** —
+- **Test:** `tests/integration/test_chat_logs.py::test_the_error_of_the_worker_carries_the_user_of_the_message`
 
 #### C3-19 · Un error previsto de un pedido con sesión lleva su usuario
 
@@ -924,7 +924,7 @@ sus líneas en un registro que el test lee, y Lucía manda "gasté 3500 en el s�
 - **Dado** Lucía con una sesión abierta, y un mensaje de Pablo,
 - **cuando** Lucía pide `GET /chat/messages?after=` con el id del mensaje de Pablo,
 - **entonces** responde `404`, y la línea `error.expected` lleva el `user_id` de Lucía.
-- **Test:** —
+- **Test:** `tests/integration/test_chat_logs.py::test_a_foreseen_error_of_a_request_with_a_session_carries_its_user`
 
 #### C3-20 · Un error imprevisto de un pedido con sesión lleva su usuario
 
@@ -933,7 +933,7 @@ sus líneas en un registro que el test lee, y Lucía manda "gasté 3500 en el s�
   entrante,
 - **cuando** Lucía manda "gasté 3500 en el súper",
 - **entonces** responde `500`, y la línea `error.unexpected` lleva el `user_id` de Lucía.
-- **Test:** —
+- **Test:** `tests/integration/test_chat_logs.py::test_an_unforeseen_error_of_a_request_with_a_session_carries_its_user`
 
 El contraste de la hora sobre cada burbuja no tiene caso: se calcula con los colores de los
 tokens y queda anotado en el [contrato de UI](ui_contract.md#accesibilidad), como en la pantalla

@@ -109,6 +109,14 @@ La entrada de desarrollo se enciende con `DEV_ENTRY_ENABLED=true`, y el chat web
 encendida en `production` ningún proceso arranca
 ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 
+Dos esperas son configuración, y cada una tiene su variable, que es opcional:
+`QUEUE_MAX_WAIT_MINUTES`, cuántos minutos puede esperar un mensaje pendiente antes de que
+`GET /queuez` falle, 10 si no se define, y `WORKER_LOCK_SECONDS`, cuántos segundos queda tomado
+un mensaje por un worker, 120 si no se define
+([ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md)). Las dos aceptan solo un número
+entero mayor que cero: con cualquier otro valor, el proceso no arranca y dice qué variable está
+mal.
+
 | Entorno | Para qué | En qué se diferencia | Cómo se promueve |
 |---|---|---|---|
 | Local | Desarrollo y pruebas manuales del flujo por WhatsApp | Docker Compose con la imagen `pgvector/pgvector:pg16`, el número de prueba gratuito de Meta detrás de un túnel, y datos semilla que se niegan a correr contra producción | Pull request |

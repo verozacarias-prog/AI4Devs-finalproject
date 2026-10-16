@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-
 from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -18,9 +16,7 @@ class HealthStatus(BaseModel):
     status: HealthState = Field(description=reference.HEALTH_STATE)
 
 
-def build_health_router(
-    check_readiness: CheckReadiness, check_queue: Callable[[], CheckQueue]
-) -> APIRouter:
+def build_health_router(check_readiness: CheckReadiness, check_queue: CheckQueue) -> APIRouter:
     router = APIRouter(tags=[HEALTH_TAG])
 
     @router.get(
@@ -62,7 +58,7 @@ def build_health_router(
         },
     )
     def queuez() -> JSONResponse:
-        return _health(check_queue().execute())
+        return _health(check_queue.execute())
 
     return router
 
