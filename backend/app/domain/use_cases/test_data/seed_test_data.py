@@ -9,8 +9,8 @@ from app.domain.entities.budget_period import first_period
 from app.domain.entities.family_group import FamilyGroup, GroupRole, Membership
 from app.domain.entities.user import User
 from app.domain.errors import TestDataNotAllowedError
-from app.domain.local_date import local_today
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
+from app.domain.services.dates.local_date import local_today
 from app.domain.use_cases.test_data.create_test_user import CreateTestUser
 from app.shared.clock import Clock
 

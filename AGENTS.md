@@ -55,7 +55,9 @@ excepciones, está en el [ADR 0001](docs/adr/0001-arquitectura-hexagonal.md).
 `app/shared/` tiene las utilidades técnicas que usan el dominio y los adaptadores, como el
 reloj. Un módulo de `shared/` importa solo la librería estándar, no importa nada del resto de
 `app/`, y hay uno por tema: no existe un `helpers.py` general. La lógica de negocio va en
-`domain/` aunque sea una función suelta. Un caso de uso recibe el reloj al construirse y nunca
+`domain/` aunque sea una función suelta: una regla que no le pertenece a una sola entidad es un
+servicio de dominio y va en `domain/services/`, en la carpeta de su tema, como función. Fuera de
+las carpetas, en `domain/` queda solo `errors.py`. Un caso de uso recibe el reloj al construirse y nunca
 lee la hora por su cuenta.
 
 Los errores que una regla de negocio prevé se declaran en `domain/errors.py`, con un código
@@ -73,10 +75,7 @@ de pre-commit. No son una recomendación: rompen el commit.
 - `backend/app/domain/use_cases/` — una carpeta por funcionalidad, como `sessions/`, `messages/` o `accounts/`, con sus casos de uso: CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, ListAccounts, SendChatMessage, ListChatMessages, ClaimNextMessage, AnswerMessage, ProcessNextMessage, ValidateSession, CheckReadiness, CheckQueue, GenerateProactiveAlert.
 - `backend/app/domain/ports/` — interfaces que el dominio declara y no implementa.
 - `backend/app/domain/errors.py` — los errores que una regla de negocio prevé, cada uno con su código y su categoría.
-- `backend/app/domain/local_date.py` — qué día es para un usuario, en su zona horaria.
-- `backend/app/domain/account_balance.py` — el saldo de una cuenta, calculado con lo que ya ocurrió en ella.
-- `backend/app/domain/movement_resolution.py` — si un gasto o un ingreso interpretado se puede registrar sin preguntar.
-- `backend/app/domain/registration_confirmation.py` — el texto que confirma un movimiento registrado.
+- `backend/app/domain/services/` — los servicios de dominio, como funciones, en una carpeta por tema: `accounts/account_balance.py`, el saldo de una cuenta, calculado con lo que ya ocurrió en ella; `transactions/movement_resolution.py`, si un gasto o un ingreso interpretado se puede registrar sin preguntar, y `transactions/registration_confirmation.py`, el texto que lo confirma; `dates/local_date.py`, qué día es para un usuario, en su zona horaria.
 - `backend/app/shared/` — utilidades técnicas que usan todas las capas, solo con la librería estándar. `clock.py` tiene el protocolo del reloj y su implementación con el reloj de la máquina.
 - `backend/app/adapters/inbound/api/` — el lado HTTP: arma la aplicación, sus controles y sus respuestas de error. En `routers/`, un archivo por grupo de endpoints, que traducen HTTP a llamadas a casos de uso. Incluye el chat web de desarrollo, que guarda el mensaje y no lo procesa.
 - `backend/app/adapters/inbound/whatsapp_webhook/` — traduce payloads de WhatsApp a llamadas a casos de uso.
@@ -210,8 +209,9 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   la librería estándar y no se llame como un módulo general, que ningún adaptador de entrada
   importe a otro: la API, el worker, los comandos y los procesos programados llegan cada uno a
   los casos de uso por su cuenta. Valida también dónde va cada tipo de archivo: los endpoints
-  en `api/routers/`, cada caso de uso en la carpeta de su funcionalidad y cada repositorio en
-  su archivo de `postgres/repositories/`; que ningún archivo de `backend/app/` ni de
+  en `api/routers/`, cada caso de uso en la carpeta de su funcionalidad, cada servicio de
+  dominio en la carpeta de su tema, ningún otro archivo suelto en `domain/` que `errors.py`, y
+  cada repositorio en su archivo de `postgres/repositories/`; que ningún archivo de `backend/app/` ni de
   `frontend/src/` tenga un nombre general como `utils` o `helpers`, salvo los de shadcn/ui; y
   que toda carpeta de los dos esté en el árbol de `docs/02-arquitectura.md`. No valida que los errores se
   traduzcan en un solo lugar, ni que un caso de uso no lea la hora por su cuenta.

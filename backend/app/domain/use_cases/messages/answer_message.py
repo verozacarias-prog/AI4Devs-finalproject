@@ -23,11 +23,15 @@ from app.domain.entities.pending_transaction import (
     PendingTransaction,
 )
 from app.domain.entities.transaction import Transaction, TransactionSource, TransactionType
-from app.domain.local_date import local_today
-from app.domain.movement_resolution import ResolvedMovement, is_movement, resolve_movement
 from app.domain.ports.llm_port import LLMPort
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
-from app.domain.registration_confirmation import confirmation_text
+from app.domain.services.dates.local_date import local_today
+from app.domain.services.transactions.movement_resolution import (
+    ResolvedMovement,
+    is_movement,
+    resolve_movement,
+)
+from app.domain.services.transactions.registration_confirmation import confirmation_text
 from app.shared.clock import Clock
 
 

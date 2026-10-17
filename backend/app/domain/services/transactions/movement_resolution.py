@@ -17,7 +17,7 @@ from app.domain.entities.budget_period import BudgetPeriod, PeriodStatus
 from app.domain.entities.category import Category
 from app.domain.entities.classification import Classification, RegistrationType
 from app.domain.entities.transaction import TransactionType
-from app.domain.local_date import local_today
+from app.domain.services.dates.local_date import local_today
 
 _TRANSACTION_TYPES = {
     RegistrationType.EXPENSE: TransactionType.EXPENSE,

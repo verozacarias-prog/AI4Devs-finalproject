@@ -188,9 +188,8 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
         - llm_call_log_port.py
         - database_health_port.py
         - queue_health_port.py
-      errors.py          # the errors a business rule foresees, each with a stable code and a category
-      local_date.py      # which day it is for a user, in the time zone of that user
-      account_balance.py # the balance of an account, from what already happened in it
+      /services          # domain services: business rules that belong to no single entity, as functions; one folder per topic, such as accounts/ (the balance of an account), transactions/ (whether a movement can be registered without asking, and its confirmation) or dates/ (which day it is for a user)
+      errors.py          # the errors a business rule foresees, each with a stable code and a category; the only file loose in domain/
     /adapters
       /inbound
         /api               # the HTTP side: building the app, its middleware and error answers; main.py is the entry point of the API process
@@ -246,6 +245,14 @@ LICENSE
 prompts.md
 llms.txt                    # descripción del proyecto para agentes de IA
 ```
+
+Dentro del dominio, un caso de uso y un servicio de dominio son dos cosas distintas. El caso de
+uso, en `use_cases/`, es un servicio de aplicación: atiende un pedido de afuera y orquesta los
+puertos. El servicio de dominio, en `services/`, es una regla del negocio que no le pertenece a
+una sola entidad, como el saldo de una cuenta o si un gasto se puede registrar sin preguntar: no
+guarda estado, recibe y devuelve objetos del dominio, y no toca ningún puerto. Se escribe como
+función, no como clase, y lo usan los casos de uso. Los dos se agrupan en una carpeta por tema,
+para que ninguno termine siendo un cajón de funciones sueltas.
 
 `/backend` y `/frontend` existen desde el scaffold, con las carpetas que ya tienen código; las demás se crean con lo primero que va en ellas.
 

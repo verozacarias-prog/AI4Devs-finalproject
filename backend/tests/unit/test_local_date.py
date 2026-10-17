@@ -6,7 +6,7 @@ from datetime import UTC, date, datetime
 
 import pytest
 
-from app.domain.local_date import local_today
+from app.domain.services.dates.local_date import local_today
 
 # Half past one in the morning of March 1, in UTC.
 INSTANT = datetime(2031, 3, 1, 1, 30, tzinfo=UTC)

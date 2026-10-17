@@ -11,7 +11,7 @@ from decimal import Decimal
 
 from app.domain.entities.budget_period import BudgetPeriod, PeriodStatus, PeriodType
 from app.domain.entities.transaction import TransactionType
-from app.domain.registration_confirmation import confirmation_text
+from app.domain.services.transactions.registration_confirmation import confirmation_text
 from tests.support.registration_data import OCTOBER_1, OCTOBER_17, OCTOBER_31
 
 LUCIAS_OCTOBER = BudgetPeriod(
