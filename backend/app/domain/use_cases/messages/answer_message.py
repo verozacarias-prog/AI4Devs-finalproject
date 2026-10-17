@@ -27,12 +27,16 @@ from app.domain.ports.llm_port import LLMPort
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
 from app.domain.services.dates.local_date import local_today
 from app.domain.services.transactions.movement_resolution import (
+    BeforeAccountOpening,
     ResolvedMovement,
     is_movement,
     movement_date,
     resolve_movement,
 )
-from app.domain.services.transactions.registration_confirmation import confirmation_text
+from app.domain.services.transactions.registration_confirmation import (
+    before_opening_text,
+    confirmation_text,
+)
 from app.shared.clock import Clock
 
 
@@ -83,8 +87,19 @@ class AnswerMessage:
                     user.time_zone,
                     periods,
                 )
-            if movement is not None:
+            if isinstance(movement, ResolvedMovement):
                 _register(unit_of_work, message, user_id, movement, now)
+            elif isinstance(movement, BeforeAccountOpening):
+                unit_of_work.outbound_messages.add(
+                    _reply(
+                        message,
+                        before_opening_text(
+                            movement.type, movement.account.name, movement.opened_on
+                        ),
+                        ResponseKind.FIXED_TEXT,
+                        now,
+                    )
+                )
             else:
                 text = _fixed_text(classification)
                 unit_of_work.outbound_messages.add(

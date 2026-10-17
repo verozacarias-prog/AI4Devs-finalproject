@@ -42,6 +42,19 @@ def confirmation_text(
     return LINE_END.join(lines)
 
 
+def before_opening_text(type: TransactionType, account_name: str, opened_on: date) -> str:
+    """Why a movement before its account was opened is not registered (domain rules, § 2)."""
+    return messages.BEFORE_ACCOUNT_OPENING.format(
+        account=account_name, date=written_day(opened_on), done=_DONE_BEFORE[type]
+    )
+
+
+_DONE_BEFORE = {
+    TransactionType.EXPENSE: messages.SPENT_BEFORE,
+    TransactionType.INCOME: messages.RECEIVED_BEFORE,
+}
+
+
 def written_amount(amount: Decimal, currency: str) -> str:
     """$3.500, or $3.500,50 when it has cents: how an amount is read in Argentina."""
     whole, cents = f"{amount:,.2f}".split(".")

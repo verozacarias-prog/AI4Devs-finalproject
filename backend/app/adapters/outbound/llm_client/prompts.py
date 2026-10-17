@@ -7,7 +7,7 @@ of any user (ADR 0013, point 12). The data of the task goes in the user message,
 from __future__ import annotations
 
 # Recorded with every call, so the metrics can compare one prompt with the next.
-CLASSIFICATION_PROMPT_VERSION = "classification-2"
+CLASSIFICATION_PROMPT_VERSION = "classification-3"
 
 # Between these, the data of the task: information, never instructions (ADR 0013, point 9).
 DATA_OPEN = "<datos>"
@@ -47,8 +47,10 @@ cual, por ejemplo "el banco", "la billetera" o las iniciales de una cuenta. No e
 cuenta de la lista: copiá lo que dice el mensaje. Cómo pagó no es una cuenta: "por \
 transferencia" o "con débito" solos son null. Si no se refiere a ninguna, null.
 - category: el nombre de la categoría de la lista del tipo que corresponde (de gasto o de \
-ingreso) que mejor describe el movimiento, escrito igual que en la lista. Si ninguna encaja, \
-null. Entendé lo que el mensaje dice con palabras de todos los días: "el súper", "la nafta", \
+ingreso) que describe el movimiento, escrito igual que en la lista. Elegí una solo si el \
+movimiento es claramente de esa categoría. Si ninguna encaja con claridad, null, aunque haya \
+una parecida: una categoría que no corresponde queda mal anotada, y con null se le pregunta a \
+la persona. Entendé lo que el mensaje dice con palabras de todos los días: "el súper", "la nafta", \
 "el colectivo" o "la prepaga" tienen una categoría que les corresponde aunque no la nombren.
 - currency: "ARS" o "USD", solo si el mensaje dice la moneda de alguna forma: "pesos", \
 "lucas", "mangos", "pe" o "$" son "ARS", y "dólares", "verdes" o "USD" son "USD". Un número \

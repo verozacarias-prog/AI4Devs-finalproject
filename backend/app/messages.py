@@ -47,6 +47,14 @@ CONFIRMATION_DATE = "Fecha: {date}"
 CONFIRMATION_CURRENCY = "Moneda: {currency}"
 CONFIRMATION_CATEGORY = "Categoría: {category}"
 CONFIRMATION_PERSONAL_BUDGET = "Presupuesto: tu presupuesto personal, del {start} al {end}"
+# A movement dated before its account was opened, which is already in its initial balance
+# (domain rules, § 2).
+BEFORE_ACCOUNT_OPENING = (
+    "{account} la tenés cargada desde el {date}, así que lo que {done} antes ya está en el "
+    "saldo con el que la diste de alta. Lo dejo sin anotar para no contarlo dos veces."
+)
+SPENT_BEFORE = "gastaste"
+RECEIVED_BEFORE = "cobraste"
 # How a day is written in a message: 17/10/2026, and 1/10/2026 without a leading zero.
 DAY_FORMAT = "{day}/{month}/{year}"
 # How an amount is written: $3.500, and $3.500,50 when it has cents.

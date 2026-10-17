@@ -43,6 +43,15 @@ class ResolvedMovement:
     transaction_date: date
 
 
+@dataclass(frozen=True)
+class BeforeAccountOpening:
+    """A movement dated before its account was opened: it is already in the initial balance."""
+
+    type: TransactionType
+    account: Account
+    opened_on: date
+
+
 def movement_date(classification: Classification, today: date) -> date:
     """The day the message says, or else the day the user wrote."""
     return classification.transaction_date or today
@@ -61,8 +70,11 @@ def resolve_movement(
     today: date,
     time_zone: str,
     periods: Sequence[BudgetPeriod],
-) -> ResolvedMovement | None:
+) -> ResolvedMovement | BeforeAccountOpening | None:
     """The movement to register, or None when something needs the user (domain rules, § 1).
+
+    A movement before its account was opened is never registered, whatever else it lacks: the
+    answer is why (§ 2).
 
     `periods` are the ones that cover its day, which the use case reads before: a domain
     service touches no port.
@@ -80,6 +92,13 @@ def resolve_movement(
         classification.currency,
         [account for account in accounts if account.type in _ACCOUNT_TYPES_FOR_MOVEMENTS],
     )
+    if account is None:
+        return None
+    transaction_date = movement_date(classification, today)
+    # Nothing is registered before the day the account was opened (domain rules, § 2).
+    opened_on = local_today(account.opened_at, time_zone)
+    if transaction_date < opened_on:
+        return BeforeAccountOpening(type=transaction_type, account=account, opened_on=opened_on)
     category = _only_one(
         [
             category
@@ -88,11 +107,7 @@ def resolve_movement(
             and _same_name(category.name, classification.category)
         ]
     )
-    if account is None or category is None:
-        return None
-    transaction_date = movement_date(classification, today)
-    # Nothing is registered before the day the account was opened (domain rules, § 2).
-    if transaction_date < local_today(account.opened_at, time_zone):
+    if category is None:
         return None
     period = _only_one(list(periods))
     # With a single possible period, and confirmed, it goes there without asking. An expense
