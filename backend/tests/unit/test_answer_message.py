@@ -3,8 +3,8 @@
 Cases C1-06, C1-07, C1-08 and C1-11: the date of a movement, the names of the account and the
 category, and the fixed text of an advice. Cases C1-17 to C1-22: which account the message
 names, decided by the code and not by the model. Case C1-24: a movement before the account was
-opened. The database is in memory; the integration tests
-check the same use case against PostgreSQL.
+opened. Case C1-25: another account named outside the mention. The database is in memory; the
+integration tests check the same use case against PostgreSQL.
 """
 
 from __future__ import annotations
@@ -237,3 +237,17 @@ def test_an_expense_before_its_account_was_opened_says_why_it_is_not_registered(
         "en el saldo con el que la diste de alta. Lo dejo sin anotar para no contarlo dos veces."
     )
     assert reply.response_kind is ResponseKind.FIXED_TEXT
+
+
+def test_the_name_of_another_account_outside_the_mention_does_not_change_the_account() -> None:
+    # Case C1-25. "efectivo" is the whole name of an account, but the mention is "MP".
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    llm = _expense("3500", "MP", "Supermercado", None)
+
+    AnswerMessage(unit_of_work, FixedClock(NOW), llm).execute(
+        lucia.message("pagué 3500 en el súper con MP porque no tenía efectivo")
+    )
+
+    [transaction] = unit_of_work.transactions.added
+    assert transaction.account_id == lucia.accounts["Mercado Pago"]
