@@ -1,7 +1,8 @@
 """Answering a message the worker took, with the model replaced (FEAT-003, its spec.md).
 
 Cases C1-06, C1-07, C1-08 and C1-11: the date of a movement, the names of the account and the
-category, and the fixed text of an advice. The database is in memory; the integration tests
+category, and the fixed text of an advice. Cases C1-17 to C1-22: which account the message
+names, decided by the code and not by the model. The database is in memory; the integration tests
 check the same use case against PostgreSQL.
 """
 
@@ -101,3 +102,102 @@ def test_an_advice_gets_the_fixed_text() -> None:
         "los ves en el dashboard."
     )
     assert reply.response_kind is ResponseKind.FIXED_TEXT
+
+
+def _expense(amount: str, account: str, category: str, currency: str | None) -> FakeLLM:
+    return FakeLLM(
+        Classification(
+            MessageClass.REGISTRATION,
+            registration_type=RegistrationType.EXPENSE,
+            amount=Decimal(amount),
+            account=account,
+            category=category,
+            currency=currency,
+        )
+    )
+
+
+def test_an_account_the_message_does_not_write_is_not_used() -> None:
+    # Case C1-17. The model chose an account the message never wrote.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    llm = _expense("26000", "Galicia pesos", "Impuestos y trámites", None)
+
+    AnswerMessage(unit_of_work, FixedClock(NOW), llm).execute(
+        lucia.message("pagué 26 mil a la muni por transferencia")
+    )
+
+    assert unit_of_work.transactions.added == []
+    [reply] = unit_of_work.outbound_messages.added
+    assert reply.text == "Eso todavía no lo sé anotar. Por ahora me manejo con gastos e ingresos."
+    assert reply.response_kind is ResponseKind.FIXED_TEXT
+
+
+def test_half_a_name_without_a_currency_does_not_choose_between_two_accounts() -> None:
+    # Case C1-18. "galicia" names Galicia pesos and Galicia USD.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    llm = _expense("2000", "galicia", "Supermercado", None)
+
+    AnswerMessage(unit_of_work, FixedClock(NOW), llm).execute(
+        lucia.message("gasté 2000 en la verdulería con galicia")
+    )
+
+    assert unit_of_work.transactions.added == []
+
+
+def test_half_a_name_with_the_currency_said_chooses_the_account() -> None:
+    # Case C1-19.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    llm = _expense("2000", "galicia", "Supermercado", "ARS")
+
+    AnswerMessage(unit_of_work, FixedClock(NOW), llm).execute(
+        lucia.message("gasté 2000 mangos en la verdulería con galicia")
+    )
+
+    [transaction] = unit_of_work.transactions.added
+    assert transaction.account_id == lucia.accounts["Galicia pesos"]
+    [reply] = unit_of_work.outbound_messages.added
+    assert reply.text.splitlines()[0] == "¡Listo! Anoté un gasto de $2.000 en Galicia pesos."
+
+
+def test_the_initials_name_an_account() -> None:
+    # Case C1-20.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    llm = _expense("3500", "MP", "Supermercado", None)
+
+    AnswerMessage(unit_of_work, FixedClock(NOW), llm).execute(
+        lucia.message("pagué 3500 en el súper con MP")
+    )
+
+    [transaction] = unit_of_work.transactions.added
+    assert transaction.account_id == lucia.accounts["Mercado Pago"]
+
+
+def test_the_type_and_the_currency_name_an_account() -> None:
+    # Case C1-21. Galicia pesos is her only bank account in pesos.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    llm = _expense("5000", "el banco", "Supermercado", "ARS")
+
+    AnswerMessage(unit_of_work, FixedClock(NOW), llm).execute(
+        lucia.message("gasté 5 mil pesos en la carnicería con el banco")
+    )
+
+    [transaction] = unit_of_work.transactions.added
+    assert transaction.account_id == lucia.accounts["Galicia pesos"]
+
+
+def test_the_type_without_a_currency_does_not_choose_between_two_accounts() -> None:
+    # Case C1-22. She has two bank accounts.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    llm = _expense("5000", "el banco", "Supermercado", None)
+
+    AnswerMessage(unit_of_work, FixedClock(NOW), llm).execute(
+        lucia.message("gasté 5 mil en la carnicería con el banco")
+    )
+
+    assert unit_of_work.transactions.added == []

@@ -1,6 +1,7 @@
 """The OpenAI adapter, with the HTTP transport of the SDK replaced (FEAT-003, its spec.md).
 
-Cases C1-14 and C1-15: what the adapter sends, and how it reads the amount back. Nothing here
+Cases C1-14, C1-15 and C1-23: what the adapter sends, and how it reads the amount and the
+currency back. Nothing here
 reaches the provider.
 """
 
@@ -130,3 +131,19 @@ def test_the_adapter_returns_the_amount_as_a_decimal() -> None:
     assert classification.amount == Decimal("3500.50")
     assert isinstance(classification.amount, Decimal)
     assert not isinstance(classification.amount, float)
+
+
+def test_the_adapter_returns_the_currency_the_message_says() -> None:
+    # Case C1-23.
+    transport = FakeTransport({**_expense("2000"), "account": "galicia", "currency": "ARS"})
+
+    classification = _adapter(transport).classify(REQUEST)
+
+    assert classification.account == "galicia"
+    assert classification.currency == "ARS"
+    [sent] = transport.received
+    output_format = cast(dict[str, dict[str, object]], sent["text"])["format"]
+    schema = cast(dict[str, object], output_format["schema"])
+    assert "currency" in cast(list[str], schema["required"])
+    properties = cast(dict[str, dict[str, object]], schema["properties"])
+    assert set(cast(list[str | None], properties["currency"]["enum"])) == {"ARS", "USD", None}

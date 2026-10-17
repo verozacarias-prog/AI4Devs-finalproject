@@ -47,6 +47,7 @@ LUCIAS_ACCOUNTS = (
 SOME_CATEGORIES = (
     ("Supermercado", TransactionType.EXPENSE),
     ("Transporte", TransactionType.EXPENSE),
+    ("Impuestos y trámites", TransactionType.EXPENSE),
     ("Sueldo", TransactionType.INCOME),
 )
 
