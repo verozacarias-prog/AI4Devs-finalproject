@@ -101,7 +101,7 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 - **CA-36.** Con un pendiente esperando respuesta, un mensaje que trae otro movimiento no se anota: el asistente pide terminar primero el anterior y repite su pregunta. Sumar el movimiento nuevo al lote es de la entrega final. Decidido por Vero el 17/10/2026.
 - **CA-37.** El usuario puede descartar el pendiente que espera respuesta, como con "dejalo, no lo anotes": queda rechazado, su lote cerrado, y no se registra nada.
 - **CA-38.** Un pendiente vencido, a las 24 horas de creado, no se continúa: queda `expired`, y el mensaje se procesa como si no hubiera nada abierto.
-- **CA-39.** La moneda que devuelve el modelo cuenta solo si las palabras que la dicen están escritas en el mensaje, igual que la mención de la cuenta. Es la opción B que eligió Vero en el corte 1.
+- **CA-39.** Si el modelo devuelve las palabras que dicen la moneda y no están escritas en el mensaje, la moneda no cuenta, igual que una mención de la cuenta que no está escrita. Si devuelve la moneda sin sus palabras, cuenta como la dio: así lo decidió Vero el 17/10/2026, para no cambiar C1-23, sabiendo que un modelo que no devuelve las palabras se saltea la verificación. Es la opción B que eligió Vero en el corte 1.
 
 ### Cuando algo falla — corte 2
 
