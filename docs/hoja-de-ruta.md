@@ -49,6 +49,13 @@ la [línea de corte de la entrega final](#alcance-de-la-entrega-final).
 | Que la entrada de desarrollo avise cuando el navegador no guarda la sesión, en vez de volver a la lista sin decir nada | La cookie de la sesión es `Secure`, y sobre `http` en la propia máquina Safari no la guarda: la sesión se abre, el siguiente pedido llega sin ella, y la persona no sabe por qué no entró. El README ya avisa qué navegadores usar. Se decidió el 14 de octubre de 2026 |
 | La pantalla de presupuesto y `GET /budgets/{budget_id}`, y los formularios de carga del dashboard | La pantalla de cuentas ya muestra el efecto de un gasto. El reparto por ticket está en [6. Tickets](06-tickets.md) |
 
+**Un pendiente a la vez en la entrega 2.** Las [reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)
+suman al lote que espera respuesta un movimiento nuevo que llega mientras tanto, y reenvían la
+lista numerada. En la entrega 2 un lote tiene un solo pendiente: con uno esperando respuesta, el
+asistente pide terminar el anterior y no anota el nuevo
+([FEAT-003](features/FEAT-003/spec.md), CA-36). Sumarlo al lote llega con los varios
+movimientos en un mensaje, en la entrega final.
+
 **Lo que el asistente todavía no sabe hacer responde un texto fijo.** La clasificación reconoce las tres
 clases y todos los tipos de registro desde el inicio. Cuando el mensaje pide algo de la segunda
 tabla, el asistente no llama al modelo otra vez ni cobra cuota:
@@ -170,11 +177,10 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   Falta definir qué pasa ante un error inesperado, por ejemplo una restricción de la base que
   rechaza el movimiento o una caída a mitad del proceso: si el proceso reintenta, si la regla se
   pausa, y qué se le avisa al usuario. Sin eso, el alquiler de un mes puede no registrarse sin que nadie se entere.
-- **Qué recibe el usuario si el modelo se niega a responder: sin decidir.** El modelo puede
-  negarse, o el proveedor puede cortar una respuesta
-  ([ADR 0025](adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)). Falta decidir si se trata
-  como un modelo caído, y el mensaje se procesa después, o si sale un texto fijo. Se decide al
-  escribir el adaptador del LLM.
+- **Qué recibe el usuario si el modelo se niega a responder: decidido el 17 de octubre de
+  2026.** Una negativa del modelo recibe enseguida un texto fijo que pide escribirlo de otra
+  forma, sin reintentar. Una respuesta que el proveedor corta se trata como un modelo caído y se
+  reintenta ([FEAT-003](features/FEAT-003/spec.md), CA-40).
 - **La documentación automática de la API: sin decidir.** El framework publica `/docs` y
   `/openapi.json` sin pedir sesión, en todos los entornos. Hoy solo describen las rutas de
   salud. Falta decidir si en `production` se apagan o piden sesión, antes de que describan los
@@ -204,12 +210,22 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   decidir un tope de tokens por mensaje, cuotas menores para cuentas nuevas y una alerta de
   gasto diario antes de llegar al tope. El costo por día ya se puede leer de la tabla de
   llamadas al modelo ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
-- **Qué responde el asistente ante lo que pasó a la entrega final: sin decidir.** Los textos
-  fijos de arriba cubren un registro que no es gasto ni ingreso, y una consulta o un consejo.
-  No cubren tres casos que en la entrega 2 no tienen código: un mensaje con varios movimientos,
-  un usuario con un período individual y uno de grupo para la misma fecha, y una respuesta que
-  cita una confirmación para corregirla o borrarla. Hay que decidirlo antes de escribir el
-  registro de un gasto.
+- **Qué responde el asistente ante lo que pasó a la entrega final: decidido en parte.** Los
+  textos fijos de arriba cubren un registro que no es gasto ni ingreso, y una consulta o un
+  consejo. Un mensaje con varios movimientos recibe el de un registro que no es gasto ni
+  ingreso, decidido el 17 de octubre de 2026 ([FEAT-003](features/FEAT-003/spec.md), C2-35).
+  Quedan para la entrega final un usuario con un período individual y uno de grupo para la misma
+  fecha, y una respuesta que cita una confirmación para corregirla o borrarla.
+- **La memoria de la clasificación: sin decidir.** El [ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md),
+  punto 9, dice que la clasificación recibe el último intercambio. El código le manda solo el
+  mensaje y, si hay uno esperando respuesta, el estado del pendiente. Falta decidir si se suma
+  el último intercambio o si se corrige el ADR porque el pendiente alcanza. Encontrado con el
+  `/spec-drift` del corte 2 de FEAT-003, el 17 de octubre de 2026.
+- **Proponer u ofrecer la cuenta: sin decidir.** Las [reglas de dominio § 1](reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma)
+  dicen que, para lo que requiere confirmación, el asistente propone lo más probable y el
+  usuario confirma. [FEAT-003](features/FEAT-003/spec.md) ofrece las cuentas candidatas sin
+  proponer una, que es una regla determinista (CA-19 y CA-20). Falta decidir cuál de las dos
+  queda, y escribirlo en la otra.
 - **Un movimiento roto bloquea todos los saldos: a revisar después de la entrega 2.** Si un
   movimiento en otra moneda llegara sin cotización, el cálculo se detiene y la pantalla de
   cuentas muestra el error, sin el saldo de ninguna cuenta (caso C2-12 de
