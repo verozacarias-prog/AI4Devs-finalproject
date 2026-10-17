@@ -372,9 +372,12 @@ El monto va con punto de miles y, si tiene centavos, con coma: $3.500, $3.500,50
 como día/mes/año.
 
 Los textos fijos de lo que el asistente todavía no sabe hacer, los mismos de la
-[hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-2):
+[hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-2). Para un registro que no es un
+gasto ni un ingreso:
 
 > Eso todavía no lo sé anotar. Por ahora me manejo con gastos e ingresos.
+
+Para una consulta o un consejo:
 
 > Todavía no sé responder preguntas. Por ahora anoto gastos e ingresos, y tus saldos los ves en
 > el dashboard.
