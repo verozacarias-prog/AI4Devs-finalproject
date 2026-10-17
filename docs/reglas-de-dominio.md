@@ -55,6 +55,27 @@ usuario. Si el nombre coincide con más de una cuenta, como "la Galicia" con "Ga
 "Galicia USD", primero se pregunta la cuenta (§ 2) y la moneda sale de la que el usuario elige.
 La moneda sigue a la vista en la confirmación, donde se corrige como cualquier default.
 
+**Qué cuenta como nombrar una cuenta.** El modelo entiende el lenguaje, y el código decide la
+cuenta. El modelo devuelve la mención, que son las palabras con que el mensaje se refiere a la
+cuenta, como "galicia", "MP" o "el banco", y la moneda, solo si el mensaje la dice de alguna
+forma: "pesos", "lucas", "mangos" o "$" son pesos, y "dólares", "verdes" o "USD", dólares. Un
+número solo, como "2000", no dice ninguna moneda. Con eso, el código sigue una regla fija:
+
+1. La mención tiene que estar escrita en el mensaje. Una cuenta que el modelo deduce, por
+   ejemplo de "por transferencia", no cuenta como nombrada.
+2. Si el mensaje tiene todas las palabras del nombre de una sola cuenta, como "galicia pesos",
+   es esa.
+3. Si no, las candidatas son las cuentas que la mención nombra por una palabra de su nombre,
+   como "galicia", por sus iniciales, como "MP" por Mercado Pago, o por su tipo, como "el
+   banco", "la billetera" o "efectivo".
+4. Si el mensaje dice la moneda, quedan solo las candidatas en esa moneda.
+5. Con exactamente una candidata, el movimiento va a esa cuenta. Con ninguna o con más de una,
+   se pregunta (§ 5).
+
+Así, "gasté 2000 mangos con galicia" va a Galicia pesos, y "gasté 2000 con galicia" pregunta si
+es Galicia pesos o Galicia USD. Un apodo que el usuario le da a una cuenta, como "la naranja",
+no se reconoce: se pregunta.
+
 **Un movimiento, un presupuesto.** Todo gasto o ingreso se imputa entero a un solo período,
 aunque el usuario lo use para más de un fin, como un celular que sirve para la actividad y para lo
 personal. El asistente no lo divide ni propone dividirlo: el usuario elige a qué presupuesto va.
