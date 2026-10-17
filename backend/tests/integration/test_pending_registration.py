@@ -1,8 +1,8 @@
 """A registration that asks, and its continuation, against PostgreSQL (FEAT-003, its spec.md).
 
-Cases C2-01, C2-07, C2-14, C2-16, C2-19, C2-21, C2-24 and C2-33. The worker runs whole rounds,
-the way its process does, with the model replaced by a double inside the wrapper that records
-each call. A case that starts from an open pending gets it the way a user does: a first
+Cases C2-01, C2-07, C2-14, C2-16, C2-19, C2-21, C2-24, C2-33 and C2-36. The worker runs whole
+rounds, the way its process does, with the model replaced by a double inside the wrapper that
+records each call. A case that starts from an open pending gets it the way a user does: a first
 message that leaves it pending, and then the reply.
 """
 
@@ -454,3 +454,28 @@ def test_two_workers_that_continue_the_same_pending_leave_one_movement(
     [pending] = _rows(engine, "SELECT status FROM pending_transaction")
     assert pending["status"] == "promoted"
     assert len(_replies_to(engine, first.id)) == 1
+
+
+def test_a_reply_that_changes_an_interpreted_field_adds_a_correction(
+    settings: Settings, engine: Engine
+) -> None:
+    # Case C2-36. The amount changed, which the model had interpreted; the account was
+    # missing, and completing it does not count.
+    _supermarket_without_account(settings, engine)
+    reply = Classification(
+        MessageClass.REGISTRATION,
+        amount=Decimal("3800"),
+        account="MP",
+        pending_reply=PendingReply.CONTINUES,
+    )
+
+    _write_and_answer(
+        settings, engine, "con MP, y eran 3800", reply, now=NOW + timedelta(minutes=1)
+    )
+
+    [movement] = _transactions(engine)
+    assert movement["amount"] == Decimal("3800.00")
+    assert movement["account"] == "Mercado Pago"
+    [pending] = _rows(engine, "SELECT status, corrected_fields_count FROM pending_transaction")
+    assert pending["status"] == "promoted"
+    assert pending["corrected_fields_count"] == 1

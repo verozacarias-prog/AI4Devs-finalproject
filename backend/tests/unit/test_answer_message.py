@@ -132,8 +132,12 @@ def test_an_account_the_message_does_not_write_is_not_used() -> None:
 
     assert unit_of_work.transactions.added == []
     [reply] = unit_of_work.outbound_messages.added
-    assert reply.text == "Eso todavía no lo sé anotar. Por ahora me manejo con gastos e ingresos."
-    assert reply.response_kind is ResponseKind.FIXED_TEXT
+    # Since cut 2 the account is asked, instead of the provisional fixed text (CA-19).
+    assert reply.text.splitlines() == [
+        "Para anotar el gasto de $26.000 en Impuestos y trámites me falta un dato:",
+        "¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD.",
+    ]
+    assert reply.response_kind is ResponseKind.REGISTRATION
 
 
 def test_half_a_name_without_a_currency_does_not_choose_between_two_accounts() -> None:

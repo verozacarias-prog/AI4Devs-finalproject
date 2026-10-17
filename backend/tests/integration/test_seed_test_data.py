@@ -174,6 +174,9 @@ class _GroupsThatFail:
     def find_owned_by(self, owner_id: uuid.UUID, name: str) -> FamilyGroup | None:
         return None
 
+    def find_by_id(self, group_id: uuid.UUID) -> FamilyGroup | None:
+        return None
+
 
 class _FailsAtTheGroup(SqlAlchemyUnitOfWork):
     """The real unit of work, except that creating the group fails."""

@@ -1,6 +1,7 @@
 """What the registration asks, and how a reply continues it, with the model replaced (FEAT-003).
 
-Cases C2-02 to C2-06, C2-08 to C2-13, C2-15, C2-17, C2-18, C2-20 and C2-35 of its spec.md.
+Cases C2-02 to C2-06, C2-08 to C2-13, C2-15, C2-17, C2-18, C2-20, C2-35, C2-37 and C2-38 of
+its spec.md.
 Each case that starts from an open pending gets it the way a user does: a first message that
 leaves it pending, and then the reply. The database is in memory; the integration tests check
 the same use case against PostgreSQL.
@@ -510,3 +511,46 @@ def test_a_message_with_several_movements_gets_the_fixed_text_and_stays_not_pend
     assert unit_of_work.transactions.added == []
     assert unit_of_work.pendings.added == []
     assert _last_reply(unit_of_work) == CANNOT_REGISTER
+
+
+def _farmacia(unit_of_work: InMemoryUnitOfWork, lucia: Lucia) -> None:
+    """The pending of C2-37: the model proposes a category that already exists."""
+    _answer(
+        unit_of_work,
+        lucia,
+        "gasté 9000 en la farmacia con MP",
+        _registration(amount="9000", account="MP", proposed_category="salud"),
+    )
+
+
+def test_a_proposed_category_with_the_name_of_an_existing_one_offers_that_one() -> None:
+    # Case C2-37.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    lucia.add_base_category("Salud")
+    categories_before = list(unit_of_work.categories.added)
+
+    _farmacia(unit_of_work, lucia)
+
+    assert unit_of_work.transactions.added == []
+    assert unit_of_work.categories.added == categories_before
+    [pending] = unit_of_work.pendings.added
+    assert pending.missing_fields == ("category_id",)
+    assert _last_reply(unit_of_work).splitlines()[1] == (
+        "Ya tenés la categoría «Salud». ¿La uso, o preferís otro nombre?"
+    )
+
+
+def test_with_a_yes_the_existing_category_is_used_and_none_is_created() -> None:
+    # Case C2-38.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    health = lucia.add_base_category("Salud")
+    _farmacia(unit_of_work, lucia)
+    categories_before = list(unit_of_work.categories.added)
+
+    _answer(unit_of_work, lucia, "sí", _reply(PendingReply.CONTINUES, accepts_proposal=True))
+
+    [transaction] = unit_of_work.transactions.added
+    assert transaction.category_id == health
+    assert unit_of_work.categories.added == categories_before
