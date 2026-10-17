@@ -76,42 +76,44 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 - **CA-7.** La moneda es la de la cuenta que nombra el mensaje.
 - **CA-8.** La cuenta y la categoría se reconocen por su nombre sin distinguir mayúsculas.
 - **CA-9.** La cuenta la decide el código, con la mención y la moneda que devuelve el modelo: la mención tiene que estar escrita en el mensaje; todas las palabras del nombre de una sola cuenta la nombran; si no, la nombran una palabra de su nombre, sus iniciales o su tipo, y una moneda dicha deja solo las cuentas en esa moneda; con exactamente una candidata se usa esa, y con ninguna o varias no se registra ([reglas de dominio § 1](../../reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma)).
-- **CA-10.** El movimiento queda con `source = 'manual'`.
-- **CA-11.** La confirmación dice si fue un gasto o un ingreso, el monto y la cuenta, y lista la fecha, la moneda, la categoría y el presupuesto.
-- **CA-12.** Un gasto o un ingreso completo también pasa por un lote de uno: su pendiente queda promovido y el lote cerrado, con la confirmación como `confirmation_message_id`, para que esa confirmación se pueda citar.
-- **CA-13.** El movimiento, su pendiente, su lote, el mensaje procesado y la confirmación se guardan juntos, o no se guarda ninguno.
-- **CA-14.** El saldo de la cuenta, en la pantalla de cuentas, ya incluye el movimiento.
+- **CA-10.** Un gasto o un ingreso con fecha anterior al alta de su cuenta no se registra, y la respuesta explica que la cuenta registra desde su alta y que eso ya está en el saldo con que se dio de alta ([reglas de dominio § 2](../../reglas-de-dominio.md#2-cuentas-y-saldo-calculado)).
+- **CA-11.** El movimiento queda con `source = 'manual'`.
+- **CA-12.** La confirmación dice si fue un gasto o un ingreso, el monto y la cuenta, y lista la fecha, la moneda, la categoría y el presupuesto.
+- **CA-13.** Un gasto o un ingreso completo también pasa por un lote de uno: su pendiente queda promovido y el lote cerrado, con la confirmación como `confirmation_message_id`, para que esa confirmación se pueda citar.
+- **CA-14.** El movimiento, su pendiente, su lote, el mensaje procesado y la confirmación se guardan juntos, o no se guarda ninguno.
+- **CA-15.** El saldo de la cuenta, en la pantalla de cuentas, ya incluye el movimiento.
 
 ### Lo que el asistente todavía no sabe hacer
 
-- **CA-15.** Un registro que no es un gasto ni un ingreso recibe un texto fijo, no registra nada y no vuelve a llamar al modelo.
-- **CA-16.** Una consulta o un consejo recibe un texto fijo y no vuelve a llamar al modelo.
-- **CA-17.** Un mensaje que no es de ninguna clase, como un saludo, recibe un texto fijo que pide una aclaración.
+- **CA-16.** Un registro que no es un gasto ni un ingreso recibe un texto fijo, no registra nada y no vuelve a llamar al modelo.
+- **CA-17.** Una consulta o un consejo recibe un texto fijo y no vuelve a llamar al modelo.
+- **CA-18.** Un mensaje que no es de ninguna clase, como un saludo, recibe un texto fijo que pide una aclaración.
 
 ### Preguntar lo que falta — corte 2
 
-- **CA-18.** Un gasto o un ingreso sin cuenta no usa ninguna por defecto: queda pendiente y el asistente pregunta, ofreciendo las cuentas del usuario.
-- **CA-19.** Una cuenta nombrada que coincide con más de una, como "la Galicia", se pregunta ofreciendo las que coinciden.
-- **CA-20.** Un mensaje sin monto, o que no deja claro si es gasto o ingreso, queda pendiente y se pregunta.
-- **CA-21.** Cuando falta más de un dato, se preguntan todos en un solo mensaje, y lo ya interpretado se conserva.
-- **CA-22.** La respuesta del usuario continúa el pendiente y, completo, lo promueve a movimiento.
-- **CA-23.** Si ninguna categoría encaja, el asistente propone crear una y no la crea sin confirmación.
-- **CA-24.** Un único período posible que está en borrador deja el movimiento pendiente.
+- **CA-19.** Un gasto o un ingreso sin cuenta no usa ninguna por defecto: queda pendiente y el asistente pregunta, ofreciendo las cuentas del usuario.
+- **CA-20.** Una cuenta nombrada que coincide con más de una, como "la Galicia", se pregunta ofreciendo las que coinciden.
+- **CA-21.** Un mensaje sin monto, o que no deja claro si es gasto o ingreso, queda pendiente y se pregunta.
+- **CA-22.** Cuando falta más de un dato, se preguntan todos en un solo mensaje, y lo ya interpretado se conserva.
+- **CA-23.** La respuesta del usuario continúa el pendiente y, completo, lo promueve a movimiento.
+- **CA-24.** Si ninguna categoría encaja, el asistente propone crear una y no la crea sin confirmación.
+- **CA-25.** Un único período posible que está en borrador deja el movimiento pendiente.
 
 ### Cuando algo falla — corte 2
 
-- **CA-25.** Si la llamada al modelo falla o devuelve algo que no se puede validar, el mensaje se reintenta con espera creciente; agotados los intentos queda `failed`, el usuario recibe un aviso y su siguiente mensaje se procesa.
-- **CA-26.** Si dos workers terminan el mismo mensaje, queda un solo movimiento.
-- **CA-27.** Si el tiempo máximo de la llamada al modelo no es menor que la duración del lock, ningún proceso arranca.
+- **CA-26.** Si la llamada al modelo falla o devuelve algo que no se puede validar, el mensaje se reintenta con espera creciente; agotados los intentos queda `failed`, el usuario recibe un aviso y su siguiente mensaje se procesa.
+- **CA-27.** Si dos workers terminan el mismo mensaje, queda un solo movimiento.
+- **CA-28.** Si el tiempo máximo de la llamada al modelo no es menor que la duración del lock, ningún proceso arranca.
 
 ### Límites y observabilidad — corte 3
 
-- **CA-28.** Con el tope diario total alcanzado, el mensaje no se clasifica y se procesa al día siguiente.
-- **CA-29.** Con la cuota de registro agotada, el mensaje se demora al día siguiente, y una consulta o un consejo con su cuota agotada recibe un texto fijo.
-- **CA-30.** Ninguna línea de los registros lleva el texto, el monto ni el teléfono.
-- **CA-31.** El prompt de sistema es el mismo para todos los usuarios.
-- **CA-32.** Una llamada al modelo cuyo mensaje termina con la transacción final deshecha deja igual su fila en `LLM_CALL`, y el worker usa siempre el envoltorio.
-- **CA-33.** `scripts/llm_metrics.sql` da la latencia, el costo, la calidad y las respuestas bloqueadas del ADR 0023.
+- **CA-29.** Con el tope diario total alcanzado, el mensaje no se clasifica y se procesa al día siguiente.
+- **CA-30.** Con la cuota de registro agotada, el mensaje se demora al día siguiente, y una consulta o un consejo con su cuota agotada recibe un texto fijo.
+- **CA-31.** Ninguna línea de los registros lleva el texto, el monto ni el teléfono.
+- **CA-32.** El prompt de sistema es el mismo para todos los usuarios.
+- **CA-33.** Una llamada al modelo cuyo mensaje termina con la transacción final deshecha deja igual su fila en `LLM_CALL`, y el worker usa siempre el envoltorio.
+- **CA-34.** Cada fila de `LLM_CALL` de una clasificación dice qué campos de la salida vinieron vacíos, sin ningún valor, para poder diagnosticar una interpretación fallida sin guardar contenido. Sumado el 17/10/2026, después de que un mensaje de la prueba contra el modelo real no se registrara sin que pudiera saberse por qué. Necesita una columna nueva en `LLM_CALL`.
+- **CA-35.** `scripts/llm_metrics.sql` da la latencia, el costo, la calidad y las respuestas bloqueadas del ADR 0023.
 
 ## Casos de prueba
 
@@ -137,26 +139,27 @@ de 2026, 2026-10-17T18:00:00Z.
 
 - **Aprobado por:** Veronica Zacarias 16/10/2026
 - **C1-17 a C1-23, sumados con la prueba contra el modelo real, que registró dos gastos en una cuenta que el mensaje no decía:** Veronica Zacarias 16/10/2026
-- **Total:** 23 casos, 15 unitarios y 8 de integración.
+- **C1-24, el motivo de un gasto anterior al alta de su cuenta, sumado con la prueba contra el modelo real:** Veronica Zacarias 17/10/2026
+- **Total:** 24 casos, 16 unitarios y 8 de integración.
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
-| C1-01 | Un gasto que nombra la cuenta queda registrado | Integración | CA-5, CA-7, CA-10, CA-12 y CA-13 |
+| C1-01 | Un gasto que nombra la cuenta queda registrado | Integración | CA-5, CA-7, CA-11, CA-13 y CA-14 |
 | C1-02 | Un ingreso que nombra la cuenta queda registrado | Integración | CA-5 y CA-7 |
-| C1-03 | La confirmación de un gasto lista lo que se asumió | Unitario | CA-11 |
-| C1-04 | La confirmación de un ingreso dice que es un ingreso | Unitario | CA-11 |
-| C1-05 | El saldo de la cuenta ya incluye el gasto | Integración | CA-14 |
+| C1-03 | La confirmación de un gasto lista lo que se asumió | Unitario | CA-12 |
+| C1-04 | La confirmación de un ingreso dice que es un ingreso | Unitario | CA-12 |
+| C1-05 | El saldo de la cuenta ya incluye el gasto | Integración | CA-15 |
 | C1-06 | La fecha es el día en que escribió, no el día en que se procesa | Unitario | CA-6 |
 | C1-07 | Una fecha que el mensaje indica se respeta | Unitario | CA-6 |
 | C1-08 | La cuenta y la categoría se reconocen sin distinguir mayúsculas | Unitario | CA-8 |
-| C1-09 | Una transferencia recibe el texto fijo y no registra nada | Integración | CA-15 |
-| C1-10 | Una consulta recibe el texto fijo | Integración | CA-16 |
-| C1-11 | Un consejo recibe el texto fijo | Unitario | CA-16 |
-| C1-12 | Un saludo recibe el pedido de aclaración | Integración | CA-17 |
+| C1-09 | Una transferencia recibe el texto fijo y no registra nada | Integración | CA-16 |
+| C1-10 | Una consulta recibe el texto fijo | Integración | CA-17 |
+| C1-11 | Un consejo recibe el texto fijo | Unitario | CA-17 |
+| C1-12 | Un saludo recibe el pedido de aclaración | Integración | CA-18 |
 | C1-13 | La clasificación deja su fila en `LLM_CALL` | Integración | CA-3 |
 | C1-14 | El adaptador pide al modelo configurado una salida estructurada | Unitario | CA-1 y CA-2 |
 | C1-15 | El adaptador devuelve el monto como `Decimal` | Unitario | CA-4 |
-| C1-16 | Escribir un gasto en el chat y ver la confirmación | Integración | CA-5 y CA-11 |
+| C1-16 | Escribir un gasto en el chat y ver la confirmación | Integración | CA-5 y CA-12 |
 | C1-17 | Una cuenta que el mensaje no escribe no se usa | Unitario | CA-9 |
 | C1-18 | Un nombre a medias sin moneda no elige entre dos cuentas | Unitario | CA-9 |
 | C1-19 | Un nombre a medias con la moneda dicha elige la cuenta | Unitario | CA-9 |
@@ -164,10 +167,11 @@ de 2026, 2026-10-17T18:00:00Z.
 | C1-21 | El tipo y la moneda nombran una cuenta | Unitario | CA-9 |
 | C1-22 | El tipo sin moneda no elige entre dos cuentas | Unitario | CA-9 |
 | C1-23 | El adaptador devuelve la moneda que dice el mensaje | Unitario | CA-9 |
+| C1-24 | Un gasto anterior al alta de su cuenta explica por qué no se anota | Unitario | CA-10 |
 
 #### C1-01 · Un gasto que nombra la cuenta queda registrado
 
-- **Sale de:** CA-5, CA-7, CA-10, CA-12 y CA-13 · **Tipo:** integración
+- **Sale de:** CA-5, CA-7, CA-11, CA-13 y CA-14 · **Tipo:** integración
 - **Dado** un mensaje web de Lucía, "gasté 3500 en el súper con Mercado Pago", pendiente, con
   `sent_at` 2026-10-17T17:59:55Z, y el modelo responde que es un registro de tipo gasto, con
   monto 3500, cuenta "Mercado Pago" y categoría "Supermercado", sin fecha,
@@ -198,7 +202,7 @@ de 2026, 2026-10-17T18:00:00Z.
 
 #### C1-03 · La confirmación de un gasto lista lo que se asumió
 
-- **Sale de:** CA-11 · **Tipo:** unitario
+- **Sale de:** CA-12 · **Tipo:** unitario
 - **Dado** el gasto de C1-01 ya resuelto: $3.500, Mercado Pago, Supermercado, 17/10/2026, ARS,
   y el período individual del 1/10/2026 al 31/10/2026,
 - **cuando** se arma la confirmación,
@@ -214,7 +218,7 @@ de 2026, 2026-10-17T18:00:00Z.
 
 #### C1-04 · La confirmación de un ingreso dice que es un ingreso
 
-- **Sale de:** CA-11 · **Tipo:** unitario
+- **Sale de:** CA-12 · **Tipo:** unitario
 - **Dado** el ingreso de C1-02 ya resuelto: $850.000, Galicia pesos, Sueldo, 17/10/2026, ARS, y
   el mismo período,
 - **cuando** se arma la confirmación,
@@ -224,7 +228,7 @@ de 2026, 2026-10-17T18:00:00Z.
 
 #### C1-05 · El saldo de la cuenta ya incluye el gasto
 
-- **Sale de:** CA-14 · **Tipo:** integración
+- **Sale de:** CA-15 · **Tipo:** integración
 - **Dado** el gasto de C1-01 ya procesado, y ningún otro movimiento de Lucía,
 - **cuando** Lucía pide `GET /accounts`,
 - **entonces** Mercado Pago tiene saldo `76500.00`, que es 80.000 − 3.500, y las otras tres
@@ -263,7 +267,7 @@ de 2026, 2026-10-17T18:00:00Z.
 
 #### C1-09 · Una transferencia recibe el texto fijo y no registra nada
 
-- **Sale de:** CA-15 · **Tipo:** integración
+- **Sale de:** CA-16 · **Tipo:** integración
 - **Dado** un mensaje web de Lucía, "pasé 20000 de Galicia pesos a Mercado Pago", pendiente, y
   el modelo responde que es un registro de tipo transferencia,
 - **cuando** el worker hace una ronda,
@@ -274,7 +278,7 @@ de 2026, 2026-10-17T18:00:00Z.
 
 #### C1-10 · Una consulta recibe el texto fijo
 
-- **Sale de:** CA-16 · **Tipo:** integración
+- **Sale de:** CA-17 · **Tipo:** integración
 - **Dado** un mensaje web de Lucía, "¿cuánto gasté este mes?", pendiente, y el modelo responde
   que es una consulta,
 - **cuando** el worker hace una ronda,
@@ -285,7 +289,7 @@ de 2026, 2026-10-17T18:00:00Z.
 
 #### C1-11 · Un consejo recibe el texto fijo
 
-- **Sale de:** CA-16 · **Tipo:** unitario
+- **Sale de:** CA-17 · **Tipo:** unitario
 - **Dado** un mensaje de Lucía, "¿me conviene sacar un préstamo?", y el modelo responde que es
   un consejo,
 - **cuando** se procesa,
@@ -295,7 +299,7 @@ de 2026, 2026-10-17T18:00:00Z.
 
 #### C1-12 · Un saludo recibe el pedido de aclaración
 
-- **Sale de:** CA-17 · **Tipo:** integración
+- **Sale de:** CA-18 · **Tipo:** integración
 - **Dado** un mensaje web de Lucía, "hola", pendiente, y el modelo responde que no es de ninguna
   clase,
 - **cuando** el worker hace una ronda,
@@ -343,7 +347,7 @@ de 2026, 2026-10-17T18:00:00Z.
 
 #### C1-16 · Escribir un gasto en el chat y ver la confirmación
 
-- **Sale de:** CA-5 y CA-11 · **Tipo:** integración
+- **Sale de:** CA-5 y CA-12 · **Tipo:** integración
 - **Dado** Lucía con una sesión abierta y el chat web encendido, y el modelo responde la
   interpretación de C1-01,
 - **cuando** Lucía envía "gasté 3500 en el súper con Mercado Pago" por `POST /chat/messages`,
@@ -419,6 +423,19 @@ de 2026, 2026-10-17T18:00:00Z.
   esquema de salida estructurada que se envió pide la moneda, que puede ser ARS, USD o nula.
 - **Test:** `tests/unit/test_openai_llm.py::test_the_adapter_returns_the_currency_the_message_says`
 
+#### C1-24 · Un gasto anterior al alta de su cuenta explica por qué no se anota
+
+- **Sale de:** CA-10 · **Tipo:** unitario
+- **Dado** Lucía con Mercado Pago dada de alta el 13/10/2026, un mensaje suyo, "el lunes cargué
+  nafta, 25 lucas, con MP", y el modelo responde un gasto de 25000, con cuenta "MP", categoría
+  "Transporte", moneda ARS y fecha 2026-10-12,
+- **cuando** se procesa,
+- **entonces** no se registra ningún movimiento, y la respuesta es "Mercado Pago la tenés
+  cargada desde el 13/10/2026, así que lo que gastaste antes ya está en el saldo con el que la
+  diste de alta. Lo dejo sin anotar para no contarlo dos veces.", con
+  `response_kind = 'fixed_text'`.
+- **Test:** `tests/unit/test_answer_message.py::test_an_expense_before_its_account_was_opened_says_why_it_is_not_registered`
+
 ### Corte 2 — errores y lo que exige confirmación
 
 - **Aprobado por:** pendiente
@@ -457,6 +474,14 @@ Para una consulta o un consejo:
 
 > Todavía no sé responder preguntas. Por ahora anoto gastos e ingresos, y tus saldos los ves en
 > el dashboard.
+
+Un gasto o un ingreso anterior al alta de su cuenta, con el nombre de la cuenta y el día de su
+alta:
+
+> Mercado Pago la tenés cargada desde el 13/10/2026, así que lo que gastaste antes ya está en el
+> saldo con el que la diste de alta. Lo dejo sin anotar para no contarlo dos veces.
+
+En un ingreso dice "lo que cobraste antes" en vez de "lo que gastaste antes".
 
 La respuesta a un mensaje que no es de ninguna clase. Sirve igual para un saludo y para algo
 que no se entiende, así la clasificación no necesita una clase más:
