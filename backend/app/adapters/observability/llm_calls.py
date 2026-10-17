@@ -62,7 +62,12 @@ def _call(purpose: LlmPurpose, usage: ModelUsage | None, started: float) -> LlmC
 
 def _cost(usage: ModelUsage | None) -> Decimal | None:
     """In dollars, with the prices of the model as they are today (ADR 0023, point 8)."""
-    if usage is None or usage.model not in LLM_PRICES_USD_PER_MILLION_TOKENS:
+    if (
+        usage is None
+        or usage.input_tokens is None
+        or usage.output_tokens is None
+        or usage.model not in LLM_PRICES_USD_PER_MILLION_TOKENS
+    ):
         return None
     input_price, output_price = LLM_PRICES_USD_PER_MILLION_TOKENS[usage.model]
     cost = (

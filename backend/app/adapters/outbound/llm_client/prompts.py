@@ -12,6 +12,8 @@ CLASSIFICATION_PROMPT_VERSION = "classification-1"
 # Between these, the data of the task: information, never instructions (ADR 0013, point 9).
 DATA_OPEN = "<datos>"
 DATA_CLOSE = "</datos>"
+# The JSON escapes of the characters of the delimiters, which the data never carries as such.
+DELIMITER_ESCAPES = {"<": "\\u003c", ">": "\\u003e"}
 
 CLASSIFICATION_SYSTEM_PROMPT = """\
 Sos el clasificador de Platita, un asistente de finanzas personales que se usa en Argentina, \

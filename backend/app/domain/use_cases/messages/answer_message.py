@@ -29,6 +29,7 @@ from app.domain.services.dates.local_date import local_today
 from app.domain.services.transactions.movement_resolution import (
     ResolvedMovement,
     is_movement,
+    movement_date,
     resolve_movement,
 )
 from app.domain.services.transactions.registration_confirmation import confirmation_text
@@ -70,13 +71,11 @@ class AnswerMessage:
                 return False
             movement = None
             if is_movement(classification):
+                periods = unit_of_work.budget_periods.list_covering(
+                    user_id, movement_date(classification, today)
+                )
                 movement = resolve_movement(
-                    classification,
-                    accounts,
-                    categories,
-                    today,
-                    user.time_zone,
-                    lambda day: unit_of_work.budget_periods.list_covering(user_id, day),
+                    classification, accounts, categories, today, user.time_zone, periods
                 )
             if movement is not None:
                 _register(unit_of_work, message, user_id, movement, now)

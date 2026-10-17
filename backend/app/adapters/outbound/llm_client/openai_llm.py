@@ -116,8 +116,8 @@ class OpenAILLM:
                 provider=LLM_PROVIDER,
                 model=LLM_MODEL,
                 prompt_version=prompts.CLASSIFICATION_PROMPT_VERSION,
-                input_tokens=usage.input_tokens if usage else 0,
-                output_tokens=usage.output_tokens if usage else 0,
+                input_tokens=usage.input_tokens if usage else None,
+                output_tokens=usage.output_tokens if usage else None,
             ),
         )
 
@@ -131,4 +131,8 @@ def _delimited(request: ClassificationRequest) -> str:
         "categorias_de_gasto": list(request.expense_categories),
         "categorias_de_ingreso": list(request.income_categories),
     }
-    return f"{prompts.DATA_OPEN}{json.dumps(data, ensure_ascii=False)}{prompts.DATA_CLOSE}"
+    # Escaped as JSON allows, so that a message cannot close the delimiter with "</datos>".
+    encoded = json.dumps(data, ensure_ascii=False)
+    for character, escaped in prompts.DELIMITER_ESCAPES.items():
+        encoded = encoded.replace(character, escaped)
+    return f"{prompts.DATA_OPEN}{encoded}{prompts.DATA_CLOSE}"

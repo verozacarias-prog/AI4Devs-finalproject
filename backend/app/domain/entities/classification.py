@@ -48,8 +48,9 @@ class ModelUsage:
     provider: str
     model: str
     prompt_version: str
-    input_tokens: int
-    output_tokens: int
+    # None when the provider did not report them.
+    input_tokens: int | None
+    output_tokens: int | None
 
 
 @dataclass(frozen=True)

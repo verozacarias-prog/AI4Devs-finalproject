@@ -7,7 +7,7 @@ missing or ambiguous is asked in a pending, which comes in the next cut of FEAT-
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
@@ -42,6 +42,11 @@ class ResolvedMovement:
     transaction_date: date
 
 
+def movement_date(classification: Classification, today: date) -> date:
+    """The day the message says, or else the day the user wrote."""
+    return classification.transaction_date or today
+
+
 def is_movement(classification: Classification) -> bool:
     """Whether it is a registration of the types that have code: an expense or an income."""
     return classification.registration_type in _TRANSACTION_TYPES
@@ -53,9 +58,13 @@ def resolve_movement(
     categories: Sequence[Category],
     today: date,
     time_zone: str,
-    periods_covering: Callable[[date], list[BudgetPeriod]],
+    periods: Sequence[BudgetPeriod],
 ) -> ResolvedMovement | None:
-    """The movement to register, or None when something needs the user (domain rules, § 1)."""
+    """The movement to register, or None when something needs the user (domain rules, § 1).
+
+    `periods` are the ones that cover its day, which the use case reads before: a domain
+    service touches no port.
+    """
     if classification.registration_type not in _TRANSACTION_TYPES:
         return None
     transaction_type = _TRANSACTION_TYPES[classification.registration_type]
@@ -81,11 +90,11 @@ def resolve_movement(
     )
     if account is None or category is None:
         return None
-    transaction_date = classification.transaction_date or today
+    transaction_date = movement_date(classification, today)
     # Nothing is registered before the day the account was opened (domain rules, § 2).
     if transaction_date < local_today(account.opened_at, time_zone):
         return None
-    period = _only_one(periods_covering(transaction_date))
+    period = _only_one(list(periods))
     # With a single possible period, and confirmed, it goes there without asking. An expense
     # in another currency than its period needs a rate, which is not built yet.
     if (

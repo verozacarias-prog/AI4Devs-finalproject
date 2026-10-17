@@ -1,7 +1,7 @@
 # Especificación — FEAT-003 · Registro de un gasto y de un ingreso
 
 - **Historia de usuario:** [HU3](../../05-historias-de-usuario.md)
-- **Estado:** borrador
+- **Estado:** aprobada para el corte 1. Los casos de los cortes 2 y 3 están en borrador
 - **Fecha:** 2026-10-16
 
 ## Alcance

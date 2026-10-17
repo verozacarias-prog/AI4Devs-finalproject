@@ -172,7 +172,7 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
 /backend
   /app
     /domain
-      /entities         # User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, AdviceDocument, AdviceChunk, InboundMessage, OutboundMessage, ChatMessage
+      /entities         # User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, PendingTransaction, PendingBatch, AdviceDocument, AdviceChunk, InboundMessage, OutboundMessage, ChatMessage, Classification, LlmCall
       /use_cases         # one folder per feature, such as sessions/, messages/ or accounts/: CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, ListAccounts, SendChatMessage, ListChatMessages, ClaimNextMessage, AnswerMessage, ProcessNextMessage, ValidateSession, CheckReadiness, CheckQueue, GenerateProactiveAlert...
       /ports             # interfaces the domain depends on but does not implement
         - transaction_repository_port.py
@@ -188,7 +188,10 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
         - llm_call_log_port.py
         - database_health_port.py
         - queue_health_port.py
-      /services          # domain services: business rules that belong to no single entity, as functions; one folder per topic, such as accounts/ (the balance of an account), transactions/ (whether a movement can be registered without asking, and its confirmation) or dates/ (which day it is for a user)
+      /services          # domain services: business rules that belong to no single entity, as functions, one folder per topic
+        /accounts        # the balance of an account
+        /transactions    # whether a movement can be registered without asking, and its confirmation
+        /dates           # which day it is for a user, in the time zone of that user
       errors.py          # the errors a business rule foresees, each with a stable code and a category; the only file loose in domain/
     /adapters
       /inbound
