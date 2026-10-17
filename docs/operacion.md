@@ -117,6 +117,10 @@ un mensaje por un worker, 120 si no se define
 entero mayor que cero: con cualquier otro valor, el proceso no arranca y dice qué variable está
 mal.
 
+El worker es el único proceso que llama al modelo, y lo hace con la clave de
+`OPENAI_API_KEY` ([ADR 0025](adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)). Sin ella, el
+worker no arranca y dice qué variable falta. La API no la lee.
+
 | Entorno | Para qué | En qué se diferencia | Cómo se promueve |
 |---|---|---|---|
 | Local | Desarrollo y pruebas manuales del flujo por WhatsApp | Docker Compose con la imagen `pgvector/pgvector:pg16`, el número de prueba gratuito de Meta detrás de un túnel, y datos semilla que se niegan a correr contra producción | Pull request |

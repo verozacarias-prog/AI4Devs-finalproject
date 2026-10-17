@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from datetime import date
 from decimal import Decimal
+from typing import cast
 
 import httpx2
 
@@ -103,10 +104,10 @@ def test_the_adapter_asks_the_configured_model_for_a_structured_output() -> None
     [sent] = transport.received
     assert sent["model"] == "gpt-5.4-mini"
     assert sent["reasoning"] == {"effort": "low"}
-    output_format = sent["text"]["format"]  # type: ignore[index]
+    output_format = cast(dict[str, dict[str, object]], sent["text"])["format"]
     assert output_format["type"] == "json_schema"
     assert "schema" in output_format
-    [system, user] = sent["input"]  # type: ignore[misc]
+    [system, user] = cast(list[dict[str, str]], sent["input"])
     assert system["role"] == "system"
     assert user["role"] == "user"
     data = user["content"]

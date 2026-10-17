@@ -75,6 +75,8 @@ de pre-commit. No son una recomendación: rompen el commit.
 - `backend/app/domain/errors.py` — los errores que una regla de negocio prevé, cada uno con su código y su categoría.
 - `backend/app/domain/local_date.py` — qué día es para un usuario, en su zona horaria.
 - `backend/app/domain/account_balance.py` — el saldo de una cuenta, calculado con lo que ya ocurrió en ella.
+- `backend/app/domain/movement_resolution.py` — si un gasto o un ingreso interpretado se puede registrar sin preguntar.
+- `backend/app/domain/registration_confirmation.py` — el texto que confirma un movimiento registrado.
 - `backend/app/shared/` — utilidades técnicas que usan todas las capas, solo con la librería estándar. `clock.py` tiene el protocolo del reloj y su implementación con el reloj de la máquina.
 - `backend/app/adapters/inbound/api/` — el lado HTTP: arma la aplicación, sus controles y sus respuestas de error. En `routers/`, un archivo por grupo de endpoints, que traducen HTTP a llamadas a casos de uso. Incluye el chat web de desarrollo, que guarda el mensaje y no lo procesa.
 - `backend/app/adapters/inbound/whatsapp_webhook/` — traduce payloads de WhatsApp a llamadas a casos de uso.
@@ -86,7 +88,7 @@ de pre-commit. No son una recomendación: rompen el commit.
 - `backend/app/adapters/outbound/whatsapp_client/` — envío de mensajes salientes de WhatsApp.
 - `backend/app/adapters/outbound/email_reader/` — integración IMAP/Gmail (could-have, fuera del MVP).
 - `backend/app/adapters/outbound/exchange_rate_client/` — proveedor de cotizaciones e indicadores de mercado (tasa de plazo fijo, inflación).
-- `backend/app/adapters/outbound/llm_client/` — cliente de LLM: clasificación, interpretación y respuestas, con el SDK del proveedor.
+- `backend/app/adapters/outbound/llm_client/` — cliente de LLM: clasificación, interpretación y respuestas, con el SDK del proveedor. `prompts.py` tiene los prompts, cada uno con su versión.
 - `backend/app/adapters/outbound/embedding_client/` — cliente del proveedor de embeddings.
 - `backend/app/adapters/outbound/text_splitter/` — particionado de documentos; el único lugar que importa `langchain-text-splitters`.
 - `backend/app/adapters/observability/` — envoltorios de los puertos de LLM y de embeddings, que registran cada llamada sin su contenido, y el formato JSON de los registros con su filtro.

@@ -12,6 +12,13 @@ class TransactionType(StrEnum):
     INCOME = "income"
 
 
+class TransactionSource(StrEnum):
+    # Registered by the user, conversing.
+    MANUAL = "manual"
+    # Detected in a notice email.
+    AUTOMATIC = "automatic"
+
+
 @dataclass(frozen=True)
 class Transaction:
     """An expense or an income already confirmed, with what the balance of its account needs.
@@ -31,3 +38,9 @@ class Transaction:
     # Set when it describes the same money as another movement: then it counts nowhere.
     duplicate_of: uuid.UUID | None = None
     deleted_at: datetime | None = None
+    # What a balance does not need, and a new movement always has. Reading for a balance
+    # leaves them out.
+    budget_period_id: uuid.UUID | None = None
+    category_id: uuid.UUID | None = None
+    source: TransactionSource | None = None
+    description: str | None = None

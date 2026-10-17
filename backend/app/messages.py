@@ -37,7 +37,31 @@ NAIVE_INSTANT = "An instant needs its time zone to say which day it is"
 # The identifier to look for in the logs.
 ERROR_REFERENCE = "Reference: {reference}"
 
-# For the end user, in Spanish.
+# For the end user, in Spanish: rioplatense, with voseo, warm and short (docs/01-producto.md).
 
-# What the worker answers every message while there is no model (FEAT-002).
-FIXED_REPLY = "Recibí tu mensaje. Todavía no puedo procesarlo."
+# The confirmation of a registered movement: what it was, then what was assumed, one per line
+# (domain rules, § 1; FEAT-003).
+REGISTERED_EXPENSE = "¡Listo! Anoté un gasto de {amount} en {account}."
+REGISTERED_INCOME = "¡Listo! Anoté un ingreso de {amount} en {account}."
+CONFIRMATION_DATE = "Fecha: {date}"
+CONFIRMATION_CURRENCY = "Moneda: {currency}"
+CONFIRMATION_CATEGORY = "Categoría: {category}"
+CONFIRMATION_PERSONAL_BUDGET = "Presupuesto: tu presupuesto personal, del {start} al {end}"
+# How a day is written in a message: 17/10/2026, and 1/10/2026 without a leading zero.
+DAY_FORMAT = "{day}/{month}/{year}"
+# How an amount is written: $3.500, and $3.500,50 when it has cents.
+THOUSANDS_SEPARATOR = "."
+DECIMAL_SEPARATOR = ","
+CURRENCY_SYMBOLS: Mapping[str, str] = {"ARS": "$", "USD": "US$"}
+
+# What the assistant cannot do yet answers a fixed text (ADR 0018; roadmap, entrega 2).
+CANNOT_REGISTER_YET = "Eso todavía no lo sé anotar. Por ahora me manejo con gastos e ingresos."
+CANNOT_ANSWER_YET = (
+    "Todavía no sé responder preguntas. Por ahora anoto gastos e ingresos, y tus saldos los ves "
+    "en el dashboard."
+)
+# A message of no class: a greeting, or anything the model cannot place.
+ASK_FOR_DETAILS = (
+    "¡Hola! Soy Platita y te ayudo a llevar las cuentas. Contame qué gastaste o qué cobraste, y "
+    "con qué cuenta. Por ejemplo: «gasté 3500 en el súper con Mercado Pago»."
+)

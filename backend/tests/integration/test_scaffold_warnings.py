@@ -31,7 +31,7 @@ def test_with_the_chat_on_the_api_says_so_when_it_starts(database_url: str) -> N
     # Case C3-07.
     stream = io.StringIO()
 
-    create_app(_settings(database_url, WEB_CHAT_ENABLED="true"), log_stream=stream, llm=FakeLLM())
+    create_app(_settings(database_url, WEB_CHAT_ENABLED="true"), log_stream=stream)
 
     [line] = events_of(stream, "dev.scaffold_enabled")
     assert line["level"] == "WARNING"

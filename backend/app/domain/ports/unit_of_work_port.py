@@ -5,11 +5,13 @@ from typing import Protocol, Self
 
 from app.domain.ports.account_repository_port import AccountRepositoryPort
 from app.domain.ports.budget_period_repository_port import BudgetPeriodRepositoryPort
+from app.domain.ports.category_repository_port import CategoryRepositoryPort
 from app.domain.ports.chat_message_repository_port import ChatMessageRepositoryPort
 from app.domain.ports.family_group_repository_port import FamilyGroupRepositoryPort
 from app.domain.ports.financial_profile_repository_port import FinancialProfileRepositoryPort
 from app.domain.ports.inbound_message_repository_port import InboundMessageRepositoryPort
 from app.domain.ports.outbound_message_repository_port import OutboundMessageRepositoryPort
+from app.domain.ports.pending_repository_port import PendingRepositoryPort
 from app.domain.ports.session_repository_port import SessionRepositoryPort
 from app.domain.ports.transaction_repository_port import TransactionRepositoryPort
 from app.domain.ports.transfer_repository_port import TransferRepositoryPort
@@ -27,6 +29,12 @@ class UnitOfWorkPort(Protocol):
 
     @property
     def budget_periods(self) -> BudgetPeriodRepositoryPort: ...
+
+    @property
+    def categories(self) -> CategoryRepositoryPort: ...
+
+    @property
+    def pendings(self) -> PendingRepositoryPort: ...
 
     @property
     def financial_profiles(self) -> FinancialProfileRepositoryPort: ...

@@ -351,7 +351,7 @@ Se usa cuando falta algo que **depende de una decisión del usuario** — la cue
 
 Un movimiento que llega completo también pasa por un pendiente, en un lote de uno: el pendiente se promueve y el lote se cierra en la misma operación, con la confirmación como `confirmation_message_id`. Así hay un solo camino para todo movimiento, y cualquier confirmación se puede citar para corregirlo (§ 15).
 
-Cuando el usuario responde, se completa y se promueve a `TRANSACTION` (quedando enlazada por `resulting_transaction_id`). `expires_at` evita que se acumulen pendientes eternos de mensajes que nunca se contestaron.
+Cuando el usuario responde, se completa y se promueve a `TRANSACTION` (quedando enlazada por `resulting_transaction_id`). `expires_at` evita que se acumulen pendientes eternos de mensajes que nunca se contestaron. Un pendiente vence a las 24 horas de creado: es la ventana en la que WhatsApp deja escribirle al usuario con texto libre desde su último mensaje (§ 11), así que el recordatorio previo entra siempre en ella.
 
 **Un pendiente también puede ser una transferencia o una compra con tarjeta.** Las dos se
 confirman conversando igual que un gasto (§ 13): a una transferencia le puede faltar la cuenta

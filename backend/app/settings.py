@@ -38,6 +38,8 @@ class Settings:
     queue_max_wait_minutes: int = DEFAULT_QUEUE_MAX_WAIT_MINUTES
     # How long a message stays taken by one worker (ADR 0010).
     worker_lock_seconds: int = DEFAULT_WORKER_LOCK_SECONDS
+    # Only the worker calls the model, so only the worker requires it. Never logged.
+    openai_api_key: str | None = None
 
 
 def _read(environ: Mapping[str, str], name: EnvVar, default: str = "") -> str:
@@ -107,4 +109,12 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
         worker_lock_seconds=_read_positive_integer(
             environ, EnvVar.WORKER_LOCK_SECONDS, DEFAULT_WORKER_LOCK_SECONDS
         ),
+        openai_api_key=_read(environ, EnvVar.OPENAI_API_KEY) or None,
     )
+
+
+def require_openai_api_key(settings: Settings) -> str:
+    """The key of the model, for the process that calls it: without it, it does not start."""
+    if settings.openai_api_key is None:
+        raise SettingsError(messages.MISSING_ENV_VAR.format(name=EnvVar.OPENAI_API_KEY))
+    return settings.openai_api_key
