@@ -63,8 +63,9 @@ número solo, como "2000", no dice ninguna moneda. Con eso, el código sigue una
 
 1. La mención tiene que estar escrita en el mensaje. Una cuenta que el modelo deduce, por
    ejemplo de "por transferencia", no cuenta como nombrada.
-2. Si el mensaje tiene todas las palabras del nombre de una sola cuenta, como "galicia pesos",
-   es esa.
+2. Si la mención tiene todas las palabras del nombre de una sola cuenta, como "galicia pesos",
+   es esa. Se mira la mención y no el resto del mensaje: en "con MP porque no tenía efectivo",
+   la cuenta es Mercado Pago, no Efectivo.
 3. Si no, las candidatas son las cuentas que la mención nombra por una palabra de su nombre,
    como "galicia", por sus iniciales, como "MP" por Mercado Pago, o por su tipo, como "el
    banco", "la billetera" o "efectivo".

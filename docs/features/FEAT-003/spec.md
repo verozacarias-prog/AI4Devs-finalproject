@@ -75,7 +75,7 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 - **CA-6.** La fecha es el día en que el usuario escribió, en su zona horaria, salvo que el mensaje diga otra.
 - **CA-7.** La moneda es la de la cuenta que nombra el mensaje.
 - **CA-8.** La cuenta y la categoría se reconocen por su nombre sin distinguir mayúsculas.
-- **CA-9.** La cuenta la decide el código, con la mención y la moneda que devuelve el modelo: la mención tiene que estar escrita en el mensaje; todas las palabras del nombre de una sola cuenta la nombran; si no, la nombran una palabra de su nombre, sus iniciales o su tipo, y una moneda dicha deja solo las cuentas en esa moneda; con exactamente una candidata se usa esa, y con ninguna o varias no se registra ([reglas de dominio § 1](../../reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma)).
+- **CA-9.** La cuenta la decide el código, con la mención y la moneda que devuelve el modelo: la mención tiene que estar escrita en el mensaje; una mención con todas las palabras del nombre de una sola cuenta la nombra; si no, la nombran una palabra de su nombre, sus iniciales o su tipo, y una moneda dicha deja solo las cuentas en esa moneda; con exactamente una candidata se usa esa, y con ninguna o varias no se registra ([reglas de dominio § 1](../../reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma)).
 - **CA-10.** Un gasto o un ingreso con fecha anterior al alta de su cuenta no se registra, y la respuesta explica que la cuenta registra desde su alta y que eso ya está en el saldo con que se dio de alta ([reglas de dominio § 2](../../reglas-de-dominio.md#2-cuentas-y-saldo-calculado)).
 - **CA-11.** El movimiento queda con `source = 'manual'`.
 - **CA-12.** La confirmación dice si fue un gasto o un ingreso, el monto y la cuenta, y lista la fecha, la moneda, la categoría y el presupuesto.
@@ -138,9 +138,10 @@ de 2026, 2026-10-17T18:00:00Z.
 ### Corte 1 — camino feliz
 
 - **Aprobado por:** Veronica Zacarias 16/10/2026
-- **C1-17 a C1-23, sumados con la prueba contra el modelo real, que registró dos gastos en una cuenta que el mensaje no decía:** Veronica Zacarias 16/10/2026
+- **C1-17 a C1-23, sumados con la prueba contra el modelo real, que registró dos gastos en una cuenta que el mensaje no decía:** Veronica Zacarias 17/10/2026
 - **C1-24, el motivo de un gasto anterior al alta de su cuenta, sumado con la prueba contra el modelo real:** Veronica Zacarias 17/10/2026
-- **Total:** 24 casos, 16 unitarios y 8 de integración.
+- **C1-25, el nombre de otra cuenta fuera de la mención, sumado con la segunda revisión de pr-reviewer:** Veronica Zacarias 17/10/2026
+- **Total:** 25 casos, 17 unitarios y 8 de integración.
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
@@ -168,6 +169,7 @@ de 2026, 2026-10-17T18:00:00Z.
 | C1-22 | El tipo sin moneda no elige entre dos cuentas | Unitario | CA-9 |
 | C1-23 | El adaptador devuelve la moneda que dice el mensaje | Unitario | CA-9 |
 | C1-24 | Un gasto anterior al alta de su cuenta explica por qué no se anota | Unitario | CA-10 |
+| C1-25 | El nombre de otra cuenta fuera de la mención no cambia la cuenta | Unitario | CA-9 |
 
 #### C1-01 · Un gasto que nombra la cuenta queda registrado
 
@@ -435,6 +437,16 @@ de 2026, 2026-10-17T18:00:00Z.
   diste de alta. Lo dejo sin anotar para no contarlo dos veces.", con
   `response_kind = 'fixed_text'`.
 - **Test:** `tests/unit/test_answer_message.py::test_an_expense_before_its_account_was_opened_says_why_it_is_not_registered`
+
+#### C1-25 · El nombre de otra cuenta fuera de la mención no cambia la cuenta
+
+- **Sale de:** CA-9 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía, "pagué 3500 en el súper con MP porque no tenía efectivo", y el
+  modelo responde un gasto de 3500, con cuenta "MP", categoría "Supermercado" y sin moneda,
+- **cuando** se procesa,
+- **entonces** el movimiento queda en Mercado Pago, y no en Efectivo, aunque "efectivo" es el
+  nombre completo de una cuenta y está en el mensaje.
+- **Test:** `tests/unit/test_answer_message.py::test_the_name_of_another_account_outside_the_mention_does_not_change_the_account`
 
 ### Corte 2 — errores y lo que exige confirmación
 

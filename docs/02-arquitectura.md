@@ -190,7 +190,7 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
         - queue_health_port.py
       /services          # domain services: business rules that belong to no single entity, as functions, one folder per topic
         /accounts        # the balance of an account
-        /transactions    # whether a movement can be registered without asking, and its confirmation
+        /transactions    # which account a message names, whether a movement can be registered without asking, and its confirmation
         /dates           # which day it is for a user, in the time zone of that user
       errors.py          # the errors a business rule foresees, each with a stable code and a category; the only file loose in domain/
     /adapters
