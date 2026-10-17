@@ -21,6 +21,7 @@ from app.domain.use_cases.messages.claim_next_message import ClaimNextMessage
 from app.settings import load_settings
 from tests.support.chat_data import FIXED_REPLY, NOW, inbound, seed, status_of, user_id
 from tests.support.doubles import FixedClock
+from tests.support.fake_llm import FakeLLM
 
 pytestmark = pytest.mark.integration
 
@@ -56,7 +57,7 @@ def test_the_worker_answers_a_pending_message_with_the_fixed_text(
         {"DATABASE_URL": seeded_database_url, "APP_ENV": "local", "APP_VERSION": "test"}
     )
 
-    create_worker(settings, FixedClock(NOW), log_stream=io.StringIO()).run_round()
+    create_worker(settings, FixedClock(NOW), log_stream=io.StringIO(), llm=FakeLLM()).run_round()
 
     with engine.connect() as connection:
         answered = connection.execute(

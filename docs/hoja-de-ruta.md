@@ -49,14 +49,14 @@ la [línea de corte de la entrega final](#alcance-de-la-entrega-final).
 | Que la entrada de desarrollo avise cuando el navegador no guarda la sesión, en vez de volver a la lista sin decir nada | La cookie de la sesión es `Secure`, y sobre `http` en la propia máquina Safari no la guarda: la sesión se abre, el siguiente pedido llega sin ella, y la persona no sabe por qué no entró. El README ya avisa qué navegadores usar. Se decidió el 14 de octubre de 2026 |
 | La pantalla de presupuesto y `GET /budgets/{budget_id}`, y los formularios de carga del dashboard | La pantalla de cuentas ya muestra el efecto de un gasto. El reparto por ticket está en [6. Tickets](06-tickets.md) |
 
-**Lo que todavía no tiene código responde un texto fijo.** La clasificación reconoce las tres
+**Lo que el asistente todavía no sabe hacer responde un texto fijo.** La clasificación reconoce las tres
 clases y todos los tipos de registro desde el inicio. Cuando el mensaje pide algo de la segunda
 tabla, el asistente no llama al modelo otra vez ni cobra cuota:
 
-- Un registro que no es un gasto ni un ingreso: "Todavía no puedo registrar eso. Por ahora
-  registro gastos e ingresos."
-- Una consulta o un consejo: "Todavía no puedo responder preguntas. Por ahora registro gastos e
-  ingresos, y tus saldos están en el dashboard."
+- Un registro que no es un gasto ni un ingreso: "Eso todavía no lo sé anotar. Por ahora me
+  manejo con gastos e ingresos."
+- Una consulta o un consejo: "Todavía no sé responder preguntas. Por ahora anoto gastos e
+  ingresos, y tus saldos los ves en el dashboard."
 
 **Si el tiempo no alcanza, se cae lo último de esta lista y no lo primero:** el camino feliz de
 un gasto y de un ingreso con la pantalla de cuentas; y los pendientes y la categoría nueva.

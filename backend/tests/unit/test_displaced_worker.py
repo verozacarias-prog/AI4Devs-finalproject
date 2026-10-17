@@ -14,6 +14,7 @@ from app.adapters.observability.logs import configure_logging
 from app.domain.entities.inbound_message import InboundMessage, InboundStatus, Provider
 from app.domain.use_cases.messages.process_next_message import ProcessNextMessage
 from tests.support.doubles import FixedClock, InMemoryUnitOfWork
+from tests.support.fake_llm import FakeLLM
 from tests.support.log_lines import events_of
 
 NOW = datetime(2026, 10, 15, 18, 0, 0, tzinfo=UTC)
@@ -43,7 +44,7 @@ def test_a_displaced_worker_leaves_no_answered_line() -> None:
     stream = io.StringIO()
     configure_logging(stream, "test", "worker")
     worker = MessageWorker(
-        lambda: ProcessNextMessage(unit_of_work, FixedClock(NOW), LOCK), in_full=False
+        lambda: ProcessNextMessage(unit_of_work, FixedClock(NOW), LOCK, FakeLLM()), in_full=False
     )
 
     worker.run_round()

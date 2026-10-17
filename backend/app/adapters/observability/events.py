@@ -10,6 +10,9 @@ from enum import StrEnum
 
 # What replaces anything the filter does not let through.
 REDACTED = "[redacted]"
+# The provider and the model of a call whose adapter reported no usage, which only a test double
+# does: the columns of LLM_CALL cannot be empty.
+UNREPORTED_USAGE = "unreported"
 
 # The shape each part of a log line must have to pass the filter.
 EVENT_NAME_PATTERN = r"[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+"

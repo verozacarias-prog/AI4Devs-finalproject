@@ -7,8 +7,8 @@ from app.domain.entities.account import Account
 from app.domain.entities.budget_period import first_period
 from app.domain.entities.financial_profile import FinancialProfile
 from app.domain.entities.user import OnboardingStatus, User
-from app.domain.local_date import local_today
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
+from app.domain.services.dates.local_date import local_today
 from app.shared.clock import Clock
 
 

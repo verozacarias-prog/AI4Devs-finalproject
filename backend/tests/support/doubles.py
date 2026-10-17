@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import replace
-from datetime import datetime
+from datetime import date, datetime
 from types import TracebackType
 from typing import TYPE_CHECKING, Self
 
@@ -17,9 +17,11 @@ from app.domain.entities.user import User
 from app.domain.errors import ConflictError, ErrorCode
 
 if TYPE_CHECKING:
+    from app.domain.entities.category import Category
     from app.domain.entities.chat_message import ChatMessage
     from app.domain.entities.inbound_message import InboundMessage
     from app.domain.entities.outbound_message import OutboundMessage
+    from app.domain.entities.pending_transaction import PendingBatch, PendingTransaction
     from app.domain.entities.transaction import Transaction
     from app.domain.entities.transfer import Transfer
 
@@ -67,6 +69,42 @@ class InMemoryBudgetPeriods:
 
     def add(self, period: BudgetPeriod) -> None:
         self.added.append(period)
+
+    def list_covering(self, user_id: uuid.UUID, day: date) -> list[BudgetPeriod]:
+        # The periods of the groups of the user are a rule of the query: the integration tests
+        # check them against PostgreSQL.
+        return [
+            period
+            for period in self.added
+            if period.user_id == user_id and period.period_start <= day <= period.period_end
+        ]
+
+
+class InMemoryCategories:
+    def __init__(self) -> None:
+        self.added: list[Category] = []
+
+    def add(self, category: Category) -> None:
+        self.added.append(category)
+
+    def list_available(self, user_id: uuid.UUID) -> list[Category]:
+        return [
+            category
+            for category in self.added
+            if category.user_id is None or category.user_id == user_id
+        ]
+
+
+class InMemoryPendings:
+    def __init__(self) -> None:
+        self.batches: list[PendingBatch] = []
+        self.added: list[PendingTransaction] = []
+
+    def add_batch(self, batch: PendingBatch) -> None:
+        self.batches.append(batch)
+
+    def add(self, pending: PendingTransaction) -> None:
+        self.added.append(pending)
 
 
 class InMemoryFinancialProfiles:
@@ -220,6 +258,8 @@ class InMemoryUnitOfWork:
         self.users = InMemoryUsers()
         self.accounts = InMemoryAccounts()
         self.budget_periods = InMemoryBudgetPeriods()
+        self.categories = InMemoryCategories()
+        self.pendings = InMemoryPendings()
         self.financial_profiles = InMemoryFinancialProfiles()
         self.family_groups = InMemoryFamilyGroups()
         self.sessions = InMemorySessions()

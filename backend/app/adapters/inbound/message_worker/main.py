@@ -12,12 +12,12 @@ from app.settings import SettingsError, load_settings
 
 def main() -> int:
     try:
-        settings = load_settings(os.environ)
+        worker = create_worker(load_settings(os.environ))
     except SettingsError as error:
         # Its message names the variable and never a value, so it is all that is written.
         sys.stderr.write(str(error) + LINE_END)
         return EXIT_FAILED
-    create_worker(settings).run_forever()
+    worker.run_forever()
 
 
 if __name__ == "__main__":

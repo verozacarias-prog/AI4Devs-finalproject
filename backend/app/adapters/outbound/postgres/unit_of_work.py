@@ -9,6 +9,7 @@ from app.adapters.outbound.postgres.repositories.accounts import PostgresAccount
 from app.adapters.outbound.postgres.repositories.budget_periods import (
     PostgresBudgetPeriodRepository,
 )
+from app.adapters.outbound.postgres.repositories.categories import PostgresCategoryRepository
 from app.adapters.outbound.postgres.repositories.chat_messages import PostgresChatMessageRepository
 from app.adapters.outbound.postgres.repositories.family_groups import PostgresFamilyGroupRepository
 from app.adapters.outbound.postgres.repositories.financial_profiles import (
@@ -20,17 +21,20 @@ from app.adapters.outbound.postgres.repositories.inbound_messages import (
 from app.adapters.outbound.postgres.repositories.outbound_messages import (
     PostgresOutboundMessageRepository,
 )
+from app.adapters.outbound.postgres.repositories.pendings import PostgresPendingRepository
 from app.adapters.outbound.postgres.repositories.sessions import PostgresSessionRepository
 from app.adapters.outbound.postgres.repositories.transactions import PostgresTransactionRepository
 from app.adapters.outbound.postgres.repositories.transfers import PostgresTransferRepository
 from app.adapters.outbound.postgres.repositories.users import PostgresUserRepository
 from app.domain.ports.account_repository_port import AccountRepositoryPort
 from app.domain.ports.budget_period_repository_port import BudgetPeriodRepositoryPort
+from app.domain.ports.category_repository_port import CategoryRepositoryPort
 from app.domain.ports.chat_message_repository_port import ChatMessageRepositoryPort
 from app.domain.ports.family_group_repository_port import FamilyGroupRepositoryPort
 from app.domain.ports.financial_profile_repository_port import FinancialProfileRepositoryPort
 from app.domain.ports.inbound_message_repository_port import InboundMessageRepositoryPort
 from app.domain.ports.outbound_message_repository_port import OutboundMessageRepositoryPort
+from app.domain.ports.pending_repository_port import PendingRepositoryPort
 from app.domain.ports.session_repository_port import SessionRepositoryPort
 from app.domain.ports.transaction_repository_port import TransactionRepositoryPort
 from app.domain.ports.transfer_repository_port import TransferRepositoryPort
@@ -47,6 +51,8 @@ class SqlAlchemyUnitOfWork:
     users: UserRepositoryPort
     accounts: AccountRepositoryPort
     budget_periods: BudgetPeriodRepositoryPort
+    categories: CategoryRepositoryPort
+    pendings: PendingRepositoryPort
     financial_profiles: FinancialProfileRepositoryPort
     family_groups: FamilyGroupRepositoryPort
     sessions: SessionRepositoryPort
@@ -67,6 +73,8 @@ class SqlAlchemyUnitOfWork:
         self.users = PostgresUserRepository(connection)
         self.accounts = PostgresAccountRepository(connection)
         self.budget_periods = PostgresBudgetPeriodRepository(connection)
+        self.categories = PostgresCategoryRepository(connection)
+        self.pendings = PostgresPendingRepository(connection)
         self.financial_profiles = PostgresFinancialProfileRepository(connection)
         self.family_groups = PostgresFamilyGroupRepository(connection)
         self.sessions = PostgresSessionRepository(connection)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Final, Literal
 
 
 class Environment(StrEnum):
@@ -24,6 +25,7 @@ class EnvVar(StrEnum):
     WEB_CHAT_ENABLED = "WEB_CHAT_ENABLED"
     QUEUE_MAX_WAIT_MINUTES = "QUEUE_MAX_WAIT_MINUTES"
     WORKER_LOCK_SECONDS = "WORKER_LOCK_SECONDS"
+    OPENAI_API_KEY = "OPENAI_API_KEY"
 
 
 class ProcessName(StrEnum):
@@ -78,6 +80,25 @@ WORKER_IDLE_SECONDS = 0.25
 # How long a pending message may wait before GET /queuez fails (docs/04-api.md), unless
 # QUEUE_MAX_WAIT_MINUTES says otherwise.
 DEFAULT_QUEUE_MAX_WAIT_MINUTES = 10
+
+# The language model (ADR 0025). Prices are in dollars per million tokens, input and output, and
+# give the estimated cost of each call when it is recorded (ADR 0023).
+LLM_PROVIDER = "openai"
+LLM_MODEL = "gpt-5.4-mini"
+LLM_REASONING_EFFORT: Final[Literal["low"]] = "low"
+LLM_PRICES_USD_PER_MILLION_TOKENS: dict[str, tuple[str, str]] = {"gpt-5.4-mini": ("0.75", "4.50")}
+# Shorter than the lock of a message, so the call ends before another worker can take it.
+LLM_TIMEOUT_SECONDS = 30
+# The worker retries a failed round itself (ADR 0010): the SDK does not retry on its own.
+LLM_SDK_RETRIES = 0
+TOKENS_PER_MILLION = 1_000_000
+
+# The currencies a message can say, as the model returns them (domain rules, § 1).
+MESSAGE_CURRENCIES = ("ARS", "USD")
+
+# How long a pending waits for its answer before it expires: the WhatsApp window for free text,
+# so the reminder before it always fits (domain rules, § 5).
+PENDING_VALIDITY_HOURS = 24
 
 # What an operation command returns to the shell.
 EXIT_OK = 0

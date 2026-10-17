@@ -9,10 +9,10 @@ from decimal import Decimal
 
 import pytest
 
-from app.domain.account_balance import balance_of
 from app.domain.entities.account import Account, AccountType
 from app.domain.entities.transaction import Transaction, TransactionType
 from app.domain.errors import InconsistentDataError
+from app.domain.services.accounts.account_balance import balance_of
 
 
 def test_without_an_exchange_rate_the_balance_is_not_computed() -> None:

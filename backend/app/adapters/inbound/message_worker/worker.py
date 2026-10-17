@@ -15,13 +15,17 @@ from typing import NoReturn, TextIO
 
 from app.adapters.observability.errors import log_error
 from app.adapters.observability.events import Event, Field, LoggerName
+from app.adapters.observability.llm_calls import RecordedLLM
 from app.adapters.observability.logs import configure_logging, message_id_var, user_id_var
+from app.adapters.outbound.llm_client.openai_llm import OpenAILLM
 from app.adapters.outbound.postgres.connection import create_db_engine
+from app.adapters.outbound.postgres.repositories.llm_calls import PostgresLlmCallLog
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
 from app.constants import MILLISECONDS_PER_SECOND, WORKER_IDLE_SECONDS, Environment, ProcessName
 from app.domain.entities.inbound_message import InboundMessage
+from app.domain.ports.llm_port import LLMPort
 from app.domain.use_cases.messages.process_next_message import ProcessNextMessage, RoundOutcome
-from app.settings import Settings
+from app.settings import Settings, require_openai_api_key
 from app.shared.clock import Clock, SystemClock
 
 logger = logging.getLogger(LoggerName.WORKER)
@@ -68,16 +72,23 @@ class MessageWorker:
 
 
 def create_worker(
-    settings: Settings, clock: Clock | None = None, log_stream: TextIO | None = None
+    settings: Settings,
+    clock: Clock | None = None,
+    log_stream: TextIO | None = None,
+    llm: LLMPort | None = None,
 ) -> MessageWorker:
+    """Only a test passes `llm`, to replace the provider: it is wrapped all the same."""
     configure_logging(log_stream or sys.stdout, settings.version, ProcessName.WORKER)
     if settings.dev_entry_enabled or settings.web_chat_enabled:
         # Said at every start, so that nobody leaves it on without knowing (ADR 0016).
         logger.warning(Event.DEV_SCAFFOLD_ENABLED)
+    model = llm or OpenAILLM(require_openai_api_key(settings))
     engine = create_db_engine(settings.database_url)
+    # Every call is recorded: no entry point injects the model without its wrapper (ADR 0023).
+    recorded = RecordedLLM(model, PostgresLlmCallLog(engine))
     worker_clock = clock or SystemClock()
     lock = timedelta(seconds=settings.worker_lock_seconds)
     return MessageWorker(
-        lambda: ProcessNextMessage(SqlAlchemyUnitOfWork(engine), worker_clock, lock),
+        lambda: ProcessNextMessage(SqlAlchemyUnitOfWork(engine), worker_clock, lock, recorded),
         in_full=settings.environment is Environment.LOCAL,
     )

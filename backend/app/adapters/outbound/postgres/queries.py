@@ -93,6 +93,68 @@ SELECT_TRANSFERS_BY_USER = """
     WHERE user_id = :user_id
 """
 
+INSERT_TRANSACTION = """
+    INSERT INTO transaction (
+        id, user_id, account_id, budget_period_id, category_id, amount, currency,
+        exchange_rate, type, source, description, transaction_date
+    ) VALUES (
+        :id, :user_id, :account_id, :budget_period_id, :category_id, :amount, :currency,
+        :exchange_rate, :type, :source, :description, :transaction_date
+    )
+"""
+
+# The own periods of the user and those of the groups they are in now, that cover that day.
+SELECT_PERIODS_COVERING = """
+    SELECT id, user_id, family_group_id, period_type, period_start, period_end,
+           primary_currency, estimated_income, status
+      FROM budget_period
+     WHERE :day BETWEEN period_start AND period_end
+       AND (
+           user_id = :user_id
+           OR family_group_id IN (
+               SELECT family_group_id FROM user_group
+                WHERE user_id = :user_id AND left_at IS NULL
+           )
+       )
+"""
+
+SELECT_CATEGORIES_AVAILABLE = """
+    SELECT id, name, kind, user_id
+      FROM category
+     WHERE user_id IS NULL OR user_id = :user_id
+"""
+
+INSERT_PENDING_BATCH = """
+    INSERT INTO pending_batch (
+        id, user_id, source, awaiting_reply, question_message_id, confirmation_message_id,
+        status, created_at
+    ) VALUES (
+        :id, :user_id, :source, :awaiting_reply, :question_message_id,
+        :confirmation_message_id, :status, :created_at
+    )
+"""
+
+INSERT_PENDING_TRANSACTION = """
+    INSERT INTO pending_transaction (
+        id, user_id, intent, parsed_data, missing_fields, source, batch_id, position,
+        resulting_transaction_id, status, resolved_by, expires_at, created_at
+    ) VALUES (
+        :id, :user_id, :intent, CAST(:parsed_data AS jsonb), :missing_fields, :source,
+        :batch_id, :position, :resulting_transaction_id, :status, :resolved_by, :expires_at,
+        :created_at
+    )
+"""
+
+INSERT_LLM_CALL = """
+    INSERT INTO llm_call (
+        id, inbound_message_id, purpose, provider, model, prompt_version, input_tokens,
+        output_tokens, duration_ms, estimated_cost_usd, outcome
+    ) VALUES (
+        :id, :inbound_message_id, :purpose, :provider, :model, :prompt_version, :input_tokens,
+        :output_tokens, :duration_ms, :estimated_cost_usd, :outcome
+    )
+"""
+
 INSERT_BUDGET_PERIOD = """
     INSERT INTO budget_period (
         id, user_id, family_group_id, period_type, period_start, period_end,

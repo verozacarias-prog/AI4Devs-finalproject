@@ -55,6 +55,28 @@ usuario. Si el nombre coincide con más de una cuenta, como "la Galicia" con "Ga
 "Galicia USD", primero se pregunta la cuenta (§ 2) y la moneda sale de la que el usuario elige.
 La moneda sigue a la vista en la confirmación, donde se corrige como cualquier default.
 
+**Qué cuenta como nombrar una cuenta.** El modelo entiende el lenguaje, y el código decide la
+cuenta. El modelo devuelve la mención, que son las palabras con que el mensaje se refiere a la
+cuenta, como "galicia", "MP" o "el banco", y la moneda, solo si el mensaje la dice de alguna
+forma: "pesos", "lucas", "mangos" o "$" son pesos, y "dólares", "verdes" o "USD", dólares. Un
+número solo, como "2000", no dice ninguna moneda. Con eso, el código sigue una regla fija:
+
+1. La mención tiene que estar escrita en el mensaje. Una cuenta que el modelo deduce, por
+   ejemplo de "por transferencia", no cuenta como nombrada.
+2. Si la mención tiene todas las palabras del nombre de una sola cuenta, como "galicia pesos",
+   es esa. Se mira la mención y no el resto del mensaje: en "con MP porque no tenía efectivo",
+   la cuenta es Mercado Pago, no Efectivo.
+3. Si no, las candidatas son las cuentas que la mención nombra por una palabra de su nombre,
+   como "galicia", por sus iniciales, como "MP" por Mercado Pago, o por su tipo, como "el
+   banco", "la billetera" o "efectivo".
+4. Si el mensaje dice la moneda, quedan solo las candidatas en esa moneda.
+5. Con exactamente una candidata, el movimiento va a esa cuenta. Con ninguna o con más de una,
+   se pregunta (§ 5).
+
+Así, "gasté 2000 mangos con galicia" va a Galicia pesos, y "gasté 2000 con galicia" pregunta si
+es Galicia pesos o Galicia USD. Un apodo que el usuario le da a una cuenta, como "la naranja",
+no se reconoce: se pregunta.
+
 **Un movimiento, un presupuesto.** Todo gasto o ingreso se imputa entero a un solo período,
 aunque el usuario lo use para más de un fin, como un celular que sirve para la actividad y para lo
 personal. El asistente no lo divide ni propone dividirlo: el usuario elige a qué presupuesto va.
@@ -349,7 +371,9 @@ Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-princip
 
 Se usa cuando falta algo que **depende de una decisión del usuario** — la cuenta, el monto, el tipo si es ambiguo, o la confirmación del presupuesto; no se crea un pendiente por una fecha o una moneda ausente, porque esas se resuelven solas.
 
-Cuando el usuario responde, se completa y se promueve a `TRANSACTION` (quedando enlazada por `resulting_transaction_id`). `expires_at` evita que se acumulen pendientes eternos de mensajes que nunca se contestaron.
+Un movimiento que llega completo también pasa por un pendiente, en un lote de uno: el pendiente se promueve y el lote se cierra en la misma operación, con la confirmación como `confirmation_message_id`. Así hay un solo camino para todo movimiento, y cualquier confirmación se puede citar para corregirlo (§ 15).
+
+Cuando el usuario responde, se completa y se promueve a `TRANSACTION` (quedando enlazada por `resulting_transaction_id`). `expires_at` evita que se acumulen pendientes eternos de mensajes que nunca se contestaron. Un pendiente vence a las 24 horas de creado: es la ventana en la que WhatsApp deja escribirle al usuario con texto libre desde su último mensaje (§ 11), así que el recordatorio previo entra siempre en ella.
 
 **Un pendiente también puede ser una transferencia o una compra con tarjeta.** Las dos se
 confirman conversando igual que un gasto (§ 13): a una transferencia le puede faltar la cuenta
