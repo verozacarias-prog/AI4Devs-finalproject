@@ -25,6 +25,10 @@ class EnvVar(StrEnum):
     WEB_CHAT_ENABLED = "WEB_CHAT_ENABLED"
     QUEUE_MAX_WAIT_MINUTES = "QUEUE_MAX_WAIT_MINUTES"
     WORKER_LOCK_SECONDS = "WORKER_LOCK_SECONDS"
+    LLM_TIMEOUT_SECONDS = "LLM_TIMEOUT_SECONDS"
+    MESSAGE_MAX_ATTEMPTS = "MESSAGE_MAX_ATTEMPTS"
+    MESSAGE_RETRY_FIRST_WAIT_SECONDS = "MESSAGE_RETRY_FIRST_WAIT_SECONDS"
+    MESSAGE_RETRY_MAX_WAIT_SECONDS = "MESSAGE_RETRY_MAX_WAIT_SECONDS"
     OPENAI_API_KEY = "OPENAI_API_KEY"
 
 
@@ -80,6 +84,13 @@ WORKER_IDLE_SECONDS = 0.25
 # How long a pending message may wait before GET /queuez fails (docs/04-api.md), unless
 # QUEUE_MAX_WAIT_MINUTES says otherwise.
 DEFAULT_QUEUE_MAX_WAIT_MINUTES = 10
+# The retries of a message whose call to the model failed (ADR 0010, point 4): how many times
+# it is tried, and how long it waits before each new attempt, growing by a factor up to a most.
+# MESSAGE_MAX_ATTEMPTS and the two MESSAGE_RETRY_* variables change them.
+DEFAULT_MESSAGE_MAX_ATTEMPTS = 3
+DEFAULT_MESSAGE_RETRY_FIRST_WAIT_SECONDS = 30
+DEFAULT_MESSAGE_RETRY_MAX_WAIT_SECONDS = 120
+MESSAGE_RETRY_WAIT_GROWTH = 4
 
 # The language model (ADR 0025). Prices are in dollars per million tokens, input and output, and
 # give the estimated cost of each call when it is recorded (ADR 0023).
@@ -87,8 +98,10 @@ LLM_PROVIDER = "openai"
 LLM_MODEL = "gpt-5.4-mini"
 LLM_REASONING_EFFORT: Final[Literal["low"]] = "low"
 LLM_PRICES_USD_PER_MILLION_TOKENS: dict[str, tuple[str, str]] = {"gpt-5.4-mini": ("0.75", "4.50")}
-# Shorter than the lock of a message, so the call ends before another worker can take it.
-LLM_TIMEOUT_SECONDS = 30
+# Shorter than the lock of a message, so the call ends before another worker can take it: with
+# a lock not longer than this, no process starts (ADR 0010). LLM_TIMEOUT_SECONDS changes it.
+# Twenty seconds keeps the reply under the 30 of the p95 in docs/operacion.md.
+DEFAULT_LLM_TIMEOUT_SECONDS = 20
 # The worker retries a failed round itself (ADR 0010): the SDK does not retry on its own.
 LLM_SDK_RETRIES = 0
 TOKENS_PER_MILLION = 1_000_000

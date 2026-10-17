@@ -9,6 +9,7 @@ from app.adapters.outbound.postgres.repositories.accounts import PostgresAccount
 from app.adapters.outbound.postgres.repositories.budget_periods import (
     PostgresBudgetPeriodRepository,
 )
+from app.adapters.outbound.postgres.repositories.budgets import PostgresBudgetRepository
 from app.adapters.outbound.postgres.repositories.categories import PostgresCategoryRepository
 from app.adapters.outbound.postgres.repositories.chat_messages import PostgresChatMessageRepository
 from app.adapters.outbound.postgres.repositories.family_groups import PostgresFamilyGroupRepository
@@ -28,6 +29,7 @@ from app.adapters.outbound.postgres.repositories.transfers import PostgresTransf
 from app.adapters.outbound.postgres.repositories.users import PostgresUserRepository
 from app.domain.ports.account_repository_port import AccountRepositoryPort
 from app.domain.ports.budget_period_repository_port import BudgetPeriodRepositoryPort
+from app.domain.ports.budget_repository_port import BudgetRepositoryPort
 from app.domain.ports.category_repository_port import CategoryRepositoryPort
 from app.domain.ports.chat_message_repository_port import ChatMessageRepositoryPort
 from app.domain.ports.family_group_repository_port import FamilyGroupRepositoryPort
@@ -51,6 +53,7 @@ class SqlAlchemyUnitOfWork:
     users: UserRepositoryPort
     accounts: AccountRepositoryPort
     budget_periods: BudgetPeriodRepositoryPort
+    budgets: BudgetRepositoryPort
     categories: CategoryRepositoryPort
     pendings: PendingRepositoryPort
     financial_profiles: FinancialProfileRepositoryPort
@@ -73,6 +76,7 @@ class SqlAlchemyUnitOfWork:
         self.users = PostgresUserRepository(connection)
         self.accounts = PostgresAccountRepository(connection)
         self.budget_periods = PostgresBudgetPeriodRepository(connection)
+        self.budgets = PostgresBudgetRepository(connection)
         self.categories = PostgresCategoryRepository(connection)
         self.pendings = PostgresPendingRepository(connection)
         self.financial_profiles = PostgresFinancialProfileRepository(connection)

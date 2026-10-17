@@ -18,6 +18,9 @@ class PostgresBudgetPeriodRepository:
     def add(self, period: BudgetPeriod) -> None:
         execute_write(self._connection, queries.INSERT_BUDGET_PERIOD, asdict(period))
 
+    def confirm(self, period_id: uuid.UUID) -> None:
+        execute_write(self._connection, queries.CONFIRM_BUDGET_PERIOD, {"period_id": period_id})
+
     def list_covering(self, user_id: uuid.UUID, day: date) -> list[BudgetPeriod]:
         rows = self._connection.execute(
             text(queries.SELECT_PERIODS_COVERING), {"user_id": user_id, "day": day}

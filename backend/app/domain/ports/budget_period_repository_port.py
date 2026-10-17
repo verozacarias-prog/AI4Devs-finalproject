@@ -16,3 +16,7 @@ class BudgetPeriodRepositoryPort(Protocol):
         Drafts included: whether a period is confirmed is for the use case to weigh.
         """
         ...
+
+    def confirm(self, period_id: uuid.UUID) -> None:
+        """A draft becomes confirmed, as it is: nothing else of it changes (domain rules, § 3)."""
+        ...

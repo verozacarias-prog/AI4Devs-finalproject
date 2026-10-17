@@ -118,6 +118,20 @@ SELECT_PERIODS_COVERING = """
        )
 """
 
+# A category of a user: the base catalog is created by the migrations.
+INSERT_CATEGORY = """
+    INSERT INTO category (id, name, user_id, is_base, kind)
+    VALUES (:id, :name, :user_id, FALSE, :kind)
+"""
+
+CONFIRM_BUDGET_PERIOD = "UPDATE budget_period SET status = 'confirmed' WHERE id = :period_id"
+
+SELECT_BUDGETS_BY_PERIOD = """
+    SELECT id, budget_period_id, category_id, limit_amount
+      FROM budget
+     WHERE budget_period_id = :period_id
+"""
+
 SELECT_CATEGORIES_AVAILABLE = """
     SELECT id, name, kind, user_id
       FROM category
@@ -137,12 +151,43 @@ INSERT_PENDING_BATCH = """
 INSERT_PENDING_TRANSACTION = """
     INSERT INTO pending_transaction (
         id, user_id, intent, parsed_data, missing_fields, source, batch_id, position,
-        resulting_transaction_id, status, resolved_by, expires_at, created_at
+        resulting_transaction_id, status, resolved_by, expires_at, created_at,
+        corrected_fields_count
     ) VALUES (
         :id, :user_id, :intent, CAST(:parsed_data AS jsonb), :missing_fields, :source,
         :batch_id, :position, :resulting_transaction_id, :status, :resolved_by, :expires_at,
-        :created_at
+        :created_at, :corrected_fields_count
     )
+"""
+
+# The batch of the user that awaits a reply, and its pending: in delivery 2, the only one.
+SELECT_AWAITING_PENDING = """
+    SELECT b.id AS batch_id, b.user_id AS batch_user_id, b.source AS batch_source,
+           b.awaiting_reply, b.question_message_id, b.confirmation_message_id,
+           b.status AS batch_status, b.created_at AS batch_created_at,
+           p.id, p.user_id, p.intent, p.parsed_data, p.missing_fields, p.source, p.batch_id,
+           p.position, p.resulting_transaction_id, p.status, p.resolved_by, p.expires_at,
+           p.created_at, p.corrected_fields_count
+      FROM pending_batch b
+      JOIN pending_transaction p ON p.batch_id = b.id
+     WHERE b.user_id = :user_id AND b.awaiting_reply
+     ORDER BY p.position
+     LIMIT 1
+"""
+
+UPDATE_PENDING_TRANSACTION = """
+    UPDATE pending_transaction
+       SET parsed_data = CAST(:parsed_data AS jsonb), missing_fields = :missing_fields,
+           resulting_transaction_id = :resulting_transaction_id, status = :status,
+           resolved_by = :resolved_by, corrected_fields_count = :corrected_fields_count
+     WHERE id = :id
+"""
+
+UPDATE_PENDING_BATCH = """
+    UPDATE pending_batch
+       SET awaiting_reply = :awaiting_reply, question_message_id = :question_message_id,
+           confirmation_message_id = :confirmation_message_id, status = :status
+     WHERE id = :id
 """
 
 INSERT_LLM_CALL = """
@@ -191,6 +236,8 @@ SELECT_GROUP_OWNED_BY = """
        AND g.name = :name
 """
 
+SELECT_GROUP_BY_ID = "SELECT id, name FROM family_group WHERE id = :group_id"
+
 # The messages of the channel (ADR 0010). The text of a message lives in its JSON, under this
 # key, both in the payload of what came in and in the content of what goes out. The queries
 # that read them take the keys as parameters, so these are the only place they are written.
@@ -223,7 +270,7 @@ CLAIM_NEXT_INBOUND_MESSAGE = """
      WHERE id = (
         SELECT candidate.id
           FROM inbound_message candidate
-         WHERE (candidate.status = 'pending'
+         WHERE ((candidate.status = 'pending' AND candidate.next_attempt_at <= :now)
                 OR (candidate.status = 'processing' AND candidate.locked_until <= :now))
            AND NOT EXISTS (
                 SELECT 1
@@ -266,6 +313,22 @@ SELECT EXISTS (
 MARK_INBOUND_MESSAGE_PROCESSED = """
     UPDATE inbound_message
        SET status = 'processed', processed_at = :at
+     WHERE id = :message_id AND status = 'processing' AND attempts = :attempts
+    RETURNING id
+"""
+
+# Another attempt later, by the same fencing token (ADR 0010, point 4).
+RETRY_INBOUND_MESSAGE_LATER = """
+    UPDATE inbound_message
+       SET status = 'pending', next_attempt_at = :next_attempt_at, locked_until = NULL
+     WHERE id = :message_id AND status = 'processing' AND attempts = :attempts
+    RETURNING id
+"""
+
+# Its attempts were used up: it is not taken again, and stops holding back the next ones.
+MARK_INBOUND_MESSAGE_FAILED = """
+    UPDATE inbound_message
+       SET status = 'failed', locked_until = NULL
      WHERE id = :message_id AND status = 'processing' AND attempts = :attempts
     RETURNING id
 """

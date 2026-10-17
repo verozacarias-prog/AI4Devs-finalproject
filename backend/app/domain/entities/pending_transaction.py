@@ -70,3 +70,6 @@ class PendingTransaction:
     resolved_by: uuid.UUID | None
     expires_at: datetime | None
     created_at: datetime
+    # How many fields the model had interpreted the user changed before it was confirmed: it
+    # changes nothing the user sees, and only the quality metric reads it (domain rules, § 5).
+    corrected_fields_count: int = 0

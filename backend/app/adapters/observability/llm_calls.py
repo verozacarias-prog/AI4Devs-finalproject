@@ -20,6 +20,7 @@ from app.constants import (
 )
 from app.domain.entities.classification import Classification, ClassificationRequest, ModelUsage
 from app.domain.entities.llm_call import LlmCall, LlmOutcome, LlmPurpose
+from app.domain.errors import ModelCallFailedError, ModelRefusedError
 from app.domain.ports.llm_call_log_port import LlmCallLogPort
 from app.domain.ports.llm_port import LLMPort
 
@@ -35,14 +36,28 @@ class RecordedLLM:
         self._calls = calls
 
     def classify(self, request: ClassificationRequest) -> Classification:
+        """A call that fails or that the model refuses is recorded too, with how it ended."""
         started = time.monotonic()
-        classification = self._llm.classify(request)
-        call = _call(LlmPurpose.CLASSIFICATION, classification.usage, started)
+        try:
+            classification = self._llm.classify(request)
+        except ModelCallFailedError as error:
+            self._calls.record(
+                _call(LlmPurpose.CLASSIFICATION, error.usage, started, error.outcome)
+            )
+            raise
+        except ModelRefusedError as error:
+            self._calls.record(
+                _call(LlmPurpose.CLASSIFICATION, error.usage, started, LlmOutcome.BLOCKED)
+            )
+            raise
+        call = _call(LlmPurpose.CLASSIFICATION, classification.usage, started, LlmOutcome.OK)
         self._calls.record(call)
         return replace(classification, call_id=call.id)
 
 
-def _call(purpose: LlmPurpose, usage: ModelUsage | None, started: float) -> LlmCall:
+def _call(
+    purpose: LlmPurpose, usage: ModelUsage | None, started: float, outcome: LlmOutcome
+) -> LlmCall:
     elapsed = round((time.monotonic() - started) * MILLISECONDS_PER_SECOND)
     # The message the entry point is processing, if the call was born from one.
     message_id = message_id_var.get()
@@ -57,7 +72,7 @@ def _call(purpose: LlmPurpose, usage: ModelUsage | None, started: float) -> LlmC
         output_tokens=usage.output_tokens if usage else None,
         duration_ms=elapsed,
         estimated_cost_usd=_cost(usage),
-        outcome=LlmOutcome.OK,
+        outcome=outcome,
     )
 
 

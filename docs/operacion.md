@@ -117,6 +117,22 @@ un mensaje por un worker, 120 si no se define
 entero mayor que cero: con cualquier otro valor, el proceso no arranca y dice qué variable está
 mal.
 
+La llamada al modelo y sus reintentos también son configuración, con variables opcionales que
+aceptan lo mismo:
+
+- `LLM_TIMEOUT_SECONDS`: cuántos segundos puede durar una llamada al modelo, 20 si no se define.
+  Tiene que ser menor que `WORKER_LOCK_SECONDS`: si no, ningún proceso arranca, y el error
+  nombra las dos variables. Así la llamada termina antes de que otro worker pueda tomar el
+  mensaje.
+- `MESSAGE_MAX_ATTEMPTS`: cuántas veces se intenta un mensaje cuya llamada al modelo falla, 3 si
+  no se define. Agotados los intentos, el mensaje queda `failed` y el usuario recibe el aviso.
+- `MESSAGE_RETRY_FIRST_WAIT_SECONDS` y `MESSAGE_RETRY_MAX_WAIT_SECONDS`: la espera antes del
+  segundo intento, 30 si no se define, y la espera más larga, 120 si no se define. Cada espera es
+  cuatro veces la anterior, hasta la más larga.
+
+Una negativa del modelo no se reintenta: el usuario recibe enseguida un texto que le pide
+escribirlo de otra forma ([FEAT-003](features/FEAT-003/spec.md), CA-40).
+
 El worker es el único proceso que llama al modelo, y lo hace con la clave de
 `OPENAI_API_KEY` ([ADR 0025](adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)). Sin ella, el
 worker no arranca y dice qué variable falta. La API no la lee.

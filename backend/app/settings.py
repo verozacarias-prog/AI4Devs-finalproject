@@ -8,6 +8,10 @@ from pathlib import Path
 
 from app import messages
 from app.constants import (
+    DEFAULT_LLM_TIMEOUT_SECONDS,
+    DEFAULT_MESSAGE_MAX_ATTEMPTS,
+    DEFAULT_MESSAGE_RETRY_FIRST_WAIT_SECONDS,
+    DEFAULT_MESSAGE_RETRY_MAX_WAIT_SECONDS,
     DEFAULT_QUEUE_MAX_WAIT_MINUTES,
     DEFAULT_VERSION,
     DEFAULT_WORKER_LOCK_SECONDS,
@@ -39,6 +43,12 @@ class Settings:
     queue_max_wait_minutes: int = DEFAULT_QUEUE_MAX_WAIT_MINUTES
     # How long a message stays taken by one worker (ADR 0010).
     worker_lock_seconds: int = DEFAULT_WORKER_LOCK_SECONDS
+    # The longest a call to the model may take; shorter than the lock (ADR 0010).
+    llm_timeout_seconds: int = DEFAULT_LLM_TIMEOUT_SECONDS
+    # The retries of a message whose call to the model failed (ADR 0010, point 4).
+    message_max_attempts: int = DEFAULT_MESSAGE_MAX_ATTEMPTS
+    message_retry_first_wait_seconds: int = DEFAULT_MESSAGE_RETRY_FIRST_WAIT_SECONDS
+    message_retry_max_wait_seconds: int = DEFAULT_MESSAGE_RETRY_MAX_WAIT_SECONDS
     # Only the worker calls the model, so only the worker requires it. Never logged.
     openai_api_key: str | None = field(default=None, repr=False)
 
@@ -97,6 +107,19 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
     dev_entry_enabled = _read_scaffold_switch(environ, EnvVar.DEV_ENTRY_ENABLED, environment)
     web_chat_enabled = _read_scaffold_switch(environ, EnvVar.WEB_CHAT_ENABLED, environment)
     dashboard_dir = _read(environ, EnvVar.DASHBOARD_DIR)
+    worker_lock_seconds = _read_positive_integer(
+        environ, EnvVar.WORKER_LOCK_SECONDS, DEFAULT_WORKER_LOCK_SECONDS
+    )
+    llm_timeout_seconds = _read_positive_integer(
+        environ, EnvVar.LLM_TIMEOUT_SECONDS, DEFAULT_LLM_TIMEOUT_SECONDS
+    )
+    # Every process checks it, so that a worker that would be displaced never starts.
+    if worker_lock_seconds <= llm_timeout_seconds:
+        raise SettingsError(
+            messages.LOCK_NOT_LONGER_THAN_CALL.format(
+                lock=EnvVar.WORKER_LOCK_SECONDS, call=EnvVar.LLM_TIMEOUT_SECONDS
+            )
+        )
     return Settings(
         database_url=database_url,
         environment=environment,
@@ -107,8 +130,18 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
         queue_max_wait_minutes=_read_positive_integer(
             environ, EnvVar.QUEUE_MAX_WAIT_MINUTES, DEFAULT_QUEUE_MAX_WAIT_MINUTES
         ),
-        worker_lock_seconds=_read_positive_integer(
-            environ, EnvVar.WORKER_LOCK_SECONDS, DEFAULT_WORKER_LOCK_SECONDS
+        worker_lock_seconds=worker_lock_seconds,
+        llm_timeout_seconds=llm_timeout_seconds,
+        message_max_attempts=_read_positive_integer(
+            environ, EnvVar.MESSAGE_MAX_ATTEMPTS, DEFAULT_MESSAGE_MAX_ATTEMPTS
+        ),
+        message_retry_first_wait_seconds=_read_positive_integer(
+            environ,
+            EnvVar.MESSAGE_RETRY_FIRST_WAIT_SECONDS,
+            DEFAULT_MESSAGE_RETRY_FIRST_WAIT_SECONDS,
+        ),
+        message_retry_max_wait_seconds=_read_positive_integer(
+            environ, EnvVar.MESSAGE_RETRY_MAX_WAIT_SECONDS, DEFAULT_MESSAGE_RETRY_MAX_WAIT_SECONDS
         ),
         openai_api_key=_read(environ, EnvVar.OPENAI_API_KEY) or None,
     )

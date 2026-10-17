@@ -29,15 +29,21 @@ def confirmation_text(
     category_name: str,
     transaction_date: date,
     period: BudgetPeriod,
+    group_name: str | None = None,
 ) -> str:
+    """`group_name` is that of the group the period belongs to, when it is not the user's."""
+    start, end = written_day(period.period_start), written_day(period.period_end)
+    budget = (
+        messages.CONFIRMATION_PERSONAL_BUDGET.format(start=start, end=end)
+        if group_name is None
+        else messages.CONFIRMATION_GROUP_BUDGET.format(group=group_name, start=start, end=end)
+    )
     lines = (
         _FIRST_LINE[type].format(amount=written_amount(amount, currency), account=account_name),
         messages.CONFIRMATION_DATE.format(date=written_day(transaction_date)),
         messages.CONFIRMATION_CURRENCY.format(currency=currency),
         messages.CONFIRMATION_CATEGORY.format(category=category_name),
-        messages.CONFIRMATION_PERSONAL_BUDGET.format(
-            start=written_day(period.period_start), end=written_day(period.period_end)
-        ),
+        budget,
     )
     return LINE_END.join(lines)
 

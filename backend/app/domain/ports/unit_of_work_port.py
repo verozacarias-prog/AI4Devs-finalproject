@@ -5,6 +5,7 @@ from typing import Protocol, Self
 
 from app.domain.ports.account_repository_port import AccountRepositoryPort
 from app.domain.ports.budget_period_repository_port import BudgetPeriodRepositoryPort
+from app.domain.ports.budget_repository_port import BudgetRepositoryPort
 from app.domain.ports.category_repository_port import CategoryRepositoryPort
 from app.domain.ports.chat_message_repository_port import ChatMessageRepositoryPort
 from app.domain.ports.family_group_repository_port import FamilyGroupRepositoryPort
@@ -29,6 +30,8 @@ class UnitOfWorkPort(Protocol):
 
     @property
     def budget_periods(self) -> BudgetPeriodRepositoryPort: ...
+    @property
+    def budgets(self) -> BudgetRepositoryPort: ...
 
     @property
     def categories(self) -> CategoryRepositoryPort: ...
