@@ -2,13 +2,15 @@
 
 Cases C1-06, C1-07, C1-08 and C1-11: the date of a movement, the names of the account and the
 category, and the fixed text of an advice. Cases C1-17 to C1-22: which account the message
-names, decided by the code and not by the model. The database is in memory; the integration tests
+names, decided by the code and not by the model. Case C1-24: a movement before the account was
+opened. The database is in memory; the integration tests
 check the same use case against PostgreSQL.
 """
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from dataclasses import replace
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from app.domain.entities.classification import Classification, MessageClass, RegistrationType
@@ -201,3 +203,37 @@ def test_the_type_without_a_currency_does_not_choose_between_two_accounts() -> N
     )
 
     assert unit_of_work.transactions.added == []
+
+
+def test_an_expense_before_its_account_was_opened_says_why_it_is_not_registered() -> None:
+    # Case C1-24. Mercado Pago was opened on 13 October; the expense is of the 12th.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    accounts = unit_of_work.accounts.added
+    [wallet] = [account for account in accounts if account.name == "Mercado Pago"]
+    accounts[accounts.index(wallet)] = replace(
+        wallet, opened_at=datetime(2026, 10, 13, 15, 0, 0, tzinfo=UTC)
+    )
+    llm = FakeLLM(
+        Classification(
+            MessageClass.REGISTRATION,
+            registration_type=RegistrationType.EXPENSE,
+            amount=Decimal("25000"),
+            account="MP",
+            category="Transporte",
+            currency="ARS",
+            transaction_date=date(2026, 10, 12),
+        )
+    )
+
+    AnswerMessage(unit_of_work, FixedClock(NOW), llm).execute(
+        lucia.message("el lunes cargué nafta, 25 lucas, con MP")
+    )
+
+    assert unit_of_work.transactions.added == []
+    [reply] = unit_of_work.outbound_messages.added
+    assert reply.text == (
+        "Mercado Pago la tenés cargada desde el 13/10/2026, así que lo que gastaste antes ya está "
+        "en el saldo con el que la diste de alta. Lo dejo sin anotar para no contarlo dos veces."
+    )
+    assert reply.response_kind is ResponseKind.FIXED_TEXT
