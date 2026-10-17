@@ -183,14 +183,16 @@ las 15:00:00 en Buenos Aires.
 
 - **Sale de:** CA-5, CA-6 y CA-7 · **Tipo:** integración
 - **Dado** un mensaje web de Lucía, "gasté 3500 en el súper", con `status = 'pending'`,
-  `sent_at` 2026-10-15T17:59:55Z, `attempts = 0`, y ninguna fila en `OUTBOUND_MESSAGE`,
+  `sent_at` 2026-10-15T17:59:55Z, `attempts = 0`, ninguna fila en `OUTBOUND_MESSAGE`, y el
+  modelo reemplazado por un doble que responde que el mensaje no es de ninguna clase,
 - **cuando** el worker hace una ronda,
 - **entonces** el mensaje queda con `status = 'processed'`, `attempts = 1` y
   `processed_at = 2026-10-15T18:00:00Z`; y `OUTBOUND_MESSAGE` tiene una sola fila, con
   `provider = 'web'`, el `user_id` de Lucía, `to_phone = '+000000000001'`, el
   `inbound_message_id` de ese mensaje, `status = 'sent'`, `sent_at = 2026-10-15T18:00:00Z`,
-  `provider_message_id` nulo, y en `content` el texto "Recibí tu mensaje. Todavía no puedo
-  procesarlo." con `response_kind = 'fixed_text'`.
+  `provider_message_id` nulo, y en `content` el texto fijo de un mensaje sin clase,
+  "¡Hola! Soy Platita y te ayudo a llevar las cuentas…", del [C1-12 de FEAT-003](../FEAT-003/spec.md#c1-12--un-saludo-recibe-el-pedido-de-aclaración),
+  con `response_kind = 'fixed_text'`.
 - **Test:** `tests/integration/test_message_worker.py::test_the_worker_answers_a_pending_message_with_the_fixed_text`
 
 #### C1-04 · El worker toma primero el mensaje que llegó primero
@@ -233,7 +235,7 @@ las 15:00:00 en Buenos Aires.
 
 - **Sale de:** CA-10 · **Tipo:** integración
 - **Dado** que Lucía mandó "gasté 3500 en el súper" a las 14:58:00 de Buenos Aires, Platita le
-  contestó "Recibí tu mensaje. Todavía no puedo procesarlo." a las 14:58:04, y Lucía mandó "y
+  contestó "¡Hola! Soy Platita y te ayudo a llevar las cuentas…" a las 14:58:04, y Lucía mandó "y
   1200 de nafta" a las 14:59:00, todo por el chat web,
 - **cuando** Lucía pide `GET /chat/messages`, sin cursor,
 - **entonces** responde `200` con tres mensajes, en este orden: "gasté 3500 en el súper", con
@@ -266,11 +268,12 @@ las 15:00:00 en Buenos Aires.
 #### C1-09 · Escribir, procesar y leer la respuesta
 
 - **Sale de:** CA-1, CA-5 y CA-10 · **Tipo:** integración
-- **Dado** Lucía con una sesión abierta y sin ningún mensaje,
+- **Dado** Lucía con una sesión abierta y sin ningún mensaje, y el modelo reemplazado por un
+  doble que responde que el mensaje no es de ninguna clase,
 - **cuando** manda "gasté 3500 en el súper" con `POST /chat/messages`, el worker hace una
   ronda, y Lucía pide `GET /chat/messages`,
-- **entonces** la conversación tiene dos mensajes: el suyo, `inbound`, y después "Recibí tu
-  mensaje. Todavía no puedo procesarlo.", `outbound`, con `response_kind = "fixed_text"`.
+- **entonces** la conversación tiene dos mensajes: el suyo, `inbound`, y después
+  "¡Hola! Soy Platita y te ayudo a llevar las cuentas…", `outbound`, con `response_kind = "fixed_text"`.
 - **Test:** `tests/integration/test_chat_messages.py::test_write_process_and_read_the_reply`
 
 En los casos de componente se arma el dashboard entero, con la API simulada a nivel de red,
@@ -977,11 +980,13 @@ mientras falle. Su detalle va en el corte 2.
 
 ## Mensajes al usuario
 
-El texto fijo que responde el worker mientras no haya modelo, en `backend/app/messages.py`:
+El texto fijo que respondía el worker mientras no hubiera modelo:
 
 > Recibí tu mensaje. Todavía no puedo procesarlo.
 
-Lo reemplaza la clasificación, en la funcionalidad siguiente. Los textos de la pantalla van en
+Lo reemplazó la clasificación de [FEAT-003](../FEAT-003/spec.md#mensajes-al-usuario), el 16 de
+octubre de 2026. Desde entonces los casos del worker reemplazan el modelo por un doble que
+responde que el mensaje no es de ninguna clase, y esperan el texto fijo de ese caso. Los textos de la pantalla van en
 `frontend/src/messages.ts`, y están en el [contrato de UI](ui_contract.md#textos).
 
 ## Reglas de dominio bajo prueba
@@ -1018,7 +1023,7 @@ Las preguntas que se abrieron al escribir este documento, ya resueltas.
 
 1. ~~El texto fijo de la respuesta.~~ Resuelta el 14 de octubre de 2026: "Recibí tu mensaje.
    Todavía no puedo procesarlo.", en `backend/app/messages.py`. Vive hasta que entre la
-   clasificación.
+   clasificación. Lo reemplazó FEAT-003 el 16 de octubre de 2026, por decisión de Vero.
 2. ~~El nombre de la variable que enciende el chat web.~~ Resuelta el 14 de octubre de 2026:
    `WEB_CHAT_ENABLED`, con las mismas reglas que `DEV_ENTRY_ENABLED`: vale `true` o `false`, sin
    ella queda apagado, con otro valor el proceso no arranca, y encendida con el entorno en
