@@ -1,7 +1,7 @@
 """The OpenAI adapter, with the HTTP transport of the SDK replaced (FEAT-003, its spec.md).
 
 Cases C1-14, C1-15 and C1-23: what the adapter sends, and how it reads the amount and the
-currency back. Nothing here
+currency back. Case C2-32: an answer the provider cut. Nothing here
 reaches the provider.
 """
 
@@ -13,6 +13,7 @@ from decimal import Decimal
 from typing import cast
 
 import httpx2
+import pytest
 
 from app.adapters.outbound.llm_client.openai_llm import OpenAILLM
 from app.domain.entities.classification import (
@@ -20,6 +21,8 @@ from app.domain.entities.classification import (
     MessageClass,
     RegistrationType,
 )
+from app.domain.entities.llm_call import LlmOutcome
+from app.domain.errors import ModelCallFailedError, ModelRefusedError
 
 ACCOUNTS = ("Galicia pesos", "Mercado Pago", "Efectivo", "Galicia USD")
 EXPENSE_CATEGORIES = ("Supermercado", "Transporte", "Comida afuera y delivery")
@@ -147,3 +150,24 @@ def test_the_adapter_returns_the_currency_the_message_says() -> None:
     assert "currency" in cast(list[str], schema["required"])
     properties = cast(dict[str, dict[str, object]], schema["properties"])
     assert set(cast(list[str | None], properties["currency"]["enum"])) == {"ARS", "USD", None}
+
+
+def test_a_cut_answer_is_treated_as_a_model_that_is_down() -> None:
+    # Case C2-32. The provider stopped the answer halfway: what came is not a refusal.
+    def cut(request: httpx2.Request) -> httpx2.Response:
+        response = FakeTransport(_expense("3500")).handle(request)
+        body = json.loads(response.content)
+        body["status"] = "incomplete"
+        body["incomplete_details"] = {"reason": "max_output_tokens"}
+        body["output"][0]["status"] = "incomplete"
+        body["output"][0]["content"][0]["text"] = '{"message_class": "regis'
+        return httpx2.Response(200, json=body)
+
+    client = httpx2.Client(transport=httpx2.MockTransport(cut))
+    adapter = OpenAILLM(api_key="test-key", http_client=client)
+
+    with pytest.raises(ModelCallFailedError) as error:
+        adapter.classify(REQUEST)
+
+    assert error.value.outcome is LlmOutcome.PROVIDER_ERROR
+    assert not isinstance(error.value, ModelRefusedError)
