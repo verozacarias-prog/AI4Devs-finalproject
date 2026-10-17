@@ -11,6 +11,7 @@ import uuid
 from dataclasses import replace
 from decimal import Decimal
 
+from app.adapters.observability.events import UNREPORTED_USAGE
 from app.adapters.observability.logs import message_id_var
 from app.constants import (
     LLM_PRICES_USD_PER_MILLION_TOKENS,
@@ -49,8 +50,8 @@ def _call(purpose: LlmPurpose, usage: ModelUsage | None, started: float) -> LlmC
         id=uuid.uuid4(),
         inbound_message_id=uuid.UUID(message_id) if message_id else None,
         purpose=purpose,
-        provider=usage.provider if usage else "",
-        model=usage.model if usage else "",
+        provider=usage.provider if usage else UNREPORTED_USAGE,
+        model=usage.model if usage else UNREPORTED_USAGE,
         prompt_version=usage.prompt_version if usage else None,
         input_tokens=usage.input_tokens if usage else None,
         output_tokens=usage.output_tokens if usage else None,

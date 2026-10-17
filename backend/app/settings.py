@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from app import messages
@@ -25,7 +25,8 @@ class SettingsError(Exception):
 
 @dataclass(frozen=True)
 class Settings:
-    database_url: str
+    # Out of the repr: it carries the password of the database.
+    database_url: str = field(repr=False)
     environment: Environment
     version: str
     # Folder with the compiled dashboard, or None when this process does not serve it.
@@ -39,7 +40,7 @@ class Settings:
     # How long a message stays taken by one worker (ADR 0010).
     worker_lock_seconds: int = DEFAULT_WORKER_LOCK_SECONDS
     # Only the worker calls the model, so only the worker requires it. Never logged.
-    openai_api_key: str | None = None
+    openai_api_key: str | None = field(default=None, repr=False)
 
 
 def _read(environ: Mapping[str, str], name: EnvVar, default: str = "") -> str:

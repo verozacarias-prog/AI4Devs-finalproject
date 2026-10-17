@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 from datetime import date
 from decimal import Decimal
-from typing import Literal
 
 import httpx2
 from openai import OpenAI
@@ -20,7 +19,7 @@ from openai.types.responses import (
     ResponseTextConfigParam,
 )
 from openai.types.shared_params import Reasoning
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.adapters.outbound.llm_client import prompts
 from app.constants import (
@@ -71,6 +70,13 @@ _CLASSIFICATION_SCHEMA: dict[str, object] = {
 
 
 class _ClassificationOutput(BaseModel):
+    @field_validator("currency")
+    @classmethod
+    def _known_currency(cls, value: str | None) -> str | None:
+        if value is not None and value not in MESSAGE_CURRENCIES:
+            raise ValueError(value)
+        return value
+
     """What the model must answer. Anything else is rejected before reaching the domain."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -81,7 +87,7 @@ class _ClassificationOutput(BaseModel):
     account: str | None
     category: str | None
     # Absent from an answer of an earlier schema, which said no currency.
-    currency: Literal["ARS", "USD"] | None = None
+    currency: str | None = None
     transaction_date: date | None
 
 

@@ -11,8 +11,16 @@ import re
 import unicodedata
 from collections.abc import Sequence
 
-from app.constants import ACCOUNT_TYPE_WORDS, MENTION_FILLER_WORDS
-from app.domain.entities.account import Account
+from app.domain.entities.account import Account, AccountType
+
+# The words that name an account by its type, and those that only join the words of a
+# mention, such as "el" in "el banco". Without accents, in lower case.
+ACCOUNT_TYPE_WORDS: dict[AccountType, frozenset[str]] = {
+    AccountType.BANK_ACCOUNT: frozenset({"banco"}),
+    AccountType.DIGITAL_WALLET: frozenset({"billetera", "virtual"}),
+    AccountType.CASH: frozenset({"efectivo", "cash"}),
+}
+MENTION_FILLER_WORDS = frozenset({"el", "la", "los", "las", "mi", "mis", "de", "del", "con", "en"})
 
 _WORD = re.compile(r"[a-z0-9]+")
 # A name of more words than this can be named by its initials, as "MP" for Mercado Pago.
@@ -26,12 +34,14 @@ def named_account(
     if mention is None or not _written_in(mention, text):
         # An account the model deduced, as from "por transferencia", is not named.
         return None
-    message_words = set(_words(text))
-    complete = [account for account in accounts if set(_words(account.name)) <= message_words]
+    # The mention, not the rest of the message: in "con MP porque no tenía efectivo" the account
+    # is the one named "MP", even though "efectivo" is the whole name of another.
+    written_words = set(_words(mention))
+    complete = [account for account in accounts if set(_words(account.name)) <= written_words]
     if len(complete) == 1:
         candidates = complete
     else:
-        mention_words = set(_words(mention)) - MENTION_FILLER_WORDS
+        mention_words = written_words - MENTION_FILLER_WORDS
         candidates = [account for account in accounts if _named_by_part(account, mention_words)]
     if currency is not None:
         candidates = [account for account in candidates if account.currency == currency]
