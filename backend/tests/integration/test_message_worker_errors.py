@@ -22,6 +22,7 @@ from app.domain.use_cases.messages.claim_next_message import ClaimNextMessage
 from app.settings import load_settings
 from tests.support.chat_data import NOW, inbound, reject_every_reply, seed, status_of
 from tests.support.doubles import FixedClock
+from tests.support.fake_llm import FakeLLM
 
 pytestmark = pytest.mark.integration
 
@@ -93,8 +94,8 @@ def test_two_workers_finish_the_same_message_and_only_one_reply_is_left(engine: 
 
     first_ends = later + timedelta(seconds=10)
     second_ends = later + timedelta(seconds=20)
-    AnswerMessage(SqlAlchemyUnitOfWork(engine), FixedClock(first_ends)).execute(first)
-    AnswerMessage(SqlAlchemyUnitOfWork(engine), FixedClock(second_ends)).execute(second)
+    AnswerMessage(SqlAlchemyUnitOfWork(engine), FixedClock(first_ends), FakeLLM()).execute(first)
+    AnswerMessage(SqlAlchemyUnitOfWork(engine), FixedClock(second_ends), FakeLLM()).execute(second)
 
     with engine.connect() as connection:
         replies = connection.execute(
@@ -116,7 +117,7 @@ def test_if_the_database_rejects_the_reply_the_message_is_not_left_half_done(
         {"DATABASE_URL": seeded_database_url, "APP_ENV": "local", "APP_VERSION": "test"}
     )
 
-    create_worker(settings, FixedClock(NOW), log_stream=io.StringIO()).run_round()
+    create_worker(settings, FixedClock(NOW), log_stream=io.StringIO(), llm=FakeLLM()).run_round()
 
     with engine.connect() as connection:
         replies = connection.execute(
@@ -146,7 +147,7 @@ def test_the_lock_of_the_worker_comes_from_an_environment_variable(
         }
     )
 
-    create_worker(settings, FixedClock(NOW), log_stream=io.StringIO()).run_round()
+    create_worker(settings, FixedClock(NOW), log_stream=io.StringIO(), llm=FakeLLM()).run_round()
 
     with engine.connect() as connection:
         locked_until = connection.execute(

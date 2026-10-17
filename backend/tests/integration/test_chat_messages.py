@@ -22,6 +22,7 @@ from app.adapters.inbound.message_worker.worker import create_worker
 from app.settings import Settings, load_settings
 from tests.support.chat_data import FIXED_REPLY, NOW, inbound, outbound, seed, user_id
 from tests.support.doubles import FixedClock
+from tests.support.fake_llm import FakeLLM
 
 pytestmark = pytest.mark.integration
 
@@ -188,7 +189,7 @@ def test_write_process_and_read_the_reply(client: TestClient, settings: Settings
     )
     assert sent.status_code == 202
 
-    create_worker(settings, FixedClock(NOW), log_stream=io.StringIO()).run_round()
+    create_worker(settings, FixedClock(NOW), log_stream=io.StringIO(), llm=FakeLLM()).run_round()
     response = client.get("/chat/messages")
 
     assert response.status_code == 200

@@ -15,6 +15,7 @@ from app.adapters.inbound.message_worker.worker import create_worker
 from app.settings import Settings, load_settings
 from tests.support.chat_data import NOW
 from tests.support.doubles import FixedClock
+from tests.support.fake_llm import FakeLLM
 from tests.support.log_lines import events_of
 
 pytestmark = pytest.mark.integration
@@ -30,7 +31,7 @@ def test_with_the_chat_on_the_api_says_so_when_it_starts(database_url: str) -> N
     # Case C3-07.
     stream = io.StringIO()
 
-    create_app(_settings(database_url, WEB_CHAT_ENABLED="true"), log_stream=stream)
+    create_app(_settings(database_url, WEB_CHAT_ENABLED="true"), log_stream=stream, llm=FakeLLM())
 
     [line] = events_of(stream, "dev.scaffold_enabled")
     assert line["level"] == "WARNING"
@@ -43,7 +44,12 @@ def test_with_the_chat_or_the_entry_on_the_worker_says_so_when_it_starts(
     # Case C3-08.
     stream = io.StringIO()
 
-    create_worker(_settings(database_url, **{switch: "true"}), FixedClock(NOW), log_stream=stream)
+    create_worker(
+        _settings(database_url, **{switch: "true"}),
+        FixedClock(NOW),
+        log_stream=stream,
+        llm=FakeLLM(),
+    )
 
     [line] = events_of(stream, "dev.scaffold_enabled")
     assert line["level"] == "WARNING"
@@ -57,7 +63,7 @@ def test_with_both_off_no_process_says_anything(database_url: str) -> None:
     settings = _settings(database_url)
 
     create_app(settings, log_stream=api_stream)
-    create_worker(settings, FixedClock(NOW), log_stream=worker_stream)
+    create_worker(settings, FixedClock(NOW), log_stream=worker_stream, llm=FakeLLM())
 
     assert events_of(api_stream, "dev.scaffold_enabled") == []
     assert events_of(worker_stream, "dev.scaffold_enabled") == []
