@@ -13,6 +13,7 @@ import pytest
 from app.domain.entities.inbound_message import InboundMessage, InboundStatus, Provider
 from app.domain.use_cases.messages.process_next_message import ProcessNextMessage
 from tests.support.doubles import FixedClock, InMemoryUnitOfWork
+from tests.support.fake_llm import FakeLLM
 
 NOW = datetime(2026, 10, 15, 18, 0, 0, tzinfo=UTC)
 
@@ -43,7 +44,7 @@ def test_if_storing_the_reply_fails_the_message_is_not_left_processed() -> None:
     unit_of_work.outbound_messages.failure = ReplyStoreDown()
 
     with pytest.raises(ReplyStoreDown):
-        ProcessNextMessage(unit_of_work, FixedClock(NOW), timedelta(minutes=2)).execute()
+        ProcessNextMessage(unit_of_work, FixedClock(NOW), timedelta(minutes=2), FakeLLM()).execute()
 
     # The only commit is the one that took the message: the round itself left nothing.
     assert unit_of_work.commits == 1

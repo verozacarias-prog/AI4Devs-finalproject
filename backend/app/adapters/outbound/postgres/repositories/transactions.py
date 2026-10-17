@@ -1,16 +1,21 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import asdict
 
 from sqlalchemy import Connection, text
 
 from app.adapters.outbound.postgres import queries
+from app.adapters.outbound.postgres.rejections import execute_write
 from app.domain.entities.transaction import Transaction, TransactionType
 
 
 class PostgresTransactionRepository:
     def __init__(self, connection: Connection) -> None:
         self._connection = connection
+
+    def add(self, transaction: Transaction) -> None:
+        execute_write(self._connection, queries.INSERT_TRANSACTION, asdict(transaction))
 
     def list_by_user(self, user_id: uuid.UUID) -> list[Transaction]:
         rows = self._connection.execute(

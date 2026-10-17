@@ -30,6 +30,7 @@ from tests.support.chat_data import (
     user_id,
 )
 from tests.support.doubles import FixedClock
+from tests.support.fake_llm import FakeLLM
 from tests.support.log_lines import events_of, lines_of
 
 pytestmark = pytest.mark.integration
@@ -127,7 +128,7 @@ def test_the_worker_leaves_one_line_per_answered_message_with_its_identifier(
     message = inbound(engine, "Lucía", SUPERMARKET, sent_at=NOW - timedelta(seconds=5))
     stream = io.StringIO()
 
-    create_worker(settings, FixedClock(NOW), log_stream=stream).run_round()
+    create_worker(settings, FixedClock(NOW), log_stream=stream, llm=FakeLLM()).run_round()
 
     [answered] = events_of(stream, "message.answered")
     assert answered["process"] == "worker"
@@ -146,7 +147,7 @@ def test_an_error_processing_a_message_leaves_its_line_with_the_message_identifi
     message = inbound(engine, "Lucía", SUPERMARKET, sent_at=NOW - timedelta(seconds=5))
     reject_every_reply(engine)
     stream = io.StringIO()
-    worker = create_worker(settings, FixedClock(NOW), log_stream=stream)
+    worker = create_worker(settings, FixedClock(NOW), log_stream=stream, llm=FakeLLM())
 
     worker.run_round()
 
@@ -172,7 +173,7 @@ def test_the_error_of_the_worker_carries_the_user_of_the_message(
     reject_every_reply(engine)
     stream = io.StringIO()
 
-    create_worker(settings, FixedClock(NOW), log_stream=stream).run_round()
+    create_worker(settings, FixedClock(NOW), log_stream=stream, llm=FakeLLM()).run_round()
 
     [error] = events_of(stream, "error.unexpected")
     assert error["user_id"] == str(user_id(engine, "Lucía"))

@@ -17,7 +17,12 @@ from app.adapters.inbound.operator_commands.seed_test_data import main as seed_t
 
 # The clock of every case, unless the case says otherwise: 15:00:00 in Buenos Aires.
 NOW = datetime(2026, 10, 15, 18, 0, 0, tzinfo=UTC)
-FIXED_REPLY = "Recibí tu mensaje. Todavía no puedo procesarlo."
+# The fixed text the worker answers to a message of no class, which is what the model double
+# answers by default (FEAT-003, C1-12).
+FIXED_REPLY = (
+    "¡Hola! Soy Platita y te ayudo a llevar las cuentas. Contame qué gastaste o qué cobraste, y "
+    "con qué cuenta. Por ejemplo: «gasté 3500 en el súper con Mercado Pago»."
+)
 # What the database says when it rejects a write: it must not reach the logs either.
 REPLY_REJECTION = "la base rechaza la respuesta"
 

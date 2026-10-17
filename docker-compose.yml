@@ -71,6 +71,8 @@ services:
       WEB_CHAT_ENABLED: ${WEB_CHAT_ENABLED:-false}
       # Empty means the default of the code (docs/operacion.md).
       WORKER_LOCK_SECONDS: ${WORKER_LOCK_SECONDS:-}
+      # Only the worker calls the model. Without it, the worker does not start (ADR 0025).
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     healthcheck:
       disable: true
     depends_on:

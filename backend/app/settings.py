@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from app import messages
@@ -25,7 +25,8 @@ class SettingsError(Exception):
 
 @dataclass(frozen=True)
 class Settings:
-    database_url: str
+    # Out of the repr: it carries the password of the database.
+    database_url: str = field(repr=False)
     environment: Environment
     version: str
     # Folder with the compiled dashboard, or None when this process does not serve it.
@@ -38,6 +39,8 @@ class Settings:
     queue_max_wait_minutes: int = DEFAULT_QUEUE_MAX_WAIT_MINUTES
     # How long a message stays taken by one worker (ADR 0010).
     worker_lock_seconds: int = DEFAULT_WORKER_LOCK_SECONDS
+    # Only the worker calls the model, so only the worker requires it. Never logged.
+    openai_api_key: str | None = field(default=None, repr=False)
 
 
 def _read(environ: Mapping[str, str], name: EnvVar, default: str = "") -> str:
@@ -107,4 +110,12 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
         worker_lock_seconds=_read_positive_integer(
             environ, EnvVar.WORKER_LOCK_SECONDS, DEFAULT_WORKER_LOCK_SECONDS
         ),
+        openai_api_key=_read(environ, EnvVar.OPENAI_API_KEY) or None,
     )
+
+
+def require_openai_api_key(settings: Settings) -> str:
+    """The key of the model, for the process that calls it: without it, it does not start."""
+    if settings.openai_api_key is None:
+        raise SettingsError(messages.MISSING_ENV_VAR.format(name=EnvVar.OPENAI_API_KEY))
+    return settings.openai_api_key

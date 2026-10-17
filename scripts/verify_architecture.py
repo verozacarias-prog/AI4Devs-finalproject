@@ -14,7 +14,8 @@ Enforces the structural rules of ADR 0001 and ADR 0020, declared in AGENTS.md:
      commands and the scheduled processes each reach the use cases on their own, so any of
      them can be replaced or deployed apart without dragging the others.
   6. Every file is where its kind goes: the endpoints in api/routers/, each use case inside
-     the folder of its feature, and each repository in a file of its own under
+     the folder of its feature, each domain service inside the folder of its topic, nothing
+     else loose in domain/ but errors.py, and each repository in a file of its own under
      postgres/repositories/.
   7. No file of backend/app/ or frontend/src/ has a general name, such as utils or helpers:
      its name says what it holds. The shadcn/ui components are left out, as the tool names
@@ -75,7 +76,11 @@ GENERAL_NAME_EXEMPT = [os.path.join(FRONTEND_DIR, 'src', 'components', 'ui')]
 API_DIR = os.path.join(BACKEND_DIR, 'app', ADAPTERS_PKG, 'inbound', 'api')
 ROUTERS_DIR = os.path.join(API_DIR, 'routers')
 ROUTER_CLASS = 'APIRouter'
-USE_CASES_DIR = os.path.join(BACKEND_DIR, 'app', 'domain', 'use_cases')
+DOMAIN_DIR = os.path.join(BACKEND_DIR, 'app', 'domain')
+USE_CASES_DIR = os.path.join(DOMAIN_DIR, 'use_cases')
+SERVICES_DIR = os.path.join(DOMAIN_DIR, 'services')
+# The only module loose in domain/: everything else goes in its folder.
+DOMAIN_LOOSE_FILES = {'errors.py'}
 REPOSITORIES_DIR = os.path.join(BACKEND_DIR, 'app', ADAPTERS_PKG, 'outbound', 'postgres',
                                 'repositories')
 REPOSITORY_CLASS = re.compile(r'^Postgres\w*Repository$')
@@ -397,7 +402,8 @@ def parsed(path):
 
 def check_file_places():
     """Regla 6: cada archivo está donde va su tipo. Un endpoint fuera de api/routers/, un
-    caso de uso suelto o un repositorio fuera de su archivo vuelven a mezclar lo que se separó."""
+    caso de uso o un servicio de dominio suelto, o un repositorio fuera de su archivo vuelven a
+    mezclar lo que se separó."""
     if os.path.isdir(API_DIR):
         for path in walk(API_DIR, ('.py',)):
             if inside(path, ROUTERS_DIR):
@@ -417,6 +423,19 @@ def check_file_places():
                 errors.append('%s es un caso de uso suelto — va dentro de la carpeta de su '
                               'funcionalidad, como sessions/ o messages/'
                               % os.path.join(USE_CASES_DIR, name))
+    if os.path.isdir(SERVICES_DIR):
+        for name in sorted(os.listdir(SERVICES_DIR)):
+            if name.endswith('.py') and name != PACKAGE_FILE:
+                errors.append('%s es un servicio de dominio suelto — va dentro de la carpeta de '
+                              'su tema, como accounts/ o transactions/'
+                              % os.path.join(SERVICES_DIR, name))
+    if os.path.isdir(DOMAIN_DIR):
+        for name in sorted(os.listdir(DOMAIN_DIR)):
+            if name.endswith('.py') and name != PACKAGE_FILE and name not in DOMAIN_LOOSE_FILES:
+                errors.append('%s está suelto en domain/ — una regla que no es de una sola '
+                              'entidad es un servicio de dominio y va en services/, en la '
+                              'carpeta de su tema (docs/02-arquitectura.md, 2.3)'
+                              % os.path.join(DOMAIN_DIR, name))
     backend_app = os.path.join(BACKEND_DIR, 'app')
     if os.path.isdir(backend_app):
         for path in walk(backend_app, ('.py',)):
