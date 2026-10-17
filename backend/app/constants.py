@@ -93,6 +93,17 @@ LLM_TIMEOUT_SECONDS = 30
 LLM_SDK_RETRIES = 0
 TOKENS_PER_MILLION = 1_000_000
 
+# The currencies a message can say, as the model returns them (domain rules, § 1).
+MESSAGE_CURRENCIES = ("ARS", "USD")
+# The words that name an account by its type, and those that only join the words of a
+# mention, such as "el" in "el banco" (domain rules, § 1). Without accents, in lower case.
+ACCOUNT_TYPE_WORDS: dict[str, frozenset[str]] = {
+    "bank_account": frozenset({"banco"}),
+    "digital_wallet": frozenset({"billetera", "virtual"}),
+    "cash": frozenset({"efectivo", "cash"}),
+}
+MENTION_FILLER_WORDS = frozenset({"el", "la", "los", "las", "mi", "mis", "de", "del", "con", "en"})
+
 # How long a pending waits for its answer before it expires: the WhatsApp window for free text,
 # so the reminder before it always fits (domain rules, § 5).
 PENDING_VALIDITY_HOURS = 24

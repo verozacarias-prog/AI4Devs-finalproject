@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from datetime import date
 from decimal import Decimal
+from typing import Literal
 
 import httpx2
 from openai import OpenAI
@@ -28,6 +29,7 @@ from app.constants import (
     LLM_REASONING_EFFORT,
     LLM_SDK_RETRIES,
     LLM_TIMEOUT_SECONDS,
+    MESSAGE_CURRENCIES,
 )
 from app.domain.entities.classification import (
     Classification,
@@ -49,6 +51,7 @@ _CLASSIFICATION_SCHEMA: dict[str, object] = {
         "amount",
         "account",
         "category",
+        "currency",
         "transaction_date",
     ],
     "properties": {
@@ -61,6 +64,7 @@ _CLASSIFICATION_SCHEMA: dict[str, object] = {
         "amount": {"type": ["string", "null"], "pattern": r"^\d+(\.\d{1,2})?$"},
         "account": _NULLABLE_TEXT,
         "category": _NULLABLE_TEXT,
+        "currency": {"type": ["string", "null"], "enum": [*MESSAGE_CURRENCIES, None]},
         "transaction_date": {"type": ["string", "null"], "format": "date"},
     },
 }
@@ -76,6 +80,8 @@ class _ClassificationOutput(BaseModel):
     amount: Decimal | None
     account: str | None
     category: str | None
+    # Absent from an answer of an earlier schema, which said no currency.
+    currency: Literal["ARS", "USD"] | None = None
     transaction_date: date | None
 
 
@@ -111,6 +117,7 @@ class OpenAILLM:
             amount=output.amount,
             account=output.account,
             category=output.category,
+            currency=output.currency,
             transaction_date=output.transaction_date,
             usage=ModelUsage(
                 provider=LLM_PROVIDER,

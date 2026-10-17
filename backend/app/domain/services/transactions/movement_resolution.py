@@ -18,6 +18,7 @@ from app.domain.entities.category import Category
 from app.domain.entities.classification import Classification, RegistrationType
 from app.domain.entities.transaction import TransactionType
 from app.domain.services.dates.local_date import local_today
+from app.domain.services.transactions.account_resolution import named_account
 
 _TRANSACTION_TYPES = {
     RegistrationType.EXPENSE: TransactionType.EXPENSE,
@@ -54,6 +55,7 @@ def is_movement(classification: Classification) -> bool:
 
 def resolve_movement(
     classification: Classification,
+    text: str,
     accounts: Sequence[Account],
     categories: Sequence[Category],
     today: date,
@@ -71,14 +73,12 @@ def resolve_movement(
     amount = classification.amount
     if amount is None or not _is_valid_amount(amount):
         return None
-    # Never an account by default: it has to be named, and match only one.
-    account = _only_one(
-        [
-            account
-            for account in accounts
-            if account.type in _ACCOUNT_TYPES_FOR_MOVEMENTS
-            and _same_name(account.name, classification.account)
-        ]
+    # Never an account by default: the message has to name it, and only it.
+    account = named_account(
+        text,
+        classification.account,
+        classification.currency,
+        [account for account in accounts if account.type in _ACCOUNT_TYPES_FOR_MOVEMENTS],
     )
     category = _only_one(
         [

@@ -7,7 +7,7 @@ of any user (ADR 0013, point 12). The data of the task goes in the user message,
 from __future__ import annotations
 
 # Recorded with every call, so the metrics can compare one prompt with the next.
-CLASSIFICATION_PROMPT_VERSION = "classification-1"
+CLASSIFICATION_PROMPT_VERSION = "classification-2"
 
 # Between these, the data of the task: information, never instructions (ADR 0013, point 9).
 DATA_OPEN = "<datos>"
@@ -42,13 +42,17 @@ en null.
 Para un gasto o un ingreso:
 - amount: el monto como texto, con punto decimal y sin separador de miles, por ejemplo \
 "3500" o "3500.50". "3,5 lucas" es "3500" y "una luca" es "1000". Si no dice cuánto, null.
-- account: el nombre de una de las cuentas, escrito igual que en la lista, solo si el \
-mensaje la nombra sin dudas. Si no nombra ninguna, o puede ser más de una, null. Nunca \
-elijas una cuenta que el mensaje no nombra.
+- account: las palabras exactas del mensaje con que se refiere a la cuenta, copiadas tal \
+cual, por ejemplo "el banco", "la billetera" o las iniciales de una cuenta. No elijas una \
+cuenta de la lista: copiá lo que dice el mensaje. Cómo pagó no es una cuenta: "por \
+transferencia" o "con débito" solos son null. Si no se refiere a ninguna, null.
 - category: el nombre de la categoría de la lista del tipo que corresponde (de gasto o de \
 ingreso) que mejor describe el movimiento, escrito igual que en la lista. Si ninguna encaja, \
 null. Entendé lo que el mensaje dice con palabras de todos los días: "el súper", "la nafta", \
 "el colectivo" o "la prepaga" tienen una categoría que les corresponde aunque no la nombren.
+- currency: "ARS" o "USD", solo si el mensaje dice la moneda de alguna forma: "pesos", \
+"lucas", "mangos", "pe" o "$" son "ARS", y "dólares", "verdes" o "USD" son "USD". Un número \
+solo, como "2000" o "26 mil", no dice ninguna moneda: null.
 - transaction_date: el día del movimiento como AAAA-MM-DD, solo si el mensaje dice cuál \
 ("ayer", "el lunes", "el 3"), calculado desde el día en que la persona escribió. Si no dice, \
 null.

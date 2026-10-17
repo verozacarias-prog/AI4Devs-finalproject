@@ -60,8 +60,11 @@ class Classification:
     message_class: MessageClass
     registration_type: RegistrationType | None = None
     amount: Decimal | None = None
+    # How the message names the account, in its own words: the code decides which it is.
     account: str | None = None
     category: str | None = None
+    # Only when the message says it, as "pesos", "lucas" or "dólares": an ISO code.
+    currency: str | None = None
     # Only when the message says which day; otherwise it is the day the user wrote.
     transaction_date: date | None = None
     usage: ModelUsage | None = None

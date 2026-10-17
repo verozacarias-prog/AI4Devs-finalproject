@@ -75,7 +75,13 @@ class AnswerMessage:
                     user_id, movement_date(classification, today)
                 )
                 movement = resolve_movement(
-                    classification, accounts, categories, today, user.time_zone, periods
+                    classification,
+                    message.text,
+                    accounts,
+                    categories,
+                    today,
+                    user.time_zone,
+                    periods,
                 )
             if movement is not None:
                 _register(unit_of_work, message, user_id, movement, now)
