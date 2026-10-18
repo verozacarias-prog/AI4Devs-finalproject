@@ -200,8 +200,12 @@ class InMemorySessions:
 class InMemoryTransactions:
     def __init__(self) -> None:
         self.added: list[Transaction] = []
+        # Raised by the next add instead of storing, when a case needs the store to fail.
+        self.failure: Exception | None = None
 
     def add(self, transaction: Transaction) -> None:
+        if self.failure is not None:
+            raise self.failure
         self.added.append(transaction)
 
     def list_by_user(self, user_id: uuid.UUID) -> list[Transaction]:

@@ -1,6 +1,6 @@
 """A registration that asks, and its continuation, against PostgreSQL (FEAT-003, its spec.md).
 
-Cases C2-01, C2-07, C2-14, C2-16, C2-19, C2-21, C2-24, C2-33 and C2-36. The worker runs whole
+Cases C2-01, C2-07, C2-14, C2-16, C2-19, C2-21, C2-24, C2-33, C2-36 and C2-40. The worker runs
 rounds, the way its process does, with the model replaced by a double inside the wrapper that
 records each call. A case that starts from an open pending gets it the way a user does: a first
 message that leaves it pending, and then the reply.
@@ -479,3 +479,37 @@ def test_a_reply_that_changes_an_interpreted_field_adds_a_correction(
     [pending] = _rows(engine, "SELECT status, corrected_fields_count FROM pending_transaction")
     assert pending["status"] == "promoted"
     assert pending["corrected_fields_count"] == 1
+
+
+def test_a_new_category_with_the_name_of_a_base_one_of_the_other_kind_is_created(
+    settings: Settings, engine: Engine
+) -> None:
+    # Case C2-40. "Honorarios" is a base category of income; this one is of expenses.
+    lucia = user_id(engine, "Lucía")
+    first, _ = _write_and_answer(
+        settings,
+        engine,
+        "pagué 50000 de honorarios al contador con MP",
+        _expense(amount="50000", account="MP", category=None, proposed_category="Honorarios"),
+    )
+    [question] = _replies_to(engine, first)
+    assert str(question["text"]).splitlines()[1] == (
+        "No encaja en ninguna de tus categorías. ¿Creo «Honorarios», o va en otra de las tuyas?"
+    )
+
+    reply, _ = _write_and_answer(
+        settings, engine, "sí", _continues(accepts_proposal=True), now=NOW + timedelta(minutes=1)
+    )
+
+    categories = _rows(
+        engine, "SELECT user_id, is_base, kind FROM category WHERE name = 'Honorarios'"
+    )
+    assert {(row["user_id"], row["is_base"], row["kind"]) for row in categories} == {
+        (None, True, "income"),
+        (lucia, False, "expense"),
+    }
+    [movement] = _transactions(engine)
+    assert movement["category"] == "Honorarios"
+    assert movement["category_user_id"] == lucia
+    assert status_of(engine, first)[0] == "processed"
+    assert status_of(engine, reply)[0] == "processed"

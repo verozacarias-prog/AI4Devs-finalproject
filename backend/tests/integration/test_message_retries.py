@@ -1,6 +1,6 @@
 """When the call to the model fails, against PostgreSQL (FEAT-003, its spec.md).
 
-Cases C2-25 and C2-28 to C2-31: the retries with a growing wait, the message that fails for
+Cases C2-25, C2-28 to C2-31 and C2-41: the retries with a growing wait, the message that fails for
 good and its notice, the next message after it, and a refusal of the model. The worker runs
 whole rounds, with the model replaced by a double inside the wrapper that records each call.
 """
@@ -179,3 +179,41 @@ def test_if_the_model_refuses_the_fixed_text_goes_out_and_it_is_not_retried(
     )
     assert reply["response_kind"] == "fixed_text"
     assert _outcomes(engine, message) == ["blocked"]
+
+
+def test_a_write_the_database_rejects_fails_the_message_without_retrying(
+    settings: Settings, engine: Engine
+) -> None:
+    # Case C2-41. Its state will not change, so it is not tried again.
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "CREATE FUNCTION reject_transaction() RETURNS trigger AS $$ BEGIN "
+                "RAISE EXCEPTION 'la base rechaza el movimiento'; END $$ LANGUAGE plpgsql"
+            )
+        )
+        connection.execute(
+            text(
+                "CREATE TRIGGER reject_transaction BEFORE INSERT ON transaction "
+                "FOR EACH ROW EXECUTE FUNCTION reject_transaction()"
+            )
+        )
+    message = inbound(engine, "Lucía", SUPERMARKET_EXPENSE, sent_at=SENT_AT)
+    greeting = inbound(engine, "Lucía", "hola", sent_at=SENT_AT + timedelta(seconds=1))
+
+    _run_round(settings, FakeLLM(supermarket_expense()))
+    after = FakeLLM(Classification(MessageClass.NONE))
+    _run_round(settings, after, NOW + timedelta(seconds=1))
+
+    assert status_of(engine, message) == ("failed", 1)
+    assert _count(engine, "SELECT count(*) FROM transaction") == 0
+    [notice] = _replies_to(engine, message)
+    assert notice["text"] == (
+        "Tuve un problema y no pude procesar tu mensaje. ¿Me lo mandás de nuevo en un rato?"
+    )
+    assert [request.text for request in after.requests] == ["hola"]
+    [reply] = _replies_to(engine, greeting)
+    assert reply["text"] == (
+        "¡Hola! Soy Platita y te ayudo a llevar las cuentas. Contame qué gastaste o qué "
+        "cobraste, y con qué cuenta. Por ejemplo: «gasté 3500 en el súper con Mercado Pago»."
+    )
