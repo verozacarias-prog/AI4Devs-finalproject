@@ -2,7 +2,8 @@
 
 Case C3-15: a call whose final transaction is undone keeps its row (ADR 0023, point 5).
 Case C3-17: the row of a classification says which fields came empty (CA-34). Case C3-19:
-`scripts/llm_metrics.sql` gives the four metrics of ADR 0023 (CA-35).
+`scripts/llm_metrics.sql` gives the four metrics of ADR 0023 (CA-35). Case C3-23: a refusal of
+the model is no hallucination, and has its own figure.
 """
 
 from __future__ import annotations
@@ -231,3 +232,17 @@ def test_the_metrics_script_gives_the_four_metrics(settings: Settings, engine: E
     assert rates["invalid_output_pct"] == Decimal("16.7")
     [blocked] = hallucinations
     assert blocked["blocked_pct"] == Decimal("16.7")
+
+
+def test_the_metric_of_hallucinations_leaves_out_the_refusals(
+    settings: Settings, engine: Engine
+) -> None:
+    # Case C3-23.
+    october_17 = datetime(2026, 10, 17, 15, 0, 0, tzinfo=UTC)
+    for outcome in ("ok", "blocked", "refused"):
+        _call(engine, october_17, 1000, "0.001", outcome)
+
+    [rates] = _metrics(engine)[3]
+
+    assert rates["blocked_pct"] == Decimal("33.3")
+    assert rates["refused_pct"] == Decimal("33.3")
