@@ -249,7 +249,9 @@ def _continue(
                 + corrections(previous, interpretation),
             )
             if classification.accepts_proposal:
-                interpretation = _accept_proposal(unit_of_work, context, pending, interpretation)
+                interpretation = _accept_proposal(
+                    unit_of_work, context, pending, previous, interpretation
+                )
             _settle(unit_of_work, context, interpretation, (batch, corrected))
         case None:
             # Not about the pending: it keeps waiting, and the message gets its fixed text.
@@ -260,9 +262,14 @@ def _accept_proposal(
     unit_of_work: UnitOfWorkPort,
     context: _Context,
     pending: PendingTransaction,
+    asked: Interpretation,
     interpretation: Interpretation,
 ) -> Interpretation:
-    """A yes to what the question offered: the category to create, or the draft to confirm."""
+    """A yes to what the question offered: the category to create, or the draft to confirm.
+
+    The draft is the one the question showed, for the day it asked about, and only while the
+    movement still falls in it: a yes never confirms a period the user did not see (§ 3).
+    """
     proposed = interpretation.proposed_category
     if (
         MissingField.CATEGORY in pending.missing_fields
@@ -272,15 +279,14 @@ def _accept_proposal(
         category = _category_named(unit_of_work, context, proposed, interpretation.type)
         interpretation = replace(interpretation, category=category.name)
     if MissingField.PERIOD in pending.missing_fields:
-        periods = unit_of_work.budget_periods.list_covering(
-            context.user.id, interpretation.transaction_date
-        )
+        shown = unit_of_work.budget_periods.list_covering(context.user.id, asked.transaction_date)
         if (
-            len(periods) == 1
-            and periods[0].status is PeriodStatus.DRAFT
-            and periods[0].user_id == context.user.id
+            len(shown) == 1
+            and shown[0].status is PeriodStatus.DRAFT
+            and shown[0].user_id == context.user.id
+            and shown[0].period_start <= interpretation.transaction_date <= shown[0].period_end
         ):
-            unit_of_work.budget_periods.confirm(periods[0].id)
+            unit_of_work.budget_periods.confirm(shown[0].id)
     return interpretation
 
 

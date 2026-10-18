@@ -124,7 +124,10 @@ INSERT_CATEGORY = """
     VALUES (:id, :name, :user_id, FALSE, :kind)
 """
 
-CONFIRM_BUDGET_PERIOD = "UPDATE budget_period SET status = 'confirmed' WHERE id = :period_id"
+# Only a draft: the query protects itself, whatever the use case checked before.
+CONFIRM_BUDGET_PERIOD = """
+    UPDATE budget_period SET status = 'confirmed' WHERE id = :period_id AND status = 'draft'
+"""
 
 SELECT_BUDGETS_BY_PERIOD = """
     SELECT id, budget_period_id, category_id, limit_amount

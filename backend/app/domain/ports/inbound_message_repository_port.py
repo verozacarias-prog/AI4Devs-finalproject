@@ -42,5 +42,7 @@ class InboundMessageRepositoryPort(Protocol):
         """Its attempts are used up: it is not taken again, and stops holding back the next ones.
 
         Only if it is still in process by the claim with those attempts, as `mark_processed`.
+        `at` keeps the same signature as `mark_processed`; the schema has no column for when a
+        message failed, so it is not stored.
         """
         ...
