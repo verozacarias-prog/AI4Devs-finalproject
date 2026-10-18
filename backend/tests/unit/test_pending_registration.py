@@ -1,7 +1,7 @@
 """What the registration asks, and how a reply continues it, with the model replaced (FEAT-003).
 
-Cases C2-02 to C2-06, C2-08 to C2-13, C2-15, C2-17, C2-18, C2-20, C2-35, C2-37, C2-38, C2-44
-and C2-45 of its spec.md.
+Cases C2-02 to C2-06, C2-08 to C2-13, C2-15, C2-17, C2-18, C2-20, C2-35, C2-37, C2-38, C2-44,
+C2-45 and C2-46 of its spec.md.
 Each case that starts from an open pending gets it the way a user does: a first message that
 leaves it pending, and then the reply. The database is in memory; the integration tests check
 the same use case against PostgreSQL.
@@ -618,3 +618,30 @@ def test_a_category_name_too_long_or_with_signs_not_allowed_is_not_proposed(
         else ASK_CATEGORY
     )
     assert _last_reply(unit_of_work).splitlines()[1] == expected
+
+
+def test_a_yes_confirms_only_the_draft_the_question_showed() -> None:
+    # Case C2-46. The yes came with another date, which falls in October: November stays a draft.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    draft = _november_draft(unit_of_work, lucia)
+    _supermarket_with_mp_on_november_1(unit_of_work, lucia)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "sí, pero fue el 31",
+        Classification(
+            MessageClass.REGISTRATION,
+            transaction_date=date(2026, 10, 31),
+            pending_reply=PendingReply.CONTINUES,
+            accepts_proposal=True,
+        ),
+        now=NOVEMBER_1_NOW + timedelta(minutes=1),
+    )
+
+    [stored] = [period for period in unit_of_work.budget_periods.added if period.id == draft.id]
+    assert stored.status is PeriodStatus.DRAFT
+    [transaction] = unit_of_work.transactions.added
+    assert transaction.transaction_date == date(2026, 10, 31)
+    assert transaction.budget_period_id == lucia.period.id
