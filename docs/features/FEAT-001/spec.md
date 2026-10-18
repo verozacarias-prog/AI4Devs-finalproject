@@ -1,7 +1,7 @@
 # Especificación — FEAT-001 · Pantalla de cuentas
 
 - **Historia de usuario:** [HU1](../../05-historias-de-usuario.md)
-- **Estado:** aprobada para el corte 1. Los casos de los cortes 2 y 3 están en borrador
+- **Estado:** aprobada para los tres cortes
 - **Fecha:** 2026-10-13
 
 ## Alcance
