@@ -151,6 +151,8 @@ class OpenAILLM:
                 ],
                 reasoning=Reasoning(effort=LLM_REASONING_EFFORT),
                 text=ResponseTextConfigParam(format=output_format),
+                # Nothing chains answers: the provider keeps only its abuse logs (ADR 0025).
+                store=False,
             )
         except APITimeoutError:
             raise ModelCallFailedError(LlmOutcome.TIMEOUT, _NO_TOKENS) from None
