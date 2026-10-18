@@ -8,12 +8,14 @@ is missing.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 from enum import StrEnum
 
+from app.constants import CATEGORY_NAME_MAX_LENGTH, CATEGORY_NAME_PATTERN
 from app.domain.entities.account import Account, AccountType
 from app.domain.entities.budget_period import BudgetPeriod, PeriodStatus
 from app.domain.entities.category import Category
@@ -38,6 +40,7 @@ _ACCOUNT_TYPES_FOR_MOVEMENTS = (
 )
 # Two decimals, as the database stores an amount (docs/03-modelo-de-datos.md).
 _CENTS = Decimal("0.01")
+_CATEGORY_NAME = re.compile(CATEGORY_NAME_PATTERN)
 
 
 class MissingField(StrEnum):
@@ -153,7 +156,7 @@ def interpret(
         account=account,
         account_mention=mention,
         category=classification.category,
-        proposed_category=classification.proposed_category,
+        proposed_category=_valid_proposal(classification.proposed_category),
         transaction_date=movement_date(classification, today),
     )
 
@@ -187,7 +190,8 @@ def continue_interpretation(
         account=account,
         account_mention=mention,
         category=classification.category or previous.category,
-        proposed_category=classification.proposed_category or previous.proposed_category,
+        proposed_category=_valid_proposal(classification.proposed_category)
+        or previous.proposed_category,
         transaction_date=classification.transaction_date or previous.transaction_date,
     )
 
@@ -326,6 +330,16 @@ def from_parsed_data(parsed: Mapping[str, str | None], today: date) -> Interpret
         proposed_category=parsed.get(ParsedKey.PROPOSED_CATEGORY),
         transaction_date=today if kept_date is None else date.fromisoformat(kept_date),
     )
+
+
+def _valid_proposal(name: str | None) -> str | None:
+    """The name the model proposes, if it passes the check in code; otherwise none (CA-43)."""
+    if name is None:
+        return None
+    stripped = name.strip()
+    if len(stripped) > CATEGORY_NAME_MAX_LENGTH or not _CATEGORY_NAME.fullmatch(stripped):
+        return None
+    return stripped
 
 
 def same_name(stored: str, written: str | None) -> bool:

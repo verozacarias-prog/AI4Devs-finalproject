@@ -29,7 +29,7 @@ from app.domain.entities.pending_transaction import (
 )
 from app.domain.entities.transaction import Transaction, TransactionSource, TransactionType
 from app.domain.entities.user import User
-from app.domain.errors import ModelCallFailedError, ModelRefusedError
+from app.domain.errors import ModelCallFailedError, ModelRefusedError, StoreUnavailableError
 from app.domain.ports.llm_port import LLMPort
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
 from app.domain.services.dates.local_date import local_today
@@ -97,7 +97,22 @@ class AnswerMessage:
         self._retries = retries or RetryPolicy()
 
     def execute(self, message: InboundMessage) -> bool:
-        """True if this worker handled it; False if another one took it after this one."""
+        """True if this worker handled it; False if another one took it after this one.
+
+        A failure that is not of the model is dealt with by its kind, and raised again so that
+        the entry point logs it (CA-44): one that may go away is tried again later, and one
+        whose state will not change leaves the message failed at once, with its notice.
+        """
+        try:
+            return self._answer(message)
+        except StoreUnavailableError:
+            self._try_again_later(message)
+            raise
+        except Exception:
+            self._fail(message)
+            raise
+
+    def _answer(self, message: InboundMessage) -> bool:
         user_id = message.user_id
         awaiting: tuple[PendingBatch, PendingTransaction] | None = None
         question: str | None = None
@@ -156,22 +171,29 @@ class AnswerMessage:
             unit_of_work.commit()
         return True
 
-    def _try_again_later(self, message: InboundMessage) -> bool:
-        """Another attempt with a growing wait, or, with them used up, failed and its notice."""
+    def _fail(self, message: InboundMessage) -> bool:
+        """Failed for good, and its notice: the next message of the user is processed."""
         now = self._clock.now()
         with self._unit_of_work as unit_of_work:
-            if self._retries.is_last(message.attempts):
-                if not unit_of_work.inbound_messages.mark_failed(message.id, message.attempts, now):
-                    return False
-                unit_of_work.outbound_messages.add(
-                    _reply(message, messages.MESSAGE_FAILED, ResponseKind.FIXED_TEXT, now)
-                )
-            else:
-                next_attempt_at = now + self._retries.wait_after(message.attempts)
-                if not unit_of_work.inbound_messages.retry_later(
-                    message.id, message.attempts, next_attempt_at
-                ):
-                    return False
+            if not unit_of_work.inbound_messages.mark_failed(message.id, message.attempts, now):
+                return False
+            unit_of_work.outbound_messages.add(
+                _reply(message, messages.MESSAGE_FAILED, ResponseKind.FIXED_TEXT, now)
+            )
+            unit_of_work.commit()
+        return True
+
+    def _try_again_later(self, message: InboundMessage) -> bool:
+        """Another attempt with a growing wait, or, with them used up, failed and its notice."""
+        if self._retries.is_last(message.attempts):
+            return self._fail(message)
+        now = self._clock.now()
+        next_attempt_at = now + self._retries.wait_after(message.attempts)
+        with self._unit_of_work as unit_of_work:
+            if not unit_of_work.inbound_messages.retry_later(
+                message.id, message.attempts, next_attempt_at
+            ):
+                return False
             unit_of_work.commit()
         return True
 

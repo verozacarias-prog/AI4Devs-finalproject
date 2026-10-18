@@ -133,6 +133,13 @@ class StoreRejectionError(Exception):
         self.constraint = constraint
 
 
+class StoreUnavailableError(Exception):
+    """The store did not answer, or two transactions collided: it may work a while later.
+
+    Not a DomainError: no rule foresees it. A message that meets it is tried again (CA-44).
+    """
+
+
 class ModelCallFailedError(Exception):
     """The call to the model did not give an answer to use: the message is tried again later.
 

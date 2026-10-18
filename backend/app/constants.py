@@ -109,6 +109,12 @@ TOKENS_PER_MILLION = 1_000_000
 # The currencies a message can say, as the model returns them (domain rules, § 1).
 MESSAGE_CURRENCIES = ("ARS", "USD")
 
+# What a name the model proposes for a new category may be, checked in code before it is shown
+# or stored (ADR 0013, point 10): letters, digits, spaces, hyphens, commas and brackets. With no
+# dot, slash, colon or at sign, no link can pass.
+CATEGORY_NAME_MAX_LENGTH = 40
+CATEGORY_NAME_PATTERN = r"(?:[^\W_]|[ ,()-])+"
+
 # How long a pending waits for its answer before it expires: the WhatsApp window for free text,
 # so the reminder before it always fits (domain rules, § 5).
 PENDING_VALIDITY_HOURS = 24

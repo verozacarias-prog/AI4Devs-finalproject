@@ -4,6 +4,7 @@ from types import TracebackType
 from typing import Self
 
 from sqlalchemy import Connection, Engine
+from sqlalchemy.exc import OperationalError
 
 from app.adapters.outbound.postgres.repositories.accounts import PostgresAccountRepository
 from app.adapters.outbound.postgres.repositories.budget_periods import (
@@ -27,6 +28,7 @@ from app.adapters.outbound.postgres.repositories.sessions import PostgresSession
 from app.adapters.outbound.postgres.repositories.transactions import PostgresTransactionRepository
 from app.adapters.outbound.postgres.repositories.transfers import PostgresTransferRepository
 from app.adapters.outbound.postgres.repositories.users import PostgresUserRepository
+from app.domain.errors import StoreUnavailableError
 from app.domain.ports.account_repository_port import AccountRepositoryPort
 from app.domain.ports.budget_period_repository_port import BudgetPeriodRepositoryPort
 from app.domain.ports.budget_repository_port import BudgetRepositoryPort
@@ -70,8 +72,11 @@ class SqlAlchemyUnitOfWork:
         self._connection: Connection | None = None
 
     def __enter__(self) -> Self:
-        connection = self._engine.connect()
-        connection.begin()
+        try:
+            connection = self._engine.connect()
+            connection.begin()
+        except OperationalError as error:
+            raise StoreUnavailableError from error
         self._connection = connection
         self.users = PostgresUserRepository(connection)
         self.accounts = PostgresAccountRepository(connection)
@@ -99,7 +104,14 @@ class SqlAlchemyUnitOfWork:
             # Closing a connection with an open transaction rolls it back.
             self._connection.close()
             self._connection = None
+        # A connection lost, or two transactions that collided, may work a while later: the
+        # single place where the domain learns it, whatever query met it.
+        if isinstance(exc, OperationalError):
+            raise StoreUnavailableError from exc
 
     def commit(self) -> None:
         if self._connection is not None:
-            self._connection.commit()
+            try:
+                self._connection.commit()
+            except OperationalError as error:
+                raise StoreUnavailableError from error
