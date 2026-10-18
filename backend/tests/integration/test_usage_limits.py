@@ -302,16 +302,21 @@ def test_going_over_the_cap_or_the_quota_leaves_its_event_without_the_phone(
 
 
 @pytest.mark.parametrize(
-    ("error", "status"),
+    ("error", "status", "classified"),
     [
-        (ModelCallFailedError(LlmOutcome.PROVIDER_ERROR), ("pending", 1)),
-        (ModelRefusedError(), ("processed", 1)),
+        (ModelCallFailedError(LlmOutcome.PROVIDER_ERROR), ("pending", 1), 7),
+        (ModelRefusedError(), ("processed", 1), 8),
     ],
 )
-def test_a_classification_call_that_fails_also_adds_to_the_cap_of_the_day(
-    settings: Settings, engine: Engine, error: Exception, status: tuple[str, int]
+def test_a_failed_call_does_not_add_to_the_cap_and_a_refusal_does(
+    settings: Settings,
+    engine: Engine,
+    error: Exception,
+    status: tuple[str, int],
+    classified: int,
 ) -> None:
-    # Case C3-21. The call was paid all the same (ADR 0018, point 3).
+    # Case C3-21. A fall of the provider does not use up the cap of the user; a refusal is a
+    # message processed with its fixed text (ADR 0018, point 3).
     _set_usage(engine, OCTOBER_17, "classification", 7)
     message = inbound(engine, "Lucía", SUPERMARKET_EXPENSE, sent_at=SENT_AT)
 
@@ -320,7 +325,7 @@ def test_a_classification_call_that_fails_also_adds_to_the_cap_of_the_day(
     assert status_of(engine, message) == status
     classification = _usage(engine, OCTOBER_17, "classification")
     assert classification is not None
-    assert classification[0] == 8
+    assert classification[0] == classified
 
 
 def _answered(stream: io.StringIO, message: uuid.UUID) -> int:
