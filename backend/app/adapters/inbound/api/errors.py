@@ -30,6 +30,7 @@ STATUS_BY_CATEGORY = {
     ErrorCategory.FORBIDDEN: status.HTTP_403_FORBIDDEN,
     ErrorCategory.CONFLICT: status.HTTP_409_CONFLICT,
     ErrorCategory.INVALID: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    ErrorCategory.UNAVAILABLE: status.HTTP_503_SERVICE_UNAVAILABLE,
 }
 
 

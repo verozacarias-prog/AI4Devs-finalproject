@@ -12,8 +12,9 @@ SELECT purpose,
  GROUP BY purpose
  ORDER BY purpose;
 
--- Cost: the estimated cost in dollars, by day and by purpose. The day is the one of UTC.
-SELECT (created_at AT TIME ZONE 'UTC')::date AS day,
+-- Cost: the estimated cost in dollars, by day and by purpose. The day is the one of Buenos
+-- Aires, the day of every user while Platita is only in Argentina.
+SELECT (created_at AT TIME ZONE 'America/Argentina/Buenos_Aires')::date AS day,
        purpose,
        sum(estimated_cost_usd) AS cost_usd
   FROM llm_call

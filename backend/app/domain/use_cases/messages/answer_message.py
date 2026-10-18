@@ -15,6 +15,7 @@ from app.domain.entities.classification import (
     Classification,
     ClassificationRequest,
     MessageClass,
+    ModelUsage,
     OpenPending,
     PendingReply,
 )
@@ -67,9 +68,13 @@ _FIRST_POSITION = 1
 
 @dataclass(frozen=True)
 class LimitReached:
-    """The user went over a daily counter, and the message was put off to their next day."""
+    """The user went over a daily counter, and the message was put off to their next day.
+
+    `answered` says whether it got a notice: the one of the cap goes out once a day.
+    """
 
     counter: UsageCounter
+    answered: bool
 
 
 @dataclass(frozen=True)
@@ -94,6 +99,16 @@ class _Usage:
     user: User
     day: date
     now: datetime
+
+
+@dataclass(frozen=True)
+class _PaidCall:
+    """A call to classify the message, which counts against the cap of the day whatever its
+    end, with the tokens it took (ADR 0018, point 3).
+    """
+
+    usage: _Usage
+    model: ModelUsage | None
 
 
 @dataclass(frozen=True)
@@ -189,8 +204,7 @@ class AnswerMessage:
             return self._store_reply(message, messages.ASK_FOR_DETAILS, ResponseKind.FIXED_TEXT)
         if classified >= self._limits.classification:
             # Classifying costs too: it is not known whether it was an expense, so it waits.
-            notify(LimitReached(UsageCounter.CLASSIFICATION))
-            return self._put_off_by_the_cap(message, usage)
+            return self._put_off_by_the_cap(message, usage, notify)
         open_pending = None
         if awaiting is not None and question is not None:
             open_pending = OpenPending(
@@ -202,11 +216,16 @@ class AnswerMessage:
             classification = self._llm.classify(
                 _request(message.text, accounts, categories, today, open_pending)
             )
-        except ModelRefusedError:
-            return self._store_reply(message, messages.MODEL_REFUSED, ResponseKind.FIXED_TEXT)
+        except ModelRefusedError as error:
+            return self._store_reply(
+                message,
+                messages.MODEL_REFUSED,
+                ResponseKind.FIXED_TEXT,
+                _PaidCall(usage, error.usage),
+            )
         except ModelCallFailedError as error:
             notify(ModelFailed(error))
-            return self._try_again_later(message)
+            return self._try_again_later(message, _PaidCall(usage, error.usage))
         continuing = awaiting is not None and open_pending is not None
         previous = (
             from_parsed_data(awaiting[1].parsed_data, today)
@@ -229,7 +248,7 @@ class AnswerMessage:
             # First, so that a worker another one displaced writes nothing at all.
             if not unit_of_work.inbound_messages.mark_processed(message.id, message.attempts, now):
                 return False
-            _count(unit_of_work, usage, UsageCounter.CLASSIFICATION, classification)
+            _count(unit_of_work, usage, UsageCounter.CLASSIFICATION, classification.usage)
             if registration:
                 _count(unit_of_work, usage, UsageCounter.REGISTRATION, None)
             if awaiting is not None and open_pending is None:
@@ -253,7 +272,9 @@ class AnswerMessage:
         ):
             self._calls.mark_blocked(classification.call_id)
 
-    def _put_off_by_the_cap(self, message: InboundMessage, usage: _Usage) -> bool:
+    def _put_off_by_the_cap(
+        self, message: InboundMessage, usage: _Usage, notify: Callable[[AnswerNotice], None]
+    ) -> bool:
         """Put off to the next day without classifying, with the notice once a day (§ 12)."""
         time_zone = usage.user.time_zone
         with self._unit_of_work as unit_of_work:
@@ -261,15 +282,17 @@ class AnswerMessage:
                 message.id, message.attempts - 1, start_of_next_day(usage.now, time_zone)
             ):
                 return False
-            if not unit_of_work.outbound_messages.sent_since(
+            told = unit_of_work.outbound_messages.sent_since(
                 usage.user.id, messages.DAILY_LIMIT_REACHED, start_of_day(usage.now, time_zone)
-            ):
+            )
+            if not told:
                 unit_of_work.outbound_messages.add(
                     _reply(
                         message, messages.DAILY_LIMIT_REACHED, ResponseKind.FIXED_TEXT, usage.now
                     )
                 )
             unit_of_work.commit()
+        notify(LimitReached(UsageCounter.CLASSIFICATION, answered=not told))
         return True
 
     def _put_off_by_the_quota(
@@ -287,39 +310,47 @@ class AnswerMessage:
         next_day = start_of_next_day(usage.now, usage.user.time_zone)
         if not unit_of_work.inbound_messages.defer(message.id, message.attempts - 1, next_day):
             return False
-        _count(unit_of_work, usage, UsageCounter.CLASSIFICATION, classification)
+        _count(unit_of_work, usage, UsageCounter.CLASSIFICATION, classification.usage)
         unit_of_work.outbound_messages.add(
             _reply(message, messages.REGISTRATION_QUOTA_USED_UP, ResponseKind.FIXED_TEXT, usage.now)
         )
         unit_of_work.commit()
-        notify(LimitReached(UsageCounter.REGISTRATION))
+        notify(LimitReached(UsageCounter.REGISTRATION, answered=True))
         return True
 
-    def _store_reply(self, message: InboundMessage, text: str, kind: ResponseKind) -> bool:
+    def _store_reply(
+        self,
+        message: InboundMessage,
+        text: str,
+        kind: ResponseKind,
+        paid: _PaidCall | None = None,
+    ) -> bool:
         now = self._clock.now()
         with self._unit_of_work as unit_of_work:
             if not unit_of_work.inbound_messages.mark_processed(message.id, message.attempts, now):
                 return False
+            _count_paid(unit_of_work, paid)
             unit_of_work.outbound_messages.add(_reply(message, text, kind, now))
             unit_of_work.commit()
         return True
 
-    def _fail(self, message: InboundMessage) -> bool:
+    def _fail(self, message: InboundMessage, paid: _PaidCall | None = None) -> bool:
         """Failed for good, and its notice: the next message of the user is processed."""
         now = self._clock.now()
         with self._unit_of_work as unit_of_work:
             if not unit_of_work.inbound_messages.mark_failed(message.id, message.attempts, now):
                 return False
+            _count_paid(unit_of_work, paid)
             unit_of_work.outbound_messages.add(
                 _reply(message, messages.MESSAGE_FAILED, ResponseKind.FIXED_TEXT, now)
             )
             unit_of_work.commit()
         return True
 
-    def _try_again_later(self, message: InboundMessage) -> bool:
+    def _try_again_later(self, message: InboundMessage, paid: _PaidCall | None = None) -> bool:
         """Another attempt with a growing wait, or, with them used up, failed and its notice."""
         if self._retries.is_last(message.attempts):
-            return self._fail(message)
+            return self._fail(message, paid)
         now = self._clock.now()
         next_attempt_at = now + self._retries.wait_after(message.attempts)
         with self._unit_of_work as unit_of_work:
@@ -327,6 +358,7 @@ class AnswerMessage:
                 message.id, message.attempts, next_attempt_at
             ):
                 return False
+            _count_paid(unit_of_work, paid)
             unit_of_work.commit()
         return True
 
@@ -350,10 +382,9 @@ def _count(
     unit_of_work: UnitOfWorkPort,
     usage: _Usage,
     counter: UsageCounter,
-    classification: Classification | None,
+    model_usage: ModelUsage | None,
 ) -> None:
     """One more of that counter, with the tokens of the call when it is the one that paid it."""
-    model_usage = None if classification is None else classification.usage
     unit_of_work.llm_usage.add(
         usage.user.id,
         usage.day,
@@ -361,6 +392,12 @@ def _count(
         (model_usage.input_tokens or 0) if model_usage else 0,
         (model_usage.output_tokens or 0) if model_usage else 0,
     )
+
+
+def _count_paid(unit_of_work: UnitOfWorkPort, paid: _PaidCall | None) -> None:
+    """A call that ended without classifying still counts against the cap of the day."""
+    if paid is not None:
+        _count(unit_of_work, paid.usage, UsageCounter.CLASSIFICATION, paid.model)
 
 
 def _answer_new(

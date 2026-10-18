@@ -59,17 +59,22 @@ class MessageWorker:
             if message.user_id is not None:
                 user_id_var.set(str(message.user_id))
 
+        model_failures: list[ModelFailed] = []
+
         def log(notice: AnswerNotice) -> None:
             match notice:
                 case LimitReached():
                     logger.info(Event.USAGE_QUOTA_EXCEEDED, extra={Field.QUOTA: notice.counter})
                 case ModelFailed():
-                    # The use case dealt with it; it is still an error, and leaves its line.
-                    log_error(notice.error, in_full=self._in_full)
+                    model_failures.append(notice)
 
         started = time.monotonic()
         try:
             outcome = self._process_next().execute(on_claimed=follow, on_notice=log)
+            if model_failures:
+                # The use case dealt with it, and it is still an error: it goes to the one
+                # place that logs the errors of a round.
+                raise model_failures[0].error
         except Exception as error:
             # The use case already left the message for another attempt, or failed with its
             # notice (CA-44). Only if that failed too, or the claim did, it stays in process

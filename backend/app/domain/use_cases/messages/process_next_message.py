@@ -29,7 +29,8 @@ class RoundOutcome(StrEnum):
     TAKEN_BY_ANOTHER = "taken_by_another"
     # The call to the model failed: the message waits for another attempt, or failed.
     LEFT_FOR_LATER = "left_for_later"
-    # A limit of use put it off to the next day of the user (domain rules, § 12).
+    # A limit of use put it off to the next day of the user without a notice: the one of the
+    # cap goes out once a day (domain rules, § 12). With its notice, it was answered.
     PUT_OFF = "put_off"
 
 
@@ -74,6 +75,6 @@ class ProcessNextMessage:
             return RoundOutcome.TAKEN_BY_ANOTHER
         if any(isinstance(notice, ModelFailed) for notice in notices):
             return RoundOutcome.LEFT_FOR_LATER
-        if any(isinstance(notice, LimitReached) for notice in notices):
+        if any(isinstance(notice, LimitReached) and not notice.answered for notice in notices):
             return RoundOutcome.PUT_OFF
         return RoundOutcome.ANSWERED
