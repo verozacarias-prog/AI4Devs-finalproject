@@ -36,8 +36,8 @@ Lo que ya está decidido acota la solución:
 1. **Una tabla `LLM_CALL` con una fila por llamada, sin ningún contenido.** Guarda el mensaje
    que la originó, el propósito (clasificar, interpretar, consulta, consejo o embedding), el
    proveedor, el modelo, la versión del prompt, los tokens de entrada y de salida, la duración,
-   el costo estimado y el resultado: bien, salida inválida, bloqueada por la validación, error
-   del proveedor o tiempo agotado. Nunca texto, montos ni nombres. Las columnas están en el
+   el costo estimado y el resultado: bien, salida inválida, bloqueada por la validación, negada
+   por el modelo, error del proveedor o tiempo agotado. Nunca texto, montos ni nombres. Las columnas están en el
    [modelo de datos](../03-modelo-de-datos.md#llm_call).
 2. **Un campo reservado para la recuperación.** Guarda qué fragmentos de la base de conocimiento
    se trajeron y con qué similitud. Queda vacío hasta que existan los consejos. Para llenarlo,
@@ -71,7 +71,8 @@ Lo que ya está decidido acota la solución:
     - costo, por día y por propósito;
     - calidad: el porcentaje de registros confirmados sin correcciones, y el de salidas con
       formato inválido;
-    - alucinaciones: el porcentaje de respuestas bloqueadas por la validación.
+    - alucinaciones: el porcentaje de respuestas bloqueadas por la validación. Una negativa del
+      modelo no cuenta: tiene su propio resultado y su propia cifra, al lado.
 
     Con los consejos se suma el porcentaje de respuestas sin ningún fragmento por encima de un
     umbral de similitud. Ese umbral es un parámetro de la métrica: no cambia qué fragmentos se

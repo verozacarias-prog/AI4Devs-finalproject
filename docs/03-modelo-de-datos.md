@@ -509,7 +509,7 @@ erDiagram
         int output_tokens "NULLABLE — null for embeddings and when the provider did not answer"
         int duration_ms "NOT NULL, CHECK (duration_ms >= 0)"
         numeric estimated_cost_usd "NULLABLE, NUMERIC(12,6), CHECK (estimated_cost_usd >= 0) — computed when the row is written, from the configured prices per model; always US dollars"
-        string outcome "NOT NULL, CHECK IN ('ok','invalid_output','blocked','provider_error','timeout')"
+        string outcome "NOT NULL, CHECK IN ('ok','invalid_output','blocked','refused','provider_error','timeout')"
         jsonb retrieval "NULLABLE — reserved for advice: the chunks retrieved and their similarity; empty until advice exists"
         string[] empty_fields "NULLABLE, CHECK each IN ('registration_type','amount','account','category','currency','transaction_date') — for a classification of a registration, the output fields that came empty; never a value"
         timestamptz created_at "NOT NULL, DEFAULT now()"
@@ -827,7 +827,7 @@ Una fila por cada llamada al proveedor de LLM o al de embeddings, sin ningún co
 
 - `inbound_message_id` es también el identificador con que se sigue un mensaje en los registros.
 - `purpose` sale del método del puerto que se llamó. `interpretation` es la llamada que interpreta la respuesta a una pregunta de un pendiente; la llamada inicial, que clasifica y además adelanta el trabajo, es `classification`.
-- `outcome` nace como `ok`, `invalid_output`, `provider_error` o `timeout`, o como `blocked` cuando el modelo se niega a interpretar el mensaje ([FEAT-003](features/FEAT-003/spec.md), CA-40). Una llamada `ok` pasa a `blocked` después, cuando la validación de salida rechaza la respuesta (CA-47).
+- `outcome` nace como `ok`, `invalid_output`, `refused`, cuando el modelo se niega a interpretar el mensaje ([FEAT-003](features/FEAT-003/spec.md), CA-40), `provider_error` o `timeout`. Una llamada `ok` pasa a `blocked` después, cuando la validación de salida rechaza la respuesta (CA-47).
 - `estimated_cost_usd` es un costo de operación de Platita, no plata de un usuario: por eso lleva la moneda en el nombre y no una columna de moneda.
 - `empty_fields` dice, para una clasificación que resultó un registro, qué campos de la salida vinieron vacíos: solo sus nombres, nunca un valor. Sirve para diagnosticar una interpretación fallida sin guardar contenido. Es nulo en cualquier otra llamada ([FEAT-003](features/FEAT-003/spec.md), CA-34).
 - `retrieval` guarda, para un consejo, una lista con el identificador de cada fragmento recuperado y su similitud. No tiene clave foránea a `ADVICE_CHUNK`, que todavía no existe.

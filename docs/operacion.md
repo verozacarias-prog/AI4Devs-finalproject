@@ -336,7 +336,7 @@ de síntoma con ventanas largas, y el consumo del objetivo se revisa en el resum
 | Latencia | Duración de las llamadas, por propósito |
 | Costo | Costo estimado, por día de Buenos Aires y por propósito |
 | Calidad | Porcentaje de registros confirmados sin ninguna corrección, y porcentaje de llamadas con salida de formato inválido |
-| Alucinaciones | Porcentaje de respuestas bloqueadas por la validación de salida |
+| Alucinaciones | Porcentaje de respuestas bloqueadas por la validación de salida, y al lado el de negativas del modelo, que no cuentan como alucinación |
 | Recuperación, cuando existan los consejos | Porcentaje de respuestas sin ningún fragmento por encima del umbral de similitud, que es un parámetro del script |
 
 `Propuesto, sin decidir:` el resto de esta sección.

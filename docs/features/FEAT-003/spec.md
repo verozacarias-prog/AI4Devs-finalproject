@@ -1,7 +1,7 @@
 # Especificación — FEAT-003 · Registro de un gasto y de un ingreso
 
 - **Historia de usuario:** [HU3](../../05-historias-de-usuario.md)
-- **Estado:** aprobada para los tres cortes: C1-01 a C1-25, C2-01 a C2-47 y C3-01 a C3-22
+- **Estado:** aprobada para los tres cortes: C1-01 a C1-25, C2-01 a C2-47 y C3-01 a C3-23
 - **Fecha:** 2026-10-16
 
 ## Alcance
@@ -113,7 +113,7 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 - **CA-44.** Cualquier otro fallo al procesar un mensaje se trata según su tipo ([ADR 0010](../../adr/0010-webhook-asincrono-con-tabla-de-entrada.md), punto 4). Uno pasajero, que puede salir bien al rato, como la base caída o dos transacciones que chocan, se reintenta igual que un fallo del modelo. Uno permanente, cuyo estado no va a cambiar, como una escritura que la base rechaza, datos guardados que rompen una regla o un error del código, no se reintenta: el mensaje queda `failed` enseguida, el usuario recibe el aviso y su siguiente mensaje se procesa. Ningún mensaje queda tomado sin fin. Decidido por Vero el 17/10/2026, con la revisión de `pr-reviewer` del corte 2.
 - **CA-27.** Si dos workers terminan el mismo mensaje, queda un solo movimiento.
 - **CA-28.** Si el tiempo máximo de la llamada al modelo no es menor que la duración del lock, ningún proceso arranca.
-- **CA-40.** Si el modelo se niega a interpretar el mensaje, el usuario recibe enseguida un texto fijo que le pide escribirlo de otra forma, sin reintentar, y la llamada queda `blocked`. Una respuesta que el proveedor corta a la mitad se trata como un modelo caído (CA-26). Decidido por Vero el 17/10/2026, y resuelve la pregunta abierta 1.
+- **CA-40.** Si el modelo se niega a interpretar el mensaje, el usuario recibe enseguida un texto fijo que le pide escribirlo de otra forma, sin reintentar, y la llamada queda `refused`, aparte de lo que bloquea la validación (CA-47). Una respuesta que el proveedor corta a la mitad se trata como un modelo caído (CA-26). Decidido por Vero el 17/10/2026, y resuelve la pregunta abierta 1. El resultado `refused` lo decidió Vero el 18/10/2026, con la revisión de `pr-reviewer` del corte 3, para que la métrica de alucinaciones no cuente las negativas.
 
 ### Límites y observabilidad — corte 3
 
@@ -900,7 +900,7 @@ defecto.
 - **entonces** el mensaje queda `processed`, con `attempts = 1`; no se registra nada; la
   respuesta es "No pude entender ese mensaje. ¿Me lo escribís de otra forma? Por ejemplo:
   «gasté 3500 en el súper con Mercado Pago».", con `response_kind = 'fixed_text'`; y la fila de
-  `LLM_CALL` tiene `outcome = 'blocked'`.
+  `LLM_CALL` tiene `outcome = 'refused'`.
 - **Test:** `tests/integration/test_message_retries.py::test_if_the_model_refuses_the_fixed_text_goes_out_and_it_is_not_retried`
 
 #### C2-32 · Una respuesta cortada se trata como un modelo caído
@@ -1089,7 +1089,8 @@ defecto.
 - **Aprobado por:** Veronica Zacarias 18/10/2026
 - **C3-21 y C3-22, sumados con el `/spec-drift` del corte 3:** Veronica Zacarias 18/10/2026
 - **C3-21, cambiado con la revisión de `pr-reviewer` del corte 3:** Veronica Zacarias 18/10/2026
-- **Total:** 22 casos, 8 unitarios y 14 de integración.
+- **C2-31 cambiado y C3-23 sumado, con la revisión de `pr-reviewer` del corte 3:** pendiente
+- **Total:** 23 casos, 8 unitarios y 15 de integración.
 
 Cómo se cuentan los límites, para leer los casos
 ([reglas de dominio § 12](../../reglas-de-dominio.md#12-límites-de-uso-del-asistente) y
@@ -1136,6 +1137,7 @@ Cómo se cuentan los límites, para leer los casos
 | C3-20 | Un mensaje que se deja para otro intento no se registra como respondido | Integración | CA-26 y CA-31 |
 | C3-21 | Una llamada que falla no suma al tope, y una negativa del modelo sí | Integración | CA-29 |
 | C3-22 | Un mensaje demorado con aviso queda como respondido, y uno demorado en silencio no | Integración | CA-29, CA-30 y CA-31 |
+| C3-23 | La métrica de alucinaciones no cuenta las negativas, que tienen su propia cifra | Integración | CA-35 y CA-40 |
 
 #### C3-01 · Con el tope diario alcanzado, el mensaje no se clasifica y se demora
 
@@ -1373,6 +1375,15 @@ Cómo se cuentan los límites, para leer los casos
 - **entonces** C3-01 y C3-05 dejan una línea `message.answered` cada uno, y C3-02 no deja
   ninguna ([Operación](../../operacion.md#63-registros)).
 - **Test:** `tests/integration/test_usage_limits.py::test_a_message_put_off_with_a_notice_is_answered_and_one_put_off_in_silence_is_not`
+
+#### C3-23 · La métrica de alucinaciones no cuenta las negativas, que tienen su propia cifra
+
+- **Sale de:** CA-35 y CA-40 · **Tipo:** integración
+- **Dado** en `LLM_CALL` tres clasificaciones del 17/10/2026: una `ok`, una `blocked` y una
+  `refused`,
+- **cuando** se corre `scripts/llm_metrics.sql` contra la base,
+- **entonces** la cuarta consulta da `blocked_pct` de 33,3 y `refused_pct` de 33,3.
+- **Test:** —
 
 ## Mensajes al usuario
 
