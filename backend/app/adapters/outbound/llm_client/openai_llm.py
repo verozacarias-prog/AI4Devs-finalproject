@@ -212,14 +212,14 @@ def _usage(response: Response) -> ModelUsage:
 def _delimited(request: ClassificationRequest) -> str:
     """The data of the task, marked as information (ADR 0013, point 9)."""
     data: dict[str, object] = {
-        "mensaje": request.text,
-        "dia_en_que_escribio": request.today.isoformat(),
-        "cuentas": list(request.accounts),
-        "categorias_de_gasto": list(request.expense_categories),
-        "categorias_de_ingreso": list(request.income_categories),
+        prompts.DATA_KEY_MESSAGE: request.text,
+        prompts.DATA_KEY_TODAY: request.today.isoformat(),
+        prompts.DATA_KEY_ACCOUNTS: list(request.accounts),
+        prompts.DATA_KEY_EXPENSE_CATEGORIES: list(request.expense_categories),
+        prompts.DATA_KEY_INCOME_CATEGORIES: list(request.income_categories),
     }
     if request.open_pending is not None:
-        data["pendiente_abierto"] = _pending_data(request.open_pending)
+        data[prompts.DATA_KEY_OPEN_PENDING] = _pending_data(request.open_pending)
     # Escaped as JSON allows, so that a message cannot close the delimiter with "</datos>".
     encoded = json.dumps(data, ensure_ascii=False)
     for character, escaped in prompts.DELIMITER_ESCAPES.items():
@@ -230,9 +230,9 @@ def _delimited(request: ClassificationRequest) -> str:
 def _pending_data(pending: OpenPending) -> dict[str, object]:
     """The pending the message may answer: what was understood, what is missing, the question."""
     return {
-        "lo_interpretado": {
+        prompts.DATA_KEY_INTERPRETED: {
             key: value for key, value in pending.interpreted.items() if value is not None
         },
-        "lo_que_falta": list(pending.missing),
-        "pregunta": pending.question,
+        prompts.DATA_KEY_MISSING: list(pending.missing),
+        prompts.DATA_KEY_QUESTION: pending.question,
     }
