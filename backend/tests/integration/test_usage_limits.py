@@ -1,9 +1,10 @@
 """The daily limits of use, against PostgreSQL (FEAT-003, its spec.md).
 
-Cases C3-01 to C3-03, C3-05, C3-07, C3-08 and C3-11: the total daily cap before classifying,
-the quota of registration after it, the messages put off to the next day, and the event of a
-limit reached. The worker runs whole rounds, with the model replaced by a double inside the
-wrapper that records each call.
+Cases C3-01 to C3-03, C3-05, C3-07, C3-08, C3-11, C3-21 and C3-22: the total daily cap before
+classifying, the quota of registration after it, the messages put off to the next day, the
+event of a limit reached, a call that failed, and which messages put off were answered. The
+worker runs whole rounds, with the model replaced by a double inside the wrapper that records
+each call.
 """
 
 from __future__ import annotations
@@ -19,6 +20,8 @@ from sqlalchemy import Engine, create_engine, text
 
 from app.adapters.inbound.message_worker.worker import create_worker
 from app.domain.entities.classification import Classification, MessageClass
+from app.domain.entities.llm_call import LlmOutcome
+from app.domain.errors import ModelCallFailedError, ModelRefusedError
 from app.settings import Settings, load_settings
 from tests.support.chat_data import inbound, status_of, user_id
 from tests.support.doubles import FixedClock
@@ -296,3 +299,64 @@ def test_going_over_the_cap_or_the_quota_leaves_its_event_without_the_phone(
             if key != "ts" and not key.endswith("_id"):
                 assert "súper" not in str(value)
                 assert "3500" not in str(value)
+
+
+@pytest.mark.parametrize(
+    ("error", "status"),
+    [
+        (ModelCallFailedError(LlmOutcome.PROVIDER_ERROR), ("pending", 1)),
+        (ModelRefusedError(), ("processed", 1)),
+    ],
+)
+def test_a_classification_call_that_fails_also_adds_to_the_cap_of_the_day(
+    settings: Settings, engine: Engine, error: Exception, status: tuple[str, int]
+) -> None:
+    # Case C3-21. The call was paid all the same (ADR 0018, point 3).
+    _set_usage(engine, OCTOBER_17, "classification", 7)
+    message = inbound(engine, "Lucía", SUPERMARKET_EXPENSE, sent_at=SENT_AT)
+
+    _run_round(settings, FakeLLM(supermarket_expense(), error=error))
+
+    assert status_of(engine, message) == status
+    classification = _usage(engine, OCTOBER_17, "classification")
+    assert classification is not None
+    assert classification[0] == 8
+
+
+def _answered(stream: io.StringIO, message: uuid.UUID) -> int:
+    return sum(
+        1 for line in events_of(stream, "message.answered") if line["message_id"] == str(message)
+    )
+
+
+def test_a_message_put_off_with_a_notice_is_answered_and_one_put_off_in_silence_is_not(
+    settings: Settings, engine: Engine
+) -> None:
+    # Case C3-22. The messages of C3-01 and C3-02, and then the one of C3-05.
+    stream = io.StringIO()
+    _set_usage(engine, OCTOBER_17, "classification", 100)
+    with_the_notice = inbound(engine, "Lucía", SUPERMARKET_EXPENSE, sent_at=SENT_AT)
+    _run_round(settings, FakeLLM(supermarket_expense()), stream=stream)
+    in_silence = inbound(engine, "Lucía", "hola", sent_at=NOW + timedelta(seconds=1))
+    _run_round(
+        settings,
+        FakeLLM(Classification(MessageClass.NONE)),
+        NOW + timedelta(seconds=2),
+        stream,
+    )
+    # Pablo, with the quota of registration used up: the message of C3-05.
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO llm_usage (user_id, usage_date, quota, message_count) "
+                "SELECT id, :day, 'registration', 50 FROM app_user WHERE name = 'Pablo'"
+            ),
+            {"day": OCTOBER_17},
+        )
+    over_the_quota = inbound(engine, "Pablo", SUPERMARKET_EXPENSE, sent_at=SENT_AT)
+    _run_round(settings, FakeLLM(supermarket_expense()), NOW + timedelta(seconds=3), stream)
+
+    assert _replies_to(engine, over_the_quota)[0]["text"] == REGISTRATION_QUOTA_USED_UP
+    assert _answered(stream, with_the_notice) == 1
+    assert _answered(stream, over_the_quota) == 1
+    assert _answered(stream, in_silence) == 0
