@@ -1315,7 +1315,7 @@ Cómo se cuentan los límites, para leer los casos
 - **Sale de:** CA-47 · **Tipo:** unitario
 - **Dado** el envoltorio con un registro de llamadas doble, y por separado cada una de estas
   salidas del modelo: el nombre de categoría con un enlace de C2-44, el nombre demasiado largo
-  de C2-45, una mención de la cuenta que no está escrita en el mensaje (C1-25), las palabras de
+  de C2-45, una mención de la cuenta que no está escrita en el mensaje (C1-17), las palabras de
   la moneda que no están escritas (C2-22), y un sí con un nombre de categoría que nadie
   escribió (C2-47),
 - **cuando** se procesa el mensaje,
