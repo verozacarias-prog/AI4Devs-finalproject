@@ -617,7 +617,7 @@ Registro de pedidos de código y canjes fallidos, del que salen los límites del
 
 ##### LLM_USAGE
 
-Consumo diario de cada usuario, por cuota. Se suma en la misma transacción que procesa el mensaje. El orden es: primero se mira el contador `classification`, que es el tope diario total; si no se alcanzó, se clasifica el mensaje, y recién entonces se mira la cuota de su clase (`registration`, `query` o `advice`). `classification` no es una cuarta cuota: cuenta las llamadas de clasificación del día y guarda sus tokens. Los tokens no deciden ningún límite, que es por cantidad de mensajes, pero permiten saber cuánto cuesta cada usuario y ajustar los límites con datos. La regla está en [reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente) y el mecanismo en el [ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md).
+Consumo diario de cada usuario, por cuota. Se suma en la misma transacción que procesa el mensaje, o que lo deja para otro intento cuando la llamada al modelo falló. El orden es: primero se mira el contador `classification`, que es el tope diario total; si no se alcanzó, se clasifica el mensaje, y recién entonces se mira la cuota de su clase (`registration`, `query` o `advice`). `classification` no es una cuarta cuota: cuenta las llamadas de clasificación del día, también la que falla y la que el modelo se niega a interpretar, y guarda sus tokens. Los tokens no deciden ningún límite, que es por cantidad de mensajes, pero permiten saber cuánto cuesta cada usuario y ajustar los límites con datos. La regla está en [reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente) y el mecanismo en el [ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md).
 
 ##### ALLOWED_PHONE
 
@@ -827,7 +827,7 @@ Una fila por cada llamada al proveedor de LLM o al de embeddings, sin ningún co
 
 - `inbound_message_id` es también el identificador con que se sigue un mensaje en los registros.
 - `purpose` sale del método del puerto que se llamó. `interpretation` es la llamada que interpreta la respuesta a una pregunta de un pendiente; la llamada inicial, que clasifica y además adelanta el trabajo, es `classification`.
-- `outcome` nace como `ok`, `invalid_output`, `provider_error` o `timeout`. Pasa a `blocked` después, cuando la validación de salida rechaza la respuesta.
+- `outcome` nace como `ok`, `invalid_output`, `provider_error` o `timeout`, o como `blocked` cuando el modelo se niega a interpretar el mensaje ([FEAT-003](features/FEAT-003/spec.md), CA-40). Una llamada `ok` pasa a `blocked` después, cuando la validación de salida rechaza la respuesta (CA-47).
 - `estimated_cost_usd` es un costo de operación de Platita, no plata de un usuario: por eso lleva la moneda en el nombre y no una columna de moneda.
 - `empty_fields` dice, para una clasificación que resultó un registro, qué campos de la salida vinieron vacíos: solo sus nombres, nunca un valor. Sirve para diagnosticar una interpretación fallida sin guardar contenido. Es nulo en cualquier otra llamada ([FEAT-003](features/FEAT-003/spec.md), CA-34).
 - `retrieval` guarda, para un consejo, una lista con el identificador de cada fragmento recuperado y su similitud. No tiene clave foránea a `ADVICE_CHUNK`, que todavía no existe.

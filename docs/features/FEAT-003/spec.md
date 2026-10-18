@@ -1087,15 +1087,18 @@ defecto.
 ### Corte 3 — límites y observabilidad
 
 - **Aprobado por:** Veronica Zacarias 18/10/2026
-- **Total:** 20 casos, 8 unitarios y 12 de integración.
+- **C3-21 y C3-22, sumados con el `/spec-drift` del corte 3:** pendiente
+- **Total:** 22 casos, 8 unitarios y 14 de integración.
 
 Cómo se cuentan los límites, para leer los casos
 ([reglas de dominio § 12](../../reglas-de-dominio.md#12-límites-de-uso-del-asistente) y
 [ADR 0018](../../adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), puntos 3 a 6):
 
 - `LLM_USAGE` tiene una fila por usuario, por día y por contador. El contador
-  `classification` es el tope diario total: suma uno por cada mensaje clasificado, con sus
-  tokens. El contador `registration` es la cuota de registro.
+  `classification` es el tope diario total: suma uno por cada llamada de clasificación, con
+  sus tokens, también la que falla y se reintenta o la que el modelo se niega a interpretar
+  ([ADR 0018](../../adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), punto 3).
+  El contador `registration` es la cuota de registro.
 - El día es el del momento en que el mensaje se procesa, en la zona horaria del usuario. La
   fecha de un movimiento, en cambio, sigue siendo el día en que se escribió (§ 1).
 - Cuentan en la cuota de registro un gasto, un ingreso y la respuesta a un pendiente, también
@@ -1130,6 +1133,8 @@ Cómo se cuentan los límites, para leer los casos
 | C3-18 | Lo que la validación rechaza deja la llamada `blocked` | Unitario | CA-47 |
 | C3-19 | El script de métricas da las cuatro métricas | Integración | CA-35 |
 | C3-20 | Un mensaje que se deja para otro intento no se registra como respondido | Integración | CA-26 y CA-31 |
+| C3-21 | Una llamada de clasificación que falla también suma al tope del día | Integración | CA-29 |
+| C3-22 | Un mensaje demorado con aviso queda como respondido, y uno demorado en silencio no | Integración | CA-29, CA-30 y CA-31 |
 
 #### C3-01 · Con el tope diario alcanzado, el mensaje no se clasifica y se demora
 
@@ -1346,6 +1351,26 @@ Cómo se cuentan los límites, para leer los casos
 - **entonces** no queda ninguna línea `message.answered` de ese mensaje, y queda una línea de
   error con la clase del error del dominio, su código y el `message_id`, sin su mensaje.
 - **Test:** `tests/integration/test_registration_logs.py::test_a_message_left_for_another_attempt_is_not_logged_as_answered`
+
+#### C3-21 · Una llamada de clasificación que falla también suma al tope del día
+
+- **Sale de:** CA-29 · **Tipo:** integración
+- **Dado** que Lucía tiene 7 clasificaciones el 17/10/2026, el mensaje de C1-01 pendiente, y
+  el modelo falla con un error del proveedor, o se niega a interpretarlo como en C2-31,
+- **cuando** el worker hace una ronda,
+- **entonces** el contador `classification` del 17 queda en 8 en los dos casos; con el error
+  del proveedor el mensaje vuelve a `pending` para otro intento.
+- **Test:** `tests/integration/test_usage_limits.py::test_a_classification_call_that_fails_also_adds_to_the_cap_of_the_day`
+
+#### C3-22 · Un mensaje demorado con aviso queda como respondido, y uno demorado en silencio no
+
+- **Sale de:** CA-29, CA-30 y CA-31 · **Tipo:** integración
+- **Dado** los mensajes de C3-01 y de C3-05, que reciben su aviso, y el de C3-02, que no
+  recibe ninguno,
+- **cuando** el worker hace una ronda con cada uno,
+- **entonces** C3-01 y C3-05 dejan una línea `message.answered` cada uno, y C3-02 no deja
+  ninguna ([Operación](../../operacion.md#63-registros)).
+- **Test:** `tests/integration/test_usage_limits.py::test_a_message_put_off_with_a_notice_is_answered_and_one_put_off_in_silence_is_not`
 
 ## Mensajes al usuario
 

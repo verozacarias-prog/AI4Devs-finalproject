@@ -82,8 +82,10 @@ ninguna es un puerto con su adaptador.
    dominio.
 3. **El dominio declara sus errores, y cada borde los traduce una sola vez.** Los errores que
    una regla de negocio prevé están en `domain/errors.py`. Cada uno tiene un código estable y
-   una categoría, y el error base no se puede lanzar sin una. Las categorías son: algo que no existe o es de otro, falta de una sesión válida, falta de permiso, conflicto, o un dato que
-   viola una regla. No saben nada de HTTP ni de la base. Un adaptador de salida que recibe un
+   una categoría, y el error base no se puede lanzar sin una. Las categorías son: algo que no existe o es de otro, falta de una sesión válida, falta de permiso, conflicto, un dato que
+   viola una regla, o un servicio del que depende el caso de uso que no respondió, como el modelo de lenguaje. Esta
+   última la sumó Vero el 18/10/2026, con el corte 3 de [FEAT-003](../features/FEAT-003/spec.md): el fallo del modelo es
+   un error previsto, con su código, aunque ninguna respuesta de la API salga de él. No saben nada de HTTP ni de la base. Un adaptador de salida que recibe un
    error de su librería que el dominio prevé, como una clave única repetida, lo convierte
    en el error del dominio que corresponde y conserva el original como causa. Lo único que el
    error se lleva de la base es el nombre de la restricción que rechazó la escritura, para el
