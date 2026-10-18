@@ -76,9 +76,15 @@ El webhook solo recibe y confirma; el procesamiento ocurre después, en un proce
    responde el proveedor, en una transacción corta propia. Si el fencing deshace la
    transacción final, la llamada igual quedó registrada con su costo
    ([ADR 0023](0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
-4. **Reintentos.** Si el procesamiento falla (el LLM no responde, por ejemplo), el mensaje vuelve
-   a quedar disponible con espera creciente entre intentos. Superado un máximo de intentos queda
-   como `failed` y el usuario recibe un aviso de que su mensaje no se pudo procesar. Un mensaje
+4. **Reintentos.** Si el procesamiento falla por algo pasajero, que puede salir bien al rato (el
+   LLM no responde, la base se cae o dos transacciones chocan, por ejemplo), el mensaje vuelve a
+   quedar disponible con espera creciente entre intentos. Superado un máximo de intentos queda
+   como `failed` y el usuario recibe un aviso de que su mensaje no se pudo procesar. Si falla por
+   algo permanente, cuyo estado no va a cambiar (una escritura que la base rechaza, datos
+   guardados que rompen una regla o un error del código), no se reintenta: queda `failed`
+   enseguida, con el mismo aviso. Así ningún mensaje queda tomado sin fin, ni paga una llamada al
+   modelo en cada vuelta inútil. La distinción la decidió Vero el 17 de octubre de 2026, con el
+   corte 2 de [FEAT-003](../features/FEAT-003/spec.md) (CA-44). Un mensaje
    nunca se descarta en silencio. Mientras se reintenta, los mensajes siguientes del mismo
    remitente esperan detrás, para respetar el orden; una vez en `failed` deja de bloquearlos, y
    el siguiente se procesa normalmente. Un mensaje **demorado** por un límite de uso, sea la

@@ -77,6 +77,7 @@ nombres de archivo de código están en inglés.
 - [0025 — GPT-5.4 mini, de OpenAI, como modelo de lenguaje](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje/)
 - [0026 — React, TypeScript y Vite para el dashboard](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0026-react-typescript-y-vite-para-el-dashboard/)
 - [0027 — Tailwind CSS y shadcn/ui para el dashboard](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0027-tailwind-y-shadcn-ui-para-el-dashboard/)
+- [0028 — El modelo interpreta, el código controla las invariantes](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes/)
 
 ## Contrato para asistentes de IA
 

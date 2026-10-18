@@ -1,7 +1,7 @@
 # Especificación — FEAT-003 · Registro de un gasto y de un ingreso
 
 - **Historia de usuario:** [HU3](../../05-historias-de-usuario.md)
-- **Estado:** aprobada para los cortes 1 y 2. Los casos C2-40 a C2-45 esperan aprobación; los del corte 3, en borrador
+- **Estado:** aprobada para los cortes 1 y 2, con C2-46 incluido. Los casos del corte 3 están en borrador
 - **Fecha:** 2026-10-16
 
 ## Alcance
@@ -98,6 +98,7 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 - **CA-23.** La respuesta del usuario continúa el pendiente y, completo, lo promueve a movimiento. Entre las cuentas que ofreció la pregunta, la moneda dicha en la respuesta alcanza para elegir: si se ofrecieron todas y una sola está en esa moneda, como Galicia USD ante "pagalo en dólares", se usa esa. Decidido por Vero el 17/10/2026, con la revisión de `pr-reviewer` del corte 2.
 - **CA-24.** Si ninguna categoría encaja, el asistente propone crear una y no la crea sin confirmación.
 - **CA-42.** Una categoría se busca, y una nueva se crea, dentro de su tipo: el nombre de una categoría del otro tipo no impide crearla ([reglas de dominio § 4](../../reglas-de-dominio.md#4-categorías-catálogo-base-categorías-propias-y-creación-con-confirmación)). Sumado el 17/10/2026, con la revisión de `pr-reviewer` del corte 2.
+- **CA-45.** Un sí crea la categoría que la pregunta ofreció, o una con el nombre que la respuesta escribe, como "sí, pero llamala Barbería". Un nombre que el modelo devuelve sin que la pregunta lo haya ofrecido ni la respuesta lo escriba no se crea: el pendiente sigue esperando, y se vuelve a ofrecer la que se mostró ([ADR 0028](../../adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md), punto 2). Decidido por Vero el 17/10/2026, con la segunda revisión de `pr-reviewer` del corte 2.
 - **CA-43.** El nombre de una categoría que propone el modelo se valida en código antes de mostrarlo o guardarlo: hasta 40 caracteres, solo letras, números, espacios, guiones, comas y paréntesis. Uno que no pasa se trata como si el modelo no hubiera propuesto ninguno ([ADR 0013](../../adr/0013-datos-minimos-al-proveedor-de-llm.md), punto 10). Sumado el 17/10/2026, con la revisión de `pr-reviewer` del corte 2.
 - **CA-25.** Un único período posible que está en borrador deja el movimiento pendiente, y la pregunta ofrece confirmar el borrador con su resumen: con un sí, el período queda confirmado y el movimiento se registra en él. Sin ningún período para esa fecha, la pregunta manda al dashboard a armarlo ([reglas de dominio § 3](../../reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)). Ampliado el 17/10/2026, por decisión de Vero.
 - **CA-36.** Con un pendiente esperando respuesta, un mensaje que trae otro movimiento no se anota: el asistente pide terminar primero el anterior y repite su pregunta. Sumar el movimiento nuevo al lote es de la entrega final. Decidido por Vero el 17/10/2026.
@@ -470,7 +471,8 @@ de 2026, 2026-10-17T18:00:00Z.
 - **C2-36 a C2-39, sumados con el `/spec-drift` del corte 2:** Veronica Zacarias 17/10/2026
 - **C2-40 a C2-45, sumados con la revisión de `pr-reviewer` del corte 2:** Veronica Zacarias 17/10/2026
 - **C2-46, sumado con la misma revisión:** Veronica Zacarias 17/10/2026
-- **Total:** 46 casos, 30 unitarios y 16 de integración.
+- **C2-47, sumado con la segunda revisión de `pr-reviewer`:** Veronica Zacariass 17/10/2026
+- **Total:** 47 casos, 31 unitarios y 16 de integración.
 
 Cómo se continúa un pendiente, para leer los casos
 ([ADR 0018](../../adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), punto 9):
@@ -540,6 +542,7 @@ defecto.
 | C2-44 | Un nombre de categoría con un enlace no se muestra ni se guarda | Unitario | CA-43 |
 | C2-45 | Un nombre de categoría demasiado largo o con signos no permitidos no se propone | Unitario | CA-43 |
 | C2-46 | Un sí confirma solo el borrador que la pregunta mostró | Unitario | CA-25 |
+| C2-47 | Un sí crea la categoría ofrecida o la que la respuesta escribe, y ninguna otra | Unitario | CA-45 |
 
 #### C2-01 · Un gasto sin cuenta queda pendiente y su lote espera respuesta
 
@@ -1063,6 +1066,21 @@ defecto.
   El sí confirma el borrador que la pregunta mostró, y solo si el movimiento sigue cayendo en él.
   Decidido por Vero el 17/10/2026, con la revisión de `pr-reviewer` del corte 2.
 - **Test:** `tests/unit/test_pending_registration.py::test_a_yes_confirms_only_the_draft_the_question_showed`
+
+#### C2-47 · Un sí crea la categoría ofrecida o la que la respuesta escribe, y ninguna otra
+
+- **Sale de:** CA-45 · **Tipo:** unitario
+- **Dado** el pendiente de C2-15 esperando respuesta, con «Peluquería» ofrecida en la pregunta,
+- **cuando** se procesa cada una de estas respuestas, en un caso aparte, y el modelo responde
+  que contesta el pendiente y acepta lo que se le propuso:
+  1. "sí, pero llamala Barbería", con la categoría propuesta "Barbería";
+  2. "sí", con la categoría propuesta "Estética", que nadie escribió,
+- **entonces** en la primera, `CATEGORY` tiene una categoría propia de Lucía, de gasto, llamada
+  "Barbería", y el gasto queda registrado con ella; en la segunda, no se crea ninguna categoría
+  ni se registra nada, el pendiente sigue esperando con `missing_fields = ['category_id']`, y la
+  segunda línea de la respuesta vuelve a ser "No encaja en ninguna de tus categorías. ¿Creo
+  «Peluquería», o va en otra de las tuyas?".
+- **Test:** `tests/unit/test_pending_registration.py::test_a_yes_creates_the_offered_category_or_the_one_the_reply_writes_and_no_other`
 
 ### Corte 3 — límites y observabilidad
 
