@@ -20,6 +20,8 @@ class LlmOutcome(StrEnum):
     OK = "ok"
     INVALID_OUTPUT = "invalid_output"
     BLOCKED = "blocked"
+    # The model refused to interpret the message: no hallucination, and no retry (CA-40).
+    REFUSED = "refused"
     PROVIDER_ERROR = "provider_error"
     TIMEOUT = "timeout"
 

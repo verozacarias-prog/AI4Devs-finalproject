@@ -35,7 +35,10 @@ SELECT (
              FROM llm_call
        ) AS invalid_output_pct;
 
--- Hallucinations: the calls whose output the validation blocked, among all of them.
+-- Hallucinations: the calls whose output the validation blocked, among all of them. Beside
+-- them, the ones the model refused, which invented nothing.
 SELECT round(100.0 * count(*) FILTER (WHERE outcome = 'blocked') / nullif(count(*), 0), 1)
-       AS blocked_pct
+       AS blocked_pct,
+       round(100.0 * count(*) FILTER (WHERE outcome = 'refused') / nullif(count(*), 0), 1)
+       AS refused_pct
   FROM llm_call;

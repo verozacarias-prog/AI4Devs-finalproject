@@ -57,7 +57,7 @@ class RecordedLLM:
             raise
         except ModelRefusedError as error:
             self._calls.record(
-                _call(LlmPurpose.CLASSIFICATION, error.usage, started, LlmOutcome.BLOCKED)
+                _call(LlmPurpose.CLASSIFICATION, error.usage, started, LlmOutcome.REFUSED)
             )
             raise
         call = replace(
