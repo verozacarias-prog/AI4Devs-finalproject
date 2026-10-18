@@ -2,7 +2,8 @@
 
 Cases C1-14, C1-15 and C1-23: what the adapter sends, and how it reads the amount and the
 currency back. Case C2-32: an answer the provider cut. Case C2-39: a call that fails, recorded.
-Outside the spec, T-1: every key of the data is one the system prompt names.
+Outside the spec, T-1: every key of the data is one the system prompt names. T-2: the
+provider is asked not to keep the answer.
 Nothing here reaches the provider.
 """
 
@@ -158,6 +159,16 @@ def _keys(data: dict[str, object]) -> set[str]:
         if isinstance(value, dict) and key != "lo_interpretado":
             keys |= _keys(cast(dict[str, object], value))
     return keys
+
+
+def test_the_adapter_asks_the_provider_not_to_store_the_answer() -> None:
+    # Task T-2. Kept by default for 30 days or more, beyond the abuse logs that ADR 0025 accepts.
+    transport = FakeTransport(_expense("3500"))
+
+    _adapter(transport).classify(REQUEST)
+
+    [sent] = transport.received
+    assert sent.get("store") is False
 
 
 def test_the_adapter_returns_the_amount_as_a_decimal() -> None:
