@@ -20,7 +20,7 @@ from app.adapters.observability.events import (
     LoggerName,
 )
 from app.adapters.observability.logs import LogValue
-from app.domain.errors import ContextField, DomainError, StoreRejectionError
+from app.domain.errors import ContextField, DomainError, ForeseenError, StoreRejectionError
 
 logger = logging.getLogger(LoggerName.ERRORS)
 
@@ -35,7 +35,7 @@ def log_error(error: BaseException, *, in_full: bool) -> None:
     environment asks for it, because only its users are invented.
     """
     fields: dict[str, LogValue] = {}
-    if isinstance(error, DomainError):
+    if isinstance(error, ForeseenError):
         fields.update(
             {name: str(value) for name, value in error.context.items() if _may_be_logged(name)}
         )
@@ -47,7 +47,7 @@ def log_error(error: BaseException, *, in_full: bool) -> None:
             fields[Field.CONSTRAINT] = error.constraint
         if error.__cause__ is not None:
             fields[Field.ERROR_CAUSE] = type(error.__cause__).__name__
-    if isinstance(error, DomainError):
+    if isinstance(error, ForeseenError):
         logger.info(Event.ERROR_EXPECTED, extra={**fields, Field.ERROR_CODE: error.code})
     else:
         logger.error(Event.ERROR_UNEXPECTED, extra=fields)

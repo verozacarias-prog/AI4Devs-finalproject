@@ -29,6 +29,8 @@ class EnvVar(StrEnum):
     MESSAGE_MAX_ATTEMPTS = "MESSAGE_MAX_ATTEMPTS"
     MESSAGE_RETRY_FIRST_WAIT_SECONDS = "MESSAGE_RETRY_FIRST_WAIT_SECONDS"
     MESSAGE_RETRY_MAX_WAIT_SECONDS = "MESSAGE_RETRY_MAX_WAIT_SECONDS"
+    LLM_DAILY_CLASSIFICATION_LIMIT = "LLM_DAILY_CLASSIFICATION_LIMIT"
+    LLM_DAILY_REGISTRATION_LIMIT = "LLM_DAILY_REGISTRATION_LIMIT"
     OPENAI_API_KEY = "OPENAI_API_KEY"
 
 
@@ -102,6 +104,11 @@ LLM_PRICES_USD_PER_MILLION_TOKENS: dict[str, tuple[str, str]] = {"gpt-5.4-mini":
 # a lock not longer than this, no process starts (ADR 0010). LLM_TIMEOUT_SECONDS changes it.
 # Twenty seconds keeps the reply under the 30 of the p95 in docs/operacion.md.
 DEFAULT_LLM_TIMEOUT_SECONDS = 20
+# The daily limits of use of each user (domain rules, § 12): the messages classified a day,
+# before classifying, and the registrations interpreted, after it. The two LLM_DAILY_*
+# variables change them, without deploying (FEAT-003, CA-46).
+DEFAULT_LLM_DAILY_CLASSIFICATION_LIMIT = 100
+DEFAULT_LLM_DAILY_REGISTRATION_LIMIT = 50
 # The worker retries a failed round itself (ADR 0010): the SDK does not retry on its own.
 LLM_SDK_RETRIES = 0
 TOKENS_PER_MILLION = 1_000_000

@@ -38,6 +38,15 @@ class InboundMessageRepositoryPort(Protocol):
         """
         ...
 
+    def defer(self, message_id: uuid.UUID, attempts: int, next_attempt_at: datetime) -> bool:
+        """Puts it off until that moment by a limit of use: it is no failure (ADR 0010, point 4).
+
+        It goes back to pending with `attempts`, the ones it had before this claim, and does not
+        hold back the next messages of its sender while it waits. Only if it is still in
+        process by the claim that followed those attempts, as `mark_processed`.
+        """
+        ...
+
     def mark_failed(self, message_id: uuid.UUID, attempts: int, at: datetime) -> bool:
         """Its attempts are used up: it is not taken again, and stops holding back the next ones.
 

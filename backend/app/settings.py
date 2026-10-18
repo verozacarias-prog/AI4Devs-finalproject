@@ -8,6 +8,8 @@ from pathlib import Path
 
 from app import messages
 from app.constants import (
+    DEFAULT_LLM_DAILY_CLASSIFICATION_LIMIT,
+    DEFAULT_LLM_DAILY_REGISTRATION_LIMIT,
     DEFAULT_LLM_TIMEOUT_SECONDS,
     DEFAULT_MESSAGE_MAX_ATTEMPTS,
     DEFAULT_MESSAGE_RETRY_FIRST_WAIT_SECONDS,
@@ -49,6 +51,9 @@ class Settings:
     message_max_attempts: int = DEFAULT_MESSAGE_MAX_ATTEMPTS
     message_retry_first_wait_seconds: int = DEFAULT_MESSAGE_RETRY_FIRST_WAIT_SECONDS
     message_retry_max_wait_seconds: int = DEFAULT_MESSAGE_RETRY_MAX_WAIT_SECONDS
+    # The daily limits of use of each user (domain rules, § 12).
+    llm_daily_classification_limit: int = DEFAULT_LLM_DAILY_CLASSIFICATION_LIMIT
+    llm_daily_registration_limit: int = DEFAULT_LLM_DAILY_REGISTRATION_LIMIT
     # Only the worker calls the model, so only the worker requires it. Never logged.
     openai_api_key: str | None = field(default=None, repr=False)
 
@@ -142,6 +147,12 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
         ),
         message_retry_max_wait_seconds=_read_positive_integer(
             environ, EnvVar.MESSAGE_RETRY_MAX_WAIT_SECONDS, DEFAULT_MESSAGE_RETRY_MAX_WAIT_SECONDS
+        ),
+        llm_daily_classification_limit=_read_positive_integer(
+            environ, EnvVar.LLM_DAILY_CLASSIFICATION_LIMIT, DEFAULT_LLM_DAILY_CLASSIFICATION_LIMIT
+        ),
+        llm_daily_registration_limit=_read_positive_integer(
+            environ, EnvVar.LLM_DAILY_REGISTRATION_LIMIT, DEFAULT_LLM_DAILY_REGISTRATION_LIMIT
         ),
         openai_api_key=_read(environ, EnvVar.OPENAI_API_KEY) or None,
     )

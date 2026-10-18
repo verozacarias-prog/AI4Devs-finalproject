@@ -18,8 +18,13 @@ from app.constants import (
     MILLISECONDS_PER_SECOND,
     TOKENS_PER_MILLION,
 )
-from app.domain.entities.classification import Classification, ClassificationRequest, ModelUsage
-from app.domain.entities.llm_call import LlmCall, LlmOutcome, LlmPurpose
+from app.domain.entities.classification import (
+    Classification,
+    ClassificationRequest,
+    MessageClass,
+    ModelUsage,
+)
+from app.domain.entities.llm_call import LlmCall, LlmOutcome, LlmPurpose, OutputField
 from app.domain.errors import ModelCallFailedError, ModelRefusedError
 from app.domain.ports.llm_call_log_port import LlmCallLogPort
 from app.domain.ports.llm_port import LLMPort
@@ -34,6 +39,11 @@ class RecordedLLM:
     def __init__(self, llm: LLMPort, calls: LlmCallLogPort) -> None:
         self._llm = llm
         self._calls = calls
+
+    @property
+    def wrapped(self) -> LLMPort:
+        """The adapter it records, which is the one that calls the provider."""
+        return self._llm
 
     def classify(self, request: ClassificationRequest) -> Classification:
         """A call that fails or that the model refuses is recorded too, with how it ended."""
@@ -50,7 +60,10 @@ class RecordedLLM:
                 _call(LlmPurpose.CLASSIFICATION, error.usage, started, LlmOutcome.BLOCKED)
             )
             raise
-        call = _call(LlmPurpose.CLASSIFICATION, classification.usage, started, LlmOutcome.OK)
+        call = replace(
+            _call(LlmPurpose.CLASSIFICATION, classification.usage, started, LlmOutcome.OK),
+            empty_fields=_empty_fields(classification),
+        )
         self._calls.record(call)
         return replace(classification, call_id=call.id)
 
@@ -90,3 +103,18 @@ def _cost(usage: ModelUsage | None) -> Decimal | None:
         usage.input_tokens * Decimal(input_price) + usage.output_tokens * Decimal(output_price)
     ) / TOKENS_PER_MILLION
     return cost.quantize(_COST_PRECISION)
+
+
+def _empty_fields(classification: Classification) -> tuple[OutputField, ...] | None:
+    """Which fields of a registration came empty: their names only, never a value (CA-34)."""
+    if classification.message_class is not MessageClass.REGISTRATION:
+        return None
+    values = {
+        OutputField.REGISTRATION_TYPE: classification.registration_type,
+        OutputField.AMOUNT: classification.amount,
+        OutputField.ACCOUNT: classification.account,
+        OutputField.CATEGORY: classification.category,
+        OutputField.CURRENCY: classification.currency,
+        OutputField.TRANSACTION_DATE: classification.transaction_date,
+    }
+    return tuple(field for field, value in values.items() if value is None)

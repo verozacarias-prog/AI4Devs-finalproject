@@ -364,6 +364,27 @@ def proposes_an_unwritten_name(
     )
 
 
+def rejects_output(
+    classification: Classification, text: str, previous: Interpretation | None
+) -> bool:
+    """Whether the checks in code drop something the model returned (ADR 0023, CA-47).
+
+    A mention of the account or words of the currency the message does not write (CA-9,
+    CA-39), a name of category that does not pass its check (CA-43), and, in a reply to a
+    pending, a name nobody offered nor wrote (CA-45). What is dropped is never used: this only
+    says it happened, for the metric of hallucinations.
+    """
+    account = classification.account
+    words = classification.currency_words
+    proposed = classification.proposed_category
+    return (
+        (account is not None and not is_written(account, text))
+        or (words is not None and not is_written(words, text))
+        or (proposed is not None and _valid_proposal(proposed) is None)
+        or (previous is not None and proposes_an_unwritten_name(previous, classification, text))
+    )
+
+
 def _written_proposal(classification: Classification, text: str) -> str | None:
     """In a reply, a new name counts only if the reply writes it, as "llamala Barbería"."""
     proposed = _valid_proposal(classification.proposed_category)

@@ -26,6 +26,8 @@ class ContextField(StrEnum):
     """The catalog values an error may say it was touching. Identifiers end in `_id`."""
 
     ENVIRONMENT = "environment"
+    # How a call to the model ended: one of LlmOutcome.
+    OUTCOME = "outcome"
 
 
 class ErrorCategory(StrEnum):
@@ -47,10 +49,25 @@ class ErrorCode(StrEnum):
     # No valid session. One code for every reason, so that the answer tells none apart.
     UNAUTHORIZED = "unauthorized"
     TEST_DATA_NOT_ALLOWED = "test_data_not_allowed"
+    # The call to the model gave no answer to use: the message is tried again later.
+    MODEL_CALL_FAILED = "model_call_failed"
 
 
-class DomainError(Exception):
-    """An error a rule foresees. Its text is its code: it never carries a value."""
+class ForeseenError(Exception):
+    """An error the code foresees, with its stable code and what it was touching.
+
+    Its text is its code: it never carries a value. A log line tells it apart from an
+    unexpected one. Only a DomainError also becomes an answer of the API.
+    """
+
+    def __init__(self, code: str, *, context: Mapping[str, ContextValue] | None = None) -> None:
+        super().__init__(code)
+        self.code = code
+        self.context = dict(context or {})
+
+
+class DomainError(ForeseenError):
+    """An error a rule foresees, which an inbound adapter turns into its answer."""
 
     category: ClassVar[ErrorCategory]
 
@@ -65,10 +82,8 @@ class DomainError(Exception):
         if not hasattr(type(self), "category"):
             # Only an error with a category can be turned into an answer.
             raise TypeError(type(self).__name__)
-        super().__init__(code)
-        self.code = code
+        super().__init__(code, context=context)
         self.details = dict(details or {})
-        self.context = dict(context or {})
         # Set by the adapter that translated a rejected write. A name of the schema.
         self.constraint = constraint
 
@@ -140,7 +155,7 @@ class StoreUnavailableError(Exception):
     """
 
 
-class ModelCallFailedError(Exception):
+class ModelCallFailedError(ForeseenError):
     """The call to the model did not give an answer to use: the message is tried again later.
 
     Not a DomainError: no answer of the API comes from it. It says how the call ended, a value
@@ -148,7 +163,7 @@ class ModelCallFailedError(Exception):
     """
 
     def __init__(self, outcome: LlmOutcome, usage: ModelUsage | None = None) -> None:
-        super().__init__(outcome)
+        super().__init__(ErrorCode.MODEL_CALL_FAILED, context={ContextField.OUTCOME: outcome})
         self.outcome = outcome
         # Which provider, model and prompt were called, with no tokens: the call gave none.
         self.usage = usage

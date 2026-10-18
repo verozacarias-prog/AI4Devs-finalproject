@@ -53,6 +53,13 @@ class PostgresInboundMessageRepository:
         ).one_or_none()
         return row is not None
 
+    def defer(self, message_id: uuid.UUID, attempts: int, next_attempt_at: datetime) -> bool:
+        row = self._connection.execute(
+            text(queries.DEFER_INBOUND_MESSAGE),
+            {"message_id": message_id, "attempts": attempts, "next_attempt_at": next_attempt_at},
+        ).one_or_none()
+        return row is not None
+
     def mark_failed(self, message_id: uuid.UUID, attempts: int, at: datetime) -> bool:
         row = self._connection.execute(
             text(queries.MARK_INBOUND_MESSAGE_FAILED),

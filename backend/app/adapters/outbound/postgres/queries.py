@@ -196,11 +196,31 @@ UPDATE_PENDING_BATCH = """
 INSERT_LLM_CALL = """
     INSERT INTO llm_call (
         id, inbound_message_id, purpose, provider, model, prompt_version, input_tokens,
-        output_tokens, duration_ms, estimated_cost_usd, outcome
+        output_tokens, duration_ms, estimated_cost_usd, outcome, empty_fields
     ) VALUES (
         :id, :inbound_message_id, :purpose, :provider, :model, :prompt_version, :input_tokens,
-        :output_tokens, :duration_ms, :estimated_cost_usd, :outcome
+        :output_tokens, :duration_ms, :estimated_cost_usd, :outcome, :empty_fields
     )
+"""
+
+# The validation rejected what the call returned (ADR 0023, point 6).
+MARK_LLM_CALL_BLOCKED = """
+    UPDATE llm_call SET outcome = 'blocked' WHERE id = :call_id
+"""
+
+# The daily counters of a user (domain rules, § 12). One row per user, day and counter.
+SELECT_LLM_USAGE_COUNT = """
+    SELECT message_count FROM llm_usage
+     WHERE user_id = :user_id AND usage_date = :day AND quota = :counter
+"""
+
+ADD_LLM_USAGE = """
+    INSERT INTO llm_usage (user_id, usage_date, quota, message_count, input_tokens, output_tokens)
+    VALUES (:user_id, :day, :counter, 1, :input_tokens, :output_tokens)
+    ON CONFLICT (user_id, usage_date, quota) DO UPDATE
+       SET message_count = llm_usage.message_count + 1,
+           input_tokens = llm_usage.input_tokens + EXCLUDED.input_tokens,
+           output_tokens = llm_usage.output_tokens + EXCLUDED.output_tokens
 """
 
 INSERT_BUDGET_PERIOD = """
@@ -266,10 +286,12 @@ INSERT_INBOUND_MESSAGE = """
 # that took it fell, and it is free again. It is taken only if it is the earliest available
 # one of its sender, and the sender has no message in process with its lock in force. The
 # first condition also covers two workers racing: the one that skips a locked message cannot
-# take the next of the same sender.
+# take the next of the same sender. A message put off by a limit of use holds back nobody while
+# it waits; once due, it does, so the ones put off keep their order (ADR 0018, point 5).
 CLAIM_NEXT_INBOUND_MESSAGE = """
     UPDATE inbound_message
-       SET status = 'processing', attempts = attempts + 1, locked_until = :locked_until
+       SET status = 'processing', attempts = attempts + 1, locked_until = :locked_until,
+           deferred = FALSE
      WHERE id = (
         SELECT candidate.id
           FROM inbound_message candidate
@@ -282,7 +304,8 @@ CLAIM_NEXT_INBOUND_MESSAGE = """
                        = COALESCE(candidate.user_id::text, candidate.from_phone)
                    AND (
                         (other.status = 'processing' AND other.locked_until > :now)
-                        OR ((other.status = 'pending'
+                        OR (((other.status = 'pending'
+                              AND (NOT other.deferred OR other.next_attempt_at <= :now))
                              OR (other.status = 'processing' AND other.locked_until <= :now))
                             AND (other.sent_at, other.id) < (candidate.sent_at, candidate.id))
                    )
@@ -328,6 +351,16 @@ RETRY_INBOUND_MESSAGE_LATER = """
     RETURNING id
 """
 
+# Put off by a limit of use, with the attempts it had before this claim: it is no failure
+# (ADR 0010, point 4). The same fencing token, the attempts of this claim.
+DEFER_INBOUND_MESSAGE = """
+    UPDATE inbound_message
+       SET status = 'pending', attempts = :attempts, next_attempt_at = :next_attempt_at,
+           locked_until = NULL, deferred = TRUE
+     WHERE id = :message_id AND status = 'processing' AND attempts = :attempts + 1
+    RETURNING id
+"""
+
 # Its attempts were used up: it is not taken again, and stops holding back the next ones.
 MARK_INBOUND_MESSAGE_FAILED = """
     UPDATE inbound_message
@@ -340,6 +373,14 @@ MARK_INBOUND_MESSAGE_FAILED = """
 OUTBOUND_MESSAGE_OF_USER_EXISTS = """
     SELECT EXISTS (
         SELECT 1 FROM outbound_message WHERE id = :message_id AND user_id = :user_id
+    )
+"""
+
+# Whether Platita sent that text to that user from that moment on: a notice that goes out once.
+OUTBOUND_TEXT_SENT_SINCE = """
+    SELECT EXISTS (
+        SELECT 1 FROM outbound_message
+         WHERE user_id = :user_id AND content ->> :text_key = :text AND created_at >= :since
     )
 """
 

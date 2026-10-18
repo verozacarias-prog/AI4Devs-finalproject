@@ -23,7 +23,9 @@ from app.adapters.outbound.postgres.repositories.llm_calls import PostgresLlmCal
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
 from app.constants import MILLISECONDS_PER_SECOND, WORKER_IDLE_SECONDS, Environment, ProcessName
 from app.domain.entities.inbound_message import InboundMessage, RetryPolicy
+from app.domain.entities.llm_usage import UsageLimits
 from app.domain.ports.llm_port import LLMPort
+from app.domain.use_cases.messages.answer_message import AnswerNotice, LimitReached, ModelFailed
 from app.domain.use_cases.messages.process_next_message import ProcessNextMessage, RoundOutcome
 from app.settings import Settings, require_openai_api_key
 from app.shared.clock import Clock, SystemClock
@@ -32,9 +34,17 @@ logger = logging.getLogger(LoggerName.WORKER)
 
 
 class MessageWorker:
-    def __init__(self, process_next: Callable[[], ProcessNextMessage], in_full: bool) -> None:
+    def __init__(
+        self,
+        process_next: Callable[[], ProcessNextMessage],
+        in_full: bool,
+        llm: LLMPort | None = None,
+    ) -> None:
         self._process_next = process_next
         self._in_full = in_full
+        # The model its use cases get, as `create_worker` wires it: always the wrapper that
+        # records the calls (ADR 0023, point 3).
+        self.llm = llm
 
     def run_round(self) -> bool:
         """Takes and answers one message. True if there was one, so it asks again at once.
@@ -49,9 +59,17 @@ class MessageWorker:
             if message.user_id is not None:
                 user_id_var.set(str(message.user_id))
 
+        def log(notice: AnswerNotice) -> None:
+            match notice:
+                case LimitReached():
+                    logger.info(Event.USAGE_QUOTA_EXCEEDED, extra={Field.QUOTA: notice.counter})
+                case ModelFailed():
+                    # The use case dealt with it; it is still an error, and leaves its line.
+                    log_error(notice.error, in_full=self._in_full)
+
         started = time.monotonic()
         try:
-            outcome = self._process_next().execute(on_claimed=follow)
+            outcome = self._process_next().execute(on_claimed=follow, on_notice=log)
         except Exception as error:
             # The use case already left the message for another attempt, or failed with its
             # notice (CA-44). Only if that failed too, or the claim did, it stays in process
@@ -87,7 +105,8 @@ def create_worker(
     model = llm or OpenAILLM(require_openai_api_key(settings), settings.llm_timeout_seconds)
     engine = create_db_engine(settings.database_url)
     # Every call is recorded: no entry point injects the model without its wrapper (ADR 0023).
-    recorded = RecordedLLM(model, PostgresLlmCallLog(engine))
+    calls = PostgresLlmCallLog(engine)
+    recorded = RecordedLLM(model, calls)
     worker_clock = clock or SystemClock()
     lock = timedelta(seconds=settings.worker_lock_seconds)
     retries = RetryPolicy(
@@ -95,9 +114,14 @@ def create_worker(
         first_wait=timedelta(seconds=settings.message_retry_first_wait_seconds),
         max_wait=timedelta(seconds=settings.message_retry_max_wait_seconds),
     )
+    limits = UsageLimits(
+        classification=settings.llm_daily_classification_limit,
+        registration=settings.llm_daily_registration_limit,
+    )
     return MessageWorker(
         lambda: ProcessNextMessage(
-            SqlAlchemyUnitOfWork(engine), worker_clock, lock, recorded, retries
+            SqlAlchemyUnitOfWork(engine), worker_clock, lock, recorded, retries, limits, calls
         ),
         in_full=settings.environment is Environment.LOCAL,
+        llm=recorded,
     )
