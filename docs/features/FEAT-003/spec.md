@@ -1087,7 +1087,7 @@ defecto.
 ### Corte 3 — límites y observabilidad
 
 - **Aprobado por:** Veronica Zacarias 18/10/2026
-- **C3-21 y C3-22, sumados con el `/spec-drift` del corte 3:** pendiente
+- **C3-21 y C3-22, sumados con el `/spec-drift` del corte 3:** Veronica Zacarias 18/10/2026
 - **Total:** 22 casos, 8 unitarios y 14 de integración.
 
 Cómo se cuentan los límites, para leer los casos
