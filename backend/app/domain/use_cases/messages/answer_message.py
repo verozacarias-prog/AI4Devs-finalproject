@@ -103,8 +103,9 @@ class _Usage:
 
 @dataclass(frozen=True)
 class _PaidCall:
-    """A call to classify the message, which counts against the cap of the day whatever its
-    end, with the tokens it took (ADR 0018, point 3).
+    """The call that classified the message, which counts against the cap of the day with the
+    tokens it took. One the model refused counts too; one that failed does not (ADR 0018,
+    point 3).
     """
 
     usage: _Usage
@@ -225,7 +226,8 @@ class AnswerMessage:
             )
         except ModelCallFailedError as error:
             notify(ModelFailed(error))
-            return self._try_again_later(message, _PaidCall(usage, error.usage))
+            # A fall of the provider does not use up the cap of the user (ADR 0018, point 3).
+            return self._try_again_later(message)
         continuing = awaiting is not None and open_pending is not None
         previous = (
             from_parsed_data(awaiting[1].parsed_data, today)
@@ -334,23 +336,22 @@ class AnswerMessage:
             unit_of_work.commit()
         return True
 
-    def _fail(self, message: InboundMessage, paid: _PaidCall | None = None) -> bool:
+    def _fail(self, message: InboundMessage) -> bool:
         """Failed for good, and its notice: the next message of the user is processed."""
         now = self._clock.now()
         with self._unit_of_work as unit_of_work:
             if not unit_of_work.inbound_messages.mark_failed(message.id, message.attempts, now):
                 return False
-            _count_paid(unit_of_work, paid)
             unit_of_work.outbound_messages.add(
                 _reply(message, messages.MESSAGE_FAILED, ResponseKind.FIXED_TEXT, now)
             )
             unit_of_work.commit()
         return True
 
-    def _try_again_later(self, message: InboundMessage, paid: _PaidCall | None = None) -> bool:
+    def _try_again_later(self, message: InboundMessage) -> bool:
         """Another attempt with a growing wait, or, with them used up, failed and its notice."""
         if self._retries.is_last(message.attempts):
-            return self._fail(message, paid)
+            return self._fail(message)
         now = self._clock.now()
         next_attempt_at = now + self._retries.wait_after(message.attempts)
         with self._unit_of_work as unit_of_work:
@@ -358,7 +359,6 @@ class AnswerMessage:
                 message.id, message.attempts, next_attempt_at
             ):
                 return False
-            _count_paid(unit_of_work, paid)
             unit_of_work.commit()
         return True
 
@@ -395,7 +395,7 @@ def _count(
 
 
 def _count_paid(unit_of_work: UnitOfWorkPort, paid: _PaidCall | None) -> None:
-    """A call that ended without classifying still counts against the cap of the day."""
+    """A message the model refused still counts against the cap of the day."""
     if paid is not None:
         _count(unit_of_work, paid.usage, UsageCounter.CLASSIFICATION, paid.model)
 
