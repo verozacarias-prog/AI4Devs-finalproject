@@ -496,9 +496,11 @@ aviso por Telegram y el servicio de avisos por ausencia para las tareas programa
 | Error nuevo | Un error que Sentry no había visto, o más de 20 en una hora | Media | Revisarlo. Si está ligado al último despliegue, revertirlo | Propuesto |
 | Base casi llena | Disco por encima del 80 % | Media | Ampliar el disco desde Render y revisar la retención de mensajes | Propuesto |
 
-Bajar una cuota hoy exige desplegar, porque las cuotas viven en YAML versionado; esa
-contradicción ya está entre las [decisiones abiertas](hoja-de-ruta.md#decisiones-abiertas). Ahí
-está también lo que falta de los eventos de seguridad: cuál de ellos dispara una alerta.
+Bajar una cuota no exige desplegar: las cuotas y el tope diario total se leen de variables de
+entorno, y se cambian reiniciando el proceso ([2.5](02-arquitectura.md#25-seguridad)). Valen
+para todos los usuarios: bajársela a uno solo no existe todavía. Entre las
+[decisiones abiertas](hoja-de-ruta.md#decisiones-abiertas) está lo que falta de los eventos de
+seguridad: cuál de ellos dispara una alerta.
 
 ## 7. Cuándo crecer
 

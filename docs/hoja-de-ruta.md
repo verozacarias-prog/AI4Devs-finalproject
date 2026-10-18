@@ -254,11 +254,11 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   Platita descarga son las cotizaciones, la inflación mensual y la tasa promedio de plazo fijo
   ([reglas de dominio § 18](reglas-de-dominio.md#18-alcance-de-los-consejos)). La autora duda de
   mantener la tercera. No afecta la entrega 2.
-- **Cuotas en YAML versionado o ajustables sin desplegar: contradicción.**
-  [2.5](02-arquitectura.md#25-seguridad) pone las cuotas de uso en archivos YAML del repositorio,
-  que solo cambian con un despliegue, y [reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente)
-  pide poder ajustarlas sin desplegar. Importa ante un abuso, porque define cuánto tarda bajar una
-  cuota. Hay que decidir cuál de los dos manda.
+- **Cuotas en YAML versionado o ajustables sin desplegar: decidido el 18 de octubre de 2026.**
+  Manda [reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente): el tope
+  diario total y las cuotas se leen de variables de entorno, y se bajan reiniciando el proceso,
+  sin desplegar. [2.5](02-arquitectura.md#25-seguridad) se corrigió
+  ([FEAT-003](features/FEAT-003/spec.md), CA-46).
 - **Registro de eventos de seguridad: definido en parte.** Dónde se registran, cómo se redactan
   y cuáles son los primeros eventos está en el [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md): pedidos y fallos de código,
   sesiones creadas, límites alcanzados, cuotas superadas y respuestas bloqueadas. Falta decidir

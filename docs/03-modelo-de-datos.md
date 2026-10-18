@@ -510,6 +510,7 @@ erDiagram
         numeric estimated_cost_usd "NULLABLE, NUMERIC(12,6), CHECK (estimated_cost_usd >= 0) — computed when the row is written, from the configured prices per model; always US dollars"
         string outcome "NOT NULL, CHECK IN ('ok','invalid_output','blocked','provider_error','timeout')"
         jsonb retrieval "NULLABLE — reserved for advice: the chunks retrieved and their similarity; empty until advice exists"
+        string[] empty_fields "NULLABLE, CHECK each IN ('registration_type','amount','account','category','currency','transaction_date') — for a classification of a registration, the output fields that came empty; never a value"
         timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 ```
@@ -826,10 +827,11 @@ Una fila por cada llamada al proveedor de LLM o al de embeddings, sin ningún co
 - `purpose` sale del método del puerto que se llamó. `interpretation` es la llamada que interpreta la respuesta a una pregunta de un pendiente; la llamada inicial, que clasifica y además adelanta el trabajo, es `classification`.
 - `outcome` nace como `ok`, `invalid_output`, `provider_error` o `timeout`. Pasa a `blocked` después, cuando la validación de salida rechaza la respuesta.
 - `estimated_cost_usd` es un costo de operación de Platita, no plata de un usuario: por eso lleva la moneda en el nombre y no una columna de moneda.
+- `empty_fields` dice, para una clasificación que resultó un registro, qué campos de la salida vinieron vacíos: solo sus nombres, nunca un valor. Sirve para diagnosticar una interpretación fallida sin guardar contenido. Es nulo en cualquier otra llamada ([FEAT-003](features/FEAT-003/spec.md), CA-34).
 - `retrieval` guarda, para un consejo, una lista con el identificador de cada fragmento recuperado y su similitud. No tiene clave foránea a `ADVICE_CHUNK`, que todavía no existe.
 
 **Restricciones:**
 
-- En `LLM_CALL`, `purpose` y `outcome` tienen un `CHECK` con su conjunto cerrado, y `duration_ms` y `estimated_cost_usd` no pueden ser negativos.
+- En `LLM_CALL`, `purpose` y `outcome` tienen un `CHECK` con su conjunto cerrado, igual que cada nombre de `empty_fields`, y `duration_ms` y `estimated_cost_usd` no pueden ser negativos.
 - En `LLM_CALL`, un índice sobre `(created_at, purpose)`, que es por donde agrupan las métricas.
 - Las filas no se borran por plazo. Al borrarse una cuenta se borran sus mensajes, y `inbound_message_id` queda nulo ([reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos)).
