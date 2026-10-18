@@ -1,7 +1,7 @@
 """What the registration asks, and how a reply continues it, with the model replaced (FEAT-003).
 
 Cases C2-02 to C2-06, C2-08 to C2-13, C2-15, C2-17, C2-18, C2-20, C2-35, C2-37, C2-38, C2-44,
-C2-45 and C2-46 of its spec.md.
+C2-45, C2-46 and C2-47 of its spec.md.
 Each case that starts from an open pending gets it the way a user does: a first message that
 leaves it pending, and then the reply. The database is in memory; the integration tests check
 the same use case against PostgreSQL.
@@ -645,3 +645,50 @@ def test_a_yes_confirms_only_the_draft_the_question_showed() -> None:
     [transaction] = unit_of_work.transactions.added
     assert transaction.transaction_date == date(2026, 10, 31)
     assert transaction.budget_period_id == lucia.period.id
+
+
+@pytest.mark.parametrize(
+    ("text", "proposed", "created"),
+    [
+        ("sí, pero llamala Barbería", "Barbería", "Barbería"),
+        ("sí", "Estética", None),
+    ],
+)
+def test_a_yes_creates_the_offered_category_or_the_one_the_reply_writes_and_no_other(
+    text: str, proposed: str, created: str | None
+) -> None:
+    # Case C2-47. "Peluquería" was offered; "Estética" nobody wrote.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    _peluquería(unit_of_work, lucia)
+    categories_before = list(unit_of_work.categories.added)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        text,
+        Classification(
+            MessageClass.REGISTRATION,
+            proposed_category=proposed,
+            pending_reply=PendingReply.CONTINUES,
+            accepts_proposal=True,
+        ),
+    )
+
+    new = [
+        category for category in unit_of_work.categories.added if category not in categories_before
+    ]
+    if created is not None:
+        [category] = new
+        assert (category.name, category.user_id) == (created, lucia.id)
+        [transaction] = unit_of_work.transactions.added
+        assert transaction.category_id == category.id
+        return
+    assert new == []
+    assert unit_of_work.transactions.added == []
+    [pending] = unit_of_work.pendings.added
+    assert pending.status is PendingStatus.OPEN
+    assert pending.missing_fields == ("category_id",)
+    assert _last_reply(unit_of_work).splitlines()[1] == (
+        "No encaja en ninguna de tus categorías. ¿Creo «Peluquería», o va en otra de las tuyas?"
+    )
