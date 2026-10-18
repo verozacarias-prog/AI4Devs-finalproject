@@ -95,7 +95,7 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 - **CA-20.** Una cuenta nombrada que coincide con más de una, como "la Galicia", se pregunta ofreciendo las que coinciden.
 - **CA-21.** Un mensaje sin monto, o que no deja claro si es gasto o ingreso, queda pendiente y se pregunta.
 - **CA-22.** Cuando falta más de un dato, se preguntan todos en un solo mensaje, y lo ya interpretado se conserva.
-- **CA-23.** La respuesta del usuario continúa el pendiente y, completo, lo promueve a movimiento.
+- **CA-23.** La respuesta del usuario continúa el pendiente y, completo, lo promueve a movimiento. Entre las cuentas que ofreció la pregunta, la moneda dicha en la respuesta alcanza para elegir: si se ofrecieron todas y una sola está en esa moneda, como Galicia USD ante "pagalo en dólares", se usa esa. Decidido por Vero el 17/10/2026, con la revisión de `pr-reviewer` del corte 2.
 - **CA-24.** Si ninguna categoría encaja, el asistente propone crear una y no la crea sin confirmación.
 - **CA-42.** Una categoría se busca, y una nueva se crea, dentro de su tipo: el nombre de una categoría del otro tipo no impide crearla ([reglas de dominio § 4](../../reglas-de-dominio.md#4-categorías-catálogo-base-categorías-propias-y-creación-con-confirmación)). Sumado el 17/10/2026, con la revisión de `pr-reviewer` del corte 2.
 - **CA-43.** El nombre de una categoría que propone el modelo se valida en código antes de mostrarlo o guardarlo: hasta 40 caracteres, solo letras, números, espacios, guiones, comas y paréntesis. Uno que no pasa se trata como si el modelo no hubiera propuesto ninguno ([ADR 0013](../../adr/0013-datos-minimos-al-proveedor-de-llm.md), punto 10). Sumado el 17/10/2026, con la revisión de `pr-reviewer` del corte 2.
@@ -103,7 +103,7 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 - **CA-36.** Con un pendiente esperando respuesta, un mensaje que trae otro movimiento no se anota: el asistente pide terminar primero el anterior y repite su pregunta. Sumar el movimiento nuevo al lote es de la entrega final. Decidido por Vero el 17/10/2026.
 - **CA-37.** El usuario puede descartar el pendiente que espera respuesta, como con "dejalo, no lo anotes": queda rechazado, su lote cerrado, y no se registra nada.
 - **CA-38.** Un pendiente vencido, a las 24 horas de creado, no se continúa: queda `expired`, y el mensaje se procesa como si no hubiera nada abierto. Las 24 horas se cuentan hasta el momento en que el usuario escribió la respuesta, no hasta el que se procesa: una respuesta escrita a tiempo y demorada por los reintentos sigue valiendo, igual que la fecha de un movimiento es el día en que se escribió (§ 1). Anotado el 17/10/2026 con el `/spec-drift` del corte 2.
-- **CA-41.** Cada respuesta que cambia un dato que el modelo ya había interpretado —el monto, el tipo, la fecha, la moneda, la categoría o la cuenta— suma uno al contador de correcciones del pendiente; completar un dato que faltaba no suma ([reglas de dominio § 5](../../reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)). Sumado el 17/10/2026, con el `/spec-drift` del corte 2.
+- **CA-41.** Cada respuesta que cambia un dato que el modelo ya había interpretado —el monto, el tipo, la fecha, la moneda, la categoría o la cuenta— suma uno al contador de correcciones del pendiente; completar un dato que faltaba no suma ([reglas de dominio § 5](../../reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)). Sumado el 17/10/2026, con el `/spec-drift` del corte 2. El código compara lo que había con lo que quedó, así que una fecha que se había asumido por defecto y la respuesta cambia también suma: es un costo asumido del [ADR 0028](../../adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md), hasta que el modelo devuelva qué campos corrigió el usuario, con la métrica del corte 3.
 - **CA-39.** Si el modelo devuelve las palabras que dicen la moneda y no están escritas en el mensaje, la moneda no cuenta, igual que una mención de la cuenta que no está escrita. Si devuelve la moneda sin sus palabras, cuenta como la dio: así lo decidió Vero el 17/10/2026, para no cambiar C1-23, sabiendo que un modelo que no devuelve las palabras se saltea la verificación. Es la opción B que eligió Vero en el corte 1.
 
 ### Cuando algo falla — corte 2
@@ -469,7 +469,8 @@ de 2026, 2026-10-17T18:00:00Z.
 - **Aprobado por:** Veronica Zacarias 17/10/2026
 - **C2-36 a C2-39, sumados con el `/spec-drift` del corte 2:** Veronica Zacarias 17/10/2026
 - **C2-40 a C2-45, sumados con la revisión de `pr-reviewer` del corte 2:** Veronica Zacarias 17/10/2026
-- **Total:** 45 casos, 29 unitarios y 16 de integración.
+- **C2-46, sumado con la misma revisión:** Veronica Zacarias 17/10/2026
+- **Total:** 46 casos, 30 unitarios y 16 de integración.
 
 Cómo se continúa un pendiente, para leer los casos
 ([ADR 0018](../../adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), punto 9):
@@ -483,6 +484,8 @@ Cómo se continúa un pendiente, para leer los casos
   estar escrita en la respuesta.
 - Cuando la pregunta ofrece algo, como crear una categoría o confirmar un borrador, un "sí" lo
   acepta.
+- Qué quiso decir la respuesta lo interpreta el modelo; el código solo controla las invariantes
+  y valida la salida ([ADR 0028](../../adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md)).
 
 Los reintentos ([ADR 0010](../../adr/0010-webhook-asincrono-con-tabla-de-entrada.md), punto
 4): un mensaje se intenta como mucho 3 veces, con 30 segundos de espera antes del segundo
@@ -536,6 +539,7 @@ defecto.
 | C2-43 | Un error del código deja el mensaje `failed` sin reintentar | Unitario | CA-44 |
 | C2-44 | Un nombre de categoría con un enlace no se muestra ni se guarda | Unitario | CA-43 |
 | C2-45 | Un nombre de categoría demasiado largo o con signos no permitidos no se propone | Unitario | CA-43 |
+| C2-46 | Un sí confirma solo el borrador que la pregunta mostró | Unitario | CA-25 |
 
 #### C2-01 · Un gasto sin cuenta queda pendiente y su lote espera respuesta
 
@@ -1046,6 +1050,19 @@ defecto.
   categorías. ¿En cuál lo anoto?". Sí se proponen una de exactamente 40 caracteres, y una con
   letras con acento, un guion, una coma y paréntesis, como "Clases (pádel, tenis) - Club".
 - **Test:** `tests/unit/test_pending_registration.py::test_a_category_name_too_long_or_with_signs_not_allowed_is_not_proposed`
+
+#### C2-46 · Un sí confirma solo el borrador que la pregunta mostró
+
+- **Sale de:** CA-25 · **Tipo:** unitario
+- **Dado** el pendiente de C2-18 esperando respuesta, con el borrador de noviembre en la
+  pregunta, el mensaje "sí, pero fue el 31", y el modelo responde que contesta el pendiente,
+  acepta lo que se le propuso y la fecha es 2026-10-31,
+- **cuando** se procesa,
+- **entonces** el borrador de noviembre sigue en borrador, y el movimiento queda registrado el
+  31/10/2026 en el período de octubre, que es el único posible para esa fecha y está confirmado.
+  El sí confirma el borrador que la pregunta mostró, y solo si el movimiento sigue cayendo en él.
+  Decidido por Vero el 17/10/2026, con la revisión de `pr-reviewer` del corte 2.
+- **Test:** `tests/unit/test_pending_registration.py::test_a_yes_confirms_only_the_draft_the_question_showed`
 
 ### Corte 3 — límites y observabilidad
 

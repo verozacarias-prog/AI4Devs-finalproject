@@ -108,6 +108,11 @@ de pre-commit. No son una recomendación: rompen el commit.
 - El saldo de una cuenta se calcula, no se almacena como campo mutable.
 - Una categoría nueva no se crea sin confirmación.
 
+Estas reglas las controla el código, y entender lo que la persona escribe lo hace el modelo: no se
+suma una regla de código para cada forma de contestar. Antes de proponer un caso para una
+respuesta del usuario, se decide si es interpretación, que va al prompt, o una invariante, que va
+al código ([ADR 0028](docs/adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md)).
+
 Para cualquier ticket de dominio, leer [`docs/reglas-de-dominio.md`](docs/reglas-de-dominio.md)
 completo antes de escribir código.
 
@@ -260,7 +265,7 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
 - Decisión de arquitectura → [`docs/adr/`](docs/adr/).
 - Qué entra en la entrega 2 y qué no → [`docs/hoja-de-ruta.md`](docs/hoja-de-ruta.md#alcance-de-la-entrega-2).
 - Docker, pipeline, registros, métricas del modelo o rutas de salud → los ADR [0021](docs/adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) y [0023](docs/adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md), y [`docs/operacion.md`](docs/operacion.md), que separa lo decidido de lo propuesto.
-- Clasificación, memoria, base de conocimiento o prompts → los ADR [0013](docs/adr/0013-datos-minimos-al-proveedor-de-llm.md), [0018](docs/adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), [0019](docs/adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md), [0020](docs/adr/0020-sin-framework-de-orquestacion-de-ia.md) y [0025](docs/adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md).
+- Clasificación, memoria, base de conocimiento o prompts → los ADR [0013](docs/adr/0013-datos-minimos-al-proveedor-de-llm.md), [0018](docs/adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), [0019](docs/adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md), [0020](docs/adr/0020-sin-framework-de-orquestacion-de-ia.md), [0025](docs/adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md) y [0028](docs/adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md).
 
 ## 13. Método de trabajo
 
