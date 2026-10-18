@@ -39,7 +39,7 @@ def account_candidates(
     text: str, mention: str | None, currency: str | None, accounts: Sequence[Account]
 ) -> list[Account]:
     """The accounts the mention may be: the ones to offer when there is more than one."""
-    if mention is None or not _written_in(mention, text):
+    if mention is None or is_unwritten(mention, text):
         # An account the model deduced, as from "por transferencia", is not named.
         return []
     # The mention, not the rest of the message: in "con MP porque no tenía efectivo" the account
@@ -59,6 +59,13 @@ def account_candidates(
 def is_written(words: str, text: str) -> bool:
     """Whether those words appear in the message, whole and in the same order."""
     return _written_in(words, text)
+
+
+def is_unwritten(words: str | None, text: str) -> bool:
+    """Whether the model returned words the message does not write: they are never used, and
+    the call counts as one whose output the validation rejected (CA-47).
+    """
+    return words is not None and not _written_in(words, text)
 
 
 def _named_by_part(account: Account, mention_words: set[str]) -> bool:
