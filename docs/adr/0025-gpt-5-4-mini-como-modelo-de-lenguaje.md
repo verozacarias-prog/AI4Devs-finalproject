@@ -34,6 +34,12 @@ mensaje. Alcanza un modelo chico: la tarea es interpretar un mensaje corto, no r
    Platita no la pidió. La autora aceptó esos 30 días a cambio de la calidad de las respuestas,
    sabiendo que la alternativa retiene menos. Estas condiciones se vuelven a revisar si el
    proveedor cambia sus términos.
+
+   Aparte de esos registros, la Responses API guarda cada respuesta como estado de la
+   aplicación, al menos 30 días, salvo que el pedido diga `store=false` (verificado el
+   2026-10-18 en la misma guía y en la documentación del SDK). Platita no recupera ni encadena
+   respuestas, así que el adaptador pide `store=false` en cada llamada, y lo único que retiene
+   el proveedor son los registros del control de abuso.
 3. **Se eligió con una evaluación.** Tres candidatos, 30 casos y tres corridas:
    - Los candidatos fueron GPT-5.4 mini y GPT-5.4 nano, de OpenAI, y Claude Haiku 5.5, de
      Anthropic.
