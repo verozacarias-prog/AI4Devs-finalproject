@@ -2,11 +2,13 @@
 
 Cases C1-14, C1-15 and C1-23: what the adapter sends, and how it reads the amount and the
 currency back. Case C2-32: an answer the provider cut. Case C2-39: a call that fails, recorded.
+Outside the spec, T-1: every key of the data is one the system prompt names.
 Nothing here reaches the provider.
 """
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from datetime import date
 from decimal import Decimal
@@ -21,6 +23,7 @@ from app.adapters.outbound.llm_client.openai_llm import OpenAILLM
 from app.domain.entities.classification import (
     ClassificationRequest,
     MessageClass,
+    OpenPending,
     RegistrationType,
 )
 from app.domain.entities.llm_call import LlmOutcome
@@ -124,6 +127,37 @@ def test_the_adapter_asks_the_configured_model_for_a_structured_output() -> None
     for value in task_data:
         assert value in data, f"{value!r} is missing from the data of the request"
         assert value not in system["content"], f"{value!r} reached the system prompt"
+
+
+def test_every_key_of_the_data_is_named_in_the_system_prompt() -> None:
+    # Task T-1. The prompt explains the data by its keys: a key it does not name means nothing.
+    transport = FakeTransport(_expense("3500"))
+    pending = OpenPending(
+        interpreted={"amount": "3500", "category": "Supermercado"},
+        missing=("account_id",),
+        question="¿Con qué cuenta lo pagaste?",
+    )
+    request = dataclasses.replace(REQUEST, open_pending=pending)
+
+    _adapter(transport).classify(request)
+
+    [sent] = transport.received
+    [system, user] = cast(list[dict[str, str]], sent["input"])
+    data = user["content"].removeprefix("<datos>").removesuffix("</datos>")
+    keys = _keys(json.loads(data))
+    assert "lo_que_falta" in keys, "the data carried no open pending"
+    for key in keys:
+        # Quoted, as a name: a key that is also a plain word must not pass by chance.
+        assert f'"{key}"' in system["content"], f"{key!r} is not named in the system prompt"
+
+
+def _keys(data: dict[str, object]) -> set[str]:
+    """The keys of the data, nested ones included; those of what was understood are domain names."""
+    keys = set(data)
+    for key, value in data.items():
+        if isinstance(value, dict) and key != "lo_interpretado":
+            keys |= _keys(cast(dict[str, object], value))
+    return keys
 
 
 def test_the_adapter_returns_the_amount_as_a_decimal() -> None:
