@@ -1089,7 +1089,7 @@ defecto.
 - **Aprobado por:** Veronica Zacarias 18/10/2026
 - **C3-21 y C3-22, sumados con el `/spec-drift` del corte 3:** Veronica Zacarias 18/10/2026
 - **C3-21, cambiado con la revisión de `pr-reviewer` del corte 3:** Veronica Zacarias 18/10/2026
-- **C2-31 cambiado y C3-23 sumado, con la revisión de `pr-reviewer` del corte 3:** pendiente
+- **C2-31 cambiado y C3-23 sumado, con la revisión de `pr-reviewer` del corte 3:** Veronica Zacarias 18/10/2026
 - **Total:** 23 casos, 8 unitarios y 15 de integración.
 
 Cómo se cuentan los límites, para leer los casos
@@ -1383,7 +1383,7 @@ Cómo se cuentan los límites, para leer los casos
   `refused`,
 - **cuando** se corre `scripts/llm_metrics.sql` contra la base,
 - **entonces** la cuarta consulta da `blocked_pct` de 33,3 y `refused_pct` de 33,3.
-- **Test:** —
+- **Test:** `tests/integration/test_llm_calls.py::test_the_metric_of_hallucinations_leaves_out_the_refusals`
 
 ## Mensajes al usuario
 
