@@ -1,7 +1,7 @@
 # Especificación — FEAT-003 · Registro de un gasto y de un ingreso
 
 - **Historia de usuario:** [HU3](../../05-historias-de-usuario.md)
-- **Estado:** aprobada para los cortes 1 y 2, con C2-01 a C2-47. Los casos del corte 3 están en borrador
+- **Estado:** aprobada para los tres cortes: C1-01 a C1-25, C2-01 a C2-47 y C3-01 a C3-20
 - **Fecha:** 2026-10-16
 
 ## Alcance
@@ -1142,7 +1142,7 @@ Cómo se cuentan los límites, para leer los casos
   2026-10-18T03:00:00Z, las 00:00 del domingo 18 en Buenos Aires; y la respuesta es "Por hoy
   llegué al límite de mensajes que puedo leer. Lo que me mandes de acá en adelante lo guardo y
   lo proceso mañana.", con `response_kind = 'fixed_text'`.
-- **Test:** —
+- **Test:** `tests/integration/test_usage_limits.py::test_with_the_daily_cap_reached_the_message_is_not_classified_and_is_put_off`
 
 #### C3-02 · El aviso del tope sale una sola vez por día
 
@@ -1152,7 +1152,7 @@ Cómo se cuentan los límites, para leer los casos
 - **cuando** el worker hace una ronda,
 - **entonces** el mensaje "hola" también queda demorado hasta 2026-10-18T03:00:00Z, y no hay
   ninguna respuesta nueva.
-- **Test:** —
+- **Test:** `tests/integration/test_usage_limits.py::test_the_notice_of_the_cap_goes_out_once_a_day`
 
 #### C3-03 · Cada clasificación suma uno al tope del día, con sus tokens
 
@@ -1162,7 +1162,7 @@ Cómo se cuentan los límites, para leer los casos
 - **cuando** el worker hace una ronda,
 - **entonces** la fila `classification` de Lucía del 17/10/2026 en `LLM_USAGE` queda con
   `message_count = 8` y suma esos tokens, y la fila `registration` no cambia.
-- **Test:** —
+- **Test:** `tests/integration/test_usage_limits.py::test_each_classification_adds_one_to_the_cap_of_the_day_with_its_tokens`
 
 #### C3-04 · El día del contador es el del usuario
 
@@ -1171,7 +1171,7 @@ Cómo se cuentan los límites, para leer los casos
   Aires, 2026-10-18T02:30:00Z,
 - **cuando** se procesa,
 - **entonces** la clasificación suma en el contador del 17/10/2026, y no en el del 18.
-- **Test:** —
+- **Test:** `tests/unit/test_usage_limits.py::test_the_day_of_the_counter_is_the_day_of_the_user`
 
 #### C3-05 · Con la cuota de registro agotada, un gasto se demora con su texto fijo
 
@@ -1184,7 +1184,7 @@ Cómo se cuentan los límites, para leer los casos
   "Por hoy ya anoté todo lo que puedo. Este lo guardo y lo anoto mañana, con la fecha de hoy.",
   con `response_kind = 'fixed_text'`; y el contador `classification` queda en 61 y el
   `registration` en 50.
-- **Test:** —
+- **Test:** `tests/integration/test_usage_limits.py::test_with_the_quota_of_registration_used_up_an_expense_is_put_off_with_its_fixed_text`
 
 #### C3-06 · Qué cuenta en la cuota de registro y qué no
 
@@ -1195,7 +1195,7 @@ Cómo se cuentan los límites, para leer los casos
   de C2-13, la transferencia de C1-09, la consulta de C1-10 y el saludo de C1-12,
 - **entonces** los cinco primeros dejan el contador `registration` en 11, y los tres últimos
   lo dejan en 10.
-- **Test:** —
+- **Test:** `tests/unit/test_usage_limits.py::test_what_counts_against_the_quota_of_registration_and_what_does_not`
 
 #### C3-07 · Un mensaje demorado no traba a los siguientes
 
@@ -1204,7 +1204,7 @@ Cómo se cuentan los límites, para leer los casos
   pendiente,
 - **cuando** el worker hace una ronda,
 - **entonces** toma el mensaje "hola" y le responde el pedido de aclaración de C1-12.
-- **Test:** —
+- **Test:** `tests/integration/test_usage_limits.py::test_a_message_put_off_does_not_hold_back_the_next_ones`
 
 #### C3-08 · Al día siguiente, el demorado se registra con el día en que se escribió
 
@@ -1214,7 +1214,7 @@ Cómo se cuentan los límites, para leer los casos
 - **cuando** el worker hace una ronda,
 - **entonces** el gasto queda registrado con fecha 17/10/2026, la confirmación lo lista, y el
   contador `registration` de Lucía del 18/10/2026 queda en 1.
-- **Test:** —
+- **Test:** `tests/integration/test_usage_limits.py::test_the_next_day_the_message_put_off_is_registered_with_the_day_it_was_written`
 
 #### C3-09 · Una demora no cuenta como intento ni avisa un fallo
 
@@ -1224,7 +1224,7 @@ Cómo se cuentan los límites, para leer los casos
 - **cuando** se procesa,
 - **entonces** vuelve a `pending` con `attempts = 2`, no queda `failed`, y la respuesta es la de
   C3-01 y no el aviso de C2-29.
-- **Test:** —
+- **Test:** `tests/unit/test_usage_limits.py::test_a_message_put_off_is_not_an_attempt_nor_tells_a_failure`
 
 #### C3-10 · Los límites salen de la configuración
 
@@ -1234,7 +1234,7 @@ Cómo se cuentan los límites, para leer los casos
 - **cuando** se lee la configuración,
 - **entonces** con la primera los límites son 30 y 20; sin definir, 100 y 50; y con un valor
   que no es un entero positivo falla con un error que nombra la variable y no arranca.
-- **Test:** —
+- **Test:** `tests/unit/test_settings.py::test_the_limits_come_from_the_configuration` y `tests/unit/test_settings.py::test_a_limit_that_is_not_a_positive_integer_stops_startup`
 
 #### C3-11 · Superar el tope o la cuota deja su evento, sin el teléfono
 
@@ -1244,7 +1244,7 @@ Cómo se cuentan los límites, para leer los casos
 - **entonces** cada ronda deja una línea `usage.quota_exceeded` con el `user_id` de Lucía, el
   `message_id` del mensaje y el contador superado, `classification` o `registration`; y ninguna
   lleva el teléfono ni el texto.
-- **Test:** —
+- **Test:** `tests/integration/test_usage_limits.py::test_going_over_the_cap_or_the_quota_leaves_its_event_without_the_phone`
 
 #### C3-12 · Ninguna línea de los registros lleva el texto, el monto ni el teléfono
 
@@ -1255,7 +1255,7 @@ Cómo se cuentan los límites, para leer los casos
   registra,
 - **entonces** ninguna línea de los registros contiene "3500", "3.500", "súper", "con MP",
   "Mercado Pago", "Lucía" ni "000000000001".
-- **Test:** —
+- **Test:** `tests/integration/test_registration_logs.py::test_no_log_line_carries_the_text_the_amount_or_the_phone`
 
 #### C3-13 · El prompt de sistema es el mismo para dos usuarios
 
@@ -1266,7 +1266,7 @@ Cómo se cuentan los límites, para leer los casos
 - **cuando** el adaptador clasifica los dos,
 - **entonces** el mensaje de sistema que llega al proveedor es idéntico en los dos, y las
   cuentas, las categorías y el texto aparecen solo en el mensaje de datos, delimitados.
-- **Test:** —
+- **Test:** `tests/unit/test_openai_llm.py::test_the_system_prompt_is_the_same_for_two_users`
 
 #### C3-14 · Ningún identificador llega al proveedor
 
@@ -1277,7 +1277,7 @@ Cómo se cuentan los límites, para leer los casos
 - **cuando** el adaptador clasifica,
 - **entonces** el cuerpo del pedido HTTP no contiene ninguno de esos identificadores, ni el
   teléfono de Lucía, ni "Lucía".
-- **Test:** —
+- **Test:** `tests/unit/test_openai_llm.py::test_no_identifier_reaches_the_provider`
 
 #### C3-15 · Una llamada cuya transacción final se deshace deja su fila
 
@@ -1287,7 +1287,7 @@ Cómo se cuentan los límites, para leer los casos
 - **cuando** el primer worker termina su llamada al modelo y su transacción final se deshace,
 - **entonces** `LLM_CALL` tiene dos filas de ese mensaje, una por cada llamada, y `TRANSACTION`
   una sola.
-- **Test:** —
+- **Test:** `tests/integration/test_llm_calls.py::test_a_call_whose_final_transaction_is_undone_keeps_its_row`
 
 #### C3-16 · El worker usa siempre el envoltorio
 
@@ -1296,7 +1296,7 @@ Cómo se cuentan los límites, para leer los casos
 - **cuando** se arma el worker como lo arma su punto de entrada,
 - **entonces** el puerto de LLM que reciben sus casos de uso es el envoltorio que registra las
   llamadas, y adentro tiene el adaptador de OpenAI.
-- **Test:** —
+- **Test:** `tests/unit/test_llm_calls.py::test_the_worker_always_uses_the_wrapper`
 
 #### C3-17 · La fila de una clasificación dice qué campos vinieron vacíos
 
@@ -1308,7 +1308,7 @@ Cómo se cuentan los límites, para leer los casos
 - **entonces** la fila de `LLM_CALL` del primero tiene `empty_fields` con `account`, `currency`
   y `transaction_date`, y ningún valor de la salida; y la del segundo tiene `empty_fields` nulo,
   porque no es un registro.
-- **Test:** —
+- **Test:** `tests/integration/test_llm_calls.py::test_the_row_of_a_classification_says_which_fields_came_empty`
 
 #### C3-18 · Lo que la validación rechaza deja la llamada `blocked`
 
@@ -1322,7 +1322,7 @@ Cómo se cuentan los límites, para leer los casos
 - **entonces** en cada una la fila de la llamada se marca `blocked`, y el mensaje sigue como
   dice su caso del corte 1 o del corte 2. Con la salida de C1-01, que pasa la validación, la
   fila queda `ok`.
-- **Test:** —
+- **Test:** `tests/unit/test_llm_calls.py::test_what_the_validation_rejects_leaves_the_call_blocked`
 
 #### C3-19 · El script de métricas da las cuatro métricas
 
@@ -1336,7 +1336,7 @@ Cómo se cuentan los límites, para leer los casos
   2.750 ms; el costo de las clasificaciones, US$ 0,005 el 17 y US$ 0,002 el 16; la calidad,
   50 % de registros confirmados sin correcciones y 16,7 % de llamadas con salida inválida; y
   16,7 % de llamadas bloqueadas.
-- **Test:** —
+- **Test:** `tests/integration/test_llm_calls.py::test_the_metrics_script_gives_the_four_metrics`
 
 #### C3-20 · Un mensaje que se deja para otro intento no se registra como respondido
 
@@ -1345,7 +1345,7 @@ Cómo se cuentan los límites, para leer los casos
 - **cuando** el worker hace una ronda,
 - **entonces** no queda ninguna línea `message.answered` de ese mensaje, y queda una línea de
   error con la clase del error del dominio, su código y el `message_id`, sin su mensaje.
-- **Test:** —
+- **Test:** `tests/integration/test_registration_logs.py::test_a_message_left_for_another_attempt_is_not_logged_as_answered`
 
 ## Mensajes al usuario
 

@@ -133,6 +133,15 @@ aceptan lo mismo:
 Una negativa del modelo no se reintenta: el usuario recibe enseguida un texto que le pide
 escribirlo de otra forma ([FEAT-003](features/FEAT-003/spec.md), CA-40).
 
+Los límites de uso de cada usuario ([reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente))
+también son variables opcionales que aceptan lo mismo, y se cambian reiniciando el worker, sin
+desplegar ([FEAT-003](features/FEAT-003/spec.md), CA-46):
+
+- `LLM_DAILY_CLASSIFICATION_LIMIT`: el tope diario total, cuántos mensajes se clasifican por
+  día, 100 si no se define.
+- `LLM_DAILY_REGISTRATION_LIMIT`: la cuota de registro, cuántos movimientos se interpretan por
+  día, 50 si no se define.
+
 El worker es el único proceso que llama al modelo, y lo hace con la clave de
 `OPENAI_API_KEY` ([ADR 0025](adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)). Sin ella, el
 worker no arranca y dice qué variable falta. La API no la lee.
@@ -431,7 +440,7 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   | `auth.code_failed` | Un canje de código falló | El login por código |
   | `auth.session_created` | Se abrió una sesión, por código, por la lista de `local` o por un enlace personal. Lleva el usuario, la sesión y la forma en el campo `method`: hoy solo `dev_user_list` | La entrada de desarrollo |
   | `auth.throttled` | Se alcanzó un límite de intentos | El login por código |
-  | `usage.quota_exceeded` | Un usuario superó una cuota o el tope diario total | Las cuotas, con el registro de gastos |
+  | `usage.quota_exceeded` | Un usuario superó una cuota o el tope diario total. Lleva el usuario, el mensaje y cuál superó en el campo `quota`: `classification` o `registration` | Las cuotas, con el registro de gastos |
   | `llm.output_blocked` | La validación de salida frenó una respuesta | Las consultas y los consejos |
   | `dev.scaffold_enabled` | Al arrancar, el chat web o la entrada de desarrollo están encendidos | El chat web y la entrada de desarrollo |
 
