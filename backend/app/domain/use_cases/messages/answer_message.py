@@ -45,6 +45,7 @@ from app.domain.services.transactions.movement_resolution import (
     from_parsed_data,
     interpret,
     is_movement,
+    proposes_an_unwritten_name,
     resolve,
     same_name,
     to_parsed_data,
@@ -248,7 +249,10 @@ def _continue(
                 corrected_fields_count=pending.corrected_fields_count
                 + corrections(previous, interpretation),
             )
-            if classification.accepts_proposal:
+            # A yes to a name nobody offered nor wrote accepts nothing: it is asked again.
+            if classification.accepts_proposal and not proposes_an_unwritten_name(
+                previous, classification, context.message.text
+            ):
                 interpretation = _accept_proposal(
                     unit_of_work, context, pending, previous, interpretation
                 )

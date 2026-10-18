@@ -190,8 +190,7 @@ def continue_interpretation(
         account=account,
         account_mention=mention,
         category=classification.category or previous.category,
-        proposed_category=_valid_proposal(classification.proposed_category)
-        or previous.proposed_category,
+        proposed_category=_written_proposal(classification, text) or previous.proposed_category,
         transaction_date=classification.transaction_date or previous.transaction_date,
     )
 
@@ -330,6 +329,26 @@ def from_parsed_data(parsed: Mapping[str, str | None], today: date) -> Interpret
         proposed_category=parsed.get(ParsedKey.PROPOSED_CATEGORY),
         transaction_date=today if kept_date is None else date.fromisoformat(kept_date),
     )
+
+
+def proposes_an_unwritten_name(
+    previous: Interpretation, classification: Classification, text: str
+) -> bool:
+    """Whether a reply comes with a name for the category that the question did not offer and
+    the reply does not write: a yes to it creates nothing (CA-45, ADR 0028).
+    """
+    proposed = _valid_proposal(classification.proposed_category)
+    return (
+        proposed is not None
+        and not same_name(proposed, previous.proposed_category)
+        and not is_written(proposed, text)
+    )
+
+
+def _written_proposal(classification: Classification, text: str) -> str | None:
+    """In a reply, a new name counts only if the reply writes it, as "llamala Barbería"."""
+    proposed = _valid_proposal(classification.proposed_category)
+    return proposed if proposed is not None and is_written(proposed, text) else None
 
 
 def _valid_proposal(name: str | None) -> str | None:

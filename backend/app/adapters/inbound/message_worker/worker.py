@@ -53,7 +53,9 @@ class MessageWorker:
         try:
             outcome = self._process_next().execute(on_claimed=follow)
         except Exception as error:
-            # The message stays in process until its lock ends; then a worker takes it again.
+            # The use case already left the message for another attempt, or failed with its
+            # notice (CA-44). Only if that failed too, or the claim did, it stays in process
+            # until its lock ends, and then a worker takes it again.
             log_error(error, in_full=self._in_full)
             return False
         else:
