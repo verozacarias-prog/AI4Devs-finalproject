@@ -22,7 +22,7 @@ from app.adapters.outbound.postgres.connection import create_db_engine
 from app.adapters.outbound.postgres.repositories.llm_calls import PostgresLlmCallLog
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
 from app.constants import MILLISECONDS_PER_SECOND, WORKER_IDLE_SECONDS, Environment, ProcessName
-from app.domain.entities.inbound_message import InboundMessage
+from app.domain.entities.inbound_message import InboundMessage, RetryPolicy
 from app.domain.ports.llm_port import LLMPort
 from app.domain.use_cases.messages.process_next_message import ProcessNextMessage, RoundOutcome
 from app.settings import Settings, require_openai_api_key
@@ -53,7 +53,9 @@ class MessageWorker:
         try:
             outcome = self._process_next().execute(on_claimed=follow)
         except Exception as error:
-            # The message stays in process until its lock ends; then a worker takes it again.
+            # The use case already left the message for another attempt, or failed with its
+            # notice (CA-44). Only if that failed too, or the claim did, it stays in process
+            # until its lock ends, and then a worker takes it again.
             log_error(error, in_full=self._in_full)
             return False
         else:
@@ -82,13 +84,20 @@ def create_worker(
     if settings.dev_entry_enabled or settings.web_chat_enabled:
         # Said at every start, so that nobody leaves it on without knowing (ADR 0016).
         logger.warning(Event.DEV_SCAFFOLD_ENABLED)
-    model = llm or OpenAILLM(require_openai_api_key(settings))
+    model = llm or OpenAILLM(require_openai_api_key(settings), settings.llm_timeout_seconds)
     engine = create_db_engine(settings.database_url)
     # Every call is recorded: no entry point injects the model without its wrapper (ADR 0023).
     recorded = RecordedLLM(model, PostgresLlmCallLog(engine))
     worker_clock = clock or SystemClock()
     lock = timedelta(seconds=settings.worker_lock_seconds)
+    retries = RetryPolicy(
+        max_attempts=settings.message_max_attempts,
+        first_wait=timedelta(seconds=settings.message_retry_first_wait_seconds),
+        max_wait=timedelta(seconds=settings.message_retry_max_wait_seconds),
+    )
     return MessageWorker(
-        lambda: ProcessNextMessage(SqlAlchemyUnitOfWork(engine), worker_clock, lock, recorded),
+        lambda: ProcessNextMessage(
+            SqlAlchemyUnitOfWork(engine), worker_clock, lock, recorded, retries
+        ),
         in_full=settings.environment is Environment.LOCAL,
     )

@@ -31,9 +31,17 @@ def named_account(
     text: str, mention: str | None, currency: str | None, accounts: Sequence[Account]
 ) -> Account | None:
     """The only account the message names, or None when it names none or several."""
+    candidates = account_candidates(text, mention, currency, accounts)
+    return candidates[0] if len(candidates) == 1 else None
+
+
+def account_candidates(
+    text: str, mention: str | None, currency: str | None, accounts: Sequence[Account]
+) -> list[Account]:
+    """The accounts the mention may be: the ones to offer when there is more than one."""
     if mention is None or not _written_in(mention, text):
         # An account the model deduced, as from "por transferencia", is not named.
-        return None
+        return []
     # The mention, not the rest of the message: in "con MP porque no tenía efectivo" the account
     # is the one named "MP", even though "efectivo" is the whole name of another.
     written_words = set(_words(mention))
@@ -45,7 +53,12 @@ def named_account(
         candidates = [account for account in accounts if _named_by_part(account, mention_words)]
     if currency is not None:
         candidates = [account for account in candidates if account.currency == currency]
-    return candidates[0] if len(candidates) == 1 else None
+    return candidates
+
+
+def is_written(words: str, text: str) -> bool:
+    """Whether those words appear in the message, whole and in the same order."""
+    return _written_in(words, text)
 
 
 def _named_by_part(account: Account, mention_words: set[str]) -> bool:

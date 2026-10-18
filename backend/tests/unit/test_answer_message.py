@@ -3,7 +3,8 @@
 Cases C1-06, C1-07, C1-08 and C1-11: the date of a movement, the names of the account and the
 category, and the fixed text of an advice. Cases C1-17 to C1-22: which account the message
 names, decided by the code and not by the model. Case C1-24: a movement before the account was
-opened. Case C1-25: another account named outside the mention. The database is in memory; the
+opened. Case C1-25: another account named outside the mention. Cases C2-22 and C2-23: a currency
+the message does not write, and the rounding of the amount. The database is in memory; the
 integration tests check the same use case against PostgreSQL.
 """
 
@@ -131,8 +132,12 @@ def test_an_account_the_message_does_not_write_is_not_used() -> None:
 
     assert unit_of_work.transactions.added == []
     [reply] = unit_of_work.outbound_messages.added
-    assert reply.text == "Eso todavía no lo sé anotar. Por ahora me manejo con gastos e ingresos."
-    assert reply.response_kind is ResponseKind.FIXED_TEXT
+    # Since cut 2 the account is asked, instead of the provisional fixed text (CA-19).
+    assert reply.text.splitlines() == [
+        "Para anotar el gasto de $26.000 en Impuestos y trámites me falta un dato:",
+        "¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD.",
+    ]
+    assert reply.response_kind is ResponseKind.REGISTRATION
 
 
 def test_half_a_name_without_a_currency_does_not_choose_between_two_accounts() -> None:
@@ -251,3 +256,40 @@ def test_the_name_of_another_account_outside_the_mention_does_not_change_the_acc
 
     [transaction] = unit_of_work.transactions.added
     assert transaction.account_id == lucia.accounts["Mercado Pago"]
+
+
+def test_a_currency_the_message_does_not_write_does_not_choose_the_account() -> None:
+    # Case C2-22. The model says "pesos", which the message never wrote.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    llm = FakeLLM(
+        Classification(
+            MessageClass.REGISTRATION,
+            registration_type=RegistrationType.EXPENSE,
+            amount=Decimal("2000"),
+            account="galicia",
+            category="Supermercado",
+            currency="ARS",
+            currency_words="pesos",
+        )
+    )
+
+    AnswerMessage(unit_of_work, FixedClock(NOW), llm).execute(
+        lucia.message("gasté 2000 en la verdulería con galicia")
+    )
+
+    assert unit_of_work.transactions.added == []
+    [reply] = unit_of_work.outbound_messages.added
+    assert reply.text.splitlines()[1] == "¿Con qué cuenta? Galicia pesos o Galicia USD."
+
+
+def test_the_amount_is_rounded_to_two_decimals_before_it_is_stored() -> None:
+    # Case C2-23. Half up, from the half.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    llm = FakeLLM(replace(supermarket_expense(), amount=Decimal("3500.555")))
+
+    AnswerMessage(unit_of_work, FixedClock(NOW), llm).execute(lucia.message(SUPERMARKET_EXPENSE))
+
+    [transaction] = unit_of_work.transactions.added
+    assert transaction.amount == Decimal("3500.56")

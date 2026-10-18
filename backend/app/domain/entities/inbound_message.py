@@ -2,8 +2,15 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import StrEnum
+
+from app.constants import (
+    DEFAULT_MESSAGE_MAX_ATTEMPTS,
+    DEFAULT_MESSAGE_RETRY_FIRST_WAIT_SECONDS,
+    DEFAULT_MESSAGE_RETRY_MAX_WAIT_SECONDS,
+    MESSAGE_RETRY_WAIT_GROWTH,
+)
 
 # Between the user and the key the browser generated, in the identifier of a web message.
 WEB_MESSAGE_ID_SEPARATOR = ":"
@@ -54,3 +61,21 @@ class InboundMessage:
 def web_message_id(user_id: uuid.UUID, idempotency_key: str) -> str:
     """The user goes first, so a key the browser repeats is unique for that user only."""
     return f"{user_id}{WEB_MESSAGE_ID_SEPARATOR}{idempotency_key}"
+
+
+@dataclass(frozen=True)
+class RetryPolicy:
+    """How a message whose call to the model failed is tried again (ADR 0010, point 4)."""
+
+    max_attempts: int = DEFAULT_MESSAGE_MAX_ATTEMPTS
+    first_wait: timedelta = timedelta(seconds=DEFAULT_MESSAGE_RETRY_FIRST_WAIT_SECONDS)
+    max_wait: timedelta = timedelta(seconds=DEFAULT_MESSAGE_RETRY_MAX_WAIT_SECONDS)
+
+    def is_last(self, attempts: int) -> bool:
+        """Whether the attempt with that number was the last one allowed."""
+        return attempts >= self.max_attempts
+
+    def wait_after(self, attempts: int) -> timedelta:
+        """The wait before the next attempt: it grows with each one, up to the most."""
+        grown: timedelta = self.first_wait * MESSAGE_RETRY_WAIT_GROWTH ** (attempts - 1)
+        return min(grown, self.max_wait)

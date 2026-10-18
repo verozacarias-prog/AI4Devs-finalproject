@@ -25,8 +25,11 @@ class FakeLLM:
         *,
         input_tokens: int = 812,
         output_tokens: int = 64,
+        error: Exception | None = None,
     ) -> None:
         self._classification = classification or Classification(MessageClass.NONE)
+        # Raised by every call instead of answering: a provider that fails, or a refusal.
+        self._error = error
         self._usage = ModelUsage(
             provider="openai",
             model="gpt-5.4-mini",
@@ -38,4 +41,6 @@ class FakeLLM:
 
     def classify(self, request: ClassificationRequest) -> Classification:
         self.requests.append(request)
+        if self._error is not None:
+            raise self._error
         return replace(self._classification, usage=self._usage)

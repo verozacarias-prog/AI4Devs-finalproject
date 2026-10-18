@@ -4,7 +4,7 @@ from collections.abc import Callable
 from datetime import timedelta
 from enum import StrEnum
 
-from app.domain.entities.inbound_message import InboundMessage
+from app.domain.entities.inbound_message import InboundMessage, RetryPolicy
 from app.domain.ports.llm_port import LLMPort
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
 from app.domain.use_cases.messages.answer_message import AnswerMessage
@@ -26,10 +26,15 @@ class ProcessNextMessage:
     """One round of the worker: take the next message and answer it (ADR 0010)."""
 
     def __init__(
-        self, unit_of_work: UnitOfWorkPort, clock: Clock, lock_duration: timedelta, llm: LLMPort
+        self,
+        unit_of_work: UnitOfWorkPort,
+        clock: Clock,
+        lock_duration: timedelta,
+        llm: LLMPort,
+        retries: RetryPolicy | None = None,
     ) -> None:
         self._claim = ClaimNextMessage(unit_of_work, clock, lock_duration)
-        self._answer = AnswerMessage(unit_of_work, clock, llm)
+        self._answer = AnswerMessage(unit_of_work, clock, llm, retries)
 
     def execute(self, on_claimed: Callable[[InboundMessage], None] | None = None) -> RoundOutcome:
         """`on_claimed` learns which message was taken before it is answered, so that whatever

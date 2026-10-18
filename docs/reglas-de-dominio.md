@@ -350,11 +350,15 @@ las demás:
 | Aporte a la actividad | Gasto | Aporte, en el presupuesto individual (§ 10) |
 | Aporte del titular | Ingreso | Aporte, en el presupuesto del grupo (§ 10) |
 
-**Una categoría propia no repite un nombre del catálogo base.** El asistente reconoce la categoría
-por su nombre, así que una propia "Salud" junto a la base "Salud" haría ambiguo cada gasto de
-salud. Si el usuario pide crear una categoría, o renombrar una propia, con el nombre de una base,
-sin distinguir mayúsculas, el asistente le dice que ya existe y le ofrece usarla o elegir otro
-nombre, como "Prepaga". La base lo impone.
+**Una categoría propia no repite un nombre del catálogo base de su mismo tipo.** El asistente
+reconoce la categoría por su nombre dentro de cada tipo, así que una propia "Salud" de gasto junto
+a la base "Salud" de gasto haría ambiguo cada gasto de salud. Si el usuario pide crear una
+categoría, o renombrar una propia, con el nombre de una base de su mismo tipo, sin distinguir
+mayúsculas, el asistente le dice que ya existe y le ofrece usarla o elegir otro nombre, como
+"Prepaga". Con el nombre de una base del otro tipo no hay ambigüedad, porque un gasto nunca usa
+una categoría de ingreso: una propia "Honorarios" de gasto convive con la base "Honorarios" de
+ingreso. Lo mismo vale entre las categorías de un usuario: puede tener "Regalos" de gasto y
+"Regalos" de ingreso. La base lo impone. Decidido por Vero el 17 de octubre de 2026.
 
 "Otros ingresos" existe porque un ingreso suelto, como una venta de algo usado, rara vez merece
 una categoría propia, y un ingreso no tiene tope que se desvirtúe. "Préstamos recibidos" y "Cuotas

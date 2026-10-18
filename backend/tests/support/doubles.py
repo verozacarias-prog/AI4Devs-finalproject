@@ -9,7 +9,7 @@ from types import TracebackType
 from typing import TYPE_CHECKING, Self
 
 from app.domain.entities.account import Account
-from app.domain.entities.budget_period import BudgetPeriod
+from app.domain.entities.budget_period import BudgetPeriod, PeriodStatus
 from app.domain.entities.family_group import FamilyGroup, GroupRole, Membership
 from app.domain.entities.financial_profile import FinancialProfile
 from app.domain.entities.session import Session
@@ -17,9 +17,11 @@ from app.domain.entities.user import User
 from app.domain.errors import ConflictError, ErrorCode
 
 if TYPE_CHECKING:
+    from app.domain.entities.budget import Budget
     from app.domain.entities.category import Category
     from app.domain.entities.chat_message import ChatMessage
     from app.domain.entities.inbound_message import InboundMessage
+    from app.domain.entities.llm_call import LlmCall
     from app.domain.entities.outbound_message import OutboundMessage
     from app.domain.entities.pending_transaction import PendingBatch, PendingTransaction
     from app.domain.entities.transaction import Transaction
@@ -79,6 +81,23 @@ class InMemoryBudgetPeriods:
             if period.user_id == user_id and period.period_start <= day <= period.period_end
         ]
 
+    def confirm(self, period_id: uuid.UUID) -> None:
+        self.added = [
+            replace(period, status=PeriodStatus.CONFIRMED) if period.id == period_id else period
+            for period in self.added
+        ]
+
+
+class InMemoryBudgets:
+    def __init__(self) -> None:
+        self.added: list[Budget] = []
+
+    def add(self, budget: Budget) -> None:
+        self.added.append(budget)
+
+    def list_by_period(self, period_id: uuid.UUID) -> list[Budget]:
+        return [budget for budget in self.added if budget.budget_period_id == period_id]
+
 
 class InMemoryCategories:
     def __init__(self) -> None:
@@ -105,6 +124,24 @@ class InMemoryPendings:
 
     def add(self, pending: PendingTransaction) -> None:
         self.added.append(pending)
+
+    def find_awaiting_reply(
+        self, user_id: uuid.UUID
+    ) -> tuple[PendingBatch, PendingTransaction] | None:
+        batch = next(
+            (batch for batch in self.batches if batch.user_id == user_id and batch.awaiting_reply),
+            None,
+        )
+        if batch is None:
+            return None
+        pending = next(pending for pending in self.added if pending.batch_id == batch.id)
+        return batch, pending
+
+    def update(self, pending: PendingTransaction) -> None:
+        self.added = [pending if stored.id == pending.id else stored for stored in self.added]
+
+    def update_batch(self, batch: PendingBatch) -> None:
+        self.batches = [batch if stored.id == batch.id else stored for stored in self.batches]
 
 
 class InMemoryFinancialProfiles:
@@ -136,6 +173,9 @@ class InMemoryFamilyGroups:
             (group for group in self.added if group.id in owned and group.name == name), None
         )
 
+    def find_by_id(self, group_id: uuid.UUID) -> FamilyGroup | None:
+        return next((group for group in self.added if group.id == group_id), None)
+
 
 class InMemorySessions:
     def __init__(self) -> None:
@@ -160,8 +200,12 @@ class InMemorySessions:
 class InMemoryTransactions:
     def __init__(self) -> None:
         self.added: list[Transaction] = []
+        # Raised by the next add instead of storing, when a case needs the store to fail.
+        self.failure: Exception | None = None
 
     def add(self, transaction: Transaction) -> None:
+        if self.failure is not None:
+            raise self.failure
         self.added.append(transaction)
 
     def list_by_user(self, user_id: uuid.UUID) -> list[Transaction]:
@@ -194,6 +238,9 @@ class InMemoryInboundMessages:
         self.stored_meanwhile: InboundMessage | None = None
         # Another worker took the message again after this one did: marking it fails.
         self.taken_again = False
+        # Left for another attempt, as (message, attempts, next attempt), and failed for good.
+        self.retried: list[tuple[uuid.UUID, int, datetime]] = []
+        self.failed: list[uuid.UUID] = []
 
     def add(self, message: InboundMessage) -> None:
         if self.stored_meanwhile is not None:
@@ -219,6 +266,18 @@ class InMemoryInboundMessages:
         if self.taken_again:
             return False
         self.marked_uncommitted.append(message_id)
+        return True
+
+    def retry_later(self, message_id: uuid.UUID, attempts: int, next_attempt_at: datetime) -> bool:
+        if self.taken_again:
+            return False
+        self.retried.append((message_id, attempts, next_attempt_at))
+        return True
+
+    def mark_failed(self, message_id: uuid.UUID, attempts: int, at: datetime) -> bool:
+        if self.taken_again:
+            return False
+        self.failed.append(message_id)
         return True
 
     def commit(self) -> None:
@@ -258,6 +317,7 @@ class InMemoryUnitOfWork:
         self.users = InMemoryUsers()
         self.accounts = InMemoryAccounts()
         self.budget_periods = InMemoryBudgetPeriods()
+        self.budgets = InMemoryBudgets()
         self.categories = InMemoryCategories()
         self.pendings = InMemoryPendings()
         self.financial_profiles = InMemoryFinancialProfiles()
@@ -285,3 +345,11 @@ class InMemoryUnitOfWork:
     def commit(self) -> None:
         self.commits += 1
         self.inbound_messages.commit()
+
+
+class InMemoryLlmCallLog:
+    def __init__(self) -> None:
+        self.recorded: list[LlmCall] = []
+
+    def record(self, call: LlmCall) -> None:
+        self.recorded.append(call)

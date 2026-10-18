@@ -17,6 +17,8 @@ INVALID_ENV_VAR = "{name} must be one of: {allowed}"
 # The scaffold never runs in production (ADR 0016).
 NOT_ALLOWED_IN_ENVIRONMENT = "{name} cannot be enabled in the {environment} environment"
 NOT_A_POSITIVE_INTEGER = "{name} must be a whole number greater than zero"
+# The call to the model must end before another worker can take the message (ADR 0010).
+LOCK_NOT_LONGER_THAN_CALL = "{lock} must be greater than {call}"
 
 # The test data script. It counts users and never names a phone or a balance.
 TEST_DATA_SEEDED = "Test data: {created} created, {existing} already existed."
@@ -47,6 +49,7 @@ CONFIRMATION_DATE = "Fecha: {date}"
 CONFIRMATION_CURRENCY = "Moneda: {currency}"
 CONFIRMATION_CATEGORY = "Categoría: {category}"
 CONFIRMATION_PERSONAL_BUDGET = "Presupuesto: tu presupuesto personal, del {start} al {end}"
+CONFIRMATION_GROUP_BUDGET = "Presupuesto: el de {group}, del {start} al {end}"
 # A movement dated before its account was opened, which is already in its initial balance
 # (domain rules, § 2).
 BEFORE_ACCOUNT_OPENING = (
@@ -72,4 +75,48 @@ CANNOT_ANSWER_YET = (
 ASK_FOR_DETAILS = (
     "¡Hola! Soy Platita y te ayudo a llevar las cuentas. Contame qué gastaste o qué cobraste, y "
     "con qué cuenta. Por ejemplo: «gasté 3500 en el súper con Mercado Pago»."
+)
+
+# The question of a pending: what was understood, then one line for each thing that is missing,
+# in this order (domain rules, § 5; FEAT-003).
+QUESTION_ONE_MISSING = "Para anotar {movement} me falta un dato:"
+QUESTION_SEVERAL_MISSING = "Para anotar {movement} me faltan unos datos:"
+QUESTION_EXPENSE = "el gasto"
+QUESTION_INCOME = "el ingreso"
+QUESTION_MOVEMENT = "el movimiento"
+QUESTION_AMOUNT_PART = " de {amount}"
+QUESTION_CATEGORY_PART = " en {category}"
+QUESTION_ACCOUNT_PART = " con {account}"
+ASK_TYPE = "¿Fue un gasto o un ingreso?"
+ASK_AMOUNT = "¿Cuánto fue?"
+ASK_ACCOUNT = "¿Con qué cuenta? {options}."
+# The last two options of a list go joined by this, and the rest by a comma.
+LAST_OPTION_JOINER = " o "
+OPTION_SEPARATOR = ", "
+PROPOSE_CATEGORY = (
+    "No encaja en ninguna de tus categorías. ¿Creo «{category}», o va en otra de las tuyas?"
+)
+# The name proposed is that of a category the user already has (domain rules, § 4).
+OFFER_EXISTING_CATEGORY = "Ya tenés la categoría «{category}». ¿La uso, o preferís otro nombre?"
+# Without a name to propose: the model gave none.
+ASK_CATEGORY = "No encaja en ninguna de tus categorías. ¿En cuál lo anoto?"
+CONFIRM_DRAFT = (
+    "Tu presupuesto del {start} al {end} todavía no está confirmado. Ingreso estimado: "
+    "{income}. {limits} ¿Lo confirmo así?"
+)
+DRAFT_LIMITS = "Topes: {limits}."
+DRAFT_LIMIT = "{category} {amount}"
+DRAFT_WITHOUT_LIMITS = "Sin topes."
+NO_PERIOD = "No tenés un presupuesto para el {date}. Armalo en el dashboard y después avisame."
+# Another movement while a pending awaits its reply: one at a time in delivery 2 (CA-36).
+FINISH_THE_PENDING_FIRST = "Primero terminemos con lo anterior."
+PENDING_DISCARDED = "Listo, no lo anoto."
+# The model refused to interpret the message: it is not tried again (CA-40).
+MODEL_REFUSED = (
+    "No pude entender ese mensaje. ¿Me lo escribís de otra forma? Por ejemplo: «gasté 3500 en "
+    "el súper con Mercado Pago»."
+)
+# A message whose attempts were used up (ADR 0010, point 4).
+MESSAGE_FAILED = (
+    "Tuve un problema y no pude procesar tu mensaje. ¿Me lo mandás de nuevo en un rato?"
 )

@@ -57,7 +57,8 @@ def inbound(
 ) -> uuid.UUID:
     """A message the user wrote, by default in the web chat, in the state the case needs.
 
-    Without `next_attempt_at`, it is the default of the table: the moment it was stored.
+    Without `next_attempt_at`, it is the moment it was sent, as the application stores a new
+    message: its first attempt is due at once.
     """
     with engine.begin() as connection:
         created: uuid.UUID = connection.execute(
@@ -69,7 +70,8 @@ def inbound(
                 "CASE WHEN :purged THEN NULL ELSE whatsapp_phone END, "
                 "CASE WHEN :purged THEN NULL ELSE CAST(:payload AS jsonb) END, "
                 "CASE WHEN :purged THEN :sent_at END, :sent_at, :status, :attempts, "
-                ":locked_until, COALESCE(CAST(:next_attempt_at AS timestamptz), now()), :sent_at "
+                ":locked_until, COALESCE(CAST(:next_attempt_at AS timestamptz), :sent_at), "
+                ":sent_at "
                 "FROM app_user WHERE name = :name RETURNING id"
             ),
             {

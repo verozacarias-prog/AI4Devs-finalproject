@@ -75,7 +75,7 @@ de pre-commit. No son una recomendación: rompen el commit.
 - `backend/app/domain/use_cases/` — una carpeta por funcionalidad, como `sessions/`, `messages/` o `accounts/`, con sus casos de uso: CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, ListAccounts, SendChatMessage, ListChatMessages, ClaimNextMessage, AnswerMessage, ProcessNextMessage, ValidateSession, CheckReadiness, CheckQueue, GenerateProactiveAlert.
 - `backend/app/domain/ports/` — interfaces que el dominio declara y no implementa.
 - `backend/app/domain/errors.py` — los errores que una regla de negocio prevé, cada uno con su código y su categoría.
-- `backend/app/domain/services/` — los servicios de dominio, como funciones, en una carpeta por tema: `accounts/account_balance.py`, el saldo de una cuenta, calculado con lo que ya ocurrió en ella; `transactions/account_resolution.py`, qué cuenta nombra un mensaje; `transactions/movement_resolution.py`, si un gasto o un ingreso interpretado se puede registrar sin preguntar, y `transactions/registration_confirmation.py`, el texto que lo confirma; `dates/local_date.py`, qué día es para un usuario, en su zona horaria.
+- `backend/app/domain/services/` — los servicios de dominio, como funciones, en una carpeta por tema: `accounts/account_balance.py`, el saldo de una cuenta, calculado con lo que ya ocurrió en ella; `transactions/account_resolution.py`, qué cuenta nombra un mensaje; `transactions/movement_resolution.py`, si un gasto o un ingreso interpretado se puede registrar sin preguntar o qué le falta, `transactions/pending_question.py`, la pregunta de lo que falta, y `transactions/registration_confirmation.py`, el texto que lo confirma; `dates/local_date.py`, qué día es para un usuario, en su zona horaria.
 - `backend/app/shared/` — utilidades técnicas que usan todas las capas, solo con la librería estándar. `clock.py` tiene el protocolo del reloj y su implementación con el reloj de la máquina.
 - `backend/app/adapters/inbound/api/` — el lado HTTP: arma la aplicación, sus controles y sus respuestas de error. En `routers/`, un archivo por grupo de endpoints, que traducen HTTP a llamadas a casos de uso. Incluye el chat web de desarrollo, que guarda el mensaje y no lo procesa.
 - `backend/app/adapters/inbound/whatsapp_webhook/` — traduce payloads de WhatsApp a llamadas a casos de uso.
@@ -107,6 +107,11 @@ de pre-commit. No son una recomendación: rompen el commit.
 - La moneda viaja siempre junto al monto, nunca implícita.
 - El saldo de una cuenta se calcula, no se almacena como campo mutable.
 - Una categoría nueva no se crea sin confirmación.
+
+Estas reglas las controla el código, y entender lo que la persona escribe lo hace el modelo: no se
+suma una regla de código para cada forma de contestar. Antes de proponer un caso para una
+respuesta del usuario, se decide si es interpretación, que va al prompt, o una invariante, que va
+al código ([ADR 0028](docs/adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md)).
 
 Para cualquier ticket de dominio, leer [`docs/reglas-de-dominio.md`](docs/reglas-de-dominio.md)
 completo antes de escribir código.
@@ -260,7 +265,7 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
 - Decisión de arquitectura → [`docs/adr/`](docs/adr/).
 - Qué entra en la entrega 2 y qué no → [`docs/hoja-de-ruta.md`](docs/hoja-de-ruta.md#alcance-de-la-entrega-2).
 - Docker, pipeline, registros, métricas del modelo o rutas de salud → los ADR [0021](docs/adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) y [0023](docs/adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md), y [`docs/operacion.md`](docs/operacion.md), que separa lo decidido de lo propuesto.
-- Clasificación, memoria, base de conocimiento o prompts → los ADR [0013](docs/adr/0013-datos-minimos-al-proveedor-de-llm.md), [0018](docs/adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), [0019](docs/adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md), [0020](docs/adr/0020-sin-framework-de-orquestacion-de-ia.md) y [0025](docs/adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md).
+- Clasificación, memoria, base de conocimiento o prompts → los ADR [0013](docs/adr/0013-datos-minimos-al-proveedor-de-llm.md), [0018](docs/adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), [0019](docs/adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md), [0020](docs/adr/0020-sin-framework-de-orquestacion-de-ia.md), [0025](docs/adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md) y [0028](docs/adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md).
 
 ## 13. Método de trabajo
 

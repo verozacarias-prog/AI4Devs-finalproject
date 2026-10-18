@@ -94,3 +94,17 @@ def test_a_wait_or_a_lock_that_is_not_a_positive_integer_stops_startup(
     message = str(error.value)
     assert variable in message
     assert value not in message
+
+
+def test_with_the_lock_not_longer_than_the_call_no_process_starts() -> None:
+    """Case C2-34 of FEAT-003: the call must end before another worker can take the message."""
+    with pytest.raises(SettingsError) as error:
+        load_settings(BASE_ENVIRON | {"WORKER_LOCK_SECONDS": "30", "LLM_TIMEOUT_SECONDS": "30"})
+
+    message = str(error.value)
+    assert "WORKER_LOCK_SECONDS" in message
+    assert "LLM_TIMEOUT_SECONDS" in message
+    settings = load_settings(
+        BASE_ENVIRON | {"WORKER_LOCK_SECONDS": "31", "LLM_TIMEOUT_SECONDS": "30"}
+    )
+    assert settings.worker_lock_seconds == 31

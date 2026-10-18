@@ -79,6 +79,7 @@ class Lucia:
     """Lucía in memory, with the ids of what she has, for the unit tests."""
 
     def __init__(self, unit_of_work: InMemoryUnitOfWork) -> None:
+        self._unit_of_work = unit_of_work
         self.id = uuid.uuid4()
         unit_of_work.users.add(
             User(
@@ -129,6 +130,17 @@ class Lucia:
             status=PeriodStatus.CONFIRMED,
         )
         unit_of_work.budget_periods.add(self.period)
+
+    def add_base_category(
+        self, name: str, kind: TransactionType = TransactionType.EXPENSE
+    ) -> uuid.UUID:
+        """One more category of the base catalog, for a case that names it."""
+        category_id = uuid.uuid4()
+        self.categories[name] = category_id
+        self._unit_of_work.categories.add(
+            Category(id=category_id, name=name, kind=kind, user_id=None)
+        )
+        return category_id
 
     def message(
         self, text: str, *, sent_at: datetime = NOW - timedelta(seconds=5)

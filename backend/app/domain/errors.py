@@ -12,6 +12,8 @@ from enum import StrEnum
 from typing import ClassVar
 
 from app.constants import Environment
+from app.domain.entities.classification import ModelUsage
+from app.domain.entities.llm_call import LlmOutcome
 
 # An extra field of the answer, for the client to go on: never something the client sent.
 DetailValue = str | int | bool | list[str]
@@ -129,3 +131,32 @@ class StoreRejectionError(Exception):
     def __init__(self, constraint: str | None) -> None:
         super().__init__(constraint)
         self.constraint = constraint
+
+
+class StoreUnavailableError(Exception):
+    """The store did not answer, or two transactions collided: it may work a while later.
+
+    Not a DomainError: no rule foresees it. A message that meets it is tried again (CA-44).
+    """
+
+
+class ModelCallFailedError(Exception):
+    """The call to the model did not give an answer to use: the message is tried again later.
+
+    Not a DomainError: no answer of the API comes from it. It says how the call ended, a value
+    of a closed catalog, and never what was sent or received.
+    """
+
+    def __init__(self, outcome: LlmOutcome, usage: ModelUsage | None = None) -> None:
+        super().__init__(outcome)
+        self.outcome = outcome
+        # Which provider, model and prompt were called, with no tokens: the call gave none.
+        self.usage = usage
+
+
+class ModelRefusedError(Exception):
+    """The model refused to interpret the message: trying again would get the same answer."""
+
+    def __init__(self, usage: ModelUsage | None = None) -> None:
+        super().__init__()
+        self.usage = usage

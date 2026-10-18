@@ -26,3 +26,9 @@ class PostgresFamilyGroupRepository:
             {"owner_id": owner_id, "owner_role": GroupRole.OWNER, "name": name},
         ).one_or_none()
         return None if row is None else FamilyGroup(id=row.id, name=row.name)
+
+    def find_by_id(self, group_id: uuid.UUID) -> FamilyGroup | None:
+        row = self._connection.execute(
+            text(queries.SELECT_GROUP_BY_ID), {"group_id": group_id}
+        ).one_or_none()
+        return None if row is None else FamilyGroup(id=row.id, name=row.name)
