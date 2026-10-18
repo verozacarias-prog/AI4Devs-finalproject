@@ -232,46 +232,33 @@ def resolve(
     """
     movement_accounts = _movement_accounts(accounts)
     account = _by_name(movement_accounts, interpretation.account)
-    if account is not None:
+    if account is not None and interpretation.type is not None:
         opened_on = local_today(account.opened_at, time_zone)
         if interpretation.transaction_date < opened_on:
-            if interpretation.type is not None:
-                return BeforeAccountOpening(
-                    type=interpretation.type, account=account, opened_on=opened_on
-                )
-    if len(periods) > 1:
-        # Choosing between the budget of the user and that of a group: final delivery.
+            return BeforeAccountOpening(
+                type=interpretation.type, account=account, opened_on=opened_on
+            )
+    if _not_yet_supported(account, periods):
         return NotYetSupported()
     period = periods[0] if periods else None
-    if period is not None and period.status is PeriodStatus.DRAFT and period.user_id is None:
-        # A draft of a group waits for its owner, which belongs to the final delivery (§ 3).
-        return NotYetSupported()
-    if account is not None and period is not None and period.primary_currency != account.currency:
-        # Another currency than the period needs a rate, which is not built yet.
-        return NotYetSupported()
     category = _category_of(interpretation, categories)
-    missing: list[MissingField] = []
-    if interpretation.type is None:
-        missing.append(MissingField.TYPE)
-    if interpretation.amount is None or rounded(interpretation.amount) <= 0:
-        missing.append(MissingField.AMOUNT)
-    if account is None:
-        missing.append(MissingField.ACCOUNT)
-    if interpretation.type is not None and category is None:
-        missing.append(MissingField.CATEGORY)
-    if period is None or period.status is not PeriodStatus.CONFIRMED:
-        missing.append(MissingField.PERIOD)
+    missing = _missing_fields(interpretation, account, category, period)
     if missing:
         return Missing(
             interpretation=interpretation,
-            fields=tuple(missing),
+            fields=missing,
             account=account,
             category=category,
-            account_options=_options(interpretation, movement_accounts, primary_currency),
+            # Each one only when its field is asked: the question says nothing else of them.
+            account_options=_options(interpretation, movement_accounts, primary_currency)
+            if MissingField.ACCOUNT in missing
+            else (),
             draft=period,
             existing_category=_named_category(
                 categories, interpretation.type, interpretation.proposed_category
-            ),
+            )
+            if MissingField.CATEGORY in missing
+            else None,
         )
     assert interpretation.type is not None and interpretation.amount is not None
     assert account is not None and category is not None and period is not None
@@ -283,6 +270,38 @@ def resolve(
         period=period,
         transaction_date=interpretation.transaction_date,
     )
+
+
+def _not_yet_supported(account: Account | None, periods: Sequence[BudgetPeriod]) -> bool:
+    """What belongs to the final delivery, whatever else the movement lacks."""
+    if len(periods) > 1:
+        # Choosing between the budget of the user and that of a group.
+        return True
+    if not periods:
+        return False
+    period = periods[0]
+    # A draft of a group waits for its owner (§ 3), and another currency than the period needs
+    # a rate, which is not built yet.
+    return (period.status is PeriodStatus.DRAFT and period.user_id is None) or (
+        account is not None and period.primary_currency != account.currency
+    )
+
+
+def _missing_fields(
+    interpretation: Interpretation,
+    account: Account | None,
+    category: Category | None,
+    period: BudgetPeriod | None,
+) -> tuple[MissingField, ...]:
+    """What the user has to say, in the order it is asked (§ 5)."""
+    lacks = {
+        MissingField.TYPE: interpretation.type is None,
+        MissingField.AMOUNT: interpretation.amount is None or rounded(interpretation.amount) <= 0,
+        MissingField.ACCOUNT: account is None,
+        MissingField.CATEGORY: interpretation.type is not None and category is None,
+        MissingField.PERIOD: period is None or period.status is not PeriodStatus.CONFIRMED,
+    }
+    return tuple(field for field in MissingField if lacks[field])
 
 
 def verified_currency(classification: Classification, text: str) -> str | None:
@@ -390,7 +409,8 @@ def _chosen(
     named = account_candidates(text, mention, currency, accounts)
     if len(named) == 1:
         return named[0]
-    among_offered = [account for account in named if account in offered]
+    offered_ids = {account.id for account in offered}
+    among_offered = [account for account in named if account.id in offered_ids]
     if len(among_offered) == 1:
         return among_offered[0]
     if currency is not None:
