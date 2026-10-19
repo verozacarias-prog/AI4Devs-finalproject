@@ -1157,7 +1157,7 @@ defecto.
 - **entonces** no se registra nada, el pendiente sigue abierto, y la pregunta incluye la línea
   "¿Con qué cuenta? Galicia pesos o Galicia USD.". La moneda de Mercado Pago no cuenta como
   dicha.
-- **Test:** —
+- **Test:** `tests/unit/test_pending_registration.py::test_a_reply_that_names_two_accounts_without_a_currency_asks_which`
 
 ### Corte 3 — límites y observabilidad
 
