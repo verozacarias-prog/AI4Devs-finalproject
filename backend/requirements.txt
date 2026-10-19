@@ -1,6 +1,6 @@
 # Application dependencies. Versions are pinned; Dependabot proposes the updates.
 alembic==1.20.0
-fastapi==0.143.0
+fastapi==0.143.3
 # The provider SDK, with no orchestration framework (ADR 0020, ADR 0025).
 openai==3.32.0
 psycopg[binary]==3.3.6
