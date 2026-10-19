@@ -1,7 +1,7 @@
 """What the registration asks, and how a reply continues it, with the model replaced (FEAT-003).
 
 Cases C2-02 to C2-06, C2-08 to C2-13, C2-15, C2-17, C2-18, C2-20, C2-35, C2-37, C2-38, C2-44,
-C2-45, C2-46 and C2-47 of its spec.md.
+C2-45, C2-46, C2-47 and C2-48 to C2-51 of its spec.md.
 Each case that starts from an open pending gets it the way a user does: a first message that
 leaves it pending, and then the reply. The database is in memory; the integration tests check
 the same use case against PostgreSQL.
@@ -692,3 +692,104 @@ def test_a_yes_creates_the_offered_category_or_the_one_the_reply_writes_and_no_o
     assert _last_reply(unit_of_work).splitlines()[1] == (
         "No encaja en ninguna de tus categorías. ¿Creo «Peluquería», o va en otra de las tuyas?"
     )
+
+
+def test_an_expense_in_another_currency_than_the_period_gets_the_fixed_text_without_account() -> (
+    None
+):
+    # Case C2-48. The period is in pesos: a movement in dollars is not registered nor asked.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "gasté 50 dólares en el súper",
+        _registration(
+            amount="50", category="Supermercado", currency="USD", currency_words="dólares"
+        ),
+    )
+
+    assert unit_of_work.transactions.added == []
+    assert unit_of_work.pendings.added == []
+    assert _last_reply(unit_of_work) == CANNOT_REGISTER
+
+
+def test_the_whole_name_of_an_account_chooses_it_whatever_the_currency_said() -> None:
+    # Case C2-49. "Galicia pesos" is that account; the dollars said are another currency.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "gasté 50 dólares en el súper con la Galicia pesos",
+        _registration(
+            amount="50",
+            account="Galicia pesos",
+            category="Supermercado",
+            currency="USD",
+            currency_words="dólares",
+        ),
+    )
+
+    assert unit_of_work.transactions.added == []
+    assert unit_of_work.pendings.added == []
+    assert _last_reply(unit_of_work) == CANNOT_REGISTER
+
+
+def test_a_reply_that_says_another_currency_rejects_the_pending_with_the_fixed_text() -> None:
+    # Case C2-50.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    _supermarket_without_account(unit_of_work, lucia)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "con MP, eran 50 dólares",
+        _reply(
+            PendingReply.CONTINUES,
+            amount="50",
+            account="MP",
+            currency="USD",
+            currency_words="dólares",
+        ),
+        now=NOW + timedelta(minutes=1),
+    )
+
+    assert unit_of_work.transactions.added == []
+    [pending] = unit_of_work.pendings.added
+    assert pending.status is PendingStatus.REJECTED
+    [batch] = unit_of_work.pendings.batches
+    assert batch.status is BatchStatus.CLOSED
+    assert _last_reply(unit_of_work) == CANNOT_REGISTER
+
+
+def test_the_currency_said_stays_in_the_pending_and_chooses_the_account_of_the_reply() -> None:
+    # Case C2-51. "la galicia" alone names Galicia pesos and Galicia USD; the pesos said first
+    # choose between them.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    _answer(
+        unit_of_work,
+        lucia,
+        "gasté 3500 pesos en el súper",
+        _registration(
+            amount="3500", category="Supermercado", currency="ARS", currency_words="pesos"
+        ),
+    )
+    assert _last_reply(unit_of_work).splitlines()[1] == ALL_ACCOUNTS
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "con la galicia",
+        _reply(PendingReply.CONTINUES, account="galicia"),
+        now=NOW + timedelta(minutes=1),
+    )
+
+    [transaction] = unit_of_work.transactions.added
+    assert transaction.account_id == lucia.accounts["Galicia pesos"]
+    assert transaction.amount == Decimal("3500")
+    assert transaction.currency == "ARS"
