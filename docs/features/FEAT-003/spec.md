@@ -1,7 +1,7 @@
 # Especificación — FEAT-003 · Registro de un gasto y de un ingreso
 
 - **Historia de usuario:** [HU3](../../05-historias-de-usuario.md)
-- **Estado:** aprobada para los cortes 1 y 2, con C2-01 a C2-47. Los casos del corte 3 están en borrador
+- **Estado:** aprobada para los tres cortes: C1-01 a C1-25, C2-01 a C2-47 y C3-01 a C3-23
 - **Fecha:** 2026-10-16
 
 ## Alcance
@@ -113,12 +113,14 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 - **CA-44.** Cualquier otro fallo al procesar un mensaje se trata según su tipo ([ADR 0010](../../adr/0010-webhook-asincrono-con-tabla-de-entrada.md), punto 4). Uno pasajero, que puede salir bien al rato, como la base caída o dos transacciones que chocan, se reintenta igual que un fallo del modelo. Uno permanente, cuyo estado no va a cambiar, como una escritura que la base rechaza, datos guardados que rompen una regla o un error del código, no se reintenta: el mensaje queda `failed` enseguida, el usuario recibe el aviso y su siguiente mensaje se procesa. Ningún mensaje queda tomado sin fin. Decidido por Vero el 17/10/2026, con la revisión de `pr-reviewer` del corte 2.
 - **CA-27.** Si dos workers terminan el mismo mensaje, queda un solo movimiento.
 - **CA-28.** Si el tiempo máximo de la llamada al modelo no es menor que la duración del lock, ningún proceso arranca.
-- **CA-40.** Si el modelo se niega a interpretar el mensaje, el usuario recibe enseguida un texto fijo que le pide escribirlo de otra forma, sin reintentar, y la llamada queda `blocked`. Una respuesta que el proveedor corta a la mitad se trata como un modelo caído (CA-26). Decidido por Vero el 17/10/2026, y resuelve la pregunta abierta 1.
+- **CA-40.** Si el modelo se niega a interpretar el mensaje, el usuario recibe enseguida un texto fijo que le pide escribirlo de otra forma, sin reintentar, y la llamada queda `refused`, aparte de lo que bloquea la validación (CA-47). Una respuesta que el proveedor corta a la mitad se trata como un modelo caído (CA-26). Decidido por Vero el 17/10/2026, y resuelve la pregunta abierta 1. El resultado `refused` lo decidió Vero el 18/10/2026, con la revisión de `pr-reviewer` del corte 3, para que la métrica de alucinaciones no cuente las negativas.
 
 ### Límites y observabilidad — corte 3
 
-- **CA-29.** Con el tope diario total alcanzado, el mensaje no se clasifica y se procesa al día siguiente.
-- **CA-30.** Con la cuota de registro agotada, el mensaje se demora al día siguiente, y una consulta o un consejo con su cuota agotada recibe un texto fijo.
+- **CA-29.** Con el tope diario total alcanzado, el mensaje no se clasifica y se procesa al día siguiente. El aviso de que llegó al límite sale una sola vez por día.
+- **CA-30.** Con la cuota de registro agotada, un gasto, un ingreso o la respuesta a un pendiente se demoran al día siguiente, con un texto fijo y sin otra llamada al modelo. Un mensaje demorado no traba a los siguientes y, al procesarse, conserva el día en que se escribió. Las cuotas de consultas y de consejos llegan con su código, en la entrega final: mientras tanto una consulta o un consejo reciben el texto fijo de C1-10 sin cobrar cuota ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-2)). Decidido por Vero el 18/10/2026.
+- **CA-46.** El tope diario total y la cuota de registro son configuración, en variables de entorno, con 100 y 50 por defecto: se cambian sin desplegar, reiniciando el worker. Decidido por Vero el 18/10/2026; resuelve la contradicción entre [2.5](../../02-arquitectura.md#25-seguridad) y las [reglas de dominio § 12](../../reglas-de-dominio.md#12-límites-de-uso-del-asistente).
+- **CA-47.** Cuando la validación en código rechaza algo que devolvió el modelo, la fila de su llamada en `LLM_CALL` pasa a `blocked` ([ADR 0023](../../adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md), punto 6). Sumado el 18/10/2026: el corte 2 valida la salida pero deja la fila en `ok`. Cuenta como rechazo tanto un nombre de categoría que no pasa la validación (CA-43) como algo que el modelo devuelve sin que esté escrito: una mención de la cuenta (CA-9), las palabras de la moneda (CA-39) o un nombre de categoría que nadie escribió (CA-45). Así la métrica de alucinaciones ve también lo que el modelo inventa. Decidido por Vero el 18/10/2026.
 - **CA-31.** Ninguna línea de los registros lleva el texto, el monto ni el teléfono.
 - **CA-32.** El prompt de sistema es el mismo para todos los usuarios.
 - **CA-33.** Una llamada al modelo cuyo mensaje termina con la transacción final deshecha deja igual su fila en `LLM_CALL`, y el worker usa siempre el envoltorio.
@@ -898,7 +900,7 @@ defecto.
 - **entonces** el mensaje queda `processed`, con `attempts = 1`; no se registra nada; la
   respuesta es "No pude entender ese mensaje. ¿Me lo escribís de otra forma? Por ejemplo:
   «gasté 3500 en el súper con Mercado Pago».", con `response_kind = 'fixed_text'`; y la fila de
-  `LLM_CALL` tiene `outcome = 'blocked'`.
+  `LLM_CALL` tiene `outcome = 'refused'`.
 - **Test:** `tests/integration/test_message_retries.py::test_if_the_model_refuses_the_fixed_text_goes_out_and_it_is_not_retried`
 
 #### C2-32 · Una respuesta cortada se trata como un modelo caído
@@ -1084,7 +1086,304 @@ defecto.
 
 ### Corte 3 — límites y observabilidad
 
-- **Aprobado por:** pendiente
+- **Aprobado por:** Veronica Zacarias 18/10/2026
+- **C3-21 y C3-22, sumados con el `/spec-drift` del corte 3:** Veronica Zacarias 18/10/2026
+- **C3-21, cambiado con la revisión de `pr-reviewer` del corte 3:** Veronica Zacarias 18/10/2026
+- **C2-31 cambiado y C3-23 sumado, con la revisión de `pr-reviewer` del corte 3:** Veronica Zacarias 18/10/2026
+- **Total:** 23 casos, 8 unitarios y 15 de integración.
+
+Cómo se cuentan los límites, para leer los casos
+([reglas de dominio § 12](../../reglas-de-dominio.md#12-límites-de-uso-del-asistente) y
+[ADR 0018](../../adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), puntos 3 a 6):
+
+- `LLM_USAGE` tiene una fila por usuario, por día y por contador. El contador
+  `classification` es el tope diario total: suma uno por cada mensaje clasificado, con sus
+  tokens, también el que el modelo se niega a interpretar; una llamada que falla no suma
+  ([ADR 0018](../../adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), punto 3).
+  El contador `registration` es la cuota de registro.
+- El día es el del momento en que el mensaje se procesa, en la zona horaria del usuario. La
+  fecha de un movimiento, en cambio, sigue siendo el día en que se escribió (§ 1).
+- Cuentan en la cuota de registro un gasto, un ingreso y la respuesta a un pendiente, también
+  la que lo descarta. No cuentan un saludo, una consulta, un consejo ni un registro que recibe
+  el texto fijo de C1-09, como una transferencia: ninguno tiene código detrás
+  ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-2)).
+- Un mensaje demorado vuelve a `pending` con `next_attempt_at` en el inicio del día siguiente
+  del usuario, y con los mismos `attempts` que tenía antes de tomarlo: no es un fallo
+  ([ADR 0010](../../adr/0010-webhook-asincrono-con-tabla-de-entrada.md), punto 4).
+- `LLM_DAILY_CLASSIFICATION_LIMIT` vale 100 y `LLM_DAILY_REGISTRATION_LIMIT`, 50. Los casos
+  usan esos valores salvo que digan otra cosa.
+
+| Caso | Qué prueba | Tipo | Sale de |
+|---|---|---|---|
+| C3-01 | Con el tope diario alcanzado, el mensaje no se clasifica y se demora | Integración | CA-29 |
+| C3-02 | El aviso del tope sale una sola vez por día | Integración | CA-29 |
+| C3-03 | Cada clasificación suma uno al tope del día, con sus tokens | Integración | CA-29 |
+| C3-04 | El día del contador es el del usuario | Unitario | CA-29 |
+| C3-05 | Con la cuota de registro agotada, un gasto se demora con su texto fijo | Integración | CA-30 |
+| C3-06 | Qué cuenta en la cuota de registro y qué no | Unitario | CA-30 |
+| C3-07 | Un mensaje demorado no traba a los siguientes | Integración | CA-30 |
+| C3-08 | Al día siguiente, el demorado se registra con el día en que se escribió | Integración | CA-30 |
+| C3-09 | Una demora no cuenta como intento ni avisa un fallo | Unitario | CA-29 y CA-30 |
+| C3-10 | Los límites salen de la configuración | Unitario | CA-46 |
+| C3-11 | Superar el tope o la cuota deja su evento, sin el teléfono | Integración | CA-29, CA-30 y CA-31 |
+| C3-12 | Ninguna línea de los registros lleva el texto, el monto ni el teléfono | Integración | CA-31 |
+| C3-13 | El prompt de sistema es el mismo para dos usuarios | Unitario | CA-32 |
+| C3-14 | Ningún identificador llega al proveedor | Unitario | CA-2 |
+| C3-15 | Una llamada cuya transacción final se deshace deja su fila | Integración | CA-33 |
+| C3-16 | El worker usa siempre el envoltorio | Unitario | CA-33 |
+| C3-17 | La fila de una clasificación dice qué campos vinieron vacíos | Integración | CA-34 |
+| C3-18 | Lo que la validación rechaza deja la llamada `blocked` | Unitario | CA-47 |
+| C3-19 | El script de métricas da las cuatro métricas | Integración | CA-35 |
+| C3-20 | Un mensaje que se deja para otro intento no se registra como respondido | Integración | CA-26 y CA-31 |
+| C3-21 | Una llamada que falla no suma al tope, y una negativa del modelo sí | Integración | CA-29 |
+| C3-22 | Un mensaje demorado con aviso queda como respondido, y uno demorado en silencio no | Integración | CA-29, CA-30 y CA-31 |
+| C3-23 | La métrica de alucinaciones no cuenta las negativas, que tienen su propia cifra | Integración | CA-35 y CA-40 |
+
+#### C3-01 · Con el tope diario alcanzado, el mensaje no se clasifica y se demora
+
+- **Sale de:** CA-29 · **Tipo:** integración
+- **Dado** que Lucía ya tiene 100 clasificaciones el 17/10/2026, y el mensaje de C1-01,
+  pendiente, con `attempts = 0`,
+- **cuando** el worker hace una ronda,
+- **entonces** no se llama al modelo y `LLM_CALL` no tiene ninguna fila de ese mensaje; no se
+  registra nada; el mensaje vuelve a `pending`, con `attempts = 0` y `next_attempt_at` en
+  2026-10-18T03:00:00Z, las 00:00 del domingo 18 en Buenos Aires; y la respuesta es "Por hoy
+  llegué al límite de mensajes que puedo leer. Lo que me mandes de acá en adelante lo guardo y
+  lo proceso mañana.", con `response_kind = 'fixed_text'`.
+- **Test:** `tests/integration/test_usage_limits.py::test_with_the_daily_cap_reached_the_message_is_not_classified_and_is_put_off`
+
+#### C3-02 · El aviso del tope sale una sola vez por día
+
+- **Sale de:** CA-29 · **Tipo:** integración
+- **Dado** el mensaje de C3-01 ya demorado, con su aviso, y otro mensaje web de Lucía,
+  posterior, "hola", pendiente,
+- **cuando** el worker hace una ronda,
+- **entonces** el mensaje "hola" también queda demorado hasta 2026-10-18T03:00:00Z, y no hay
+  ninguna respuesta nueva.
+- **Test:** `tests/integration/test_usage_limits.py::test_the_notice_of_the_cap_goes_out_once_a_day`
+
+#### C3-03 · Cada clasificación suma uno al tope del día, con sus tokens
+
+- **Sale de:** CA-29 · **Tipo:** integración
+- **Dado** que Lucía tiene 7 clasificaciones el 17/10/2026, y el mensaje "hola", pendiente, y el
+  modelo responde que no es de ninguna clase, con 900 tokens de entrada y 40 de salida,
+- **cuando** el worker hace una ronda,
+- **entonces** la fila `classification` de Lucía del 17/10/2026 en `LLM_USAGE` queda con
+  `message_count = 8` y suma esos tokens, y la fila `registration` no cambia.
+- **Test:** `tests/integration/test_usage_limits.py::test_each_classification_adds_one_to_the_cap_of_the_day_with_its_tokens`
+
+#### C3-04 · El día del contador es el del usuario
+
+- **Sale de:** CA-29 · **Tipo:** unitario
+- **Dado** el mensaje de C1-01, y que el worker lo procesa a las 23:30 del sábado 17 en Buenos
+  Aires, 2026-10-18T02:30:00Z,
+- **cuando** se procesa,
+- **entonces** la clasificación suma en el contador del 17/10/2026, y no en el del 18.
+- **Test:** `tests/unit/test_usage_limits.py::test_the_day_of_the_counter_is_the_day_of_the_user`
+
+#### C3-05 · Con la cuota de registro agotada, un gasto se demora con su texto fijo
+
+- **Sale de:** CA-30 · **Tipo:** integración
+- **Dado** que Lucía ya tiene 50 registros y 60 clasificaciones el 17/10/2026, y el mensaje de
+  C1-01, pendiente,
+- **cuando** el worker hace una ronda,
+- **entonces** el modelo se llama una sola vez; no se registra nada ni queda ningún pendiente;
+  el mensaje vuelve a `pending`, con `next_attempt_at` en 2026-10-18T03:00:00Z; la respuesta es
+  "Por hoy ya anoté todo lo que puedo. Este lo guardo y lo anoto mañana, con la fecha de hoy.",
+  con `response_kind = 'fixed_text'`; y el contador `classification` queda en 61 y el
+  `registration` en 50.
+- **Test:** `tests/integration/test_usage_limits.py::test_with_the_quota_of_registration_used_up_an_expense_is_put_off_with_its_fixed_text`
+
+#### C3-06 · Qué cuenta en la cuota de registro y qué no
+
+- **Sale de:** CA-30 · **Tipo:** unitario
+- **Dado** que Lucía tiene 10 registros el 17/10/2026,
+- **cuando** se procesa, por separado, cada uno de estos mensajes: el gasto de C1-01, el
+  ingreso de C1-02, el gasto sin cuenta de C2-01, la respuesta "con MP" de C2-07, el descarte
+  de C2-13, la transferencia de C1-09, la consulta de C1-10 y el saludo de C1-12,
+- **entonces** los cinco primeros dejan el contador `registration` en 11, y los tres últimos
+  lo dejan en 10.
+- **Test:** `tests/unit/test_usage_limits.py::test_what_counts_against_the_quota_of_registration_and_what_does_not`
+
+#### C3-07 · Un mensaje demorado no traba a los siguientes
+
+- **Sale de:** CA-30 · **Tipo:** integración
+- **Dado** el mensaje de C3-05 ya demorado, y otro mensaje web de Lucía, posterior, "hola",
+  pendiente,
+- **cuando** el worker hace una ronda,
+- **entonces** toma el mensaje "hola" y le responde el pedido de aclaración de C1-12.
+- **Test:** `tests/integration/test_usage_limits.py::test_a_message_put_off_does_not_hold_back_the_next_ones`
+
+#### C3-08 · Al día siguiente, el demorado se registra con el día en que se escribió
+
+- **Sale de:** CA-30 · **Tipo:** integración
+- **Dado** el mensaje de C3-05 demorado hasta 2026-10-18T03:00:00Z, y que son las 09:00 del
+  domingo 18 en Buenos Aires,
+- **cuando** el worker hace una ronda,
+- **entonces** el gasto queda registrado con fecha 17/10/2026, la confirmación lo lista, y el
+  contador `registration` de Lucía del 18/10/2026 queda en 1.
+- **Test:** `tests/integration/test_usage_limits.py::test_the_next_day_the_message_put_off_is_registered_with_the_day_it_was_written`
+
+#### C3-09 · Una demora no cuenta como intento ni avisa un fallo
+
+- **Sale de:** CA-29 y CA-30 · **Tipo:** unitario
+- **Dado** el mensaje de C1-01 con `attempts = 2`, a un intento de quedar `failed`, y Lucía con
+  el tope del día alcanzado,
+- **cuando** se procesa,
+- **entonces** vuelve a `pending` con `attempts = 2`, no queda `failed`, y la respuesta es la de
+  C3-01 y no el aviso de C2-29.
+- **Test:** `tests/unit/test_usage_limits.py::test_a_message_put_off_is_not_an_attempt_nor_tells_a_failure`
+
+#### C3-10 · Los límites salen de la configuración
+
+- **Sale de:** CA-46 · **Tipo:** unitario
+- **Dado** `LLM_DAILY_CLASSIFICATION_LIMIT=30` y `LLM_DAILY_REGISTRATION_LIMIT=20`, y después
+  las dos variables sin definir, y después cada una con `0`, con `-1` y con `diez`,
+- **cuando** se lee la configuración,
+- **entonces** con la primera los límites son 30 y 20; sin definir, 100 y 50; y con un valor
+  que no es un entero positivo falla con un error que nombra la variable y no arranca.
+- **Test:** `tests/unit/test_settings.py::test_the_limits_come_from_the_configuration` y `tests/unit/test_settings.py::test_a_limit_that_is_not_a_positive_integer_stops_startup`
+
+#### C3-11 · Superar el tope o la cuota deja su evento, sin el teléfono
+
+- **Sale de:** CA-29, CA-30 y CA-31 · **Tipo:** integración
+- **Dado** los mensajes de C3-01 y de C3-05,
+- **cuando** el worker hace una ronda con cada uno,
+- **entonces** cada ronda deja una línea `usage.quota_exceeded` con el `user_id` de Lucía, el
+  `message_id` del mensaje y el contador superado, `classification` o `registration`; y ninguna
+  lleva el teléfono ni el texto.
+- **Test:** `tests/integration/test_usage_limits.py::test_going_over_the_cap_or_the_quota_leaves_its_event_without_the_phone`
+
+#### C3-12 · Ninguna línea de los registros lleva el texto, el monto ni el teléfono
+
+- **Sale de:** CA-31 · **Tipo:** integración
+- **Dado** los mensajes web de Lucía "gasté 3500 en el súper" y, después, "con MP", y el modelo
+  responde las interpretaciones de C2-01 y de C2-07,
+- **cuando** el worker hace una ronda con cada uno, el primero queda pendiente y el segundo lo
+  registra,
+- **entonces** ninguna línea de los registros contiene "3500", "3.500", "súper", "con MP",
+  "Mercado Pago", "Lucía" ni "000000000001".
+- **Test:** `tests/integration/test_registration_logs.py::test_no_log_line_carries_the_text_the_amount_or_the_phone`
+
+#### C3-13 · El prompt de sistema es el mismo para dos usuarios
+
+- **Sale de:** CA-32 · **Tipo:** unitario
+- **Dado** el adaptador de OpenAI con un transporte HTTP doble, y dos pedidos de clasificación:
+  el de C1-01 con las cuentas y categorías de Lucía, y otro con un texto, cuentas y categorías
+  distintas, de otro usuario,
+- **cuando** el adaptador clasifica los dos,
+- **entonces** el mensaje de sistema que llega al proveedor es idéntico en los dos, y las
+  cuentas, las categorías y el texto aparecen solo en el mensaje de datos, delimitados.
+- **Test:** `tests/unit/test_openai_llm.py::test_the_system_prompt_is_the_same_for_two_users`
+
+#### C3-14 · Ningún identificador llega al proveedor
+
+- **Sale de:** CA-2 · **Tipo:** unitario
+- **Dado** el adaptador de OpenAI con un transporte HTTP doble, el mensaje de C2-07 que
+  continúa el pendiente de C2-01, y los identificadores de Lucía, del mensaje, del pendiente, de
+  su lote y de sus cuentas,
+- **cuando** el adaptador clasifica,
+- **entonces** el cuerpo del pedido HTTP no contiene ninguno de esos identificadores, ni el
+  teléfono de Lucía, ni "Lucía".
+- **Test:** `tests/unit/test_openai_llm.py::test_no_identifier_reaches_the_provider`
+
+#### C3-15 · Una llamada cuya transacción final se deshace deja su fila
+
+- **Sale de:** CA-33 · **Tipo:** integración
+- **Dado** el mensaje de C1-01, que un worker tomó y cuyo lock venció, y que otro worker volvió
+  a tomar y ya terminó,
+- **cuando** el primer worker termina su llamada al modelo y su transacción final se deshace,
+- **entonces** `LLM_CALL` tiene dos filas de ese mensaje, una por cada llamada, y `TRANSACTION`
+  una sola.
+- **Test:** `tests/integration/test_llm_calls.py::test_a_call_whose_final_transaction_is_undone_keeps_its_row`
+
+#### C3-16 · El worker usa siempre el envoltorio
+
+- **Sale de:** CA-33 · **Tipo:** unitario
+- **Dado** una configuración válida, con la clave del proveedor,
+- **cuando** se arma el worker como lo arma su punto de entrada,
+- **entonces** el puerto de LLM que reciben sus casos de uso es el envoltorio que registra las
+  llamadas, y adentro tiene el adaptador de OpenAI.
+- **Test:** `tests/unit/test_llm_calls.py::test_the_worker_always_uses_the_wrapper`
+
+#### C3-17 · La fila de una clasificación dice qué campos vinieron vacíos
+
+- **Sale de:** CA-34 · **Tipo:** integración
+- **Dado** el mensaje "gasté 3500 en el súper", pendiente, y el modelo responde un gasto con
+  monto y categoría, sin cuenta, sin moneda y sin fecha; y después el mensaje "hola", y el modelo
+  responde que no es de ninguna clase,
+- **cuando** el worker hace una ronda con cada uno,
+- **entonces** la fila de `LLM_CALL` del primero tiene `empty_fields` con `account`, `currency`
+  y `transaction_date`, y ningún valor de la salida; y la del segundo tiene `empty_fields` nulo,
+  porque no es un registro.
+- **Test:** `tests/integration/test_llm_calls.py::test_the_row_of_a_classification_says_which_fields_came_empty`
+
+#### C3-18 · Lo que la validación rechaza deja la llamada `blocked`
+
+- **Sale de:** CA-47 · **Tipo:** unitario
+- **Dado** el envoltorio con un registro de llamadas doble, y por separado cada una de estas
+  salidas del modelo: el nombre de categoría con un enlace de C2-44, el nombre demasiado largo
+  de C2-45, una mención de la cuenta que no está escrita en el mensaje (C1-17), las palabras de
+  la moneda que no están escritas (C2-22), y un sí con un nombre de categoría que nadie
+  escribió (C2-47),
+- **cuando** se procesa el mensaje,
+- **entonces** en cada una la fila de la llamada se marca `blocked`, y el mensaje sigue como
+  dice su caso del corte 1 o del corte 2. Con la salida de C1-01, que pasa la validación, la
+  fila queda `ok`.
+- **Test:** `tests/unit/test_llm_calls.py::test_what_the_validation_rejects_leaves_the_call_blocked`
+
+#### C3-19 · El script de métricas da las cuatro métricas
+
+- **Sale de:** CA-35 · **Tipo:** integración
+- **Dado** en `LLM_CALL`, el 17/10/2026, cinco clasificaciones de US$ 0,001 cada una: tres `ok`
+  de 1.000, 2.000 y 3.000 ms, una `invalid_output` de 1.500 ms y una `blocked` de 1.500 ms; una
+  del 16/10/2026, `ok`, de 2.000 ms y US$ 0,002; y dos pendientes promovidos, uno sin
+  correcciones y otro con una,
+- **cuando** se corre `scripts/llm_metrics.sql` contra la base,
+- **entonces** da la latencia de las clasificaciones, con mediana de 1.750 ms y percentil 95 de
+  2.750 ms; el costo de las clasificaciones, US$ 0,005 el 17 y US$ 0,002 el 16; la calidad,
+  50 % de registros confirmados sin correcciones y 16,7 % de llamadas con salida inválida; y
+  16,7 % de llamadas bloqueadas.
+- **Test:** `tests/integration/test_llm_calls.py::test_the_metrics_script_gives_the_four_metrics`
+
+#### C3-20 · Un mensaje que se deja para otro intento no se registra como respondido
+
+- **Sale de:** CA-26 y CA-31 · **Tipo:** integración
+- **Dado** el mensaje de C2-25, y el modelo falla con un error del proveedor,
+- **cuando** el worker hace una ronda,
+- **entonces** no queda ninguna línea `message.answered` de ese mensaje, y queda una línea de
+  error con la clase del error del dominio, su código y el `message_id`, sin su mensaje.
+- **Test:** `tests/integration/test_registration_logs.py::test_a_message_left_for_another_attempt_is_not_logged_as_answered`
+
+#### C3-21 · Una llamada que falla no suma al tope, y una negativa del modelo sí
+
+- **Sale de:** CA-29 · **Tipo:** integración
+- **Dado** que Lucía tiene 7 clasificaciones el 17/10/2026 y el mensaje de C1-01 pendiente,
+- **cuando** el worker hace una ronda y el modelo falla con un error del proveedor, o se niega
+  a interpretarlo como en C2-31,
+- **entonces** con el error del proveedor el mensaje vuelve a `pending` para otro intento y el
+  contador `classification` sigue en 7; con la negativa, el mensaje queda `processed` y el
+  contador queda en 8, porque el mensaje se procesó con su texto fijo.
+- **Test:** `tests/integration/test_usage_limits.py::test_a_failed_call_does_not_add_to_the_cap_and_a_refusal_does`
+
+#### C3-22 · Un mensaje demorado con aviso queda como respondido, y uno demorado en silencio no
+
+- **Sale de:** CA-29, CA-30 y CA-31 · **Tipo:** integración
+- **Dado** los mensajes de C3-01 y de C3-05, que reciben su aviso, y el de C3-02, que no
+  recibe ninguno,
+- **cuando** el worker hace una ronda con cada uno,
+- **entonces** C3-01 y C3-05 dejan una línea `message.answered` cada uno, y C3-02 no deja
+  ninguna ([Operación](../../operacion.md#63-registros)).
+- **Test:** `tests/integration/test_usage_limits.py::test_a_message_put_off_with_a_notice_is_answered_and_one_put_off_in_silence_is_not`
+
+#### C3-23 · La métrica de alucinaciones no cuenta las negativas, que tienen su propia cifra
+
+- **Sale de:** CA-35 y CA-40 · **Tipo:** integración
+- **Dado** en `LLM_CALL` tres clasificaciones del 17/10/2026: una `ok`, una `blocked` y una
+  `refused`,
+- **cuando** se corre `scripts/llm_metrics.sql` contra la base,
+- **entonces** la cuarta consulta da `blocked_pct` de 33,3 y `refused_pct` de 33,3.
+- **Test:** `tests/integration/test_llm_calls.py::test_the_metric_of_hallucinations_leaves_out_the_refusals`
 
 ## Mensajes al usuario
 
@@ -1172,6 +1471,18 @@ Cuando un mensaje agotó sus intentos:
 
 > Tuve un problema y no pude procesar tu mensaje. ¿Me lo mandás de nuevo en un rato?
 
+Desde el corte 3, cuando el usuario llega al tope diario total. Sale una sola vez por día:
+
+> Por hoy llegué al límite de mensajes que puedo leer. Lo que me mandes de acá en adelante lo
+> guardo y lo proceso mañana.
+
+Cuando un gasto, un ingreso o la respuesta a un pendiente llegan con la cuota de registro
+agotada:
+
+> Por hoy ya anoté todo lo que puedo. Este lo guardo y lo anoto mañana, con la fecha de hoy.
+
+Los dos textos los aprobó Vero el 18/10/2026.
+
 ## Reglas de dominio bajo prueba
 
 | Regla | Caso que la cubre |
@@ -1186,7 +1497,10 @@ Cuando un mensaje agotó sus intentos:
 | Una categoría nueva no se crea sin confirmación ([§ 4](../../reglas-de-dominio.md#4-categorías-catálogo-base-categorías-propias-y-creación-con-confirmación)) | C2-15, C2-16 y C2-17 |
 | Nunca una cuenta por defecto, también sin cuenta nombrada ([§ 1](../../reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma)) | C2-01 y C2-02 |
 | Solo un período confirmado recibe movimientos ([§ 3](../../reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)) | C2-18 y C2-19 |
-| Al proveedor no le llega ningún identificador ([ADR 0013](../../adr/0013-datos-minimos-al-proveedor-de-llm.md)) | C1-14, y en el corte 3 el test que falla si aparece uno |
+| Al proveedor no le llega ningún identificador ([ADR 0013](../../adr/0013-datos-minimos-al-proveedor-de-llm.md)) | C1-14, y en el corte 3 C3-14, que falla si aparece uno |
+| Un tope diario total antes de clasificar, y la cuota de registro después ([§ 12](../../reglas-de-dominio.md#12-límites-de-uso-del-asistente)) | C3-01, C3-05 y C3-06 |
+| Superar una cuota no pierde nada, y el movimiento conserva el día en que se escribió ([§ 12](../../reglas-de-dominio.md#12-límites-de-uso-del-asistente)) | C3-07 y C3-08 |
+| El día de las cuotas es el del usuario ([§ 12](../../reglas-de-dominio.md#12-límites-de-uso-del-asistente)) | C3-04 |
 
 ## Sin cubrir
 
@@ -1219,7 +1533,13 @@ Cuando un mensaje agotó sus intentos:
   Mientras tanto, el movimiento recibe el texto fijo de C1-09.
 - Un gasto en otra moneda, transferencias, compras con tarjeta, reglas recurrentes, reintegros
   y el aviso de duplicado entre miembros: reciben el texto fijo de C1-09.
-- Las consultas y los consejos: reciben el texto fijo de C1-10.
+- Las consultas y los consejos: reciben el texto fijo de C1-10. Sus cuotas, y el texto de una
+  cuota agotada, llegan con su código en la entrega final (CA-30).
+- El evento `llm.output_blocked`: según [Operación](../../operacion.md#63-registros) llega con
+  las consultas y los consejos. En el corte 3 una salida rechazada solo marca su fila en
+  `LLM_CALL` (CA-47).
+- El contador de correcciones sigue contando una fecha asumida que la respuesta cambia (CA-41):
+  que el modelo devuelva qué corrigió el usuario es de la entrega final.
 - La descripción del movimiento: queda nula. Ninguna pantalla de la entrega 2 la muestra.
 - El webhook de WhatsApp.
 

@@ -928,7 +928,9 @@ sin desplegar.
   funcionando.
 
 **Un mensaje que no es de ninguna clase,** como un saludo o algo que el modelo no logra
-interpretar, recibe un texto fijo que pide una aclaración y no gasta ninguna cuota.
+interpretar, recibe un texto fijo que pide una aclaración y no gasta ninguna cuota. Sí suma
+al tope diario total, que no es una cuota, igual que un mensaje que el modelo se niega a
+interpretar.
 
 **Un tope global mensual como corte de emergencia.** Además de las cuotas por usuario, la cuenta
 del proveedor de LLM tiene un límite de gasto mensual de 20 dólares, configurado en la consola

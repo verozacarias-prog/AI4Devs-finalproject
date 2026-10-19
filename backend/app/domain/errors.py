@@ -26,6 +26,8 @@ class ContextField(StrEnum):
     """The catalog values an error may say it was touching. Identifiers end in `_id`."""
 
     ENVIRONMENT = "environment"
+    # How a call to the model ended: one of LlmOutcome.
+    OUTCOME = "outcome"
 
 
 class ErrorCategory(StrEnum):
@@ -34,6 +36,8 @@ class ErrorCategory(StrEnum):
     FORBIDDEN = "forbidden"
     CONFLICT = "conflict"
     INVALID = "invalid"
+    # A service the use case depends on did not answer, as the language model.
+    UNAVAILABLE = "unavailable"
 
 
 class ErrorCode(StrEnum):
@@ -47,6 +51,8 @@ class ErrorCode(StrEnum):
     # No valid session. One code for every reason, so that the answer tells none apart.
     UNAUTHORIZED = "unauthorized"
     TEST_DATA_NOT_ALLOWED = "test_data_not_allowed"
+    # The call to the model gave no answer to use: the message is tried again later.
+    MODEL_CALL_FAILED = "model_call_failed"
 
 
 class DomainError(Exception):
@@ -140,15 +146,17 @@ class StoreUnavailableError(Exception):
     """
 
 
-class ModelCallFailedError(Exception):
+class ModelCallFailedError(DomainError):
     """The call to the model did not give an answer to use: the message is tried again later.
 
-    Not a DomainError: no answer of the API comes from it. It says how the call ended, a value
-    of a closed catalog, and never what was sent or received.
+    It says how the call ended, a value of a closed catalog, and never what was sent or
+    received.
     """
 
+    category = ErrorCategory.UNAVAILABLE
+
     def __init__(self, outcome: LlmOutcome, usage: ModelUsage | None = None) -> None:
-        super().__init__(outcome)
+        super().__init__(ErrorCode.MODEL_CALL_FAILED, context={ContextField.OUTCOME: outcome})
         self.outcome = outcome
         # Which provider, model and prompt were called, with no tokens: the call gave none.
         self.usage = usage

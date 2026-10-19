@@ -133,6 +133,15 @@ aceptan lo mismo:
 Una negativa del modelo no se reintenta: el usuario recibe enseguida un texto que le pide
 escribirlo de otra forma ([FEAT-003](features/FEAT-003/spec.md), CA-40).
 
+Los límites de uso de cada usuario ([reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente))
+también son variables opcionales que aceptan lo mismo, y se cambian reiniciando el worker, sin
+desplegar ([FEAT-003](features/FEAT-003/spec.md), CA-46):
+
+- `LLM_DAILY_CLASSIFICATION_LIMIT`: el tope diario total, cuántos mensajes se clasifican por
+  día, 100 si no se define.
+- `LLM_DAILY_REGISTRATION_LIMIT`: la cuota de registro, cuántos movimientos se interpretan por
+  día, 50 si no se define.
+
 El worker es el único proceso que llama al modelo, y lo hace con la clave de
 `OPENAI_API_KEY` ([ADR 0025](adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)). Sin ella, el
 worker no arranca y dice qué variable falta. La API no la lee.
@@ -325,9 +334,9 @@ de síntoma con ventanas largas, y el consumo del objetivo se revisa en el resum
 | Métrica | Cómo se calcula |
 |---|---|
 | Latencia | Duración de las llamadas, por propósito |
-| Costo | Costo estimado, por día y por propósito |
+| Costo | Costo estimado, por día de Buenos Aires y por propósito |
 | Calidad | Porcentaje de registros confirmados sin ninguna corrección, y porcentaje de llamadas con salida de formato inválido |
-| Alucinaciones | Porcentaje de respuestas bloqueadas por la validación de salida |
+| Alucinaciones | Porcentaje de respuestas bloqueadas por la validación de salida, y al lado el de negativas del modelo, que no cuentan como alucinación |
 | Recuperación, cuando existan los consejos | Porcentaje de respuestas sin ningún fragmento por encima del umbral de similitud, que es un parámetro del script |
 
 `Propuesto, sin decidir:` el resto de esta sección.
@@ -431,7 +440,7 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   | `auth.code_failed` | Un canje de código falló | El login por código |
   | `auth.session_created` | Se abrió una sesión, por código, por la lista de `local` o por un enlace personal. Lleva el usuario, la sesión y la forma en el campo `method`: hoy solo `dev_user_list` | La entrada de desarrollo |
   | `auth.throttled` | Se alcanzó un límite de intentos | El login por código |
-  | `usage.quota_exceeded` | Un usuario superó una cuota o el tope diario total | Las cuotas, con el registro de gastos |
+  | `usage.quota_exceeded` | Un usuario superó una cuota o el tope diario total. Lleva el usuario, el mensaje y cuál superó en el campo `quota`: `classification` o `registration` | Las cuotas, con el registro de gastos |
   | `llm.output_blocked` | La validación de salida frenó una respuesta | Las consultas y los consejos |
   | `dev.scaffold_enabled` | Al arrancar, el chat web o la entrada de desarrollo están encendidos | El chat web y la entrada de desarrollo |
 
@@ -496,9 +505,11 @@ aviso por Telegram y el servicio de avisos por ausencia para las tareas programa
 | Error nuevo | Un error que Sentry no había visto, o más de 20 en una hora | Media | Revisarlo. Si está ligado al último despliegue, revertirlo | Propuesto |
 | Base casi llena | Disco por encima del 80 % | Media | Ampliar el disco desde Render y revisar la retención de mensajes | Propuesto |
 
-Bajar una cuota hoy exige desplegar, porque las cuotas viven en YAML versionado; esa
-contradicción ya está entre las [decisiones abiertas](hoja-de-ruta.md#decisiones-abiertas). Ahí
-está también lo que falta de los eventos de seguridad: cuál de ellos dispara una alerta.
+Bajar una cuota no exige desplegar: las cuotas y el tope diario total se leen de variables de
+entorno, y se cambian reiniciando el proceso ([2.5](02-arquitectura.md#25-seguridad)). Valen
+para todos los usuarios: bajársela a uno solo no existe todavía. Entre las
+[decisiones abiertas](hoja-de-ruta.md#decisiones-abiertas) está lo que falta de los eventos de
+seguridad: cuál de ellos dispara una alerta.
 
 ## 7. Cuándo crecer
 

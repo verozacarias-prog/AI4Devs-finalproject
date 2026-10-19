@@ -1,8 +1,9 @@
 """GET /accounts over HTTP, against PostgreSQL (FEAT-001, docs/features/FEAT-001/spec.md).
 
-Cases C1-14 to C1-19 and C1-23, the integration ones. Each test has a database of its own,
-with the test data of the script, and talks to the API the way the dashboard does: it enters
-through the development entry and asks for the accounts with the session cookie.
+Cases C1-14 to C1-19 and C1-23, the integration ones, and C3-01, the logs of the request.
+Each test has a database of its own, with the test data of the script, and talks to the API
+the way the dashboard does: it enters through the development entry and asks for the accounts
+with the session cookie.
 
 "Today" here is the real today in Buenos Aires, because the API runs with the clock of the
 machine. The movements are written with SQL, as the registration flow does not exist yet.
@@ -482,3 +483,41 @@ def test_the_user_comes_from_the_session_not_from_the_request(
 
     assert response.status_code == 200
     assert {account["id"] for account in response.json()["accounts"]} == lucia
+
+
+def test_the_logs_carry_no_balances_or_names(seeded_database_url: str, engine: Engine) -> None:
+    # Case C3-01. Every value of every line, except the moment and the identifiers, which have
+    # a fixed shape and may hold a digit by chance.
+    stream = io.StringIO()
+    environ = {
+        "DATABASE_URL": seeded_database_url,
+        "APP_ENV": "local",
+        "APP_VERSION": "test",
+        "DEV_ENTRY_ENABLED": "true",
+    }
+    client = TestClient(create_app(load_settings(environ), log_stream=stream), base_url=BASE_URL)
+    _enter_as(client, "Lucía")
+    written_before = len(stream.getvalue().splitlines())
+
+    _accounts(client)
+
+    lines = [json.loads(line) for line in stream.getvalue().splitlines()[written_before:]]
+    [request] = [line for line in lines if line["event"] == "http.request"]
+    assert request["endpoint"] == "GET /accounts"
+    free_text = "\n".join(
+        str(value)
+        for line in lines
+        for key, value in line.items()
+        if key != "ts" and not key.endswith("_id")
+    )
+    for data in (
+        "350000",
+        "80000",
+        "25000",
+        "500.00",
+        "Galicia",
+        "Mercado Pago",
+        "Efectivo",
+        "Lucía",
+    ):
+        assert data not in free_text, data

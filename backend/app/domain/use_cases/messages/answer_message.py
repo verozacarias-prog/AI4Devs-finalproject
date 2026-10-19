@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -14,10 +15,12 @@ from app.domain.entities.classification import (
     Classification,
     ClassificationRequest,
     MessageClass,
+    ModelUsage,
     OpenPending,
     PendingReply,
 )
 from app.domain.entities.inbound_message import InboundMessage, RetryPolicy
+from app.domain.entities.llm_usage import UsageCounter, UsageLimits
 from app.domain.entities.outbound_message import OutboundMessage, ResponseKind, reply_to
 from app.domain.entities.pending_transaction import (
     BatchStatus,
@@ -30,9 +33,10 @@ from app.domain.entities.pending_transaction import (
 from app.domain.entities.transaction import Transaction, TransactionSource, TransactionType
 from app.domain.entities.user import User
 from app.domain.errors import ModelCallFailedError, ModelRefusedError, StoreUnavailableError
+from app.domain.ports.llm_call_log_port import LlmCallLogPort
 from app.domain.ports.llm_port import LLMPort
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
-from app.domain.services.dates.local_date import local_today
+from app.domain.services.dates.local_date import local_today, start_of_day, start_of_next_day
 from app.domain.services.transactions.movement_resolution import (
     BeforeAccountOpening,
     Interpretation,
@@ -46,6 +50,7 @@ from app.domain.services.transactions.movement_resolution import (
     interpret,
     is_movement,
     proposes_an_unwritten_name,
+    rejects_output,
     resolve,
     same_name,
     to_parsed_data,
@@ -59,6 +64,68 @@ from app.shared.clock import Clock
 
 # The only pending of a batch in delivery 2: more than one comes with the final delivery.
 _FIRST_POSITION = 1
+
+
+@dataclass(frozen=True)
+class LimitReached:
+    """The user went over a daily counter, and the message was put off to their next day.
+
+    `answered` says whether it got a notice: the one of the cap goes out once a day.
+    """
+
+    counter: UsageCounter
+    answered: bool
+
+
+@dataclass(frozen=True)
+class ModelFailed:
+    """The call to the model failed: the message was left for another attempt, or it failed."""
+
+    error: ModelCallFailedError
+
+
+# What the entry point learns of an answer besides how it ended, to log it (ADR 0023).
+AnswerNotice = LimitReached | ModelFailed
+
+
+def _ignore(notice: AnswerNotice) -> None:
+    """Nobody listens: a test that only looks at what was stored."""
+
+
+@dataclass(frozen=True)
+class _Usage:
+    """The user whose counters a message uses, and their day when it is processed (§ 12)."""
+
+    user: User
+    day: date
+    now: datetime
+
+
+@dataclass(frozen=True)
+class _PaidCall:
+    """The call that classified the message, which counts against the cap of the day with the
+    tokens it took. One the model refused counts too; one that failed does not (ADR 0018,
+    point 3).
+    """
+
+    usage: _Usage
+    model: ModelUsage | None
+
+
+@dataclass(frozen=True)
+class _Loaded:
+    """What answering a message needs of its user, read before calling the model."""
+
+    usage: _Usage
+    # How many messages the user already classified today: the total daily cap (§ 12).
+    classified: int
+    accounts: list[Account]
+    categories: list[Category]
+    # The day the user wrote, in their time zone.
+    today: date
+    awaiting: tuple[PendingBatch, PendingTransaction] | None
+    # The pending the message may answer: none if there is none, or if it expired (§ 5).
+    open_pending: OpenPending | None
 
 
 @dataclass(frozen=True)
@@ -83,6 +150,10 @@ class AnswerMessage:
 
     A call that fails leaves the message for another attempt, until they are used up; a call
     the model refuses gets a fixed text at once, since trying again would get the same.
+
+    With the daily cap of the user reached, the message is not classified; with the quota of
+    registration used up, a registration is not interpreted. Either way it is put off to the
+    next day of the user, and nothing is lost (domain rules, § 12).
     """
 
     def __init__(
@@ -91,21 +162,30 @@ class AnswerMessage:
         clock: Clock,
         llm: LLMPort,
         retries: RetryPolicy | None = None,
+        limits: UsageLimits | None = None,
+        calls: LlmCallLogPort | None = None,
     ) -> None:
         self._unit_of_work = unit_of_work
         self._clock = clock
         self._llm = llm
         self._retries = retries or RetryPolicy()
+        self._limits = limits or UsageLimits()
+        # Where a call whose output the validation rejects is marked: the same record the
+        # wrapper of the model writes (ADR 0023, point 6).
+        self._calls = calls
 
-    def execute(self, message: InboundMessage) -> bool:
+    def execute(
+        self, message: InboundMessage, notify: Callable[[AnswerNotice], None] = _ignore
+    ) -> bool:
         """True if this worker handled it; False if another one took it after this one.
 
         A failure that is not of the model is dealt with by its kind, and raised again so that
         the entry point logs it (CA-44): one that may go away is tried again later, and one
-        whose state will not change leaves the message failed at once, with its notice.
+        whose state will not change leaves the message failed at once, with its notice. What
+        the entry point logs besides, a limit reached or a call that failed, goes to `notify`.
         """
         try:
-            return self._answer(message)
+            return self._answer(message, notify)
         except StoreUnavailableError:
             self._try_again_later(message)
             raise
@@ -113,61 +193,194 @@ class AnswerMessage:
             self._fail(message)
             raise
 
-    def _answer(self, message: InboundMessage) -> bool:
-        user_id = message.user_id
-        awaiting: tuple[PendingBatch, PendingTransaction] | None = None
-        question: str | None = None
-        with self._unit_of_work as unit_of_work:
-            user = None if user_id is None else unit_of_work.users.find_by_id(user_id)
-            if user is not None:
-                accounts = unit_of_work.accounts.list_by_user(user.id)
-                categories = unit_of_work.categories.list_available(user.id)
-                # "Today" is the day the user wrote, in their time zone, not the day it is
-                # processed.
-                today = local_today(message.sent_at, user.time_zone)
-                awaiting = unit_of_work.pendings.find_awaiting_reply(user.id)
-                if awaiting is not None and not _expired(awaiting[1], message.sent_at):
-                    context = _Context(message, user, accounts, categories, today, message.sent_at)
-                    question = _question_of(unit_of_work, context, awaiting[1])
-        if user_id is None or user is None:
+    def _answer(self, message: InboundMessage, notify: Callable[[AnswerNotice], None]) -> bool:
+        loaded = self._load(message)
+        if loaded is None:
             # Only a registered user reaches the model; the web chat always has one.
             return self._store_reply(message, messages.ASK_FOR_DETAILS, ResponseKind.FIXED_TEXT)
-        open_pending = None
-        if awaiting is not None and question is not None:
-            open_pending = OpenPending(
-                interpreted=dict(awaiting[1].parsed_data),
-                missing=awaiting[1].missing_fields,
-                question=question,
-            )
+        usage = loaded.usage
+        if loaded.classified >= self._limits.classification:
+            # Classifying costs too: it is not known whether it was an expense, so it waits.
+            return self._put_off_by_the_cap(message, usage, notify)
         try:
             classification = self._llm.classify(
-                _request(message.text, accounts, categories, today, open_pending)
+                _request(
+                    message.text,
+                    loaded.accounts,
+                    loaded.categories,
+                    loaded.today,
+                    loaded.open_pending,
+                )
             )
-        except ModelRefusedError:
-            return self._store_reply(message, messages.MODEL_REFUSED, ResponseKind.FIXED_TEXT)
-        except ModelCallFailedError:
+        except ModelRefusedError as error:
+            return self._store_reply(
+                message,
+                messages.MODEL_REFUSED,
+                ResponseKind.FIXED_TEXT,
+                _PaidCall(usage, error.usage),
+            )
+        except ModelCallFailedError as error:
+            notify(ModelFailed(error))
+            # A fall of the provider does not use up the cap of the user (ADR 0018, point 3).
             return self._try_again_later(message)
-        now = self._clock.now()
-        context = _Context(message, user, accounts, categories, today, now)
+        return self._settle_message(message, loaded, classification, notify)
+
+    def _load(self, message: InboundMessage) -> _Loaded | None:
+        """What answering the message needs of its user, read before calling the model.
+
+        None when the message is of no registered user.
+        """
         with self._unit_of_work as unit_of_work:
+            user_id = message.user_id
+            user = None if user_id is None else unit_of_work.users.find_by_id(user_id)
+            if user is None:
+                return None
+            now = self._clock.now()
+            # The day of the counters is the one of the user when it is processed (§ 12).
+            usage = _Usage(user, local_today(now, user.time_zone), now)
+            accounts = unit_of_work.accounts.list_by_user(user.id)
+            categories = unit_of_work.categories.list_available(user.id)
+            # "Today" is the day the user wrote, in their time zone, not the day it is
+            # processed.
+            today = local_today(message.sent_at, user.time_zone)
+            awaiting = unit_of_work.pendings.find_awaiting_reply(user.id)
+            open_pending = None
+            if awaiting is not None and not _expired(awaiting[1], message.sent_at):
+                context = _Context(message, user, accounts, categories, today, message.sent_at)
+                open_pending = OpenPending(
+                    interpreted=dict(awaiting[1].parsed_data),
+                    missing=awaiting[1].missing_fields,
+                    question=_question_of(unit_of_work, context, awaiting[1]),
+                )
+            return _Loaded(
+                usage=usage,
+                classified=unit_of_work.llm_usage.count(
+                    user.id, usage.day, UsageCounter.CLASSIFICATION
+                ),
+                accounts=accounts,
+                categories=categories,
+                today=today,
+                awaiting=awaiting,
+                open_pending=open_pending,
+            )
+
+    def _settle_message(
+        self,
+        message: InboundMessage,
+        loaded: _Loaded,
+        classification: Classification,
+        notify: Callable[[AnswerNotice], None],
+    ) -> bool:
+        """What the classification says, in one transaction, or put off by the quota."""
+        usage, awaiting = loaded.usage, loaded.awaiting
+        continuing = awaiting is not None and loaded.open_pending is not None
+        previous = (
+            from_parsed_data(awaiting[1].parsed_data, loaded.today)
+            if awaiting is not None and continuing
+            else None
+        )
+        self._mark_if_rejected(classification, message.text, previous)
+        now = self._clock.now()
+        context = _Context(
+            message, usage.user, loaded.accounts, loaded.categories, loaded.today, now
+        )
+        registration = _counts_as_registration(classification, continuing)
+        with self._unit_of_work as unit_of_work:
+            if (
+                registration
+                and unit_of_work.llm_usage.count(
+                    usage.user.id, usage.day, UsageCounter.REGISTRATION
+                )
+                >= self._limits.registration
+            ):
+                return self._put_off_by_the_quota(
+                    unit_of_work, message, usage, classification, notify
+                )
             # First, so that a worker another one displaced writes nothing at all.
             if not unit_of_work.inbound_messages.mark_processed(message.id, message.attempts, now):
                 return False
-            if awaiting is not None and open_pending is None:
+            _count(unit_of_work, usage, UsageCounter.CLASSIFICATION, classification.usage)
+            if registration:
+                _count(unit_of_work, usage, UsageCounter.REGISTRATION, None)
+            if awaiting is not None and not continuing:
                 # It expired before this message was written: it is not continued (§ 5).
                 _close(unit_of_work, awaiting, PendingStatus.EXPIRED, None)
-            if awaiting is not None and open_pending is not None:
+            if awaiting is not None and continuing:
                 _continue(unit_of_work, context, awaiting, classification)
             else:
                 _answer_new(unit_of_work, context, classification)
             unit_of_work.commit()
         return True
 
-    def _store_reply(self, message: InboundMessage, text: str, kind: ResponseKind) -> bool:
+    def _mark_if_rejected(
+        self, classification: Classification, text: str, previous: Interpretation | None
+    ) -> None:
+        """Marks the call blocked when the checks in code drop something it returned (CA-47)."""
+        if (
+            self._calls is not None
+            and classification.call_id is not None
+            and rejects_output(classification, text, previous)
+        ):
+            self._calls.mark_blocked(classification.call_id)
+
+    def _put_off_by_the_cap(
+        self, message: InboundMessage, usage: _Usage, notify: Callable[[AnswerNotice], None]
+    ) -> bool:
+        """Put off to the next day without classifying, with the notice once a day (§ 12)."""
+        time_zone = usage.user.time_zone
+        with self._unit_of_work as unit_of_work:
+            if not unit_of_work.inbound_messages.defer(
+                message.id, message.attempts - 1, start_of_next_day(usage.now, time_zone)
+            ):
+                return False
+            told = unit_of_work.outbound_messages.sent_since(
+                usage.user.id, messages.DAILY_LIMIT_REACHED, start_of_day(usage.now, time_zone)
+            )
+            if not told:
+                unit_of_work.outbound_messages.add(
+                    _reply(
+                        message, messages.DAILY_LIMIT_REACHED, ResponseKind.FIXED_TEXT, usage.now
+                    )
+                )
+            unit_of_work.commit()
+        notify(LimitReached(UsageCounter.CLASSIFICATION, answered=not told))
+        return True
+
+    def _put_off_by_the_quota(
+        self,
+        unit_of_work: UnitOfWorkPort,
+        message: InboundMessage,
+        usage: _Usage,
+        classification: Classification,
+        notify: Callable[[AnswerNotice], None],
+    ) -> bool:
+        """A registration over the quota: put off to the next day, with its notice (§ 12).
+
+        It was classified, and that counts against the cap; nothing it says is used.
+        """
+        next_day = start_of_next_day(usage.now, usage.user.time_zone)
+        if not unit_of_work.inbound_messages.defer(message.id, message.attempts - 1, next_day):
+            return False
+        _count(unit_of_work, usage, UsageCounter.CLASSIFICATION, classification.usage)
+        unit_of_work.outbound_messages.add(
+            _reply(message, messages.REGISTRATION_QUOTA_USED_UP, ResponseKind.FIXED_TEXT, usage.now)
+        )
+        unit_of_work.commit()
+        notify(LimitReached(UsageCounter.REGISTRATION, answered=True))
+        return True
+
+    def _store_reply(
+        self,
+        message: InboundMessage,
+        text: str,
+        kind: ResponseKind,
+        paid: _PaidCall | None = None,
+    ) -> bool:
         now = self._clock.now()
         with self._unit_of_work as unit_of_work:
             if not unit_of_work.inbound_messages.mark_processed(message.id, message.attempts, now):
                 return False
+            _count_paid(unit_of_work, paid)
             unit_of_work.outbound_messages.add(_reply(message, text, kind, now))
             unit_of_work.commit()
         return True
@@ -197,6 +410,43 @@ class AnswerMessage:
                 return False
             unit_of_work.commit()
         return True
+
+
+def _counts_as_registration(classification: Classification, continuing: bool) -> bool:
+    """Whether the message uses the quota of registration (domain rules, § 12).
+
+    An expense or an income to register, and the reply that completes or discards a pending.
+    What gets a fixed text because it has no code yet uses none (docs/hoja-de-ruta.md).
+    """
+    if continuing:
+        return classification.pending_reply in (PendingReply.CONTINUES, PendingReply.DISCARDS)
+    return (
+        classification.message_class is MessageClass.REGISTRATION
+        and is_movement(classification)
+        and not classification.several_movements
+    )
+
+
+def _count(
+    unit_of_work: UnitOfWorkPort,
+    usage: _Usage,
+    counter: UsageCounter,
+    model_usage: ModelUsage | None,
+) -> None:
+    """One more of that counter, with the tokens of the call when it is the one that paid it."""
+    unit_of_work.llm_usage.add(
+        usage.user.id,
+        usage.day,
+        counter,
+        (model_usage.input_tokens or 0) if model_usage else 0,
+        (model_usage.output_tokens or 0) if model_usage else 0,
+    )
+
+
+def _count_paid(unit_of_work: UnitOfWorkPort, paid: _PaidCall | None) -> None:
+    """A message the model refused still counts against the cap of the day."""
+    if paid is not None:
+        _count(unit_of_work, paid.usage, UsageCounter.CLASSIFICATION, paid.model)
 
 
 def _answer_new(

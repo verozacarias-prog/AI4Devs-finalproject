@@ -28,9 +28,14 @@ Los mensajes ya se guardan, por otros motivos, en `INBOUND_MESSAGE` y `OUTBOUND_
    funciones de solo lectura, así que una consulta se resuelve en dos llamadas y no en tres: la
    segunda redacta con los datos ya leídos. Si es un consejo, devuelve solo la clase y, cuando se
    reconoce, el tema.
-3. **Antes de clasificar hay un tope diario total por usuario.** Cuenta las llamadas de
-   clasificación del día, en un contador propio de `LLM_USAGE`, y no descuenta de ninguna de las
-   tres cuotas. Vale 100 por día, y es configuración. Un mensaje que llega con el tope alcanzado
+3. **Antes de clasificar hay un tope diario total por usuario.** Cuenta los mensajes
+   clasificados del día, en un contador propio de `LLM_USAGE`, y no descuenta de ninguna de las
+   tres cuotas. Cuenta también el mensaje que el modelo se niega a interpretar, que se procesa
+   con su texto fijo. Una llamada que falla y se reintenta no cuenta: una caída del proveedor
+   no le consume el tope al usuario, y su costo lo acota el tope mensual de la cuenta del
+   proveedor (reglas de dominio § 12). Decidido por Vero el 18/10/2026, con la revisión de
+   `pr-reviewer` del corte 3 de [FEAT-003](../features/FEAT-003/spec.md). Vale 100 por día, y es
+   configuración. Un mensaje que llega con el tope alcanzado
    no se clasifica: se guarda y se procesa al día siguiente, y el usuario recibe un solo aviso
    por día.
 4. **La cuota de la clase se cobra después de clasificar.** Si está agotada, sale un texto fijo

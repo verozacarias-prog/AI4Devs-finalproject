@@ -120,3 +120,12 @@ MODEL_REFUSED = (
 MESSAGE_FAILED = (
     "Tuve un problema y no pude procesar tu mensaje. ¿Me lo mandás de nuevo en un rato?"
 )
+# The daily cap of messages classified was reached: said once a day (domain rules, § 12).
+DAILY_LIMIT_REACHED = (
+    "Por hoy llegué al límite de mensajes que puedo leer. Lo que me mandes de acá en adelante "
+    "lo guardo y lo proceso mañana."
+)
+# A registration that came with the quota of registration used up (domain rules, § 12).
+REGISTRATION_QUOTA_USED_UP = (
+    "Por hoy ya anoté todo lo que puedo. Este lo guardo y lo anoto mañana, con la fecha de hoy."
+)

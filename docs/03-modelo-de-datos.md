@@ -476,6 +476,7 @@ erDiagram
         string status "NOT NULL, CHECK IN ('pending','processing','processed','failed'), DEFAULT 'pending'"
         int attempts "NOT NULL, DEFAULT 0"
         timestamptz next_attempt_at "NOT NULL, DEFAULT now()"
+        boolean deferred "NOT NULL, DEFAULT false, CHECK (NOT deferred OR status = 'pending') — put off to the next day by a limit of use: it does not hold back the next messages of its sender while it waits"
         timestamptz locked_until "NULLABLE — lease while a worker processes it"
         timestamptz processed_at "NULLABLE"
         timestamptz created_at "NOT NULL, DEFAULT now()"
@@ -508,8 +509,9 @@ erDiagram
         int output_tokens "NULLABLE — null for embeddings and when the provider did not answer"
         int duration_ms "NOT NULL, CHECK (duration_ms >= 0)"
         numeric estimated_cost_usd "NULLABLE, NUMERIC(12,6), CHECK (estimated_cost_usd >= 0) — computed when the row is written, from the configured prices per model; always US dollars"
-        string outcome "NOT NULL, CHECK IN ('ok','invalid_output','blocked','provider_error','timeout')"
+        string outcome "NOT NULL, CHECK IN ('ok','invalid_output','blocked','refused','provider_error','timeout')"
         jsonb retrieval "NULLABLE — reserved for advice: the chunks retrieved and their similarity; empty until advice exists"
+        string[] empty_fields "NULLABLE, CHECK each IN ('registration_type','amount','account','category','currency','transaction_date') — for a classification of a registration, the output fields that came empty; never a value"
         timestamptz created_at "NOT NULL, DEFAULT now()"
     }
 ```
@@ -615,7 +617,7 @@ Registro de pedidos de código y canjes fallidos, del que salen los límites del
 
 ##### LLM_USAGE
 
-Consumo diario de cada usuario, por cuota. Se suma en la misma transacción que procesa el mensaje. El orden es: primero se mira el contador `classification`, que es el tope diario total; si no se alcanzó, se clasifica el mensaje, y recién entonces se mira la cuota de su clase (`registration`, `query` o `advice`). `classification` no es una cuarta cuota: cuenta las llamadas de clasificación del día y guarda sus tokens. Los tokens no deciden ningún límite, que es por cantidad de mensajes, pero permiten saber cuánto cuesta cada usuario y ajustar los límites con datos. La regla está en [reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente) y el mecanismo en el [ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md).
+Consumo diario de cada usuario, por cuota. Se suma en la misma transacción que procesa el mensaje. El orden es: primero se mira el contador `classification`, que es el tope diario total; si no se alcanzó, se clasifica el mensaje, y recién entonces se mira la cuota de su clase (`registration`, `query` o `advice`). `classification` no es una cuarta cuota: cuenta los mensajes clasificados del día, también el que el modelo se niega a interpretar, y guarda sus tokens; una llamada que falla y se reintenta no cuenta ([ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), punto 3). Los tokens no deciden ningún límite, que es por cantidad de mensajes, pero permiten saber cuánto cuesta cada usuario y ajustar los límites con datos. La regla está en [reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente) y el mecanismo en el [ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md).
 
 ##### ALLOWED_PHONE
 
@@ -798,12 +800,13 @@ Ver también, en otra tabla: [el índice sobre `question_message_id`, en OUTBOUN
 
 ##### INBOUND_MESSAGE
 
-Todo mensaje que llega por el webhook de WhatsApp o por el chat web de desarrollo, guardado antes de procesarlo. Es a la vez la cola de trabajo del worker y el registro de lo que entró por el canal. `quoted_outbound_message_id` es el mensaje de Platita que el usuario citó al responder: el chat web lo manda directo, y en WhatsApp se resuelve desde el identificador de Meta del mensaje citado al guardar el mensaje. Del historial de esta tabla y de `OUTBOUND_MESSAGE` sale también la memoria de conversación ([ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md)). `status` recorre `pending` → `processing` → `processed`, o termina en `failed`, tras agotar los reintentos de un fallo pasajero o enseguida ante uno permanente, y en ese caso el usuario recibe un aviso ([ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md), punto 4). `sent_at` ordena los mensajes de un mismo remitente, que se procesan de a uno y en orden. `user_id` es nulo mientras el número no corresponde a un usuario registrado. Cómo se toma, se reintenta y se procesa está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
+Todo mensaje que llega por el webhook de WhatsApp o por el chat web de desarrollo, guardado antes de procesarlo. Es a la vez la cola de trabajo del worker y el registro de lo que entró por el canal. `quoted_outbound_message_id` es el mensaje de Platita que el usuario citó al responder: el chat web lo manda directo, y en WhatsApp se resuelve desde el identificador de Meta del mensaje citado al guardar el mensaje. Del historial de esta tabla y de `OUTBOUND_MESSAGE` sale también la memoria de conversación ([ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md)). `status` recorre `pending` → `processing` → `processed`, o termina en `failed`, tras agotar los reintentos de un fallo pasajero o enseguida ante uno permanente, y en ese caso el usuario recibe un aviso ([ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md), punto 4). `sent_at` ordena los mensajes de un mismo remitente, que se procesan de a uno y en orden. `deferred` marca un mensaje demorado hasta el día siguiente del usuario por el tope diario o por la cuota de registro ([reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente)): vuelve a `pending` como uno que espera su reintento, pero mientras espera no traba a los mensajes siguientes de su remitente; cuando le llega el momento, sí, para que los demorados conserven su orden. Vuelve a `false` cuando un worker lo toma. Decidido por Vero el 18/10/2026, con el corte 3 de [FEAT-003](features/FEAT-003/spec.md). `user_id` es nulo mientras el número no corresponde a un usuario registrado. Cómo se toma, se reintenta y se procesa está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
 
 **Restricciones:**
 
 - En `INBOUND_MESSAGE` y `OUTBOUND_MESSAGE`, el contenido y el teléfono (`payload` y `from_phone` en la entrada, `content` y `to_phone` en la salida) son nulos si y solo si `purged_at` está informado (`CHECK`): la purga borra los dos a la vez, como pide [reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos). Solo se purgan mensajes ya procesados, así que el worker, que identifica al remitente por `from_phone` cuando no hay `user_id`, nunca encuentra un pendiente sin teléfono.
 - En `INBOUND_MESSAGE`, `UNIQUE (provider, provider_message_id)`: un mensaje del proveedor se guarda una sola vez, así un reintento del webhook no genera un segundo procesamiento. En un mensaje web el identificador es el usuario de la sesión seguido del código que generó el navegador: el servidor pone la parte del usuario, así la clave es única por usuario y un reenvío del navegador no duplica. El fundamento está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
+- En `INBOUND_MESSAGE`, solo un mensaje `pending` puede estar demorado: `NOT deferred OR status = 'pending'` (`CHECK`).
 - En `INBOUND_MESSAGE`, un mensaje con `provider = 'web'` tiene `user_id` informado (`CHECK`), porque viene de una sesión. Su `from_phone` es el teléfono de ese usuario, así que la restricción de la purga no cambia.
 - El mensaje citado es del mismo usuario, y la base lo impone: `INBOUND_MESSAGE (quoted_outbound_message_id, user_id)` es una clave foránea compuesta contra `OUTBOUND_MESSAGE (id, user_id)`, apoyada en un `UNIQUE (id, user_id)`. Como esa clave no se evalúa cuando `user_id` es nulo, un mensaje que cita otro tiene `user_id` informado (`CHECK`). Así nadie puede citar la confirmación de otro para corregir sus movimientos. Qué pasa con una cita que no se encuentra, en WhatsApp y en el chat web, lo dice el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md) ([reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)).
 
@@ -824,12 +827,13 @@ Una fila por cada llamada al proveedor de LLM o al de embeddings, sin ningún co
 
 - `inbound_message_id` es también el identificador con que se sigue un mensaje en los registros.
 - `purpose` sale del método del puerto que se llamó. `interpretation` es la llamada que interpreta la respuesta a una pregunta de un pendiente; la llamada inicial, que clasifica y además adelanta el trabajo, es `classification`.
-- `outcome` nace como `ok`, `invalid_output`, `provider_error` o `timeout`. Pasa a `blocked` después, cuando la validación de salida rechaza la respuesta.
+- `outcome` nace como `ok`, `invalid_output`, `refused`, cuando el modelo se niega a interpretar el mensaje ([FEAT-003](features/FEAT-003/spec.md), CA-40), `provider_error` o `timeout`. Una llamada `ok` pasa a `blocked` después, cuando la validación de salida rechaza la respuesta (CA-47).
 - `estimated_cost_usd` es un costo de operación de Platita, no plata de un usuario: por eso lleva la moneda en el nombre y no una columna de moneda.
+- `empty_fields` dice, para una clasificación que resultó un registro, qué campos de la salida vinieron vacíos: solo sus nombres, nunca un valor. Sirve para diagnosticar una interpretación fallida sin guardar contenido. Es nulo en cualquier otra llamada ([FEAT-003](features/FEAT-003/spec.md), CA-34).
 - `retrieval` guarda, para un consejo, una lista con el identificador de cada fragmento recuperado y su similitud. No tiene clave foránea a `ADVICE_CHUNK`, que todavía no existe.
 
 **Restricciones:**
 
-- En `LLM_CALL`, `purpose` y `outcome` tienen un `CHECK` con su conjunto cerrado, y `duration_ms` y `estimated_cost_usd` no pueden ser negativos.
+- En `LLM_CALL`, `purpose` y `outcome` tienen un `CHECK` con su conjunto cerrado, igual que cada nombre de `empty_fields`, y `duration_ms` y `estimated_cost_usd` no pueden ser negativos.
 - En `LLM_CALL`, un índice sobre `(created_at, purpose)`, que es por donde agrupan las métricas.
 - Las filas no se borran por plazo. Al borrarse una cuenta se borran sus mensajes, y `inbound_message_id` queda nulo ([reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos)).

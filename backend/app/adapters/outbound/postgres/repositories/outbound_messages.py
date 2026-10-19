@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import uuid
 from dataclasses import asdict
+from datetime import datetime
 
 from sqlalchemy import Connection, text
 
@@ -31,3 +32,15 @@ class PostgresOutboundMessageRepository:
             {"message_id": message_id, "user_id": user_id},
         ).scalar_one()
         return exists
+
+    def sent_since(self, user_id: uuid.UUID, text_sent: str, since: datetime) -> bool:
+        sent: bool = self._connection.execute(
+            text(queries.OUTBOUND_TEXT_SENT_SINCE),
+            {
+                "user_id": user_id,
+                "text_key": queries.MESSAGE_TEXT_KEY,
+                "text": text_sent,
+                "since": since,
+            },
+        ).scalar_one()
+        return sent

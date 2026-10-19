@@ -108,3 +108,31 @@ def test_with_the_lock_not_longer_than_the_call_no_process_starts() -> None:
         BASE_ENVIRON | {"WORKER_LOCK_SECONDS": "31", "LLM_TIMEOUT_SECONDS": "30"}
     )
     assert settings.worker_lock_seconds == 31
+
+
+def test_the_limits_come_from_the_configuration() -> None:
+    """Case C3-10 of FEAT-003: they change without deploying, by restarting the process."""
+    settings = load_settings(
+        BASE_ENVIRON
+        | {"LLM_DAILY_CLASSIFICATION_LIMIT": "30", "LLM_DAILY_REGISTRATION_LIMIT": "20"}
+    )
+    assert settings.llm_daily_classification_limit == 30
+    assert settings.llm_daily_registration_limit == 20
+
+    defaults = load_settings(BASE_ENVIRON)
+    assert defaults.llm_daily_classification_limit == 100
+    assert defaults.llm_daily_registration_limit == 50
+
+
+@pytest.mark.parametrize(
+    "variable", ["LLM_DAILY_CLASSIFICATION_LIMIT", "LLM_DAILY_REGISTRATION_LIMIT"]
+)
+@pytest.mark.parametrize("value", ["0", "-1", "diez"])
+def test_a_limit_that_is_not_a_positive_integer_stops_startup(variable: str, value: str) -> None:
+    """Case C3-10 of FEAT-003."""
+    with pytest.raises(SettingsError) as error:
+        load_settings(BASE_ENVIRON | {variable: value})
+
+    message = str(error.value)
+    assert variable in message
+    assert value not in message

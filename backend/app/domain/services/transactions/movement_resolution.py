@@ -24,6 +24,7 @@ from app.domain.entities.transaction import TransactionType
 from app.domain.services.dates.local_date import local_today
 from app.domain.services.transactions.account_resolution import (
     account_candidates,
+    is_unwritten,
     is_written,
 )
 
@@ -309,8 +310,7 @@ def verified_currency(classification: Classification, text: str) -> str | None:
 
     Without words, the currency counts as the model gave it: Vero decided so on 17/10/2026.
     """
-    words = classification.currency_words
-    if words is not None and not is_written(words, text):
+    if is_unwritten(classification.currency_words, text):
         return None
     return classification.currency
 
@@ -361,6 +361,25 @@ def proposes_an_unwritten_name(
         proposed is not None
         and not same_name(proposed, previous.proposed_category)
         and not is_written(proposed, text)
+    )
+
+
+def rejects_output(
+    classification: Classification, text: str, previous: Interpretation | None
+) -> bool:
+    """Whether the checks in code drop something the model returned (ADR 0023, CA-47).
+
+    The same checks that decide what is used, so the metric of hallucinations says what the
+    code did: a mention of the account or words of the currency the message does not write
+    (CA-9, CA-39), a name of category that does not pass its check (CA-43), and, in a reply to
+    a pending, a name nobody offered nor wrote (CA-45).
+    """
+    proposed = classification.proposed_category
+    return (
+        is_unwritten(classification.account, text)
+        or is_unwritten(classification.currency_words, text)
+        or (proposed is not None and _valid_proposal(proposed) is None)
+        or (previous is not None and proposes_an_unwritten_name(previous, classification, text))
     )
 
 

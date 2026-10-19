@@ -20,8 +20,21 @@ class LlmOutcome(StrEnum):
     OK = "ok"
     INVALID_OUTPUT = "invalid_output"
     BLOCKED = "blocked"
+    # The model refused to interpret the message: no hallucination, and no retry (CA-40).
+    REFUSED = "refused"
     PROVIDER_ERROR = "provider_error"
     TIMEOUT = "timeout"
+
+
+class OutputField(StrEnum):
+    """A field of the output of a classification that may come empty (CA-34)."""
+
+    REGISTRATION_TYPE = "registration_type"
+    AMOUNT = "amount"
+    ACCOUNT = "account"
+    CATEGORY = "category"
+    CURRENCY = "currency"
+    TRANSACTION_DATE = "transaction_date"
 
 
 @dataclass(frozen=True)
@@ -40,3 +53,6 @@ class LlmCall:
     duration_ms: int
     estimated_cost_usd: Decimal | None
     outcome: LlmOutcome
+    # For a classification that is a registration, the fields of its output that came empty,
+    # by their names and never with a value (CA-34). None for any other call.
+    empty_fields: tuple[OutputField, ...] | None = None

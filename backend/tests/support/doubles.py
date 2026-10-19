@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from app.domain.entities.chat_message import ChatMessage
     from app.domain.entities.inbound_message import InboundMessage
     from app.domain.entities.llm_call import LlmCall
+    from app.domain.entities.llm_usage import UsageCounter
     from app.domain.entities.outbound_message import OutboundMessage
     from app.domain.entities.pending_transaction import PendingBatch, PendingTransaction
     from app.domain.entities.transaction import Transaction
@@ -241,6 +242,8 @@ class InMemoryInboundMessages:
         # Left for another attempt, as (message, attempts, next attempt), and failed for good.
         self.retried: list[tuple[uuid.UUID, int, datetime]] = []
         self.failed: list[uuid.UUID] = []
+        # Put off to the next day by a limit of use, as (message, attempts, next attempt).
+        self.deferred: list[tuple[uuid.UUID, int, datetime]] = []
 
     def add(self, message: InboundMessage) -> None:
         if self.stored_meanwhile is not None:
@@ -280,6 +283,12 @@ class InMemoryInboundMessages:
         self.failed.append(message_id)
         return True
 
+    def defer(self, message_id: uuid.UUID, attempts: int, next_attempt_at: datetime) -> bool:
+        if self.taken_again:
+            return False
+        self.deferred.append((message_id, attempts, next_attempt_at))
+        return True
+
     def commit(self) -> None:
         self.marked.extend(self.marked_uncommitted)
         self.marked_uncommitted.clear()
@@ -301,6 +310,12 @@ class InMemoryOutboundMessages:
             message.id == message_id and message.user_id == user_id for message in self.added
         )
 
+    def sent_since(self, user_id: uuid.UUID, text: str, since: datetime) -> bool:
+        return any(
+            message.user_id == user_id and message.text == text and message.created_at >= since
+            for message in self.added
+        )
+
 
 class InMemoryChatMessages:
     def contains(self, user_id: uuid.UUID, message_id: uuid.UUID) -> bool:
@@ -310,6 +325,30 @@ class InMemoryChatMessages:
     def list_by_user(self, user_id: uuid.UUID, after: uuid.UUID | None) -> list[ChatMessage]:
         # The conversation is put together by the query: the integration tests check it.
         raise NotImplementedError
+
+
+class InMemoryLlmUsage:
+    """The daily counters of each user, as (user, day, counter): what LLM_USAGE keeps."""
+
+    def __init__(self) -> None:
+        self.counts: dict[tuple[uuid.UUID, date, UsageCounter], int] = {}
+        self.tokens: dict[tuple[uuid.UUID, date, UsageCounter], tuple[int, int]] = {}
+
+    def count(self, user_id: uuid.UUID, day: date, counter: UsageCounter) -> int:
+        return self.counts.get((user_id, day, counter), 0)
+
+    def add(
+        self,
+        user_id: uuid.UUID,
+        day: date,
+        counter: UsageCounter,
+        input_tokens: int,
+        output_tokens: int,
+    ) -> None:
+        key = (user_id, day, counter)
+        self.counts[key] = self.counts.get(key, 0) + 1
+        stored_input, stored_output = self.tokens.get(key, (0, 0))
+        self.tokens[key] = (stored_input + input_tokens, stored_output + output_tokens)
 
 
 class InMemoryUnitOfWork:
@@ -328,6 +367,7 @@ class InMemoryUnitOfWork:
         self.inbound_messages = InMemoryInboundMessages()
         self.outbound_messages = InMemoryOutboundMessages()
         self.chat_messages = InMemoryChatMessages()
+        self.llm_usage = InMemoryLlmUsage()
         self.commits = 0
 
     def __enter__(self) -> Self:
@@ -350,6 +390,11 @@ class InMemoryUnitOfWork:
 class InMemoryLlmCallLog:
     def __init__(self) -> None:
         self.recorded: list[LlmCall] = []
+        # The calls whose output the validation rejected, in the order they were marked.
+        self.blocked: list[uuid.UUID] = []
 
     def record(self, call: LlmCall) -> None:
         self.recorded.append(call)
+
+    def mark_blocked(self, call_id: uuid.UUID) -> None:
+        self.blocked.append(call_id)

@@ -178,7 +178,7 @@ def test_if_the_model_refuses_the_fixed_text_goes_out_and_it_is_not_retried(
         "en el súper con Mercado Pago»."
     )
     assert reply["response_kind"] == "fixed_text"
-    assert _outcomes(engine, message) == ["blocked"]
+    assert _outcomes(engine, message) == ["refused"]
 
 
 def test_a_write_the_database_rejects_fails_the_message_without_retrying(

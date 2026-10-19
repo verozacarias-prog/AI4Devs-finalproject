@@ -1,7 +1,7 @@
 # Especificación — FEAT-001 · Pantalla de cuentas
 
 - **Historia de usuario:** [HU1](../../05-historias-de-usuario.md)
-- **Estado:** aprobada para el corte 1. Los casos de los cortes 2 y 3 están en borrador
+- **Estado:** aprobada para los tres cortes
 - **Fecha:** 2026-10-13
 
 ## Alcance
@@ -591,7 +591,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **cuando** pide `GET /accounts`,
 - **entonces** la línea de registro del pedido lleva `GET /accounts` como endpoint, y ninguna
   línea escrita durante el pedido contiene un saldo, el nombre de una cuenta ni "Lucía".
-- **Test:** —
+- **Test:** `tests/integration/test_accounts.py::test_the_logs_carry_no_balances_or_names`
 
 ## Estados de pantalla
 

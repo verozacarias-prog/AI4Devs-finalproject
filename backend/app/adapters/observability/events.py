@@ -54,6 +54,8 @@ class Event(StrEnum):
     ERROR_UNEXPECTED = "error.unexpected"
     # Security events (docs/operacion.md 6.3).
     AUTH_SESSION_CREATED = "auth.session_created"
+    # A user went over their daily cap or a quota: the field `quota` says which.
+    USAGE_QUOTA_EXCEEDED = "usage.quota_exceeded"
     DEV_SCAFFOLD_ENABLED = "dev.scaffold_enabled"
 
 
@@ -75,6 +77,8 @@ class Field(StrEnum):
     ERROR_STACK = "error_stack"
     ERROR_CAUSE = "error_cause"
     CONSTRAINT = "constraint"
+    # Which daily counter a user went over: one of UsageCounter.
+    QUOTA = "quota"
 
 
 class SessionMethod(StrEnum):

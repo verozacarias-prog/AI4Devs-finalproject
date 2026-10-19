@@ -11,6 +11,7 @@ from app.domain.ports.chat_message_repository_port import ChatMessageRepositoryP
 from app.domain.ports.family_group_repository_port import FamilyGroupRepositoryPort
 from app.domain.ports.financial_profile_repository_port import FinancialProfileRepositoryPort
 from app.domain.ports.inbound_message_repository_port import InboundMessageRepositoryPort
+from app.domain.ports.llm_usage_repository_port import LlmUsageRepositoryPort
 from app.domain.ports.outbound_message_repository_port import OutboundMessageRepositoryPort
 from app.domain.ports.pending_repository_port import PendingRepositoryPort
 from app.domain.ports.session_repository_port import SessionRepositoryPort
@@ -62,6 +63,9 @@ class UnitOfWorkPort(Protocol):
 
     @property
     def chat_messages(self) -> ChatMessageRepositoryPort: ...
+
+    @property
+    def llm_usage(self) -> LlmUsageRepositoryPort: ...
 
     def __enter__(self) -> Self: ...
 
