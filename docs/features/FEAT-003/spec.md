@@ -1143,7 +1143,7 @@ defecto.
 - **cuando** el worker hace una ronda,
 - **entonces** no se registra nada ni queda ningún pendiente, y la respuesta es "Para esa fecha tenés más de un presupuesto, y todavía no sé elegir en cuál anotarlo. Por ahora no lo anoto.", con
   `response_kind = 'fixed_text'`.
-- **Test:** —
+- **Test:** `tests/integration/test_registration.py::test_with_more_than_one_possible_period_the_expense_gets_its_text_and_is_not_pending`
 
 ### Corte 3 — límites y observabilidad
 
@@ -1455,7 +1455,7 @@ Cómo se cuentan los límites, para leer los casos
 - **cuando** se procesa el gasto en dólares de C2-48,
 - **entonces** el contador `registration` sigue en 10, y el `classification` suma uno, porque
   el mensaje se clasificó.
-- **Test:** —
+- **Test:** `tests/unit/test_usage_limits.py::test_an_expense_that_cannot_be_registered_yet_uses_no_quota_of_registration`
 
 ## Mensajes al usuario
 
