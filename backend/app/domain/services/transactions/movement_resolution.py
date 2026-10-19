@@ -83,6 +83,8 @@ class Interpretation:
     category: str | None
     proposed_category: str | None
     transaction_date: date
+    # The currency the messages say, as an ISO code: the one of the movement (CA-48).
+    currency: str | None = None
 
 
 @dataclass(frozen=True)
@@ -159,6 +161,7 @@ def interpret(
         category=classification.category,
         proposed_category=_valid_proposal(classification.proposed_category),
         transaction_date=movement_date(classification, today),
+        currency=verified_currency(classification, text),
     )
 
 
@@ -171,7 +174,8 @@ def continue_interpretation(
     """What a reply adds to the pending: what it says replaces what was understood."""
     movement_accounts = _movement_accounts(accounts)
     account, mention = previous.account, previous.account_mention
-    currency = verified_currency(classification, text)
+    # What the reply says replaces what the first message said (CA-48).
+    currency = verified_currency(classification, text) or previous.currency
     if classification.account is not None or (currency is not None and mention is not None):
         offered = (
             account_candidates(mention, mention, None, movement_accounts)
@@ -193,6 +197,7 @@ def continue_interpretation(
         category=classification.category or previous.category,
         proposed_category=_written_proposal(classification, text) or previous.proposed_category,
         transaction_date=classification.transaction_date or previous.transaction_date,
+        currency=currency,
     )
 
 
@@ -239,7 +244,9 @@ def resolve(
             return BeforeAccountOpening(
                 type=interpretation.type, account=account, opened_on=opened_on
             )
-    if _not_yet_supported(account, periods):
+    if _not_yet_supported(account, periods) or _another_currency(
+        interpretation.currency, account, periods, primary_currency
+    ):
         return NotYetSupported()
     period = periods[0] if periods else None
     category = _category_of(interpretation, categories)
@@ -286,6 +293,21 @@ def _not_yet_supported(account: Account | None, periods: Sequence[BudgetPeriod])
     return (period.status is PeriodStatus.DRAFT and period.user_id is None) or (
         account is not None and period.primary_currency != account.currency
     )
+
+
+def _another_currency(
+    currency: str | None,
+    account: Account | None,
+    periods: Sequence[BudgetPeriod],
+    primary_currency: str,
+) -> bool:
+    """Whether the messages say another currency than the period, or than the account they
+    name: it needs a rate, which delivery 2 does not have, so nothing else is asked (CA-48).
+    """
+    if currency is None:
+        return False
+    expected = periods[0].primary_currency if len(periods) == 1 else primary_currency
+    return currency != expected or (account is not None and account.currency != currency)
 
 
 def _missing_fields(
@@ -347,6 +369,7 @@ def from_parsed_data(parsed: Mapping[str, str | None], today: date) -> Interpret
         category=parsed.get(ParsedKey.CATEGORY),
         proposed_category=parsed.get(ParsedKey.PROPOSED_CATEGORY),
         transaction_date=today if kept_date is None else date.fromisoformat(kept_date),
+        currency=parsed.get(ParsedKey.CURRENCY),
     )
 
 
