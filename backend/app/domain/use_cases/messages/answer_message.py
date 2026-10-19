@@ -113,6 +113,22 @@ class _PaidCall:
 
 
 @dataclass(frozen=True)
+class _Loaded:
+    """What answering a message needs of its user, read before calling the model."""
+
+    usage: _Usage
+    # How many messages the user already classified today: the total daily cap (§ 12).
+    classified: int
+    accounts: list[Account]
+    categories: list[Category]
+    # The day the user wrote, in their time zone.
+    today: date
+    awaiting: tuple[PendingBatch, PendingTransaction] | None
+    # The pending the message may answer: none if there is none, or if it expired (§ 5).
+    open_pending: OpenPending | None
+
+
+@dataclass(frozen=True)
 class _Context:
     """What the answer of one message needs to know of its user."""
 
@@ -178,44 +194,23 @@ class AnswerMessage:
             raise
 
     def _answer(self, message: InboundMessage, notify: Callable[[AnswerNotice], None]) -> bool:
-        user_id = message.user_id
-        awaiting: tuple[PendingBatch, PendingTransaction] | None = None
-        question: str | None = None
-        classified = 0
-        with self._unit_of_work as unit_of_work:
-            user = None if user_id is None else unit_of_work.users.find_by_id(user_id)
-            if user is not None:
-                now = self._clock.now()
-                # The day of the counters is the one of the user when it is processed (§ 12).
-                usage = _Usage(user, local_today(now, user.time_zone), now)
-                classified = unit_of_work.llm_usage.count(
-                    user.id, usage.day, UsageCounter.CLASSIFICATION
-                )
-                accounts = unit_of_work.accounts.list_by_user(user.id)
-                categories = unit_of_work.categories.list_available(user.id)
-                # "Today" is the day the user wrote, in their time zone, not the day it is
-                # processed.
-                today = local_today(message.sent_at, user.time_zone)
-                awaiting = unit_of_work.pendings.find_awaiting_reply(user.id)
-                if awaiting is not None and not _expired(awaiting[1], message.sent_at):
-                    context = _Context(message, user, accounts, categories, today, message.sent_at)
-                    question = _question_of(unit_of_work, context, awaiting[1])
-        if user_id is None or user is None:
+        loaded = self._load(message)
+        if loaded is None:
             # Only a registered user reaches the model; the web chat always has one.
             return self._store_reply(message, messages.ASK_FOR_DETAILS, ResponseKind.FIXED_TEXT)
-        if classified >= self._limits.classification:
+        usage = loaded.usage
+        if loaded.classified >= self._limits.classification:
             # Classifying costs too: it is not known whether it was an expense, so it waits.
             return self._put_off_by_the_cap(message, usage, notify)
-        open_pending = None
-        if awaiting is not None and question is not None:
-            open_pending = OpenPending(
-                interpreted=dict(awaiting[1].parsed_data),
-                missing=awaiting[1].missing_fields,
-                question=question,
-            )
         try:
             classification = self._llm.classify(
-                _request(message.text, accounts, categories, today, open_pending)
+                _request(
+                    message.text,
+                    loaded.accounts,
+                    loaded.categories,
+                    loaded.today,
+                    loaded.open_pending,
+                )
             )
         except ModelRefusedError as error:
             return self._store_reply(
@@ -228,20 +223,74 @@ class AnswerMessage:
             notify(ModelFailed(error))
             # A fall of the provider does not use up the cap of the user (ADR 0018, point 3).
             return self._try_again_later(message)
-        continuing = awaiting is not None and open_pending is not None
+        return self._settle_message(message, loaded, classification, notify)
+
+    def _load(self, message: InboundMessage) -> _Loaded | None:
+        """What answering the message needs of its user, read before calling the model.
+
+        None when the message is of no registered user.
+        """
+        with self._unit_of_work as unit_of_work:
+            user_id = message.user_id
+            user = None if user_id is None else unit_of_work.users.find_by_id(user_id)
+            if user is None:
+                return None
+            now = self._clock.now()
+            # The day of the counters is the one of the user when it is processed (§ 12).
+            usage = _Usage(user, local_today(now, user.time_zone), now)
+            accounts = unit_of_work.accounts.list_by_user(user.id)
+            categories = unit_of_work.categories.list_available(user.id)
+            # "Today" is the day the user wrote, in their time zone, not the day it is
+            # processed.
+            today = local_today(message.sent_at, user.time_zone)
+            awaiting = unit_of_work.pendings.find_awaiting_reply(user.id)
+            open_pending = None
+            if awaiting is not None and not _expired(awaiting[1], message.sent_at):
+                context = _Context(message, user, accounts, categories, today, message.sent_at)
+                open_pending = OpenPending(
+                    interpreted=dict(awaiting[1].parsed_data),
+                    missing=awaiting[1].missing_fields,
+                    question=_question_of(unit_of_work, context, awaiting[1]),
+                )
+            return _Loaded(
+                usage=usage,
+                classified=unit_of_work.llm_usage.count(
+                    user.id, usage.day, UsageCounter.CLASSIFICATION
+                ),
+                accounts=accounts,
+                categories=categories,
+                today=today,
+                awaiting=awaiting,
+                open_pending=open_pending,
+            )
+
+    def _settle_message(
+        self,
+        message: InboundMessage,
+        loaded: _Loaded,
+        classification: Classification,
+        notify: Callable[[AnswerNotice], None],
+    ) -> bool:
+        """What the classification says, in one transaction, or put off by the quota."""
+        usage, awaiting = loaded.usage, loaded.awaiting
+        continuing = awaiting is not None and loaded.open_pending is not None
         previous = (
-            from_parsed_data(awaiting[1].parsed_data, today)
+            from_parsed_data(awaiting[1].parsed_data, loaded.today)
             if awaiting is not None and continuing
             else None
         )
         self._mark_if_rejected(classification, message.text, previous)
         now = self._clock.now()
-        context = _Context(message, user, accounts, categories, today, now)
+        context = _Context(
+            message, usage.user, loaded.accounts, loaded.categories, loaded.today, now
+        )
         registration = _counts_as_registration(classification, continuing)
         with self._unit_of_work as unit_of_work:
             if (
                 registration
-                and unit_of_work.llm_usage.count(user.id, usage.day, UsageCounter.REGISTRATION)
+                and unit_of_work.llm_usage.count(
+                    usage.user.id, usage.day, UsageCounter.REGISTRATION
+                )
                 >= self._limits.registration
             ):
                 return self._put_off_by_the_quota(
@@ -253,10 +302,10 @@ class AnswerMessage:
             _count(unit_of_work, usage, UsageCounter.CLASSIFICATION, classification.usage)
             if registration:
                 _count(unit_of_work, usage, UsageCounter.REGISTRATION, None)
-            if awaiting is not None and open_pending is None:
+            if awaiting is not None and not continuing:
                 # It expired before this message was written: it is not continued (§ 5).
                 _close(unit_of_work, awaiting, PendingStatus.EXPIRED, None)
-            if awaiting is not None and open_pending is not None:
+            if awaiting is not None and continuing:
                 _continue(unit_of_work, context, awaiting, classification)
             else:
                 _answer_new(unit_of_work, context, classification)

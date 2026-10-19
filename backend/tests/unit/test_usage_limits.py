@@ -13,7 +13,6 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 import pytest
-from app.domain.entities.llm_usage import UsageCounter
 
 from app.domain.entities.classification import (
     Classification,
@@ -21,6 +20,7 @@ from app.domain.entities.classification import (
     PendingReply,
     RegistrationType,
 )
+from app.domain.entities.llm_usage import UsageCounter
 from app.domain.use_cases.messages.answer_message import AnswerMessage
 from tests.support.doubles import FixedClock, InMemoryUnitOfWork
 from tests.support.fake_llm import FakeLLM

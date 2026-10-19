@@ -17,13 +17,12 @@ from app.domain.entities.user import User
 from app.domain.errors import ConflictError, ErrorCode
 
 if TYPE_CHECKING:
-    from app.domain.entities.llm_usage import UsageCounter
-
     from app.domain.entities.budget import Budget
     from app.domain.entities.category import Category
     from app.domain.entities.chat_message import ChatMessage
     from app.domain.entities.inbound_message import InboundMessage
     from app.domain.entities.llm_call import LlmCall
+    from app.domain.entities.llm_usage import UsageCounter
     from app.domain.entities.outbound_message import OutboundMessage
     from app.domain.entities.pending_transaction import PendingBatch, PendingTransaction
     from app.domain.entities.transaction import Transaction
