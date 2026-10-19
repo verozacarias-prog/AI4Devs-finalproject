@@ -91,6 +91,28 @@ Qué va primero según la capa:
 No se exige un porcentaje de cobertura. Se exige que cada criterio de aceptación y cada
 invariante en riesgo tengan su test, y que cada test diga de qué criterio sale.
 
+**Sin textos ni valores sueltos en el código.** Cada texto y cada valor va como una constante,
+en un solo lugar por tipo. En el backend:
+
+- `app/constants.py`: los entornos, los nombres de las variables de entorno y sus valores por
+  defecto;
+- `app/test_data.py`: la plantilla de un usuario de prueba y los usuarios de `local`;
+- `app/messages.py`: todo mensaje escrito para una persona;
+- `adapters/inbound/api/routes.py`, `reference.py` y `security_headers.py`: las rutas de la API
+  y los valores de sus respuestas, los textos de su referencia, y los encabezados de seguridad;
+- `adapters/observability/events.py`: los eventos, los campos y las reglas de los registros;
+- `adapters/outbound/postgres/queries.py`: el SQL escrito a mano.
+
+En el dashboard:
+
+- `src/messages.ts`: todo texto que se muestra;
+- `src/api/routes.ts`: las rutas de la API;
+- `src/constants.ts`: el resto.
+
+Tres cosas se escriben donde se usan: un nombre que impone una librería, como el de uno de sus
+parámetros; el SQL de una migración, que es lo que la migración es; y el título y el ícono del
+dashboard, que viven en archivos estáticos.
+
 **Constantes en los tests.** Lo que un test comprueba queda escrito en ese test: el mensaje o
 el nombre de la restricción que espera. Los nombres y valores que varios tests repiten para
 armar sus datos, como tablas, monedas o valores de un conjunto cerrado, no se escriben sueltos.

@@ -422,7 +422,8 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **Sale de:** CA-2 · **Tipo:** componente
 - **Dado** una respuesta con una sola cuenta, "Visa", tarjeta de crédito, ARS, -50000.00,
 - **cuando** se abre la pantalla,
-- **entonces** muestra Visa con −$ 50.000,00, con el estilo de un monto negativo.
+- **entonces** muestra Visa con -$ 50.000,00, con el guion que pone el formato de moneda de
+  `es-AR`, y con el estilo de un monto negativo.
 - **Test:** `src/pages/AccountsPage.test.tsx` › "case C1-29: a negative balance is shown with its sign"
 
 #### C1-30 · Un saldo se muestra tal como llega, sin cuentas propias

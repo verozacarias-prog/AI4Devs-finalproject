@@ -16,7 +16,7 @@ la dibuja.
 |---|---|---|
 | `Card` y `CardTitle` de shadcn/ui | Existen, desde el [ADR 0027](../../adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md) | El marco de la pantalla, con "Chat con Platita" como título |
 | `Button` de shadcn/ui | Existe, desde el ADR 0027 | Enviar, Reintentar la consulta y Reintentar un envío |
-| Opción del menú (`NavItem`) | Existe, en `App.tsx` | "Chat", en la sección "Pruebas" |
+| Opción del menú (`NavItem`) | Existe, en `components/AppShell.tsx`, el menú lateral del [ADR 0027](../../adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md) | "Chat", en la sección "Pruebas" |
 | Línea de estado (`role="status"`) | Existe, como en la pantalla de cuentas | Anuncia cargando, vacío y "Platita está procesando…" |
 | Alerta de error (`role="alert"`) | Existe, como en la pantalla de cuentas | El estado de error |
 | Burbuja de mensaje | Nuevo, en `ChatPage` | Un mensaje con su hora, a la derecha si es del usuario y a la izquierda si es de Platita. Ningún componente existente alinea por autor |

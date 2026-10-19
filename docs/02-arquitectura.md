@@ -140,7 +140,7 @@ flowchart TB
 
 **Patrón elegido:** **arquitectura hexagonal (ports & adapters)**, con el dominio (entidades + casos de uso) aislado de los detalles de infraestructura detrás de puertos, y **backend y frontend desacoplados**, comunicados únicamente por API REST.
 
-**Acceso a la base de datos:** solo el backend la toca. Desde afuera se entra únicamente por la API HTTP; adentro, la API, el worker, los procesos programados y los comandos de operación pasan por los casos de uso, ninguno llama a otro por HTTP, y el SQL vive solo en los repositorios. Las excepciones son las migraciones, el script de datos de prueba y el acceso operativo.
+**Acceso a la base de datos:** solo el backend la toca. Desde afuera se entra únicamente por la API HTTP; adentro, la API, el worker, los procesos programados y los comandos de operación pasan por los casos de uso, ninguno llama a otro por HTTP, y el SQL vive solo en los repositorios. Las excepciones son las migraciones y el acceso operativo. El script de datos de prueba es un comando de operación más: pasa por sus casos de uso.
 
 El contexto que llevó a elegirlo, sus beneficios, los sacrificios asumidos, las alternativas descartadas y el detalle de quién accede a la base están en el [ADR 0001](adr/0001-arquitectura-hexagonal.md).
 
@@ -172,22 +172,19 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
 /backend
   /app
     /domain
-      /entities         # User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, PendingTransaction, PendingBatch, AdviceDocument, AdviceChunk, InboundMessage, OutboundMessage, ChatMessage, Classification, LlmCall
+      /entities         # User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, PendingTransaction, PendingBatch, AdviceDocument, AdviceChunk, InboundMessage, OutboundMessage, ChatMessage, Classification, LlmCall, LlmUsage
       /use_cases         # one folder per feature, such as sessions/, messages/ or accounts/: CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, ListAccounts, SendChatMessage, ListChatMessages, ClaimNextMessage, AnswerMessage, ProcessNextMessage, ValidateSession, CheckReadiness, CheckQueue, GenerateProactiveAlert...
       /ports             # interfaces the domain depends on but does not implement
-        - transaction_repository_port.py
-        - account_repository_port.py
-        - session_repository_port.py
         - unit_of_work_port.py
-        - vector_store_port.py
-        - whatsapp_gateway_port.py
-        - exchange_rate_port.py
+        - one <name>_repository_port.py per repository: user, session, account, transaction, transfer,
+          category, budget_period, budget, family_group, financial_profile, pending, inbound_message,
+          outbound_message, chat_message and llm_usage
         - llm_port.py
-        - embedding_port.py
-        - text_splitter_port.py
         - llm_call_log_port.py
         - database_health_port.py
         - queue_health_port.py
+        - vector_store_port.py, embedding_port.py, text_splitter_port.py, whatsapp_gateway_port.py and
+          exchange_rate_port.py, with the features that need them
       /services          # domain services: business rules that belong to no single entity, as functions, one folder per topic
         /accounts        # the balance of an account
         /transactions    # which account a message names, whether a movement can be registered without asking, and its confirmation
@@ -202,7 +199,8 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
         /scheduler          # scheduled jobs entry point: calls use cases, never raw SQL
         /operator_commands  # commands an operator runs by hand: local test data, knowledge base load, enabling phone numbers, personal links for the demo
       /outbound
-        /postgres           # unit of work, connection setup, and queries.py with all the SQL written by hand
+        /postgres           # unit of work, connection setup, queries.py with all the SQL written by hand, the translation of
+                            # a rejected write (rejections.py), and the health checks of the database and of the queue
           /repositories    # one file per repository, each implementing its port
         /pgvector            # VectorStorePort implementation
         /whatsapp_client      # sends outbound WhatsApp messages
@@ -221,12 +219,13 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
   /migrations          # Alembic
 /frontend                # React, TypeScript and Vite (ADR 0026), Tailwind CSS and shadcn/ui (ADR 0027)
   /src
-    /api                 # API contract exported by the backend, the types generated from it, and the API paths
+    /api                 # API contract exported by the backend, the types generated from it, and the API paths in routes.ts
     /pages               # one file per screen, with its test next to it
     /components          # the pieces several screens share, such as the side menu, with their test next to them
       /ui                # the shadcn/ui components, copied into the project and owned by it
     /lib                 # small helpers of the components: class-names.ts joins class names
     messages.ts          # every text the dashboard shows
+    constants.ts         # every other value of the dashboard that is not a text nor an API path
     design-tokens.css    # design tokens: the only place with colours, sizes and spacing
     App.tsx
     main.tsx

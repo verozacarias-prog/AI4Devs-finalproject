@@ -130,7 +130,9 @@ mensaje. Alcanza un modelo chico: la tarea es interpretar un mensaje corto, no r
 - Los pedidos a las funciones de solo lectura se midieron con salida estructurada, no con
   llamadas a herramientas reales, para usar el mismo programa con los dos proveedores.
 - El modelo puede negarse a responder, o el proveedor puede cortar una respuesta. El adaptador
-  tiene que mirar el motivo de corte. Qué recibe el usuario en ese caso todavía no está definido.
+  tiene que mirar el motivo de corte. Qué recibe el usuario lo definió después
+  [FEAT-003](../features/FEAT-003/spec.md), con CA-40: una negativa recibe un texto fijo y no
+  se reintenta, y una respuesta cortada se reintenta como un modelo caído.
 - El prompt de la evaluación es un borrador. El del producto se escribe con sus propios tests.
 - Quien propuso los candidatos y corrió la evaluación es un asistente de Anthropic. Los casos,
   los resultados esperados y la elección los aprobó la autora.

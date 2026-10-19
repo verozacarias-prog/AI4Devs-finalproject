@@ -94,10 +94,11 @@ costo compra casi toda la operación.
 El entorno local y el de CI están decididos, y también qué rama despliega cada entorno: la rama
 de la entrega despliega `demo`, y `main`, `production` ([ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md)). El local levanta cuatro servicios
 con un comando: la base, las migraciones, la API y el worker, los tres últimos con la misma
-imagen. El worker se suma cuando exista la tabla de mensajes entrantes. Las pruebas manuales usan el modelo real, con la clave en un `.env` sin versionar. Dónde
+imagen. Las pruebas manuales usan el modelo real, con la clave en un `.env` sin versionar. Dónde
 se despliegan demostración y producción sigue como propuesta.
 
-Cada proceso recibe su entorno en la variable `APP_ENV`, y no hay un valor por defecto: sin
+Cada proceso de la aplicación (la API, el worker y los comandos de operación) recibe su
+entorno en la variable `APP_ENV`, y no hay un valor por defecto: sin
 ella, o con un valor que no es `local`, `demo` ni `production`, el proceso no arranca y dice
 qué variable falta. Un despliegue que la olvidara no puede quedar funcionando como `local`,
 que es el entorno donde un error se escribe con sus datos ([6.3](#63-registros)). El
@@ -192,7 +193,7 @@ Se suma al que ya valida la documentación ([ADR 0009](adr/0009-validacion-de-do
 en GitHub Actions. Todas las etapas corren en paralelo y apuntan a menos de diez minutos.
 
 Las etapas marcadas como decididas son los seis controles del [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md). Corren con
-permiso de solo lectura, salvo CodeQL, que escribe sus alertas, y con cada acción fijada al hash de su commit. Para que bloqueen un
+permiso de solo lectura, salvo CodeQL, que escribe sus alertas, y el flujo que publica el portal, que conserva los permisos de Pages, y con cada acción fijada al hash de su commit. Para que bloqueen un
 merge, la rama de la entrega tiene que estar protegida en GitHub con esos controles como
 obligatorios.
 
@@ -204,11 +205,12 @@ obligatorios.
 | Tests unitarios | pytest, y los tests de los estados de cada pantalla del dashboard | El merge | Decidido, control 2. Ya corre |
 | Tests de integración, incluido el aislamiento entre usuarios | pytest contra PostgreSQL con pgvector, con dobles para el LLM y los embeddings | El merge | Decidido, control 2. Ya corre |
 | Migraciones desde una base vacía | `alembic upgrade head` en cada corrida de los tests | El merge | Decidido, control 2. Ya corre |
-| Regla hexagonal y documentación | Los tres verificadores que ya existen | El merge | Decidido, control 3 |
+| Regla hexagonal y documentación | Los tres verificadores que ya existen | El merge | Decidido, control 3. Ya corre |
+| Contrato de la API | Regenera el contrato y los tipos del dashboard, y falla si cambian | El merge | Decidido, control 3. Ya corre |
 | Secretos en el código | gitleaks | El merge | Decidido, control 4. Ya corre |
 | Vulnerabilidades en dependencias | pip-audit y `npm audit` | El merge. En Python, ante cualquiera que tenga arreglo; en el dashboard, desde severidad alta | Decidido, control 5. Ya corre |
 | Actualización de dependencias | Dependabot, una vez por semana | No: abre un pull request | Decidido, control 5. Ya corre para las acciones, el portal, el backend, el dashboard y la imagen |
-| Análisis de seguridad del código | CodeQL, sobre el backend, el dashboard y los flujos de GitHub Actions. También corre una vez por semana | El merge, ante una alerta nueva de severidad alta o crítica | Decidido, control 6 |
+| Análisis de seguridad del código | CodeQL, sobre el backend, el dashboard y los flujos de GitHub Actions. También corre una vez por semana | El merge, ante una alerta nueva de severidad alta o crítica | Decidido, control 6. Ya corre |
 | Migraciones desde el esquema de la versión anterior | `alembic upgrade head` sobre el esquema anterior, más `alembic check` | El merge | Entrega final |
 | Imagen | build de Docker, escaneo e inventario de componentes | El merge, si hay críticas con arreglo | Entrega final |
 | Migración en producción | `preDeployCommand` de Render | El despliegue | Propuesto |

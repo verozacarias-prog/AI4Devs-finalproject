@@ -5,8 +5,9 @@
 
 ## Contexto
 
-El dashboard es la parte web de Platita. En la entrega 2 tiene tres pantallas: la entrada de
-desarrollo, el chat web y la de cuentas ([hoja de ruta](../hoja-de-ruta.md#alcance-de-la-entrega-2)).
+El dashboard es la parte web de Platita. En la entrega 2 tiene cuatro pantallas: el estado del
+sistema, la entrada de desarrollo, el chat web y la de cuentas
+([hoja de ruta](../hoja-de-ruta.md#alcance-de-la-entrega-2)).
 La especificación no decía con qué se construye, pero ya fijaba cuatro condiciones:
 
 - Se compila a archivos estáticos, que la API sirve bajo `/app`

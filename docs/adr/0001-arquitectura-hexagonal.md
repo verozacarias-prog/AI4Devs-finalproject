@@ -55,7 +55,6 @@ la API: son los tres procesos que comparten el código del dominio.
    entrada inyectan al arrancar.
 6. **Excepciones, y son todas.** Tocan la base sin pasar por un caso de uso solamente:
    - las migraciones de Alembic, que cambian el esquema en el paso previo al despliegue;
-   - el script de datos de prueba, que se niega a correr contra producción;
    - el acceso operativo de una persona para copias, restauraciones y diagnóstico, descrito en
      [Operación](../operacion.md). Ninguna funcionalidad del producto puede depender de él.
 
@@ -63,8 +62,9 @@ la API: son los tres procesos que comparten el código del dominio.
    su propio rol de base con permiso de `DELETE`
    ([ADR 0015](0015-borrado-logico-de-movimientos.md)).
 7. **Solo los procesos del backend reciben la credencial.** La variable de conexión a la base se
-   configura en el servicio web, en el worker y en los procesos programados, y en ningún otro
-   lado. El proveedor de LLM tampoco accede a la base
+   configura en el servicio web, en el worker, en los procesos programados, en los comandos de
+   operación y en el paso de las migraciones, y en ningún otro lado. El script de datos de prueba
+   es un comando de operación: pasa por sus casos de uso, y se niega a correr fuera de `local`. El proveedor de LLM tampoco accede a la base
    ([ADR 0013](0013-datos-minimos-al-proveedor-de-llm.md)).
 
 **Lo que comparten las capas.** Hay dos cosas que usan a la vez el dominio y los adaptadores, y
