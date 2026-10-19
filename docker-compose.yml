@@ -50,6 +50,9 @@ services:
       WEB_CHAT_ENABLED: ${WEB_CHAT_ENABLED:-false}
       # Empty means the default of the code (docs/operacion.md).
       QUEUE_MAX_WAIT_MINUTES: ${QUEUE_MAX_WAIT_MINUTES:-}
+      # Checked here too: with a lock not longer than the call, no process starts (ADR 0010).
+      WORKER_LOCK_SECONDS: ${WORKER_LOCK_SECONDS:-}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-}
     ports:
       - "127.0.0.1:${API_PORT:-8000}:8000"
     depends_on:
