@@ -189,6 +189,9 @@ def continue_interpretation(
         chosen = _chosen(text, classification.account, currency, movement_accounts, offered)
         if chosen is not None:
             account, mention = chosen.name, None
+        elif len(account_candidates(text, classification.account, currency, movement_accounts)) > 1:
+            # The reply names several: they are offered, and none is kept (CA-20).
+            account, mention = None, classification.account
     registration_type = classification.registration_type
     return replace(
         previous,

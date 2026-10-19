@@ -637,11 +637,8 @@ def _ask(
     reply = _add_reply(
         unit_of_work, context, _question(unit_of_work, context, missing), ResponseKind.REGISTRATION
     )
-    # The one of the account, or else the one the messages said, kept for the reply (CA-48).
-    currency = (
-        missing.interpretation.currency if missing.account is None else missing.account.currency
-    )
-    parsed = to_parsed_data(missing.interpretation, currency)
+    # Only the currency the messages said: the one of an account was never said (CA-48).
+    parsed = to_parsed_data(missing.interpretation, missing.interpretation.currency)
     fields = tuple(field.value for field in missing.fields)
     if awaiting is not None:
         batch, pending = awaiting
