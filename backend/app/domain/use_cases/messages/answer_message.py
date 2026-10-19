@@ -580,6 +580,8 @@ def _settle(
                 resolution.type, resolution.account.name, resolution.opened_on
             )
             _reject(unit_of_work, context, awaiting, text)
+        case NotYetSupported(several_periods=True):
+            _reject(unit_of_work, context, awaiting, messages.SEVERAL_PERIODS)
         case NotYetSupported():
             _reject(unit_of_work, context, awaiting, messages.CANNOT_REGISTER_YET)
         case Missing():

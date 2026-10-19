@@ -130,6 +130,10 @@ class NotYetSupported:
     possible period, which belong to the final delivery.
     """
 
+    # More than one possible period, as one of the user and one of a group: it has a text of
+    # its own (C2-52).
+    several_periods: bool = False
+
 
 Resolution = ResolvedMovement | BeforeAccountOpening | Missing | NotYetSupported
 
@@ -244,6 +248,9 @@ def resolve(
             return BeforeAccountOpening(
                 type=interpretation.type, account=account, opened_on=opened_on
             )
+    if len(periods) > 1:
+        # Choosing between the budget of the user and that of a group.
+        return NotYetSupported(several_periods=True)
     if _not_yet_supported(account, periods) or _another_currency(
         interpretation.currency, account, periods, primary_currency
     ):
@@ -282,9 +289,6 @@ def resolve(
 
 def _not_yet_supported(account: Account | None, periods: Sequence[BudgetPeriod]) -> bool:
     """What belongs to the final delivery, whatever else the movement lacks."""
-    if len(periods) > 1:
-        # Choosing between the budget of the user and that of a group.
-        return True
     if not periods:
         return False
     period = periods[0]

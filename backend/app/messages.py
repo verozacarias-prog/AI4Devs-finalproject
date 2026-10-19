@@ -120,6 +120,12 @@ MODEL_REFUSED = (
 MESSAGE_FAILED = (
     "Tuve un problema y no pude procesar tu mensaje. ¿Me lo mandás de nuevo en un rato?"
 )
+# More than one possible period for the movement, as one of the user and one of a group:
+# choosing between them belongs to the final delivery (FEAT-003, C2-52).
+SEVERAL_PERIODS = (
+    "Para esa fecha tenés más de un presupuesto, y todavía no sé elegir en cuál anotarlo. "
+    "Por ahora no lo anoto."
+)
 # The daily cap of messages classified was reached: said once a day (domain rules, § 12).
 DAILY_LIMIT_REACHED = (
     "Por hoy llegué al límite de mensajes que puedo leer. Lo que me mandes de acá en adelante "
