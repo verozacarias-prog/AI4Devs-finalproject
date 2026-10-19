@@ -1098,7 +1098,7 @@ defecto.
 - **cuando** se procesa,
 - **entonces** no se registra nada ni queda ningún pendiente, y la respuesta es el texto fijo de
   C1-09.
-- **Test:** —
+- **Test:** `tests/unit/test_pending_registration.py::test_an_expense_in_another_currency_than_the_period_gets_the_fixed_text_without_account`
 
 #### C2-49 · El nombre completo de una cuenta la elige aunque la moneda dicha sea otra, y recibe el texto fijo
 
@@ -1108,7 +1108,7 @@ defecto.
 - **cuando** se procesa,
 - **entonces** no pregunta la cuenta, no se registra nada ni queda ningún pendiente, y la
   respuesta es el texto fijo de C1-09.
-- **Test:** —
+- **Test:** `tests/unit/test_pending_registration.py::test_the_whole_name_of_an_account_chooses_it_whatever_the_currency_said`
 
 #### C2-50 · Una respuesta que dice otra moneda rechaza el pendiente con el texto fijo
 
@@ -1119,7 +1119,7 @@ defecto.
 - **cuando** se procesa,
 - **entonces** no se registra nada: el pendiente queda `rejected`, su lote `closed`, y la
   respuesta es el texto fijo de C1-09.
-- **Test:** —
+- **Test:** `tests/unit/test_pending_registration.py::test_a_reply_that_says_another_currency_rejects_the_pending_with_the_fixed_text`
 
 #### C2-51 · La moneda dicha queda en el pendiente y elige la cuenta al responder
 
@@ -1130,7 +1130,7 @@ defecto.
 - **cuando** se procesan los dos,
 - **entonces** el primero pregunta la cuenta, y el segundo registra el gasto de $3.500 en
   Galicia pesos, sin volver a preguntar.
-- **Test:** —
+- **Test:** `tests/unit/test_pending_registration.py::test_the_currency_said_stays_in_the_pending_and_chooses_the_account_of_the_reply`
 
 ### Corte 3 — límites y observabilidad
 
