@@ -140,7 +140,7 @@ flowchart TB
 
 **Patrón elegido:** **arquitectura hexagonal (ports & adapters)**, con el dominio (entidades + casos de uso) aislado de los detalles de infraestructura detrás de puertos, y **backend y frontend desacoplados**, comunicados únicamente por API REST.
 
-**Acceso a la base de datos:** solo el backend la toca. Desde afuera se entra únicamente por la API HTTP; adentro, la API, el worker, los procesos programados y los comandos de operación pasan por los casos de uso, ninguno llama a otro por HTTP, y el SQL vive solo en los repositorios. Las excepciones son las migraciones, el script de datos de prueba y el acceso operativo.
+**Acceso a la base de datos:** solo el backend la toca. Desde afuera se entra únicamente por la API HTTP; adentro, la API, el worker, los procesos programados y los comandos de operación pasan por los casos de uso, ninguno llama a otro por HTTP, y el SQL vive solo en los repositorios. Las excepciones son las migraciones y el acceso operativo. El script de datos de prueba es un comando de operación más: pasa por sus casos de uso.
 
 El contexto que llevó a elegirlo, sus beneficios, los sacrificios asumidos, las alternativas descartadas y el detalle de quién accede a la base están en el [ADR 0001](adr/0001-arquitectura-hexagonal.md).
 
@@ -172,22 +172,19 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
 /backend
   /app
     /domain
-      /entities         # User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, PendingTransaction, PendingBatch, AdviceDocument, AdviceChunk, InboundMessage, OutboundMessage, ChatMessage, Classification, LlmCall
+      /entities         # User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, PendingTransaction, PendingBatch, AdviceDocument, AdviceChunk, InboundMessage, OutboundMessage, ChatMessage, Classification, LlmCall, LlmUsage
       /use_cases         # one folder per feature, such as sessions/, messages/ or accounts/: CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, ListAccounts, SendChatMessage, ListChatMessages, ClaimNextMessage, AnswerMessage, ProcessNextMessage, ValidateSession, CheckReadiness, CheckQueue, GenerateProactiveAlert...
       /ports             # interfaces the domain depends on but does not implement
-        - transaction_repository_port.py
-        - account_repository_port.py
-        - session_repository_port.py
         - unit_of_work_port.py
-        - vector_store_port.py
-        - whatsapp_gateway_port.py
-        - exchange_rate_port.py
+        - one <name>_repository_port.py per repository: user, session, account, transaction, transfer,
+          category, budget_period, budget, family_group, financial_profile, pending, inbound_message,
+          outbound_message, chat_message and llm_usage
         - llm_port.py
-        - embedding_port.py
-        - text_splitter_port.py
         - llm_call_log_port.py
         - database_health_port.py
         - queue_health_port.py
+        - vector_store_port.py, embedding_port.py, text_splitter_port.py, whatsapp_gateway_port.py and
+          exchange_rate_port.py, with the features that need them
       /services          # domain services: business rules that belong to no single entity, as functions, one folder per topic
         /accounts        # the balance of an account
         /transactions    # which account a message names, whether a movement can be registered without asking, and its confirmation
@@ -202,7 +199,8 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
         /scheduler          # scheduled jobs entry point: calls use cases, never raw SQL
         /operator_commands  # commands an operator runs by hand: local test data, knowledge base load, enabling phone numbers, personal links for the demo
       /outbound
-        /postgres           # unit of work, connection setup, and queries.py with all the SQL written by hand
+        /postgres           # unit of work, connection setup, queries.py with all the SQL written by hand, the translation of
+                            # a rejected write (rejections.py), and the health checks of the database and of the queue
           /repositories    # one file per repository, each implementing its port
         /pgvector            # VectorStorePort implementation
         /whatsapp_client      # sends outbound WhatsApp messages
@@ -221,12 +219,13 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
   /migrations          # Alembic
 /frontend                # React, TypeScript and Vite (ADR 0026), Tailwind CSS and shadcn/ui (ADR 0027)
   /src
-    /api                 # API contract exported by the backend, the types generated from it, and the API paths
+    /api                 # API contract exported by the backend, the types generated from it, and the API paths in routes.ts
     /pages               # one file per screen, with its test next to it
     /components          # the pieces several screens share, such as the side menu, with their test next to them
       /ui                # the shadcn/ui components, copied into the project and owned by it
     /lib                 # small helpers of the components: class-names.ts joins class names
     messages.ts          # every text the dashboard shows
+    constants.ts         # every other value of the dashboard that is not a text nor an API path
     design-tokens.css    # design tokens: the only place with colours, sizes and spacing
     App.tsx
     main.tsx
@@ -325,7 +324,8 @@ Cómo se opera —entornos, pipeline de la aplicación, vuelta atrás de un desp
 - **Nunca loggear en crudo** número de teléfono, montos ni texto de usuario sin enmascarar. Los registros salen en JSON, pasan por un filtro que quita los datos personales, y los eventos de seguridad son eventos de ese mismo registro ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
 - **Cada llamada al modelo queda registrada sin contenido**: propósito, modelo, tokens, duración, costo y resultado, nunca el texto. No se usa una plataforma externa de observabilidad de LLM, porque recibiría los prompts y las respuestas ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
 - **Retención limitada**: el texto de los mensajes se borra pasado un plazo configurable, y al proveedor de LLM nunca se le envían identificadores ([reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos), [ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md)).
-- **Configuración en YAML versionado**: el plazo de retención de mensajes (`message_retention_days`, 60 por defecto), el plazo de gracia del borrado de cuenta (`account_deletion_grace_days`, 7 por defecto), los dos valores de la memoria de conversación (3 intercambios y 30 minutos), los parámetros de partición y de recuperación de la base de conocimiento, los precios por modelo con que se estima el costo de cada llamada, los umbrales de las alertas de presupuesto y las fuentes de cotización viven en archivos YAML del repositorio, no en el código ni en la base.
+- **Configuración en YAML versionado**: el plazo de retención de mensajes (`message_retention_days`, 60 por defecto), el plazo de gracia del borrado de cuenta (`account_deletion_grace_days`, 7 por defecto), los dos valores de la memoria de conversación (3 intercambios y 30 minutos), los parámetros de partición y de recuperación de la base de conocimiento, los umbrales de las alertas de presupuesto y las fuentes de cotización viven en archivos YAML del repositorio, no en el código ni en la base.
+- **Precios del modelo en el código**: el precio por millón de tokens del modelo de lenguaje, con el que se estima el costo de cada llamada ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md), punto 8), es una constante de `backend/app/constants.py`, junto al nombre del modelo. Hoy es un solo modelo y un solo precio. Nada comprueba que siga al día: se revisa a mano contra la página de precios del proveedor.
 - **Límites de uso en variables de entorno**: el tope diario total y las cuotas del asistente ([reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente)) se leen de variables de entorno, con su valor por defecto en el código, para poder bajarlos ante un abuso reiniciando el proceso, sin desplegar. Decidido el 18 de octubre de 2026 ([FEAT-003](features/FEAT-003/spec.md), CA-46).
 - **Entorno declarado y andamios que no arrancan en producción**: la configuración dice si el entorno es `local`, `demo` o `production`. El chat web y la entrada de desarrollo, que abre una sesión sin código, se habilitan solo en los dos primeros; con alguno encendido en `production`, ningún proceso arranca. En `demo` se entra solo con un enlace personal, y la primera vez hay que aceptar un aviso de prueba; cada persona que prueba ve únicamente sus datos ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 - **Inyección de prompts**: la defensa principal es que el modelo no puede escribir ni pedir datos de otro usuario. Además, todo dato que entra al prompt va delimitado, y la salida se valida en código antes de enviarla ([ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md)).

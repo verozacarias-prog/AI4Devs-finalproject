@@ -89,6 +89,7 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **C1-22 y C1-23, sumados después de la aprobación:** Verónica Zacarías 14/10/2026
 - **C1-24, sumado después:** Verónica Zacarías 14/10/2026
 - **C1-25 a C1-31, de componente, sumados con la pantalla armada:** Verónica Zacarías 14/10/2026
+- **C1-29 cambiado con el `/spec-drift` del proyecto (el guion de `es-AR` en vez del signo menos tipográfico):** Veronica Zacarias 19/10/2026
 - **Total:** 31 casos, 17 unitarios, 7 de integración y 7 de componente.
 
 | Caso | Qué prueba | Tipo | Sale de |
@@ -422,7 +423,8 @@ las cuentas se dieron de alta el 1 de octubre de 2026.
 - **Sale de:** CA-2 · **Tipo:** componente
 - **Dado** una respuesta con una sola cuenta, "Visa", tarjeta de crédito, ARS, -50000.00,
 - **cuando** se abre la pantalla,
-- **entonces** muestra Visa con −$ 50.000,00, con el estilo de un monto negativo.
+- **entonces** muestra Visa con -$ 50.000,00, con el guion que pone el formato de moneda de
+  `es-AR`, y con el estilo de un monto negativo.
 - **Test:** `src/pages/AccountsPage.test.tsx` › "case C1-29: a negative balance is shown with its sign"
 
 #### C1-30 · Un saldo se muestra tal como llega, sin cuentas propias

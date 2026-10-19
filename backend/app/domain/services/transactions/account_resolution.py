@@ -47,10 +47,10 @@ def account_candidates(
     written_words = set(_words(mention))
     complete = [account for account in accounts if set(_words(account.name)) <= written_words]
     if len(complete) == 1:
-        candidates = complete
-    else:
-        mention_words = written_words - MENTION_FILLER_WORDS
-        candidates = [account for account in accounts if _named_by_part(account, mention_words)]
+        # Its whole name is that account, whatever the currency said (domain rules, § 1).
+        return complete
+    mention_words = written_words - MENTION_FILLER_WORDS
+    candidates = [account for account in accounts if _named_by_part(account, mention_words)]
     if currency is not None:
         candidates = [account for account in candidates if account.currency == currency]
     return candidates

@@ -1,7 +1,7 @@
 # Especificación — FEAT-003 · Registro de un gasto y de un ingreso
 
 - **Historia de usuario:** [HU3](../../05-historias-de-usuario.md)
-- **Estado:** aprobada para los tres cortes: C1-01 a C1-25, C2-01 a C2-47 y C3-01 a C3-23
+- **Estado:** aprobada para los tres cortes: C1-01 a C1-25, C2-01 a C2-53 y C3-01 a C3-24
 - **Fecha:** 2026-10-16
 
 ## Alcance
@@ -104,8 +104,9 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 - **CA-36.** Con un pendiente esperando respuesta, un mensaje que trae otro movimiento no se anota: el asistente pide terminar primero el anterior y repite su pregunta. Sumar el movimiento nuevo al lote es de la entrega final. Decidido por Vero el 17/10/2026.
 - **CA-37.** El usuario puede descartar el pendiente que espera respuesta, como con "dejalo, no lo anotes": queda rechazado, su lote cerrado, y no se registra nada.
 - **CA-38.** Un pendiente vencido, a las 24 horas de creado, no se continúa: queda `expired`, y el mensaje se procesa como si no hubiera nada abierto. Las 24 horas se cuentan hasta el momento en que el usuario escribió la respuesta, no hasta el que se procesa: una respuesta escrita a tiempo y demorada por los reintentos sigue valiendo, igual que la fecha de un movimiento es el día en que se escribió (§ 1). Anotado el 17/10/2026 con el `/spec-drift` del corte 2.
-- **CA-41.** Cada respuesta que cambia un dato que el modelo ya había interpretado —el monto, el tipo, la fecha, la moneda, la categoría o la cuenta— suma uno al contador de correcciones del pendiente; completar un dato que faltaba no suma ([reglas de dominio § 5](../../reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)). Sumado el 17/10/2026, con el `/spec-drift` del corte 2. El código compara lo que había con lo que quedó, así que una fecha que se había asumido por defecto y la respuesta cambia también suma: es un costo asumido del [ADR 0028](../../adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md), hasta que el modelo devuelva qué campos corrigió el usuario, con la métrica del corte 3.
+- **CA-41.** Cada respuesta que cambia un dato que el modelo ya había interpretado —el monto, el tipo, la fecha, la categoría o la cuenta, con su moneda— suma uno al contador de correcciones del pendiente; completar un dato que faltaba no suma ([reglas de dominio § 5](../../reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)). Sumado el 17/10/2026, con el `/spec-drift` del corte 2. El código compara lo que había con lo que quedó, así que una fecha que se había asumido por defecto y la respuesta cambia también suma: es un costo asumido del [ADR 0028](../../adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md), hasta que el modelo devuelva qué campos corrigió el usuario, con la métrica del corte 3.
 - **CA-39.** Si el modelo devuelve las palabras que dicen la moneda y no están escritas en el mensaje, la moneda no cuenta, igual que una mención de la cuenta que no está escrita. Si devuelve la moneda sin sus palabras, cuenta como la dio: así lo decidió Vero el 17/10/2026, para no cambiar C1-23, sabiendo que un modelo que no devuelve las palabras se saltea la verificación. Es la opción B que eligió Vero en el corte 1.
+- **CA-48.** La moneda que dice el mensaje es la del movimiento, y queda guardada en el pendiente para la respuesta. Si no es la del período, o no es la de la cuenta nombrada, el movimiento recibe enseguida el texto fijo de C1-09, sin preguntar lo que falte: la multimoneda no entra en la entrega 2 ([reglas de dominio § 1](../../reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma)). Una mención con el nombre completo de una cuenta la elige aunque la moneda dicha sea otra. Sumado el 19/10/2026 con el `/spec-drift` del proyecto, que encontró un gasto en dólares registrado como pesos.
 
 ### Cuando algo falla — corte 2
 
@@ -474,7 +475,10 @@ de 2026, 2026-10-17T18:00:00Z.
 - **C2-40 a C2-45, sumados con la revisión de `pr-reviewer` del corte 2:** Veronica Zacarias 17/10/2026
 - **C2-46, sumado con la misma revisión:** Veronica Zacarias 17/10/2026
 - **C2-47, sumado con la segunda revisión de `pr-reviewer`:** Veronica Zacariass 17/10/2026
-- **Total:** 47 casos, 31 unitarios y 16 de integración.
+- **C2-48 a C2-51, sumados con el `/spec-drift` del proyecto:** Veronica Zacarias 19/10/2026
+- **C2-52, sumado con el `/spec-drift` del proyecto:** Veronica Zacariass 19/10/2026
+- **C2-53, sumado con la revisión de `pr-reviewer` del `/spec-drift` del proyecto:** Veronica Zacarias 19/10/2026
+- **Total:** 53 casos, 36 unitarios y 17 de integración.
 
 Cómo se continúa un pendiente, para leer los casos
 ([ADR 0018](../../adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), punto 9):
@@ -545,6 +549,12 @@ defecto.
 | C2-45 | Un nombre de categoría demasiado largo o con signos no permitidos no se propone | Unitario | CA-43 |
 | C2-46 | Un sí confirma solo el borrador que la pregunta mostró | Unitario | CA-25 |
 | C2-47 | Un sí crea la categoría ofrecida o la que la respuesta escribe, y ninguna otra | Unitario | CA-45 |
+| C2-48 | Un gasto en otra moneda que la del período recibe el texto fijo, aunque no nombre una cuenta | Unitario | CA-48 |
+| C2-49 | El nombre completo de una cuenta la elige aunque la moneda dicha sea otra, y recibe el texto fijo | Unitario | CA-48 |
+| C2-50 | Una respuesta que dice otra moneda rechaza el pendiente con el texto fijo | Unitario | CA-48 |
+| C2-51 | La moneda dicha queda en el pendiente y elige la cuenta al responder | Unitario | CA-48 y CA-23 |
+| C2-52 | Con más de un período posible, el gasto recibe su texto y no queda pendiente | Integración | Fuera de alcance, decisión del 19/10/2026 |
+| C2-53 | Una respuesta que nombra dos cuentas, sin decir la moneda, pregunta cuál | Unitario | CA-48 y CA-20 |
 
 #### C2-01 · Un gasto sin cuenta queda pendiente y su lote espera respuesta
 
@@ -1084,13 +1094,79 @@ defecto.
   «Peluquería», o va en otra de las tuyas?".
 - **Test:** `tests/unit/test_pending_registration.py::test_a_yes_creates_the_offered_category_or_the_one_the_reply_writes_and_no_other`
 
+#### C2-48 · Un gasto en otra moneda que la del período recibe el texto fijo, aunque no nombre una cuenta
+
+- **Sale de:** CA-48 · **Tipo:** unitario
+- **Dado** el mensaje "gasté 50 dólares en el súper", y el modelo responde un gasto de 50 en
+  Supermercado, sin cuenta, con moneda USD dicha con "dólares",
+- **cuando** se procesa,
+- **entonces** no se registra nada ni queda ningún pendiente, y la respuesta es el texto fijo de
+  C1-09.
+- **Test:** `tests/unit/test_pending_registration.py::test_an_expense_in_another_currency_than_the_period_gets_the_fixed_text_without_account`
+
+#### C2-49 · El nombre completo de una cuenta la elige aunque la moneda dicha sea otra, y recibe el texto fijo
+
+- **Sale de:** CA-48 · **Tipo:** unitario
+- **Dado** el mensaje "gasté 50 dólares en el súper con la Galicia pesos", y el modelo responde
+  un gasto de 50 en Supermercado, con cuenta "Galicia pesos" y moneda USD dicha con "dólares",
+- **cuando** se procesa,
+- **entonces** no pregunta la cuenta, no se registra nada ni queda ningún pendiente, y la
+  respuesta es el texto fijo de C1-09.
+- **Test:** `tests/unit/test_pending_registration.py::test_the_whole_name_of_an_account_chooses_it_whatever_the_currency_said`
+
+#### C2-50 · Una respuesta que dice otra moneda rechaza el pendiente con el texto fijo
+
+- **Sale de:** CA-48 · **Tipo:** unitario
+- **Dado** el pendiente de C2-01 esperando respuesta, el mensaje "con MP, eran 50 dólares", y el
+  modelo responde que contesta el pendiente, con cuenta "MP", monto 50 y moneda USD dicha con
+  "dólares",
+- **cuando** se procesa,
+- **entonces** no se registra nada: el pendiente queda `rejected`, su lote `closed`, y la
+  respuesta es el texto fijo de C1-09.
+- **Test:** `tests/unit/test_pending_registration.py::test_a_reply_that_says_another_currency_rejects_the_pending_with_the_fixed_text`
+
+#### C2-51 · La moneda dicha queda en el pendiente y elige la cuenta al responder
+
+- **Sale de:** CA-48 y CA-23 · **Tipo:** unitario
+- **Dado** el mensaje "gasté 3500 pesos en el súper", y el modelo responde un gasto de 3500 en
+  Supermercado, sin cuenta, con moneda ARS dicha con "pesos"; y después la respuesta "con la
+  galicia", y el modelo responde que contesta el pendiente, con cuenta "galicia" y sin moneda,
+- **cuando** se procesan los dos,
+- **entonces** el primero pregunta la cuenta, y el segundo registra el gasto de $3.500 en
+  Galicia pesos, sin volver a preguntar.
+- **Test:** `tests/unit/test_pending_registration.py::test_the_currency_said_stays_in_the_pending_and_chooses_the_account_of_the_reply`
+
+#### C2-52 · Con más de un período posible, el gasto recibe su texto y no queda pendiente
+
+- **Sale de:** [Fuera de alcance](#fuera-de-alcance), decisión de Vero del 19/10/2026 · **Tipo:** integración
+- **Dado** los datos de prueba de `local`, en los que Pablo tiene su período individual y el
+  del grupo Casa para la misma fecha, un mensaje web suyo, "gasté 3500 en el súper con Mercado
+  Pago", pendiente, y el modelo responde el gasto de C1-01,
+- **cuando** el worker hace una ronda,
+- **entonces** no se registra nada ni queda ningún pendiente, y la respuesta es "Para esa fecha tenés más de un presupuesto, y todavía no sé elegir en cuál anotarlo. Por ahora no lo anoto.", con
+  `response_kind = 'fixed_text'`.
+- **Test:** `tests/integration/test_registration.py::test_with_more_than_one_possible_period_the_expense_gets_its_text_and_is_not_pending`
+
+#### C2-53 · Una respuesta que nombra dos cuentas, sin decir la moneda, pregunta cuál
+
+- **Sale de:** CA-48 y CA-20 · **Tipo:** unitario
+- **Dado** el pendiente de C2-15, "gasté 9000 en la peluquería con MP", que espera la
+  categoría, el mensaje "con la galicia", y el modelo responde que contesta el pendiente, con
+  cuenta "galicia" y sin moneda,
+- **cuando** se procesa,
+- **entonces** no se registra nada, el pendiente sigue abierto, y la pregunta incluye la línea
+  "¿Con qué cuenta? Galicia pesos o Galicia USD.". La moneda de Mercado Pago no cuenta como
+  dicha.
+- **Test:** `tests/unit/test_pending_registration.py::test_a_reply_that_names_two_accounts_without_a_currency_asks_which`
+
 ### Corte 3 — límites y observabilidad
 
 - **Aprobado por:** Veronica Zacarias 18/10/2026
 - **C3-21 y C3-22, sumados con el `/spec-drift` del corte 3:** Veronica Zacarias 18/10/2026
 - **C3-21, cambiado con la revisión de `pr-reviewer` del corte 3:** Veronica Zacarias 18/10/2026
 - **C2-31 cambiado y C3-23 sumado, con la revisión de `pr-reviewer` del corte 3:** Veronica Zacarias 18/10/2026
-- **Total:** 23 casos, 8 unitarios y 15 de integración.
+- **C3-24, sumado con el `/spec-drift` del proyecto:** Veronica Zacarias 19/10/2026
+- **Total:** 24 casos, 9 unitarios y 15 de integración.
 
 Cómo se cuentan los límites, para leer los casos
 ([reglas de dominio § 12](../../reglas-de-dominio.md#12-límites-de-uso-del-asistente) y
@@ -1138,6 +1214,7 @@ Cómo se cuentan los límites, para leer los casos
 | C3-21 | Una llamada que falla no suma al tope, y una negativa del modelo sí | Integración | CA-29 |
 | C3-22 | Un mensaje demorado con aviso queda como respondido, y uno demorado en silencio no | Integración | CA-29, CA-30 y CA-31 |
 | C3-23 | La métrica de alucinaciones no cuenta las negativas, que tienen su propia cifra | Integración | CA-35 y CA-40 |
+| C3-24 | Un gasto que recibe un texto fijo porque todavía no se puede anotar no gasta la cuota de registro | Unitario | CA-30 |
 
 #### C3-01 · Con el tope diario alcanzado, el mensaje no se clasifica y se demora
 
@@ -1385,6 +1462,15 @@ Cómo se cuentan los límites, para leer los casos
 - **entonces** la cuarta consulta da `blocked_pct` de 33,3 y `refused_pct` de 33,3.
 - **Test:** `tests/integration/test_llm_calls.py::test_the_metric_of_hallucinations_leaves_out_the_refusals`
 
+#### C3-24 · Un gasto que recibe un texto fijo porque todavía no se puede anotar no gasta la cuota de registro
+
+- **Sale de:** CA-30 · **Tipo:** unitario
+- **Dado** que Lucía tiene 10 registros el 17/10/2026,
+- **cuando** se procesa el gasto en dólares de C2-48,
+- **entonces** el contador `registration` sigue en 10, y el `classification` suma uno, porque
+  el mensaje se clasificó.
+- **Test:** `tests/unit/test_usage_limits.py::test_an_expense_that_cannot_be_registered_yet_uses_no_quota_of_registration`
+
 ## Mensajes al usuario
 
 Van en `backend/app/messages.py`, en español rioplatense, como habla alguien de acá: con voseo
@@ -1467,6 +1553,14 @@ Cuando el modelo se niega a interpretar el mensaje:
 > No pude entender ese mensaje. ¿Me lo escribís de otra forma? Por ejemplo: «gasté 3500 en el
 > súper con Mercado Pago».
 
+Cuando un gasto o un ingreso cae en más de un período posible, como uno individual y uno de
+un grupo, mientras elegir entre ellos sea de la entrega final (C2-52):
+
+> Para esa fecha tenés más de un presupuesto, y todavía no sé elegir en cuál anotarlo.
+> Por ahora no lo anoto.
+
+Aprobado por Vero el 19/10/2026.
+
 Cuando un mensaje agotó sus intentos:
 
 > Tuve un problema y no pude procesar tu mensaje. ¿Me lo mandás de nuevo en un rato?
@@ -1512,13 +1606,21 @@ Los dos textos los aprobó Vero el 18/10/2026.
 - Que el proceso del worker arranque con el adaptador real: se comprueba a mano con
   `docker compose up`. El test de que el worker usa siempre el envoltorio va en el corte 3.
 
+## Costos asumidos
+
+- Con la cuota de registro agotada, un gasto que igual recibiría un texto fijo, como uno en otra
+  moneda o con más de un período posible, se demora al día siguiente con el aviso de la cuota.
+  La cuota se mira antes de interpretar el movimiento, y recién al interpretarlo se sabe que no
+  la gastaría (C3-24). Al día siguiente recibe su texto fijo.
+
 ## Fuera de alcance
 
 - Varios movimientos en un mensaje, elegir entre el presupuesto individual y el de un grupo, y
   corregir, borrar o restaurar: entrega final
   ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-2)). Qué responde el asistente
   ante cada uno se decide en la entrega final, salvo los varios movimientos en un mensaje, que
-  reciben el texto fijo de C1-09, por decisión de Vero del 17/10/2026.
+  reciben el texto fijo de C1-09, por decisión de Vero del 17/10/2026, y el gasto con más de un
+  período posible, que recibe el texto de C2-52, por decisión de Vero del 19/10/2026.
 - Un lote de más de un pendiente: con uno esperando respuesta, otro movimiento no se suma, y se
   pide terminar el anterior (CA-36).
 - El recordatorio de un pendiente antes de vencer: es un proceso programado. Un pendiente
@@ -1551,7 +1653,7 @@ Los dos textos los aprobó Vero el 18/10/2026.
    individual y uno de grupo para la misma fecha, y una respuesta que cita una confirmación
    ([hoja de ruta](../../hoja-de-ruta.md#decisiones-abiertas)). Pasa a la entrega final, por
    decisión de Vero del 17/10/2026. Varios movimientos en un mensaje reciben el texto fijo de
-   C1-09.
+   C1-09, y un período individual y uno de grupo para la misma fecha, el texto de C2-52.
 3. **Qué responde ante un gasto en una cuenta o en una moneda distinta de la del período.**
    Resuelta por "Fuera de alcance": recibe el texto fijo de C1-09, también cuando la cuenta se
    elige al contestar un pendiente (C2-11).

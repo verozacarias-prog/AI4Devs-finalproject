@@ -300,15 +300,16 @@ class AnswerMessage:
             if not unit_of_work.inbound_messages.mark_processed(message.id, message.attempts, now):
                 return False
             _count(unit_of_work, usage, UsageCounter.CLASSIFICATION, classification.usage)
-            if registration:
-                _count(unit_of_work, usage, UsageCounter.REGISTRATION, None)
             if awaiting is not None and not continuing:
                 # It expired before this message was written: it is not continued (§ 5).
                 _close(unit_of_work, awaiting, PendingStatus.EXPIRED, None)
             if awaiting is not None and continuing:
-                _continue(unit_of_work, context, awaiting, classification)
+                interpreted = _continue(unit_of_work, context, awaiting, classification)
             else:
-                _answer_new(unit_of_work, context, classification)
+                interpreted = _answer_new(unit_of_work, context, classification)
+            # What got a fixed text because it cannot be registered yet uses no quota (C3-24).
+            if interpreted:
+                _count(unit_of_work, usage, UsageCounter.REGISTRATION, None)
             unit_of_work.commit()
         return True
 
@@ -451,19 +452,21 @@ def _count_paid(unit_of_work: UnitOfWorkPort, paid: _PaidCall | None) -> None:
 
 def _answer_new(
     unit_of_work: UnitOfWorkPort, context: _Context, classification: Classification
-) -> None:
-    """A message with no pending to continue."""
+) -> bool:
+    """A message with no pending to continue. True if it was interpreted as a movement: it
+    uses the quota of registration (domain rules, § 12).
+    """
     if classification.message_class is MessageClass.REGISTRATION and is_movement(classification):
         if classification.several_movements:
             # Several movements in a message belong to the final delivery (CA-16).
             _add_reply(unit_of_work, context, messages.CANNOT_REGISTER_YET, ResponseKind.FIXED_TEXT)
-            return
+            return False
         interpretation = interpret(
             classification, context.message.text, context.accounts, context.today
         )
-        _settle(unit_of_work, context, interpretation, None)
-        return
+        return _settle(unit_of_work, context, interpretation, None)
     _add_reply(unit_of_work, context, _fixed_text(classification), ResponseKind.FIXED_TEXT)
+    return False
 
 
 def _continue(
@@ -471,13 +474,16 @@ def _continue(
     context: _Context,
     awaiting: tuple[PendingBatch, PendingTransaction],
     classification: Classification,
-) -> None:
-    """A message while a pending awaits its reply (domain rules, § 5)."""
+) -> bool:
+    """A message while a pending awaits its reply (domain rules, § 5). True if it completed or
+    discarded it: it uses the quota of registration (§ 12).
+    """
     batch, pending = awaiting
     match classification.pending_reply:
         case PendingReply.DISCARDS:
             _close(unit_of_work, awaiting, PendingStatus.REJECTED, context.user.id)
             _add_reply(unit_of_work, context, messages.PENDING_DISCARDED, ResponseKind.FIXED_TEXT)
+            return True
         case PendingReply.OTHER_MOVEMENT:
             # One at a time in delivery 2: the new one is not registered (CA-36).
             question = _question_of(unit_of_work, context, pending)
@@ -488,6 +494,7 @@ def _continue(
                 ResponseKind.REGISTRATION,
             )
             unit_of_work.pendings.update_batch(replace(batch, question_message_id=reply.id))
+            return False
         case PendingReply.CONTINUES:
             previous = from_parsed_data(pending.parsed_data, context.today)
             interpretation = continue_interpretation(
@@ -506,10 +513,11 @@ def _continue(
                 interpretation = _accept_proposal(
                     unit_of_work, context, pending, previous, interpretation
                 )
-            _settle(unit_of_work, context, interpretation, (batch, corrected))
+            return _settle(unit_of_work, context, interpretation, (batch, corrected))
         case None:
             # Not about the pending: it keeps waiting, and the message gets its fixed text.
             _add_reply(unit_of_work, context, _fixed_text(classification), ResponseKind.FIXED_TEXT)
+            return False
 
 
 def _accept_proposal(
@@ -569,8 +577,11 @@ def _settle(
     context: _Context,
     interpretation: Interpretation,
     awaiting: tuple[PendingBatch, PendingTransaction] | None,
-) -> None:
-    """Registers it, says why not, or asks what is missing, in a new pending or in the open one."""
+) -> bool:
+    """Registers it, says why not, or asks what is missing, in a new pending or in the open one.
+
+    False when it cannot be registered yet, whatever it says (§ 12, C3-24).
+    """
     resolution = _resolve(unit_of_work, context, interpretation)
     match resolution:
         case ResolvedMovement():
@@ -580,10 +591,13 @@ def _settle(
                 resolution.type, resolution.account.name, resolution.opened_on
             )
             _reject(unit_of_work, context, awaiting, text)
+        case NotYetSupported(several_periods=True):
+            _reject(unit_of_work, context, awaiting, messages.SEVERAL_PERIODS)
         case NotYetSupported():
             _reject(unit_of_work, context, awaiting, messages.CANNOT_REGISTER_YET)
         case Missing():
             _ask(unit_of_work, context, resolution, awaiting)
+    return not isinstance(resolution, NotYetSupported)
 
 
 def _resolve(
@@ -623,8 +637,8 @@ def _ask(
     reply = _add_reply(
         unit_of_work, context, _question(unit_of_work, context, missing), ResponseKind.REGISTRATION
     )
-    currency = None if missing.account is None else missing.account.currency
-    parsed = to_parsed_data(missing.interpretation, currency)
+    # Only the currency the messages said: the one of an account was never said (CA-48).
+    parsed = to_parsed_data(missing.interpretation, missing.interpretation.currency)
     fields = tuple(field.value for field in missing.fields)
     if awaiting is not None:
         batch, pending = awaiting

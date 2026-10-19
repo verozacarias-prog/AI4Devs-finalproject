@@ -1,8 +1,8 @@
 """Registering an expense and an income, against PostgreSQL (FEAT-003, its spec.md).
 
-Cases C1-01, C1-02, C1-05, C1-09, C1-10, C1-12, C1-13 and C1-16. The worker runs whole rounds,
-the way its process does, with the model replaced by a double: no test reaches the provider.
-The double goes inside the wrapper that records each call, as the real adapter does.
+Cases C1-01, C1-02, C1-05, C1-09, C1-10, C1-12, C1-13, C1-16 and C2-52. The worker runs whole
+rounds, the way its process does, with the model replaced by a double: no test reaches the
+provider. The double goes inside the wrapper that records each call, as the real adapter does.
 """
 
 from __future__ import annotations
@@ -330,3 +330,22 @@ def test_write_an_expense_in_the_chat_and_see_the_confirmation(
             "Presupuesto: tu presupuesto personal, del 1/10/2026 al 31/10/2026",
         ),
     ]
+
+
+def test_with_more_than_one_possible_period_the_expense_gets_its_text_and_is_not_pending(
+    settings: Settings, engine: Engine
+) -> None:
+    # Case C2-52. Pablo has his own period and the one of Casa for the same day.
+    message = inbound(engine, "Pablo", SUPERMARKET_EXPENSE, sent_at=SENT_AT)
+
+    _run_round(settings, FakeLLM(supermarket_expense()))
+
+    assert _count(engine, "SELECT count(*) FROM transaction") == 0
+    assert _count(engine, "SELECT count(*) FROM pending_transaction") == 0
+    assert status_of(engine, message)[0] == "processed"
+    [reply] = _replies_to(engine, message)
+    assert reply["text"] == (
+        "Para esa fecha tenés más de un presupuesto, y todavía no sé elegir en cuál anotarlo. "
+        "Por ahora no lo anoto."
+    )
+    assert reply["response_kind"] == "fixed_text"

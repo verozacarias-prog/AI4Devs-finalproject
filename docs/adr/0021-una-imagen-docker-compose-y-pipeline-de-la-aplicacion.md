@@ -33,8 +33,7 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
    las migraciones, que corren `alembic upgrade head` una vez y terminan; la API; y el worker.
    La API y el worker esperan a que las migraciones terminen bien, y ninguno de los dos migra al
    arrancar. El worker no escucha HTTP, así que en su servicio el chequeo de salud de la imagen
-   queda desactivado. El servicio del worker se suma cuando exista la tabla de mensajes
-   entrantes; hasta entonces son tres.
+   queda desactivado. El servicio del worker se sumó con la tabla de mensajes entrantes.
 3. **Lo que todavía no entra usa la misma imagen.** Los procesos programados serán un quinto
    servicio cuando se construyan. El comando que carga la base de conocimiento
    ([ADR 0019](0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md)) corre con ella,
@@ -53,7 +52,8 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
       base vacía. Incluye los tests del dashboard, con los estados de cada pantalla: los cuatro, o tres en una
       pantalla que no muestra datos del usuario
       ([convenciones de desarrollo](../convenciones-de-desarrollo.md#2-los-cuatro-estados-de-una-pantalla)).
-   3. Los tres verificadores del repositorio.
+   3. Los tres verificadores del repositorio, y que el contrato de la API y los tipos que el
+      dashboard genera de él estén regenerados: si cambian al regenerarlos, el control falla.
    4. Secretos en el código, con `gitleaks`.
    5. Vulnerabilidades en dependencias. En Python, `pip-audit`, que bloquea ante cualquier
       vulnerabilidad que tenga arreglo: la herramienta no filtra por severidad. En el dashboard,
@@ -67,7 +67,7 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
       revisaba nadie, porque `/security-audit` recorre solo el backend.
 7. **Solo lectura y acciones fijadas.** Los flujos corren con permiso de solo lectura sobre el
    repositorio. Cada acción se referencia por el hash de su commit, con la versión en un
-   comentario. Hay dos excepciones. El flujo que publica el portal conserva los permisos de
+   comentario. Hay dos excepciones, y solo dos. El flujo que publica el portal conserva los permisos de
    Pages, que necesita para desplegar. Y el de CodeQL puede escribir las alertas de seguridad,
    sin lo que no las publica: el permiso lo tiene su único trabajo, no el flujo.
 8. **El pipeline no guarda secretos.** Ningún control necesita una credencial. Es la regla de

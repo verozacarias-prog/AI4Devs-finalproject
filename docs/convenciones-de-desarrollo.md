@@ -91,6 +91,28 @@ Qué va primero según la capa:
 No se exige un porcentaje de cobertura. Se exige que cada criterio de aceptación y cada
 invariante en riesgo tengan su test, y que cada test diga de qué criterio sale.
 
+**Sin textos ni valores sueltos en el código.** Cada texto y cada valor va como una constante,
+en un solo lugar por tipo. En el backend:
+
+- `app/constants.py`: los entornos, los nombres de las variables de entorno y sus valores por
+  defecto;
+- `app/test_data.py`: la plantilla de un usuario de prueba y los usuarios de `local`;
+- `app/messages.py`: todo mensaje escrito para una persona;
+- `adapters/inbound/api/routes.py`, `reference.py` y `security_headers.py`: las rutas de la API
+  y los valores de sus respuestas, los textos de su referencia, y los encabezados de seguridad;
+- `adapters/observability/events.py`: los eventos, los campos y las reglas de los registros;
+- `adapters/outbound/postgres/queries.py`: el SQL escrito a mano.
+
+En el dashboard:
+
+- `src/messages.ts`: todo texto que se muestra;
+- `src/api/routes.ts`: las rutas de la API;
+- `src/constants.ts`: el resto.
+
+Tres cosas se escriben donde se usan: un nombre que impone una librería, como el de uno de sus
+parámetros; el SQL de una migración, que es lo que la migración es; y el título y el ícono del
+dashboard, que viven en archivos estáticos.
+
 **Constantes en los tests.** Lo que un test comprueba queda escrito en ese test: el mensaje o
 el nombre de la restricción que espera. Los nombres y valores que varios tests repiten para
 armar sus datos, como tablas, monedas o valores de un conjunto cerrado, no se escriben sueltos.
@@ -165,7 +187,7 @@ Cada funcionalidad tiene su carpeta en `docs/features/FEAT-XXX/`, creada copiand
 |---|---|---|
 | `spec.md` | Antes del corte 1; los casos de cada corte, antes de ese corte | Alcance, reglas de dominio que aplican, los cuatro estados, los criterios de aceptación numerados y, después, los casos de prueba, corte por corte, cada uno con su tipo y el criterio del que sale. Los casos de un corte se aprueban antes de escribir sus tests |
 | `ui_contract.md` | Antes del corte 1, si hay pantalla | Componentes, tokens del Design System, máquina de estados y accesibilidad |
-| `pr.md` | Al cerrar cada corte | Cuerpo del pull request, con el Definition of Done |
+| `pr.md` | Solo en `TEMPLATE/` | La plantilla del cuerpo del pull request, con el Definition of Done. La descripción de cada pull request se arma desde ella y vive fuera del repositorio: no se guarda en la carpeta de la funcionalidad |
 
 Son tres y no siete a propósito. Se dejó afuera el registro de riesgos, que para un proyecto
 individual es ceremonia: lo que aportaría ya vive en `spec.md`. Los casos de prueba no tienen

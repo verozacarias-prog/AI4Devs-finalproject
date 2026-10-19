@@ -1,7 +1,8 @@
 """The daily limits of use, with the model replaced (FEAT-003, its spec.md).
 
-Cases C3-04, C3-06 and C3-09: the day a counter belongs to, what counts against the quota of
-registration, and a message put off that is not an attempt. The database is in memory; the
+Cases C3-04, C3-06, C3-09 and C3-24: the day a counter belongs to, what counts against the quota
+of registration, a message put off that is not an attempt, and an expense that cannot be
+registered yet. The database is in memory; the
 integration tests check the limits against PostgreSQL.
 """
 
@@ -201,3 +202,30 @@ def test_a_message_put_off_is_not_an_attempt_nor_tells_a_failure() -> None:
     assert unit_of_work.inbound_messages.retried == []
     [reply] = unit_of_work.outbound_messages.added
     assert reply.text == DAILY_LIMIT_REACHED
+
+
+def test_an_expense_that_cannot_be_registered_yet_uses_no_quota_of_registration() -> None:
+    # Case C3-24. The expense in dollars of C2-48 gets the fixed text: it was classified, and
+    # nothing was registered.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    registration = (lucia.id, OCTOBER_17, UsageCounter.REGISTRATION)
+    classification = (lucia.id, OCTOBER_17, UsageCounter.CLASSIFICATION)
+    unit_of_work.llm_usage.counts[registration] = 10
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "gasté 50 dólares en el súper",
+        Classification(
+            MessageClass.REGISTRATION,
+            registration_type=RegistrationType.EXPENSE,
+            amount=Decimal("50"),
+            category="Supermercado",
+            currency="USD",
+            currency_words="dólares",
+        ),
+    )
+
+    assert unit_of_work.llm_usage.counts[registration] == 10
+    assert unit_of_work.llm_usage.counts[classification] == 1

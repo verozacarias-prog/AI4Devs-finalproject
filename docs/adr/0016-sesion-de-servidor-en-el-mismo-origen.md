@@ -65,7 +65,8 @@ para que la cookie de sesión funcione sin un dominio propio.
    al servicio en el paso de despliegue. Desaparece el Static Site.
 6. **Sin CORS.** La API no habilita CORS: una página de otro origen no puede hacerle requests
    con la cookie.
-7. **CSRF.** Además de `SameSite=Strict`, toda request que modifica algo exige que el header
+7. **CSRF.** Además de `SameSite=Strict`, toda request que modifica algo, es decir con un método que no sea `GET`, `HEAD`
+   u `OPTIONS`, exige que el header
    `Origin` sea el propio y que el cuerpo sea JSON. Un pedido sin `Origin` se rechaza igual: un
    navegador siempre lo manda en esos pedidos. El `Origin` se compara con el `Host` del
    pedido, sin el esquema, porque detrás del proxy del proveedor la API no ve si el navegador

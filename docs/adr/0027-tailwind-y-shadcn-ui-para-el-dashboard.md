@@ -6,8 +6,9 @@
 ## Contexto
 
 El [ADR 0026](0026-react-typescript-y-vite-para-el-dashboard.md) dejó el dashboard sin librerías
-de componentes, y dijo que cada una se suma con la primera pantalla que la necesite. Hasta acá hay
-tres pantallas, el estado del sistema, la entrada de desarrollo y las cuentas, escritas con CSS
+de componentes, y dijo que cada una se suma con la primera pantalla que la necesite. Cuando se
+tomó esta decisión había tres pantallas, el estado del sistema, la entrada de desarrollo y las
+cuentas; el chat web llegó después, ya con estas clases. Las tres estaban escritas con CSS
 propio sobre los tokens de `frontend/src/design-tokens.css`. Se ven correctas, pero no hay un
 diseño detrás: cada pieza se resolvió a mano.
 

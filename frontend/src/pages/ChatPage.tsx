@@ -267,7 +267,7 @@ function Bubble({
   return (
     <li
       className={cn(
-        'chat__message flex max-w-[80%] flex-col rounded-lg px-3 py-2 text-sm',
+        'chat__message flex max-w-[var(--chat-bubble-max-width)] flex-col rounded-lg px-3 py-2 text-sm',
         mine
           ? 'chat__message--mine self-end bg-primary text-primary-foreground'
           : 'chat__message--platita self-start bg-muted text-foreground',
@@ -276,7 +276,7 @@ function Bubble({
       <span className="sr-only">{mine ? TEXT.authorUser : TEXT.authorPlatita}: </span>
       <span className="chat__text whitespace-pre-wrap">{children}</span>
       {time !== null && (
-        <span className={cn('mt-1 self-end text-xs', mine ? 'text-primary-foreground/80' : 'text-muted-foreground')}>
+        <span className={cn('mt-1 self-end text-xs', mine ? 'text-primary-foreground' : 'text-muted-foreground')}>
           {time}
         </span>
       )}

@@ -5,8 +5,9 @@
 
 ## Contexto
 
-El dashboard es la parte web de Platita. En la entrega 2 tiene tres pantallas: la entrada de
-desarrollo, el chat web y la de cuentas ([hoja de ruta](../hoja-de-ruta.md#alcance-de-la-entrega-2)).
+El dashboard es la parte web de Platita. En la entrega 2 tiene cuatro pantallas: el estado del
+sistema, la entrada de desarrollo, el chat web y la de cuentas
+([hoja de ruta](../hoja-de-ruta.md#alcance-de-la-entrega-2)).
 La especificación no decía con qué se construye, pero ya fijaba cuatro condiciones:
 
 - Se compila a archivos estáticos, que la API sirve bajo `/app`
@@ -30,7 +31,9 @@ La especificación no decía con qué se construye, pero ya fijaba cuatro condic
    desactualizado respecto de la API.
 3. **Los tests de pantalla usan Vitest y Testing Library, con la API simulada a nivel de red**
    con `msw`. Así la pantalla y su llamada a la API se prueban juntas, y cada test busca lo que
-   ve una persona: un texto, un botón, un aviso.
+   ve una persona: un texto, un botón, un aviso. La excepción es una clase puesta solo para el
+   test, como `account__amount`, cuando lo que hay que encontrar es un valor o un estilo que en
+   pantalla no tiene un texto propio que lo distinga.
 4. **Los tokens de diseño son variables CSS en un solo archivo,** `frontend/src/design-tokens.css`.
    Ningún componente usa un color, un tamaño o un espaciado suelto.
 5. **Sin librerías de rutas, de estado ni de componentes todavía.** Cada una se suma con la

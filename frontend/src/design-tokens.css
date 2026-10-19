@@ -74,5 +74,7 @@
 /* Sizes that are not a step of a scale. */
 :root {
   --sidebar-width: 16rem;
+  /* How wide a chat bubble may grow: a share of the conversation, not a step of the scale. */
+  --chat-bubble-max-width: 80%;
   --focus-ring-width: 3px;
 }

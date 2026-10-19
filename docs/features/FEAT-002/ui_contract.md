@@ -16,7 +16,7 @@ la dibuja.
 |---|---|---|
 | `Card` y `CardTitle` de shadcn/ui | Existen, desde el [ADR 0027](../../adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md) | El marco de la pantalla, con "Chat con Platita" como título |
 | `Button` de shadcn/ui | Existe, desde el ADR 0027 | Enviar, Reintentar la consulta y Reintentar un envío |
-| Opción del menú (`NavItem`) | Existe, en `App.tsx` | "Chat", en la sección "Pruebas" |
+| Opción del menú (`NavItem`) | Existe, en `components/AppShell.tsx`, el menú lateral del [ADR 0027](../../adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md) | "Chat", en la sección "Pruebas" |
 | Línea de estado (`role="status"`) | Existe, como en la pantalla de cuentas | Anuncia cargando, vacío y "Platita está procesando…" |
 | Alerta de error (`role="alert"`) | Existe, como en la pantalla de cuentas | El estado de error |
 | Burbuja de mensaje | Nuevo, en `ChatPage` | Un mensaje con su hora, a la derecha si es del usuario y a la izquierda si es de Platita. Ningún componente existente alinea por autor |
@@ -24,14 +24,16 @@ la dibuja.
 
 ## Tokens del Design System
 
-Todos salen de `frontend/src/design-tokens.css`. No se crea ningún token para esta pantalla.
+Todos salen de `frontend/src/design-tokens.css`. Esta pantalla suma uno, `--chat-bubble-max-width`, el ancho máximo de una burbuja, que no es un paso de ninguna escala.
 
 | Uso | Token |
 |---|---|
 | Fondo, texto, borde y radio de la tarjeta | `--color-card`, `--color-card-foreground`, `--color-border`, `--radius-xl`, `--shadow-sm` |
 | Burbuja del usuario | `--color-primary`, `--color-primary-foreground`, `--radius-lg` |
 | Burbuja de Platita | `--color-muted`, `--color-foreground`, `--radius-lg` |
-| Hora de cada mensaje y "Platita está procesando…" | `--color-muted-foreground`, `--text-xs`. En la burbuja del usuario, la hora usa `--color-primary-foreground` con transparencia: el gris no se lee sobre `--color-primary` |
+| Hora de cada mensaje | `--color-muted-foreground`, `--text-xs`. En la burbuja del usuario, la hora usa `--color-primary-foreground`, sin transparencia: el gris no se lee sobre `--color-primary`, y con transparencia no llega a 4,5:1 |
+| "Platita está procesando…" | `--color-muted-foreground`, `--text-sm`, en la línea de estado, como la pantalla de cuentas |
+| Ancho de una burbuja | `--chat-bubble-max-width`, el 80 % de la conversación |
 | Campo para escribir | `--color-input`, `--color-border`, `--radius-md` |
 | Error, y un envío que falló | `--color-destructive`. "No enviado" va sobre `--color-card`, dentro de la burbuja del usuario |
 | Foco del teclado | `--color-ring`, `--focus-ring-width` |
@@ -77,13 +79,20 @@ dashboard vuelve a la entrada de desarrollo.
 
 ## Accesibilidad
 
-- [ ] Todo control tiene nombre accesible: el campo para escribir, Enviar y cada Reintentar.
-- [ ] El contraste cumple el mínimo de WCAG AA, 4,5:1 para texto normal, también la hora sobre
-  cada burbuja.
-- [ ] La pantalla se puede operar sólo con teclado: se escribe, se envía con Enter o con el
-  botón, y se llega a cada Reintentar con Tab.
-- [ ] Una respuesta nueva de Platita se anuncia a un lector de pantalla sin mover el foco.
-- [ ] Quién escribió cada mensaje se dice con texto, no solo con el lado y el color.
+- [x] Todo control tiene nombre accesible: el campo para escribir, Enviar y cada Reintentar
+  (C3-10).
+- [x] El contraste cumple el mínimo de WCAG AA, 4,5:1 para texto normal, también la hora sobre
+  cada burbuja. Calculado con los colores de `design-tokens.css`:
+  - texto y hora de la burbuja del usuario, `--color-primary-foreground` sobre
+    `--color-primary`: 5,3:1;
+  - texto de la burbuja de Platita, `--color-foreground` sobre `--color-muted`: 16,0:1;
+  - hora de la burbuja de Platita, `--color-muted-foreground` sobre `--color-muted`: 5,4:1;
+  - línea de estado, `--color-muted-foreground` sobre `--color-card`: 6,0:1.
+- [x] La pantalla se puede operar sólo con teclado: se escribe, se envía con Enter o con el
+  botón, y se llega a cada Reintentar con Tab (C3-10).
+- [x] Una respuesta nueva de Platita se anuncia a un lector de pantalla sin mover el foco
+  (C3-11).
+- [x] Quién escribió cada mensaje se dice con texto, no solo con el lado y el color.
 
 ## Textos
 
