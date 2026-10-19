@@ -1151,7 +1151,7 @@ defecto.
 - **C3-21 y C3-22, sumados con el `/spec-drift` del corte 3:** Veronica Zacarias 18/10/2026
 - **C3-21, cambiado con la revisión de `pr-reviewer` del corte 3:** Veronica Zacarias 18/10/2026
 - **C2-31 cambiado y C3-23 sumado, con la revisión de `pr-reviewer` del corte 3:** Veronica Zacarias 18/10/2026
-- **C3-24, sumado con el `/spec-drift` del proyecto:** pendiente
+- **C3-24, sumado con el `/spec-drift` del proyecto:** Veronica Zacarias 18/10/2026
 - **Total:** 24 casos, 9 unitarios y 15 de integración.
 
 Cómo se cuentan los límites, para leer los casos
