@@ -10,6 +10,10 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    groups:
+      # Sus pasos tienen que correr la misma versión: se actualizan en un solo pull request.
+      codeql-action:
+        patterns: ["github/codeql-action*"]
   - package-ecosystem: npm
     directory: /site
     schedule:
