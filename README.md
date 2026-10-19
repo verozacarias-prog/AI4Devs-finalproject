@@ -4,7 +4,7 @@ Asistente financiero personal y familiar que funciona por WhatsApp: el usuario r
 Más adelante, un módulo complementario leerá los emails de notificación bancaria y de servicios para reducir la carga manual; no forma parte del MVP.
 Toda la información —cuentas y su saldo, presupuestos multimoneda y consejos financieros generados con RAG— se visualiza desde una aplicación web con dashboards, y la comparación contra la inflación queda prevista para una versión futura.
 
-**Estado:** Entrega 1 — documentación. Fecha límite de entrega: 24 de septiembre de 2026.
+**Estado:** Entrega 2 — el registro de gastos e ingresos conversando en el chat web, con el modelo de lenguaje, y la pantalla de cuentas con su saldo. Fecha límite de entrega: 22 de octubre de 2026.
 
 ---
 
@@ -51,7 +51,7 @@ https://github.com/verozacarias-prog/AI4Devs-finalproject
 | [Convenciones de desarrollo](docs/convenciones-de-desarrollo.md) | Cortes verticales y los cuatro estados de una pantalla. |
 | [Términos y privacidad](docs/terminos-y-privacidad.md) | Qué tienen que cubrir los términos y la política de privacidad, antes de redactarlos. |
 | [Validación por casos de uso](docs/use-case-walkthrough.md) | Registro, no especificación: 51 casos cotidianos de usuarios argentinos recorridos sobre el diseño, las decisiones pendientes que dejan y los escenarios para las pruebas. |
-| [Hoja de ruta](docs/hoja-de-ruta.md) | Qué queda para la entrega 2 y para la app móvil, y por qué. |
+| [Hoja de ruta](docs/hoja-de-ruta.md) | Qué entra en la entrega 2, qué en la final y qué en una segunda versión, y por qué. |
 | [Operación](docs/operacion.md) | Entornos, pipeline, despliegue, copias de respaldo y observabilidad, con lo decidido separado de lo que sigue como propuesta. |
 | [Seguridad de la capa de IA](docs/seguridad-llm.md) | Platita contra el OWASP Top 10 para aplicaciones LLM: qué cubre cada riesgo y qué falta. |
 | [Flujo de trabajo con IA](docs/flujo-de-trabajo-con-ia.md) | Contratos, skill, commands, agente revisor, verificadores y hooks. |
@@ -116,8 +116,9 @@ cd site && npm install                # solo para ver o regenerar el portal
    `test(alcance): …`. Desde ahí, un test no se modifica ni se borra sin aprobación.
 6. **Implementar lo mínimo para que pasen,** y refactorizar en verde. Es el segundo commit,
    `feat(alcance): …`. Los tests de los estados de una pantalla van en este mismo corte.
-   La documentación que el cambio afecta —API, modelo de datos, reglas de dominio— va en el
-   mismo commit, y una decisión de arquitectura lleva su [ADR](docs/adr/).
+   La documentación que el cambio afecta —API, modelo de datos, reglas de dominio— entra en el
+   mismo pull request, en sus propios commits `docs(alcance): …`, y una decisión de
+   arquitectura lleva su [ADR](docs/adr/).
 7. **Verificar antes de cada commit.** El hook corre solo los tres verificadores de
    [Verificación](#verificación). Si cambió `docs/`, además `cd site && npm run build`, que
    regenera `llms.txt`. Un documento nuevo se suma a la tabla de arriba y a la barra lateral de
@@ -125,8 +126,9 @@ cd site && npm install                # solo para ver o regenerar el portal
 8. **Escribir cada commit** con el [formato de mensaje](docs/convenciones-de-desarrollo.md#1-cortes-verticales)
    `tipo(alcance): qué cambia`, en español.
 9. **Cerrar el corte** con `/spec-drift`, y con `/ui-states` si tiene pantalla.
-10. **Abrir el pull request contra la rama de la entrega,** con el corte en verde y el cuerpo de
-   [`pr.md`](docs/features/TEMPLATE/pr.md) y el [Definition of Done](docs/07-pull-requests.md#definition-of-done).
+10. **Abrir el pull request contra la rama de la entrega,** con el corte en verde y una
+   descripción armada desde la plantilla [`pr.md`](docs/features/TEMPLATE/pr.md), con el
+   [Definition of Done](docs/07-pull-requests.md#definition-of-done).
    Correr el agente `pr-reviewer` y pegar su informe.
 11. **Integrar** cuando todos los controles pasan, con un commit de merge y sin aplastar los
     commits, para que se vea que los tests fueron primero. La aprobación y el merge son de una
@@ -160,7 +162,11 @@ está en [documentación viva](docs/documentacion-viva.md).
 
 ## Cómo ejecutar localmente
 
-Hace falta Docker. Levanta la base, las migraciones y la API, que sirve también el dashboard:
+Hace falta Docker. Levanta cuatro servicios: la base, las migraciones, la API, que sirve también
+el dashboard, y el worker, que responde los mensajes del chat con el modelo de lenguaje.
+
+El worker necesita la clave del proveedor, en `OPENAI_API_KEY`: en `.env`, o exportada en la
+terminal, de donde Compose la toma. Sin ella, el worker no arranca y dice qué variable falta.
 
 ```sh
 cp .env.example .env
@@ -196,6 +202,33 @@ Con esos usuarios creados, el dashboard muestra la entrada de desarrollo: se eli
 abre una sesión real, sin código. Conviene abrirlo en Chrome o Firefox: la cookie de la sesión es
 `Secure`, y esos navegadores la aceptan sin HTTPS en la propia máquina.
 
+### Probar el flujo
+
+1. Crear los datos de prueba, con el comando de arriba.
+2. Abrir <http://127.0.0.1:8000/app/>, elegir a Lucía en la entrada de desarrollo e ir al chat.
+3. Escribir un gasto que nombre la cuenta, como "gasté 3500 en el súper con Mercado Pago". El
+   asistente confirma qué anotó, con la fecha, la moneda, la categoría y el presupuesto.
+4. Ir a Cuentas: Mercado Pago muestra $3.500 menos.
+5. Probar lo que exige preguntar: un gasto sin cuenta ("gasté 3500 en el súper"), y responder
+   la pregunta con "con MP"; o uno que no encaja en ninguna categoría ("gasté 9000 en la
+   peluquería con MP"), y aceptar la que propone con "sí".
+
+Los límites de uso por día son 100 mensajes clasificados y 50 registros. Para ver qué pasa al
+superarlos sin escribir tanto, se bajan al levantar:
+
+```sh
+LLM_DAILY_REGISTRATION_LIMIT=2 LLM_DAILY_CLASSIFICATION_LIMIT=5 docker compose up --build
+```
+
+Cada llamada al modelo queda en la tabla `llm_call`, sin ningún contenido. Las métricas de
+latencia, costo, calidad y alucinaciones salen de un script:
+
+```sh
+docker compose exec -T db psql -U platita -d platita < scripts/llm_metrics.sql
+```
+
+### Tests
+
 Para correr los tests del backend, con la base de Compose levantada:
 
 ```sh
@@ -212,5 +245,3 @@ npm ci
 npm run dev                               # http://127.0.0.1:5173/app/
 npm test
 ```
-
-El worker se suma cuando exista la tabla de mensajes.
