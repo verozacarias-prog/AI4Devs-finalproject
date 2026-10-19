@@ -145,7 +145,8 @@ desplegar ([FEAT-003](features/FEAT-003/spec.md), CA-46):
 
 El worker es el único proceso que llama al modelo, y lo hace con la clave de
 `OPENAI_API_KEY` ([ADR 0025](adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)). Sin ella, el
-worker no arranca y dice qué variable falta. La API no la lee.
+worker no arranca y dice qué variable falta. La API no la usa: la lectura de la configuración
+es la misma para todos los procesos, y Compose no se la pasa.
 
 | Entorno | Para qué | En qué se diferencia | Cómo se promueve |
 |---|---|---|---|
@@ -370,8 +371,8 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   código, por ejemplo `GET /budget-periods/{budget_period_id}`. Nunca lleva la dirección que
   se pidió, que puede traer un identificador, parámetros con datos o lo que alguien haya
   escrito. Un pedido a una ruta que no existe lleva solo el método. Uno rechazado
-  por su origen se responde antes de resolver su ruta, así que puede llevar solo el método:
-  es el caso de las rutas de hoy. Uno al dashboard lleva `GET /app`, sin el
+  por su origen se responde antes de resolver su ruta, y lleva igual la ruta declarada que
+  coincide con la dirección pedida. Uno al dashboard lleva `GET /app`, sin el
   archivo. Las páginas del contrato que sirve el framework, como `/docs` y `/openapi.json`,
   llevan su ruta como cualquier otra. El worker deja una línea `message.answered` por cada
   mensaje que respondió, con la duración: el identificador del mensaje y el del usuario los
@@ -388,7 +389,8 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   los registros. El comando que falla lo escribe junto a su mensaje.
 - **Errores:** todo error deja una línea, con el mismo identificador que el pedido, el mensaje o
   el comando donde ocurrió. Hay dos eventos, y los escribe un solo lugar por proceso, no cada
-  caso de uso.
+  caso de uso. Aparte, las rutas de salud escriben `database.unreachable`, en nivel WARNING,
+  cuando la base no responde: no es un error del pedido, sino el estado que la ruta informa.
 
   | Evento | Nivel | Qué registra |
   |---|---|---|
@@ -425,7 +427,8 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
     campo que falló: palabras de una lista cerrada del código, nunca un texto que escribió
     alguien. El error los lleva con su tipo, así un texto libre no puede entrar por ahí. Cada
     campo de catálogo se suma a los permitidos con la funcionalidad que lo usa: hoy son el
-    entorno, que usa el script de datos de prueba, y la forma en que se abrió una sesión. De lo que un error dice que tocaba pasan
+    entorno, que usa el script de datos de prueba, y cómo terminó una llamada al modelo
+    (`outcome`). De lo que un error dice que tocaba pasan
     solo esos campos y los terminados en `_id`, y ninguno reemplaza a un campo propio de la
     línea, como su referencia.
 

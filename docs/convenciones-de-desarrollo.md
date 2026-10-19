@@ -187,7 +187,7 @@ Cada funcionalidad tiene su carpeta en `docs/features/FEAT-XXX/`, creada copiand
 |---|---|---|
 | `spec.md` | Antes del corte 1; los casos de cada corte, antes de ese corte | Alcance, reglas de dominio que aplican, los cuatro estados, los criterios de aceptación numerados y, después, los casos de prueba, corte por corte, cada uno con su tipo y el criterio del que sale. Los casos de un corte se aprueban antes de escribir sus tests |
 | `ui_contract.md` | Antes del corte 1, si hay pantalla | Componentes, tokens del Design System, máquina de estados y accesibilidad |
-| `pr.md` | Al cerrar cada corte | Cuerpo del pull request, con el Definition of Done |
+| `pr.md` | Solo en `TEMPLATE/` | La plantilla del cuerpo del pull request, con el Definition of Done. La descripción de cada pull request se arma desde ella y vive fuera del repositorio: no se guarda en la carpeta de la funcionalidad |
 
 Son tres y no siete a propósito. Se dejó afuera el registro de riesgos, que para un proyecto
 individual es ceremonia: lo que aportaría ya vive en `spec.md`. Los casos de prueba no tienen
