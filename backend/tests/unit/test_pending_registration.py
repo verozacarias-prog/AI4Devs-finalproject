@@ -1,7 +1,7 @@
 """What the registration asks, and how a reply continues it, with the model replaced (FEAT-003).
 
 Cases C2-02 to C2-06, C2-08 to C2-13, C2-15, C2-17, C2-18, C2-20, C2-35, C2-37, C2-38, C2-44,
-C2-45, C2-46, C2-47 and C2-48 to C2-51 of its spec.md.
+C2-45, C2-46, C2-47, C2-48 to C2-51 and C2-53 of its spec.md.
 Each case that starts from an open pending gets it the way a user does: a first message that
 leaves it pending, and then the reply. The database is in memory; the integration tests check
 the same use case against PostgreSQL.
@@ -793,3 +793,23 @@ def test_the_currency_said_stays_in_the_pending_and_chooses_the_account_of_the_r
     assert transaction.account_id == lucia.accounts["Galicia pesos"]
     assert transaction.amount == Decimal("3500")
     assert transaction.currency == "ARS"
+
+
+def test_a_reply_that_names_two_accounts_without_a_currency_asks_which() -> None:
+    # Case C2-53. The pending already had Mercado Pago, in pesos: that currency was not said.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    _peluquería(unit_of_work, lucia)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "con la galicia",
+        _reply(PendingReply.CONTINUES, account="galicia"),
+        now=NOW + timedelta(minutes=1),
+    )
+
+    assert unit_of_work.transactions.added == []
+    [pending] = unit_of_work.pendings.added
+    assert pending.status is PendingStatus.OPEN
+    assert "¿Con qué cuenta? Galicia pesos o Galicia USD." in _last_reply(unit_of_work).splitlines()
