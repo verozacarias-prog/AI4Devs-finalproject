@@ -58,8 +58,7 @@ Lo que ya está decidido acota la solución:
 7. **El mensaje sale del contexto del proceso.** El punto de entrada fija el identificador del
    mensaje que está procesando, y el envoltorio lo lee de ahí. Una llamada que no nace de un
    mensaje, como la carga de la base de conocimiento, queda sin mensaje.
-8. **El costo se guarda ya calculado,** en dólares, con los precios por modelo que están en las constantes del backend, en la
-   configuración. Un cambio de precio no reescribe las filas viejas.
+8. **El costo se guarda ya calculado,** en dólares, con los precios por modelo que están en las constantes del backend. Un cambio de precio no reescribe las filas viejas.
 9. **Retención.** Las filas no se borran por plazo, porque no tienen contenido. Cuando se borra
    una cuenta, sus filas pierden el vínculo con el mensaje y conservan el resto.
 10. **Un contador de correcciones en el pendiente.** `PENDING_TRANSACTION` cuenta cuántos campos

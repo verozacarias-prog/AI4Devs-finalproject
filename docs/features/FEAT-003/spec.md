@@ -1,7 +1,7 @@
 # Especificación — FEAT-003 · Registro de un gasto y de un ingreso
 
 - **Historia de usuario:** [HU3](../../05-historias-de-usuario.md)
-- **Estado:** aprobada para los tres cortes: C1-01 a C1-25, C2-01 a C2-52 y C3-01 a C3-24
+- **Estado:** aprobada para los tres cortes: C1-01 a C1-25, C2-01 a C2-53 y C3-01 a C3-24
 - **Fecha:** 2026-10-16
 
 ## Alcance
@@ -475,9 +475,10 @@ de 2026, 2026-10-17T18:00:00Z.
 - **C2-40 a C2-45, sumados con la revisión de `pr-reviewer` del corte 2:** Veronica Zacarias 17/10/2026
 - **C2-46, sumado con la misma revisión:** Veronica Zacarias 17/10/2026
 - **C2-47, sumado con la segunda revisión de `pr-reviewer`:** Veronica Zacariass 17/10/2026
-- **C2-48 a C2-51, sumados con el `/spec-drift` del proyecto:** Veronica Zacariass 19/10/2026
+- **C2-48 a C2-51, sumados con el `/spec-drift` del proyecto:** Veronica Zacarias 19/10/2026
 - **C2-52, sumado con el `/spec-drift` del proyecto:** Veronica Zacariass 19/10/2026
-- **Total:** 52 casos, 35 unitarios y 17 de integración.
+- **C2-53, sumado con la revisión de `pr-reviewer` del `/spec-drift` del proyecto:** Veronica Zacarias 19/10/2026
+- **Total:** 53 casos, 36 unitarios y 17 de integración.
 
 Cómo se continúa un pendiente, para leer los casos
 ([ADR 0018](../../adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), punto 9):
@@ -552,7 +553,8 @@ defecto.
 | C2-49 | El nombre completo de una cuenta la elige aunque la moneda dicha sea otra, y recibe el texto fijo | Unitario | CA-48 |
 | C2-50 | Una respuesta que dice otra moneda rechaza el pendiente con el texto fijo | Unitario | CA-48 |
 | C2-51 | La moneda dicha queda en el pendiente y elige la cuenta al responder | Unitario | CA-48 y CA-23 |
-| C2-52 | Con más de un período posible, el gasto recibe su texto y no queda pendiente | Integración | CA-5 |
+| C2-52 | Con más de un período posible, el gasto recibe su texto y no queda pendiente | Integración | Fuera de alcance, decisión del 19/10/2026 |
+| C2-53 | Una respuesta que nombra dos cuentas, sin decir la moneda, pregunta cuál | Unitario | CA-48 y CA-20 |
 
 #### C2-01 · Un gasto sin cuenta queda pendiente y su lote espera respuesta
 
@@ -1136,7 +1138,7 @@ defecto.
 
 #### C2-52 · Con más de un período posible, el gasto recibe su texto y no queda pendiente
 
-- **Sale de:** CA-5 · **Tipo:** integración
+- **Sale de:** [Fuera de alcance](#fuera-de-alcance), decisión de Vero del 19/10/2026 · **Tipo:** integración
 - **Dado** los datos de prueba de `local`, en los que Pablo tiene su período individual y el
   del grupo Casa para la misma fecha, un mensaje web suyo, "gasté 3500 en el súper con Mercado
   Pago", pendiente, y el modelo responde el gasto de C1-01,
@@ -1145,13 +1147,25 @@ defecto.
   `response_kind = 'fixed_text'`.
 - **Test:** `tests/integration/test_registration.py::test_with_more_than_one_possible_period_the_expense_gets_its_text_and_is_not_pending`
 
+#### C2-53 · Una respuesta que nombra dos cuentas, sin decir la moneda, pregunta cuál
+
+- **Sale de:** CA-48 y CA-20 · **Tipo:** unitario
+- **Dado** el pendiente de C2-15, "gasté 9000 en la peluquería con MP", que espera la
+  categoría, el mensaje "con la galicia", y el modelo responde que contesta el pendiente, con
+  cuenta "galicia" y sin moneda,
+- **cuando** se procesa,
+- **entonces** no se registra nada, el pendiente sigue abierto, y la pregunta incluye la línea
+  "¿Con qué cuenta? Galicia pesos o Galicia USD.". La moneda de Mercado Pago no cuenta como
+  dicha.
+- **Test:** —
+
 ### Corte 3 — límites y observabilidad
 
 - **Aprobado por:** Veronica Zacarias 18/10/2026
 - **C3-21 y C3-22, sumados con el `/spec-drift` del corte 3:** Veronica Zacarias 18/10/2026
 - **C3-21, cambiado con la revisión de `pr-reviewer` del corte 3:** Veronica Zacarias 18/10/2026
 - **C2-31 cambiado y C3-23 sumado, con la revisión de `pr-reviewer` del corte 3:** Veronica Zacarias 18/10/2026
-- **C3-24, sumado con el `/spec-drift` del proyecto:** Veronica Zacarias 18/10/2026
+- **C3-24, sumado con el `/spec-drift` del proyecto:** Veronica Zacarias 19/10/2026
 - **Total:** 24 casos, 9 unitarios y 15 de integración.
 
 Cómo se cuentan los límites, para leer los casos
@@ -1591,6 +1605,13 @@ Los dos textos los aprobó Vero el 18/10/2026.
   a las consultas, que no entran en la entrega 2.
 - Que el proceso del worker arranque con el adaptador real: se comprueba a mano con
   `docker compose up`. El test de que el worker usa siempre el envoltorio va en el corte 3.
+
+## Costos asumidos
+
+- Con la cuota de registro agotada, un gasto que igual recibiría un texto fijo, como uno en otra
+  moneda o con más de un período posible, se demora al día siguiente con el aviso de la cuota.
+  La cuota se mira antes de interpretar el movimiento, y recién al interpretarlo se sabe que no
+  la gastaría (C3-24). Al día siguiente recibe su texto fijo.
 
 ## Fuera de alcance
 

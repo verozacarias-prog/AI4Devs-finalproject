@@ -24,7 +24,7 @@ la dibuja.
 
 ## Tokens del Design System
 
-Todos salen de `frontend/src/design-tokens.css`. No se crea ningún token para esta pantalla.
+Todos salen de `frontend/src/design-tokens.css`. Esta pantalla suma uno, `--chat-bubble-max-width`, el ancho máximo de una burbuja, que no es un paso de ninguna escala.
 
 | Uso | Token |
 |---|---|
