@@ -198,7 +198,7 @@ obligatorios.
 
 | Etapa | Herramienta | ¿Bloquea? | Estado |
 |---|---|---|---|
-| Formato y lint | ruff | El merge | Decidido, control 1. Ya corre |
+| Formato y lint | ruff, que además frena toda función con complejidad ciclomática mayor que 10 | El merge | Decidido, control 1. Ya corre |
 | Tipos | mypy en modo estricto, que hace cumplir la prohibición de `Any` | El merge | Decidido, control 1. Ya corre |
 | Frontend | lint, tipos y build | El merge | Decidido, control 1. Ya corre |
 | Tests unitarios | pytest, y los tests de los estados de cada pantalla del dashboard | El merge | Decidido, control 2. Ya corre |
