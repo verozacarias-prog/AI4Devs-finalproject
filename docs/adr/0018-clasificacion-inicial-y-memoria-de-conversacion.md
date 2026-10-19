@@ -34,7 +34,8 @@ Los mensajes ya se guardan, por otros motivos, en `INBOUND_MESSAGE` y `OUTBOUND_
    con su texto fijo. Una llamada que falla y se reintenta no cuenta: una caída del proveedor
    no le consume el tope al usuario, y su costo lo acota el tope mensual de la cuenta del
    proveedor (reglas de dominio § 12). Decidido por Vero el 18/10/2026, con la revisión de
-   `pr-reviewer` del corte 3 de [FEAT-003](../features/FEAT-003/spec.md). Vale 100 por día, y es configuración. Un mensaje que llega con el tope alcanzado
+   `pr-reviewer` del corte 3 de [FEAT-003](../features/FEAT-003/spec.md). Vale 100 por día, y es
+   configuración. Un mensaje que llega con el tope alcanzado
    no se clasifica: se guarda y se procesa al día siguiente, y el usuario recibe un solo aviso
    por día.
 4. **La cuota de la clase se cobra después de clasificar.** Si está agotada, sale un texto fijo
