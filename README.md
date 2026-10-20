@@ -44,7 +44,7 @@ https://github.com/verozacarias-prog/AI4Devs-finalproject
 | [4. Especificación de la API](docs/04-api.md) | Los endpoints principales con sus contratos de request y response. |
 | [5. Historias de usuario](docs/05-historias-de-usuario.md) | Las siete historias con sus criterios de aceptación, prioridad y estimación. |
 | [6. Tickets de trabajo](docs/06-tickets.md) | Los tres tickets de backend, frontend y base de datos. |
-| [7. Pull requests](docs/07-pull-requests.md) | Los pull requests de la entrega final. |
+| [7. Pull requests](docs/07-pull-requests.md) | Los pull requests de la entrega 2, con los tres cortes de FEAT-003, y la Definition of Done. |
 | [8. Convenciones de documentación](docs/08-convenciones-de-documentacion.md) | Idioma, diagramas, nombres de archivo y estructura de `docs/`. |
 | [Recorrido completo](docs/recorrido-completo.md) | El recorrido del usuario de punta a punta: qué proceso actúa, si la llamada es HTTPS o SQL y qué tablas escribe cada paso. |
 | [Reglas de dominio](docs/reglas-de-dominio.md) | Dueño único de las reglas de negocio, agrupadas por tema. |

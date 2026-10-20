@@ -49,7 +49,9 @@ dejó, en síntesis:
 | Validación contra los módulos de DevSecOps y de observabilidad | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Contrastar seis definiciones de infraestructura, pipeline, revisión de código, seguridad de la capa de IA y observabilidad contra la especificación en modo de solo lectura, resolver los conflictos con la autora y escribir el resultado en `docs/`, en tres ADR nuevos, en un agente revisor y en un command |
 | Elección del modelo de lenguaje | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`). Modelos evaluados: GPT-5.4 mini, GPT-5.4 nano y Claude Haiku 5.5 | Armar con la autora los casos y sus resultados esperados, escribir y correr la evaluación contra los tres modelos, y registrar la elección en un ADR |
 | Migración del esquema inicial, con tests primero | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`). El agente `pr-reviewer` corrió dos veces, en un contexto separado | Proponer los casos de test y esperar la aprobación de la autora, escribir los tests y verlos fallar, escribir la migración, y cerrar con `/spec-drift` y el agente revisor |
-| Resto del código, tests y despliegue | *(pendiente — Entrega 2)* | | |
+| Código de la entrega 2: scaffold, pantalla de cuentas, chat web con worker y registro de gastos | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`). El agente `pr-reviewer` corrió sobre cada pull request, en un contexto separado | Proponer los casos de cada corte y esperar la aprobación de la autora, escribir los tests y verlos fallar, implementar, y cerrar con `/spec-drift`, el agente revisor y `/security-audit` |
+| Interpretación de los mensajes, dentro del producto | API de OpenAI | GPT-5.4 mini, elegido en el [ADR 0025](docs/adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md) | Clasificar cada mensaje y devolver los campos de un gasto o un ingreso, con el prompt `classification-5` |
+| Despliegue | *(pendiente — Entrega final)* | | |
 
 La auditoría de repos de referencia (ver §1, Prompt 2) recomendó configurar y versionar las rules antes de empezar a codear, porque **ninguno de los dos proyectos de ejemplo del curso lo había hecho**. Esa recomendación se siguió al cierre de la Entrega 1. La configuración resultante —contratos, skill, commands, verificadores y hook— está descrita en [`docs/flujo-de-trabajo-con-ia.md`](docs/flujo-de-trabajo-con-ia.md) y no se repite acá.
 
@@ -584,7 +586,163 @@ La validación por casos de uso no se tocó: es un registro que se regenera, y s
 
 ## 7. Pull Requests
 
-*No aplica a esta entrega. Se completa en la Entrega final con 3 pull requests reales enlazados.*
+Los pull requests de la entrega 2 están enlazados en [`docs/07-pull-requests.md`](docs/07-pull-requests.md), con los tres cortes de FEAT-003 aparte. Los prompts que los produjeron están en el registro de la entrega 2.
+
+---
+
+## Registro de la entrega 2
+
+La entrega 2 es la primera con código: el scaffold, la pantalla de cuentas, el chat web con su
+worker y el registro de un gasto y de un ingreso con el modelo de lenguaje. Toda se hizo en
+Claude Code, con la misma forma de trabajo en cada corte: la IA propone los casos, la autora los
+aprueba en el `spec.md`, recién entonces se escriben los tests, se ven fallar y se implementa
+([ADR 0024](docs/adr/0024-tests-primero-en-el-backend.md)). Antes de cada merge corre el agente
+`pr-reviewer`, en un contexto separado. Los pull requests están en
+[`docs/07-pull-requests.md`](docs/07-pull-requests.md).
+
+Se registran seis prompts, los que cambiaron el diseño o la forma de trabajar. Los que solo
+aprobaban casos o pedían un commit no se transcriben.
+
+**Prompt 1** — *Claude Code · revisión del código como líder técnico, y los errores sin datos personales*
+
+> "quiero que te comportes como un experto lider tecnico especialista en python, y revises el codigo actual de platita que me digas las principales defectos tecnicos que detectes, yo te digo dos y me prepongas solucion a esos dos, no veo un helper general para el tratamiento y manejo de errores, veo que hay un system_clock  que esta dentro de outbound cuando en realidad no es ese, y es una funcion de ayuda, detecta codigo que puede ser reutilizado en otras instancias de platita, incluso si todavia no se desarrollo, y me hagas las propuestas de las mejoras, no modifiques codigo todavia"
+>
+> "1-app/clock.py, no va a ser el primer "helper" que voy a tener que definir en todo platita, no seria mejor que no esten sueltos dentro de app, y se cree algun modulo nuevo tipo helpers o algo que se alinea con la metodologia usada?
+> 2-Lo de error propuesto me parece bien, hay algun sistema de logs en los errores? sino como tengo trazabilidad del error?"
+>
+> *(ante un caso de test en el que el error no muestra su mensaje)* "estos casos no me cierran, como se que falla si no lo muestra ni lo logea?"
+>
+> *(ante la explicación de que solo se registra el tipo y la línea)* "en los logs pone los valores, sino reproducir un error me puede llevar mucho mucho tiempo"
+
+*Qué devolvió y qué se decidió:* los errores que una regla prevé pasaron a `domain/errors.py`,
+con un código y una categoría, y cada adaptador de entrada los convierte en un solo lugar. El
+reloj salió de `outbound/` a `app/shared/`, con una regla que el verificador de arquitectura
+controla: un módulo por tema y ningún `helpers.py` general.
+
+La IA no aceptó registrar los valores en todos los entornos: los registros salen del servidor y
+dejarían teléfonos y montos de personas reales, contra cuatro reglas ya escritas. Propuso cómo
+reproducir rápido sin eso, y la autora eligió la combinación: el camino completo del error
+(`error_stack`), los identificadores de lo que tocaba, sus valores de catálogo, y el error
+completo solo en `local`, donde los usuarios son inventados. Quedó en el
+[ADR 0023](docs/adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)
+y en `AGENTS.md` § 7, en el [pull request #32](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/32).
+
+**Prompt 2** — *Claude Code · la referencia de la API, con un verificador que la mantiene fiel*
+
+> "esta documentacion esta incompleta, no dice para que sirve cada api, revisa si falta algo mas porque creo tambien faltan parametros,despues de que corrigas eso, necesito que esta documentacion sea fiel a lo que hay hoy, si se puede agregar algun verificador o algun hook o algo asi seria genia, o agregarlo en algunos de los que ya hay"
+
+*Qué devolvió y qué se decidió:* a Swagger le faltaba más de lo que la autora había visto: la
+cookie de sesión como parámetro, las respuestas de error, y un `422` que mostraba el formato del
+framework en vez del que la API usa. Los textos pasaron a `reference.py`, y el contrato se
+exporta a `frontend/src/api/openapi.json`, de donde salen los tipos del dashboard.
+
+El verificador nuevo, `scripts/verify_api_contract.py`, falla si una operación no dice para qué
+sirve, si un campo no tiene descripción o si una operación del contrato no está en
+[`04-api.md`](docs/04-api.md). Corre en el hook de pre-commit y en el pipeline, junto con los
+otros dos ([pull request #34](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/34)).
+
+**Prompt 3** — *Claude Code · dónde vive el worker, y nombres de carpetas que digan para qué sirven*
+
+> "no me cierra que si el worker es un proceso aparte este dentro de backend, no tendria mas sentido que este a la misma altura de backend y sea casi un proyecto separado por si el dia de mañana quiero separarlo completamente del backend o decido aplicar otra pieza en vez de un worker, lo veo muy acoplado al backend, analisa eso y dame pros y contras"
+>
+> "revisa todo el proyecto y fijate si hay alguna regla de ordenamiento que pueda hacer mas legible el codigo y sus archivos, si encontras alguno presenta sus pros y contras, antes de tocar nada, la palabra "cli" en adapter no me dice para que sirve lo que hay adentro"
+>
+> *(ante las propuestas)* "divergencias 1. actualiza el arbol 2.No tengo claro cual es la mejor opcion
+> Propuestas 1. Hacelo 2.Hacelo 3.Hacelo ahora 4.No me gusta por tema, otra opcion podria ser dentro de entities, ports y use_cases agrupar por funcionalidad. 5.Suma la carpeta de los support, lo de utils y appshell tambien"
+
+*Qué devolvió y qué se decidió:* el worker quedó en `backend/`. La IA mostró que está acoplado al
+dominio, que es el acoplamiento que conviene, y no a la API: es otro adaptador de entrada, corre
+en su propio contenedor, y sacarlo obligaba a reemplazar los ADR 0010 y 0021. Quedó donde
+estaba.
+
+Lo del orden sí cambió el código. `cli/` pasó a `operator_commands/`, los endpoints a
+`api/routers/`, los repositorios a un archivo cada uno, y los casos de uso a una carpeta por
+funcionalidad, que fue la contrapropuesta de la autora a agrupar por tema. Antes de tocar nada,
+la IA reportó una divergencia que ella misma había causado: había movido `main.py` sin
+actualizar el árbol de [`02-arquitectura.md`](docs/02-arquitectura.md). Hoy el verificador de
+arquitectura controla que toda carpeta esté en ese árbol.
+
+**Prompt 4** — *Claude Code · cuándo el asistente pregunta la cuenta y cuándo no*
+
+> *(ante un gasto "por transferencia" que el modelo había imputado a una cuenta)* "yo te propongo que si en el primero, hubiera puesto "gaste 2000 pesos en la verduleria con galicia" eso pasa, porque le estoy diciendo pesos y galicia
+> pero en el de muni de trapiche si deberia haber preguntado, porque por transferencia puede ser cualquier cuenta en pesos, si no se vuelve muy restrictivo me parece"
+>
+> *(ante una regla que exigía todas las palabras del nombre de la cuenta)* "no me cierra que no encuentre MP como Mercado pago, o si te digo "gaste 5mil pesos en la carniceria con el banco" y tengo una sola cuenta en el banco con pesos tiene que saber cual es"
+
+*Qué devolvió y qué se decidió:* la autora probó el registro con el modelo real y encontró que
+elegía una cuenta que el mensaje no nombraba. La primera regla de la IA, todas las palabras del
+nombre en el mensaje, arreglaba eso pero no reconocía "MP" ni "el banco". La segunda separó los
+dos casos: "MP" y "el banco" apuntan a una sola cuenta, y "por transferencia" no apunta a
+ninguna.
+
+El ida y vuelta siguió en el corte 2, con una pregunta tras otra de la forma "¿y si contesta
+X?". De ahí salió el [ADR 0028](docs/adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md):
+entender lo que la persona escribe es del modelo, y el código controla solo las invariantes. El
+modelo copia las palabras con que el mensaje nombra la cuenta, y el código comprueba que estén
+escritas y que nombren una sola. Los cortes están en los pull requests
+[#49](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/49) y
+[#50](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/50).
+
+**El prompt del producto.** Es el que el worker manda al modelo en cada mensaje, versión
+`classification-5`, en
+[`backend/app/adapters/outbound/llm_client/prompts.py`](backend/app/adapters/outbound/llm_client/prompts.py).
+No se transcribe porque cambia de versión. Le pide al modelo tres cosas: que clasifique el mensaje
+(registro, consulta, consejo u otra cosa), que devuelva los campos de un gasto o un ingreso con
+las palabras exactas del mensaje para la cuenta y la moneda, y que diga si el mensaje contesta un
+pendiente abierto. Los datos del usuario llegan entre `<datos>` y `</datos>`, como información y
+nunca como instrucciones, y el texto de sistema no lleva datos de nadie
+([ADR 0013](docs/adr/0013-datos-minimos-al-proveedor-de-llm.md)). La salida se valida en código
+antes de usarla.
+
+**Prompt 5** — *Claude Code · `/spec-drift` sobre todo el proyecto, y las decisiones de a una*
+
+> "corré el spec-drift de todo el proyecto"
+>
+> *(cuando la IA propuso una rama para la primera divergencia)* "no quiero que se creen multiples branch para estas tareas, deberia ir todo en un solo branch o si es mucho, podemos agruparlas"
+>
+> *(sobre la tabla de divergencias)* "6 y 33, ok tu recomendacion
+> 8, ok tu recomendacion
+> 4. No entendi
+> 5. no entendi
+> 7. ok tu recomendacion, hay algun proceso hoy que chequee si los precios estan actualizados?
+> 9. ok tu recomendacion. En que casos la lee y no la usa?
+> 10 y 11. ok tu recomendacion
+> 12, 13, 14 y 15, no entendi
+> 24. ok
+> 25. text-sm
+> 27. ok
+> 29. ok"
+
+*Qué devolvió y qué se decidió:* cinco revisores en paralelo compararon la especificación con el
+código, uno por área, y encontraron 34 divergencias. Tres eran errores del código que los tests
+no detectaban: un gasto en dólares se registraba como
+pesos, dos usuarios con dos presupuestos no podían registrar nada, y un mensaje que recibía un texto fijo
+gastaba la cuota de registro. Cada uno se corrigió con sus casos aprobados antes del test.
+
+Lo que la autora no entendió se le volvió a explicar con un ejemplo, y lo decidió después. El
+agente revisor encontró en la corrección de la moneda un error nuevo de la IA: el pendiente
+guardaba la moneda de la cuenta como si el usuario la hubiera dicho. Se resolvió con otro caso,
+en el mismo [pull request #65](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/65).
+
+**Prompt 6** — *Claude Code · `/security-audit` antes de entregar*
+
+> "dale, corré el security-audit mientras tanto"
+>
+> *(ante el primer hallazgo, los pedidos sin tope de tamaño)* "lo anotamos para la entrega final con el despliegue de demo"
+>
+> *(ante el segundo, las dependencias sin hashes)* "anotalo para la entrega final"
+>
+> *(ante el rol de la base sin usar)* "lo del rol dejalo para la entrega final con el despliegue"
+
+*Qué devolvió y qué se decidió:* la IA confirmó primero en el sitio de OWASP las ediciones
+vigentes, el Top 10 de 2025 y el de aplicaciones LLM de 2025, y leyó lo que la especificación ya
+resuelve para no reportarlo como hallazgo. Encontró dos, ninguno crítico ni alto: los pedidos y
+los mensajes no tienen tope de tamaño, y las dependencias indirectas y las imágenes base no están
+fijadas. Los mostró de a uno, con la corrección propuesta sin aplicarla. Recordó además que la
+aplicación todavía se conecta a la base con el usuario dueño, no con el rol `platita_app`.
+
+Los tres protegen algo que todavía no está expuesto: hoy Platita corre solo en local. La autora
+los dejó para el primer despliegue, en la entrega final.
 
 ---
 
@@ -651,6 +809,12 @@ La validación por casos de uso no se tocó: es un registro que se regenera, y s
 | 56 | Permitir desarmar un par de retiro o aporte si se cambiaban las dos mitades juntas | La autora eligió la regla más simple: el vínculo no cambia una vez puesto, porque un par se borra marcando las dos mitades |
 | 57 | Dar por terminada la migración con una regla implementada que no estaba entre los casos aprobados, y con siete restricciones sin test | Lo marcó el agente revisor. Los tests se sumaron después de la implementación, así que no pasaron por rojo; el pull request lo declara como falta contra el ADR 0024 |
 | 58 | Indicar `docker compose up migrations` para actualizar la base local, y dar la tarea por cerrada | El comando usaba la imagen vieja. La IA lo encontró al comprobar la base antes de explicar cómo verla: seguía en la migración anterior. Faltaba `--build` |
+| 59 | Registrar de un error solo su tipo y la línea de origen, sin ningún valor | La autora no podía reproducir así un error sin perder mucho tiempo. La IA no aceptó los valores en todos los entornos y propuso cómo reproducir sin ellos; quedaron el camino completo, los identificadores, los valores de catálogo, y el error completo solo en `local` |
+| 60 | Reconocer una cuenta solo si el mensaje trae todas las palabras de su nombre | Demasiado rígido: "MP" y "el banco" nombran una sola cuenta. La autora separó lo que apunta a una cuenta de lo que no apunta a ninguna, como "por transferencia" |
+| 61 | Una regla de código para cada forma de contestar un pendiente | Las formas de contestar no se terminan. Entender el lenguaje pasó a ser del modelo, y el código controla solo las invariantes (ADR 0028) |
+| 62 | Una rama por cada divergencia de `/spec-drift` | La autora pidió una sola rama, o pocos grupos. Las 34 entraron en un solo pull request |
+| 63 | Guardar en un pendiente la moneda de la cuenta como si el usuario la hubiera dicho | Lo marcó el agente revisor: una respuesta como "con la galicia" elegía la cuenta en pesos sin preguntar. Se corrigió con un caso nuevo, aprobado antes del test |
+| 64 | Commitear los tests de un corte antes de la línea de aprobación de sus casos | Lo marcó el agente revisor contra el ADR 0024. Desde entonces la autora completa la aprobación en el `spec.md` antes de que se escriba un test, y la IA no la escribe nunca |
 
 El patrón que se repite: la IA tiende a **resolver la ambigüedad por su cuenta** eligiendo un valor por defecto razonable, y a **justificar decisiones técnicas por el esfuerzo** que ahorran en vez de por sus propiedades de diseño. Las dos cosas hay que detectarlas leyendo, porque el resultado siempre suena defendible.
 
@@ -680,6 +844,14 @@ columna por columna de `/spec-drift` y el agente revisor en un contexto separado
 comprobación sobre el resultado real, la base de la autora, en vez de sobre el comando que debía
 producirlo.
 
+En la entrega 2, con el modelo de lenguaje adentro, aparece otro: la IA **resuelve cada forma de
+hablar con una regla de código**. Cada regla era correcta para el ejemplo que la motivó, y la
+siguiente pregunta de la autora la rompía: "MP", "el banco", "la de pesos". La salida fue
+separar qué es del modelo, entender lo que la persona escribe, de qué es del código, que nunca
+se registre algo que rompa una invariante. Lo que los tests no detectaron lo
+encontraron otra vez las revisiones con otro criterio: `/spec-drift` sobre todo
+el proyecto, el agente revisor y la autora probando con el modelo real.
+
 ---
 
 ## Pendiente para las próximas entregas
@@ -688,7 +860,8 @@ producirlo.
 - ~~Montar el sistema de documentación viva del módulo 5~~ — hecho al cierre de la Entrega 1: portal, integración continua, `llms.txt` y cuatro ADR. Descrito en [documentación viva](docs/documentacion-viva.md).
 - ~~Comprobar en un navegador real que los diagramas del portal se renderizan~~ — verificado sobre el sitio publicado al cierre de la Entrega 1.
 - Revisar el MCP de GitHub, que falla al conectar por un error de header de autorización. Quedó desactivado al cierre de la Entrega 1; hay que reautenticarlo antes de usarlo para los pull requests.
-- Registrar los prompts de código, tests y despliegue a medida que se escriben, no al cierre.- Registrar el prompt del producto cuando se escriba el adaptador del LLM. El de la evaluación es un borrador y está en `scripts/llm_eval/run_eval.py`.
+- Registrar los prompts de código, tests y despliegue a medida que se escriben, no al cierre.
+- ~~Registrar el prompt del producto cuando se escriba el adaptador del LLM~~ — hecho en la Entrega 2: está descrito en el registro de la entrega 2, y vive en `backend/app/adapters/outbound/llm_client/prompts.py`.
 
 - Resolver las decisiones D1 a D12 de la [validación por casos de uso](docs/use-case-walkthrough.md), empezando por D1, que bloquea el primer gasto de cada usuario, y volver a correr el mismo prompt para comparar contra esta corrida.
 - Verificar la sincronización entre la documentación (`docs/02-arquitectura.md` §2.3, `docs/03-modelo-de-datos.md`, `docs/04-api.md`) y el código real antes de cada entrega, aplicando la regla de precedencia de `AGENTS.md` §10: la especificación manda, lo que se corrige es el código.
