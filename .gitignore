@@ -6,7 +6,7 @@ dist/
 # Contenido del portal generado desde docs/ por site/scripts/sync-docs.mjs.
 # La fuente es docs/; esto se regenera en cada build y no se versiona.
 site/src/content/docs/
-# Las imágenes de docs/ que el mismo script copia al portal.
+# Las capturas de docs/capturas/ que el mismo script copia al portal.
 site/public/capturas/
 
 # Caché de lychee (verificación de enlaces externos)

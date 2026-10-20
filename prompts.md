@@ -597,8 +597,8 @@ worker y el registro de un gasto y de un ingreso con el modelo de lenguaje. Toda
 Claude Code, con la misma forma de trabajo en cada corte: la IA propone los casos, la autora los
 aprueba en el `spec.md`, recién entonces se escriben los tests, se ven fallar y se implementa
 ([ADR 0024](docs/adr/0024-tests-primero-en-el-backend.md)). Antes del merge de cada corte, y de
-cada tarea con código, corre el agente `pr-reviewer`, en un contexto separado. Los pull requests están en
-[`docs/07-pull-requests.md`](docs/07-pull-requests.md).
+cada tarea con código, corre el agente `pr-reviewer`, en un contexto separado. Los pull
+requests están en [`docs/07-pull-requests.md`](docs/07-pull-requests.md).
 
 Se registran seis prompts, los que cambiaron el diseño o la forma de trabajar. Los que solo
 aprobaban casos o pedían un commit no se transcriben.

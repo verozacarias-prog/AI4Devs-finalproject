@@ -41,8 +41,8 @@ exige, reescribe los enlaces y extrae los diagramas, que se renderizan en el cli
 verificaron sobre el sitio publicado. Un enlace a otra página de `docs/` va a esa página del
 portal; una imagen de `docs/capturas/` se copia al portal y se enlaza ahí, y cualquier otro
 archivo se enlaza a GitHub, en la rama por defecto del repositorio, que es la de la entrega en
-curso. El fundamento y los problemas concretos que
-resuelve están en el [ADR 0008](adr/0008-astro-starlight-como-portal.md).
+curso. El fundamento y los problemas concretos que resuelve están en el
+[ADR 0008](adr/0008-astro-starlight-como-portal.md).
 
 `llms.txt` está versionado, a diferencia de los otros dos, porque un agente que clona el
 repositorio no ve el portal. Por eso la integración continua falla si quedó desfasado de `docs/`.
