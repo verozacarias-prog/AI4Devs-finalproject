@@ -17,7 +17,7 @@
 // La salida vive en src/content/docs/ y está en .gitignore: se regenera siempre.
 
 import { statSync } from 'node:fs';
-import { readdir, readFile, writeFile, mkdir, rm } from 'node:fs/promises';
+import { copyFile, readdir, readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -29,6 +29,7 @@ const GITHUB = 'https://github.com/verozacarias-prog/AI4Devs-finalproject';
 const BLOB = `${GITHUB}/blob/main`;
 // Tiene que coincidir con `base` en astro.config.mjs.
 const BASE = '/AI4Devs-finalproject';
+const IMAGE_EXTENSION = /\.(png|jpe?g|gif|svg|webp)$/i;
 
 // Registros: citan texto ajeno por definición. Mismo criterio que is_record()
 // en scripts/verify_docs.py.
@@ -40,6 +41,17 @@ async function markdownFiles(dir) {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) out.push(...(await markdownFiles(full)));
     else if (entry.name.endsWith('.md') && !isRecord(entry.name)) out.push(full);
+  }
+  return out;
+}
+
+// Las imágenes de doc/, con su ruta, para copiarlas al portal.
+async function imageFiles(dir) {
+  const out = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...(await imageFiles(full)));
+    else if (IMAGE_EXTENSION.test(entry.name)) out.push(full);
   }
   return out;
 }
@@ -64,8 +76,10 @@ const slugOf = (relPath) =>
 
 // Reescribe todo enlace relativo. Un .md que sigue dentro de docs/ es una página
 // del portal. Todo lo demás —un .md que se escapa de docs/, un script, una
-// carpeta— no lo publica el portal y se manda a GitHub: tree para carpetas,
-// blob para archivos.
+// carpeta— no lo publica el portal y se manda a GitHub: tree para carpetas y
+// blob para archivos. Una imagen de docs/ sí la publica el portal, copiada a
+// public/, así que se enlaza ahí: GitHub no la sirve como imagen, y la rama de
+// la entrega no llega a main.
 function rewriteLinks(body, fileDir) {
   return body.replace(/\]\(([^)\s:#/][^)\s:]*)\)/g, (whole, target) => {
     if (target === '.') return `](${BASE}/)`;
@@ -79,6 +93,9 @@ function rewriteLinks(body, fileDir) {
       return `](${BASE}/${slugOf(inside)}/${fragment})`;
     }
     const fromRoot = relative(ROOT, absolute).split(sep).join('/');
+    if (IMAGE_EXTENSION.test(path) && !inside.startsWith('..')) {
+      return `](${BASE}/${inside.split(sep).join('/')}${fragment})`;
+    }
     const kind = path.endsWith('/') || isDirectory(absolute) ? 'tree' : 'blob';
     return `](${GITHUB}/${kind}/main/${fromRoot}${fragment})`;
   });
@@ -107,6 +124,20 @@ function extractMermaid(body) {
 
 await rm(TARGET, { recursive: true, force: true });
 await mkdir(TARGET, { recursive: true });
+
+// Las imágenes van a public/, en la misma ruta que tienen dentro de docs/. Se
+// borra antes cada carpeta de primer nivel que las contiene, para que una
+// imagen quitada de docs/ no quede publicada.
+const images = await imageFiles(SOURCE);
+const imageRoots = new Set(images.map((file) => relative(SOURCE, file).split(sep)[0]));
+for (const root of imageRoots) {
+  await rm(join(SITE, 'public', root), { recursive: true, force: true });
+}
+for (const file of images) {
+  const dest = join(SITE, 'public', relative(SOURCE, file));
+  await mkdir(dirname(dest), { recursive: true });
+  await copyFile(file, dest);
+}
 
 const files = await markdownFiles(SOURCE);
 const sources = new Map(); // texto original, para llms-full.txt
