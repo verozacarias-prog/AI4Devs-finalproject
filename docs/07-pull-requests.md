@@ -13,7 +13,8 @@ queda funcionando de punta a punta. Ver
 [FEAT-003](features/FEAT-003/spec.md), el registro de un gasto y de un ingreso desde el chat, es
 la funcionalidad que muestra la entrega 2. Cada corte tiene sus casos aprobados en el `spec.md`,
 el commit de sus tests antes que el de su implementación, y el informe de `pr-reviewer` pegado
-en el pull request.
+en el pull request. La excepción la declara el #54: en tres tandas, la línea de aprobación quedó
+en git después de sus tests, y dos tests cambiaron después de su commit.
 
 | # | Corte | Pull request |
 |---|---|---|
@@ -29,13 +30,13 @@ en el pull request.
 | [FEAT-002](features/FEAT-002/spec.md), el chat web y el worker | [#44](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/44), [#45](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/45), [#47](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/47) y [#48](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/48) |
 | El scaffold: backend, dashboard, Docker, el pipeline y CodeQL | [#18](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/18), [#24](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/24), [#28](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/28) y [#29](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/29) |
 | La migración del esquema, con tests primero | [#30](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/30) y [#31](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/31) |
-| Los datos de prueba y la referencia de la API, con su verificador | [#33](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/33), [#34](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/34) y [#37](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/37) |
+| Los datos de prueba y la referencia de la API, con su verificador | [#33](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/33) y [#34](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/34) |
 | Tailwind CSS y shadcn/ui | [#42](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/42) |
 | La elección del modelo de lenguaje | [#16](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/16) y [#17](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/17) |
 | Refactors: los errores, `shared/` y la resolución de movimientos | [#32](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/32), [#52](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/52) y [#53](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/53) |
 | Las claves de los datos del prompt, y el proveedor sin guardar respuestas | [#51](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/51) |
-| El `/spec-drift` de todo el proyecto, con sus 34 divergencias resueltas | [#65](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/65) |
-| La forma de trabajo: colaborar, tests primero, qué es especificación, y el alcance de la entrega final | [#12](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/12), [#13](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/13), [#15](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/15) y [#46](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/46) |
+| El `/spec-drift` de todo el proyecto, con sus 34 divergencias decididas | [#65](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/65) |
+| La forma de trabajo: colaborar, tests primero, qué es especificación, y qué pasa a la entrega final | [#12](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/12), [#13](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/13), [#15](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/15), [#37](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/37) y [#46](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/46) |
 
 Las actualizaciones de dependencias las abre Dependabot y quedan fuera de esta lista.
 

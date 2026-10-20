@@ -40,7 +40,8 @@ En consecuencia, para cualquier diagrama nuevo:
 - `README.md` es portada e índice: la ficha del proyecto, una línea por documento y los enlaces.
   Nunca el resumen de una sección ni la descripción de un subsistema: para eso está el documento
   enlazado.
-- Todo archivo de `docs/` tiene que estar enlazado desde el `README.md`.
+- Todo documento de `docs/` tiene que estar enlazado desde el `README.md`. Una imagen se enlaza
+  desde el documento que la muestra.
 
 ## 8.5. Decisiones de arquitectura
 

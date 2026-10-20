@@ -51,8 +51,9 @@ Se tomaron el 19/10/2026 sobre un clon limpio de `feature/entrega-2-VNZ`, levant
 `docker compose up --build`, con los usuarios de prueba y el modelo real. En la entrega 2 el
 chat del dashboard reemplaza a WhatsApp, que llega en la entrega final.
 
-El recorrido de Lucía de punta a punta, en un GIF: entra, registra tres gastos conversando y ve
-el saldo de Mercado Pago actualizado.
+El recorrido de Lucía, en un GIF: arranca en Cuentas, con Mercado Pago en $80.000; en el chat
+registra tres gastos conversando y prueba uno en dólares; y vuelve a Cuentas, donde Mercado Pago
+quedó en $64.000.
 
 ![Recorrido del chat: tres gastos registrados y el saldo actualizado](capturas/entrega-2/16-recorrido-del-chat.gif)
 
@@ -77,10 +78,10 @@ Cada pantalla, en los estados que se pueden ver a mano:
 | Chat | Pablo, con dos presupuestos para la fecha | [14](capturas/entrega-2/14-chat-pablo-dos-presupuestos.jpg) |
 | Chat | Error, con la base caída | [12](capturas/entrega-2/12-chat-con-error-sin-base.jpg) |
 
-Dos estados no tienen captura. Cuentas vacía necesita un usuario sin cuentas, y ninguno de los
-de prueba lo es. El estado de carga de Cuentas y del chat dura milisegundos. Los dos los cubren
-los tests de cada pantalla ([FEAT-001](features/FEAT-001/spec.md) y
-[FEAT-002](features/FEAT-002/spec.md)).
+Tres estados no tienen captura. Cuentas vacía necesita un usuario sin cuentas, y ninguno de los
+de prueba lo es. El estado de carga de Cuentas y el del chat duran milisegundos. Los tres los
+cubren los tests de cada pantalla: C1-25 y C2-07 de [FEAT-001](features/FEAT-001/spec.md) y
+C1-11 de [FEAT-002](features/FEAT-002/spec.md).
 
 #### El flujo por WhatsApp
 

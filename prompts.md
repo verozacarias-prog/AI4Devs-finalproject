@@ -49,7 +49,7 @@ dejó, en síntesis:
 | Validación contra los módulos de DevSecOps y de observabilidad | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`) | Contrastar seis definiciones de infraestructura, pipeline, revisión de código, seguridad de la capa de IA y observabilidad contra la especificación en modo de solo lectura, resolver los conflictos con la autora y escribir el resultado en `docs/`, en tres ADR nuevos, en un agente revisor y en un command |
 | Elección del modelo de lenguaje | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`). Modelos evaluados: GPT-5.4 mini, GPT-5.4 nano y Claude Haiku 5.5 | Armar con la autora los casos y sus resultados esperados, escribir y correr la evaluación contra los tres modelos, y registrar la elección en un ADR |
 | Migración del esquema inicial, con tests primero | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`). El agente `pr-reviewer` corrió dos veces, en un contexto separado | Proponer los casos de test y esperar la aprobación de la autora, escribir los tests y verlos fallar, escribir la migración, y cerrar con `/spec-drift` y el agente revisor |
-| Código de la entrega 2: scaffold, pantalla de cuentas, chat web con worker y registro de gastos | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`). El agente `pr-reviewer` corrió sobre cada pull request, en un contexto separado | Proponer los casos de cada corte y esperar la aprobación de la autora, escribir los tests y verlos fallar, implementar, y cerrar con `/spec-drift`, el agente revisor y `/security-audit` |
+| Código de la entrega 2: scaffold, pantalla de cuentas, chat web con worker y registro de gastos | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`). El agente `pr-reviewer` corrió sobre los cortes de las historias y las tareas con código, en un contexto separado | Proponer los casos de cada corte y esperar la aprobación de la autora, escribir los tests y verlos fallar, implementar, y cerrar con `/spec-drift`, el agente revisor y `/security-audit` |
 | Interpretación de los mensajes, dentro del producto | API de OpenAI | GPT-5.4 mini, elegido en el [ADR 0025](docs/adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md) | Clasificar cada mensaje y devolver los campos de un gasto o un ingreso, con el prompt `classification-5` |
 | Despliegue | *(pendiente — Entrega final)* | | |
 
@@ -596,8 +596,8 @@ La entrega 2 es la primera con código: el scaffold, la pantalla de cuentas, el 
 worker y el registro de un gasto y de un ingreso con el modelo de lenguaje. Toda se hizo en
 Claude Code, con la misma forma de trabajo en cada corte: la IA propone los casos, la autora los
 aprueba en el `spec.md`, recién entonces se escriben los tests, se ven fallar y se implementa
-([ADR 0024](docs/adr/0024-tests-primero-en-el-backend.md)). Antes de cada merge corre el agente
-`pr-reviewer`, en un contexto separado. Los pull requests están en
+([ADR 0024](docs/adr/0024-tests-primero-en-el-backend.md)). Antes del merge de cada corte, y de
+cada tarea con código, corre el agente `pr-reviewer`, en un contexto separado. Los pull requests están en
 [`docs/07-pull-requests.md`](docs/07-pull-requests.md).
 
 Se registran seis prompts, los que cambiaron el diseño o la forma de trabajar. Los que solo

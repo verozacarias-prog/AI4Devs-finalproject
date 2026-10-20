@@ -32,12 +32,16 @@ docs/  ──┬──▶  GitHub lo renderiza directamente, incluidos los diagr
          └──▶  site/scripts/sync-docs.mjs
                  ├──▶  site/src/content/docs/   (generado, no versionado)
                  ├──▶  site/public/llms-full.txt (generado, no versionado)
+                 ├──▶  site/public/capturas/     (copiado de docs/capturas/, no versionado)
                  └──▶  llms.txt                  (generado y versionado)
 ```
 
 `docs/` no se modifica para alimentar al portal: el script agrega el frontmatter que Starlight
 exige, reescribe los enlaces y extrae los diagramas, que se renderizan en el cliente y se
-verificaron sobre el sitio publicado. El fundamento y los problemas concretos que
+verificaron sobre el sitio publicado. Un enlace a otra página de `docs/` va a esa página del
+portal; una imagen de `docs/capturas/` se copia al portal y se enlaza ahí, y cualquier otro
+archivo se enlaza a GitHub, en la rama por defecto del repositorio, que es la de la entrega en
+curso. El fundamento y los problemas concretos que
 resuelve están en el [ADR 0008](adr/0008-astro-starlight-como-portal.md).
 
 `llms.txt` está versionado, a diferencia de los otros dos, porque un agente que clona el
