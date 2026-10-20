@@ -17,7 +17,7 @@
 // La salida vive en src/content/docs/ y está en .gitignore: se regenera siempre.
 
 import { statSync } from 'node:fs';
-import { readdir, readFile, writeFile, mkdir, rm } from 'node:fs/promises';
+import { copyFile, readdir, readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,9 +26,17 @@ const ROOT = join(SITE, '..');
 const SOURCE = join(ROOT, 'docs');
 const TARGET = join(SITE, 'src', 'content', 'docs');
 const GITHUB = 'https://github.com/verozacarias-prog/AI4Devs-finalproject';
-const BLOB = `${GITHUB}/blob/main`;
+// HEAD es la rama por defecto del fork, que es la de la entrega en curso: la
+// entrega se presenta desde ahí y nunca llega a main.
+const BRANCH = 'HEAD';
+const BLOB = `${GITHUB}/blob/${BRANCH}`;
 // Tiene que coincidir con `base` en astro.config.mjs.
 const BASE = '/AI4Devs-finalproject';
+// Las capturas son las únicas imágenes de docs/ que publica el portal, copiadas
+// a public/ con la misma ruta. Una carpeta propia evita pisar lo que public/ ya
+// tiene, como el ícono.
+const CAPTURES = 'capturas';
+const IMAGE_EXTENSION = /\.(png|jpe?g|gif|webp)$/i;
 
 // Registros: citan texto ajeno por definición. Mismo criterio que is_record()
 // en scripts/verify_docs.py.
@@ -40,6 +48,17 @@ async function markdownFiles(dir) {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) out.push(...(await markdownFiles(full)));
     else if (entry.name.endsWith('.md') && !isRecord(entry.name)) out.push(full);
+  }
+  return out;
+}
+
+// Las imágenes de una carpeta de docs/, con su ruta.
+async function imageFiles(dir) {
+  const out = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...(await imageFiles(full)));
+    else if (IMAGE_EXTENSION.test(entry.name)) out.push(full);
   }
   return out;
 }
@@ -64,8 +83,9 @@ const slugOf = (relPath) =>
 
 // Reescribe todo enlace relativo. Un .md que sigue dentro de docs/ es una página
 // del portal. Todo lo demás —un .md que se escapa de docs/, un script, una
-// carpeta— no lo publica el portal y se manda a GitHub: tree para carpetas,
-// blob para archivos.
+// carpeta— no lo publica el portal y se manda a GitHub: tree para carpetas y
+// blob para archivos. Una captura sí la publica el portal, así que se enlaza
+// ahí: GitHub no sirve un blob como imagen.
 function rewriteLinks(body, fileDir) {
   return body.replace(/\]\(([^)\s:#/][^)\s:]*)\)/g, (whole, target) => {
     if (target === '.') return `](${BASE}/)`;
@@ -79,8 +99,12 @@ function rewriteLinks(body, fileDir) {
       return `](${BASE}/${slugOf(inside)}/${fragment})`;
     }
     const fromRoot = relative(ROOT, absolute).split(sep).join('/');
+    const isCapture = inside.split(sep)[0] === CAPTURES && IMAGE_EXTENSION.test(path);
+    if (isCapture) {
+      return `](${BASE}/${inside.split(sep).join('/')}${fragment})`;
+    }
     const kind = path.endsWith('/') || isDirectory(absolute) ? 'tree' : 'blob';
-    return `](${GITHUB}/${kind}/main/${fromRoot}${fragment})`;
+    return `](${GITHUB}/${kind}/${BRANCH}/${fromRoot}${fragment})`;
   });
 }
 
@@ -107,6 +131,18 @@ function extractMermaid(body) {
 
 await rm(TARGET, { recursive: true, force: true });
 await mkdir(TARGET, { recursive: true });
+
+// La copia se borra entera antes, para que una captura quitada de docs/ no
+// quede publicada.
+await rm(join(SITE, 'public', CAPTURES), { recursive: true, force: true });
+const images = isDirectory(join(SOURCE, CAPTURES))
+  ? await imageFiles(join(SOURCE, CAPTURES))
+  : [];
+for (const file of images) {
+  const dest = join(SITE, 'public', relative(SOURCE, file));
+  await mkdir(dirname(dest), { recursive: true });
+  await copyFile(file, dest);
+}
 
 const files = await markdownFiles(SOURCE);
 const sources = new Map(); // texto original, para llms-full.txt

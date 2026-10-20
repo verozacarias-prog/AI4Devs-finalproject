@@ -81,7 +81,7 @@ nombres de archivo de código están en inglés.
 
 ## Contrato para asistentes de IA
 
-- [AGENTS.md](https://github.com/verozacarias-prog/AI4Devs-finalproject/blob/main/AGENTS.md): regla de dependencia hexagonal, invariantes de dominio,
+- [AGENTS.md](https://github.com/verozacarias-prog/AI4Devs-finalproject/blob/HEAD/AGENTS.md): regla de dependencia hexagonal, invariantes de dominio,
   convenciones de código, seguridad y qué leer antes de qué. `CLAUDE.md` es un enlace simbólico
   a ese mismo archivo.
 
