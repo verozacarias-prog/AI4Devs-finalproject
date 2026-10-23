@@ -119,6 +119,29 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  punta-a-punta:
+    name: De punta a punta — un gasto en el chat baja el saldo
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No job pushes or needs the token after the checkout.
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # Builds the image and starts the whole stack with Docker Compose, with a fake of the
+      # model provider: no key and no call leaves the runner (#79).
+      - run: npm run test:e2e
+
   dashboard-dependencias:
     name: Dashboard — vulnerabilidades en dependencias
     runs-on: ubuntu-latest

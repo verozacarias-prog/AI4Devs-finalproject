@@ -7,6 +7,9 @@ import { defineConfig, devices } from '@playwright/test'
  */
 export default defineConfig({
   testDir: './e2e',
+  // Starts the stack from an empty database, and removes it after the run.
+  globalSetup: './e2e/global-setup.ts',
+  globalTeardown: './e2e/global-teardown.ts',
   // The test changes a balance: one run at a time, against one database.
   workers: 1,
   fullyParallel: false,

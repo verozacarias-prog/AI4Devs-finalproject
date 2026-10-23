@@ -132,6 +132,14 @@ Los del backend, con la base de Compose levantada, y los del dashboard:
 (cd frontend && npm ci && npm test)
 ```
 
+Y el de punta a punta, que levanta todo con Compose en otros puertos, con un proveedor del
+modelo simulado, entra como Lucía, anota un gasto en el chat y mira el saldo nuevo. No necesita
+`.env` ni clave, y al terminar borra lo que levantó:
+
+```sh
+(cd frontend && npx playwright install chromium && npm run test:e2e)
+```
+
 ## Cómo colaborar
 
 Las ramas, las issues, los pasos para incluir un cambio y los verificadores están en

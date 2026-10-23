@@ -246,7 +246,8 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   tiene comando local: una alerta que no es un problema se descarta en GitHub con su motivo.
 - Dashboard, desde `frontend/`: `npm test` corre los tests de las pantallas, `npm run lint` el
   linter, `npm run typecheck` los tipos, `npm run build` la compilación y
-  `npm audit --audit-level=high` las vulnerabilidades.
+  `npm audit --audit-level=high` las vulnerabilidades. `npm run test:e2e` corre el test de punta
+  a punta: levanta todo con Docker Compose, con un proveedor del modelo simulado.
 - Si cambia una ruta o una respuesta de la API, se regenera el contrato y sus tipos: desde
   `backend/`, `python -m app.adapters.inbound.api.export_openapi > ../frontend/src/api/openapi.json`,
   y desde `frontend/`, `npm run api:generate`. El pipeline y un test del backend fallan si
