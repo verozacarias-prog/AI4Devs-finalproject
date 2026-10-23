@@ -148,10 +148,15 @@ El worker es el único proceso que llama al modelo, y lo hace con la clave de
 worker no arranca y dice qué variable falta. La API no la usa: la lectura de la configuración
 es la misma para todos los procesos, y Compose no se la pasa.
 
+El SDK de OpenAI lee además `OPENAI_BASE_URL`, sin que la configuración la declare: con ella
+definida, el worker manda los mensajes que interpreta a esa dirección y no a OpenAI. Solo la
+define el stack del test de punta a punta, para apuntar el worker a un proveedor simulado. En
+ningún otro entorno se define.
+
 | Entorno | Para qué | En qué se diferencia | Cómo se promueve |
 |---|---|---|---|
 | Local | Desarrollo y pruebas manuales del flujo por WhatsApp | Docker Compose con la imagen `pgvector/pgvector:pg16`, el número de prueba gratuito de Meta detrás de un túnel, y datos semilla que se niegan a correr contra producción | Pull request |
-| CI, efímero | Tests de integración y migraciones contra un PostgreSQL real | PostgreSQL como contenedor del job, sin secretos, con dobles de prueba para Meta, el LLM, los embeddings y las cotizaciones | Merge a la rama de despliegue con todos los checks en verde |
+| CI, efímero | Tests de integración y migraciones contra un PostgreSQL real, y el test de punta a punta | PostgreSQL como contenedor del job, sin secretos, con dobles de prueba para Meta, el LLM, los embeddings y las cotizaciones. El test de punta a punta levanta todo con Docker Compose, con un proveedor del modelo simulado | Merge a la rama de despliegue con todos los checks en verde |
 | Demostración y pruebas | Mostrar el flujo conversacional por el chat web, sin WhatsApp, y que lo pruebe otra persona | Entorno `demo`: usuarios de prueba, chat web encendido y entrada por un enlace personal, uno por persona, con un aviso de prueba que se acepta la primera vez ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Tiene su propia base. Dónde se aloja está sin decidir | Con cada integración a la rama de la entrega |
 | Producción | Usuarios | Entorno `production`: Render, con los secretos en un Environment Group y registros en nivel INFO. No arranca con el chat web ni la entrada de desarrollo encendidos | Despliegue automático de Render cuando pasan los checks |
 
@@ -206,6 +211,7 @@ obligatorios.
 | Tests unitarios | pytest, y los tests de los estados de cada pantalla del dashboard | El merge | Decidido, control 2. Ya corre |
 | Tests de integración, incluido el aislamiento entre usuarios | pytest contra PostgreSQL con pgvector, con dobles para el LLM y los embeddings | El merge | Decidido, control 2. Ya corre |
 | Migraciones desde una base vacía | `alembic upgrade head` en cada corrida de los tests | El merge | Decidido, control 2. Ya corre |
+| Test de punta a punta del flujo principal | Playwright contra la aplicación levantada con Docker Compose, con un proveedor del modelo simulado | El merge | Decidido, control 2. Ya corre |
 | Regla hexagonal y documentación | Los tres verificadores que ya existen | El merge | Decidido, control 3. Ya corre |
 | Contrato de la API | Regenera el contrato y los tipos del dashboard, y falla si cambian | El merge | Decidido, control 3. Ya corre |
 | Secretos en el código | gitleaks | El merge | Decidido, control 4. Ya corre |

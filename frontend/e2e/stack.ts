@@ -32,5 +32,7 @@ export function startStack(): void {
 }
 
 export function removeStack(): void {
+  // CI keeps it, to read the logs of the containers when the test failed.
+  if (process.env.E2E_KEEP_STACK === 'true') return
   docker('down', '--volumes', '--remove-orphans')
 }

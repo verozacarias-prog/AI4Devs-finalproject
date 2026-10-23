@@ -141,6 +141,23 @@ jobs:
       # Builds the image and starts the whole stack with Docker Compose, with a fake of the
       # model provider: no key and no call leaves the runner (#79).
       - run: npm run test:e2e
+        env:
+          # The runner is thrown away anyway: the stack stays up for the logs of a failure.
+          E2E_KEEP_STACK: 'true'
+      # Only on a failure: what each container wrote, and the trace of the browser.
+      - if: failure()
+        run: >-
+          docker compose --project-name platita-e2e --env-file frontend/e2e/compose.env
+          --file docker-compose.yml --file frontend/e2e/compose.e2e.yml logs --no-color
+        working-directory: .
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          retention-days: 7
 
   dashboard-dependencias:
     name: Dashboard — vulnerabilidades en dependencias

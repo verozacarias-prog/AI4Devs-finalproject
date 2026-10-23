@@ -93,7 +93,7 @@ de pre-commit. No son una recomendación: rompen el commit.
 - `backend/app/adapters/observability/` — envoltorios de los puertos de LLM y de embeddings, que registran cada llamada sin su contenido, y el formato JSON de los registros con su filtro.
 - `backend/tests/` — tests unitarios, de integración y end-to-end.
 - `backend/migrations/` — migraciones de Alembic.
-- `frontend/` — dashboard web, en React con TypeScript y Vite ([ADR 0026](docs/adr/0026-react-typescript-y-vite-para-el-dashboard.md)), con Tailwind CSS y shadcn/ui ([ADR 0027](docs/adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md)). `src/api/` tiene el contrato exportado y los tipos generados, `src/pages/` una pantalla por archivo con su test al lado, `src/components/` las piezas que comparten las pantallas, como el menú lateral, con su test al lado, `src/components/ui/` los componentes de shadcn/ui, y `src/design-tokens.css` los tokens de diseño.
+- `frontend/` — dashboard web, en React con TypeScript y Vite ([ADR 0026](docs/adr/0026-react-typescript-y-vite-para-el-dashboard.md)), con Tailwind CSS y shadcn/ui ([ADR 0027](docs/adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md)). `src/api/` tiene el contrato exportado y los tipos generados, `src/pages/` una pantalla por archivo con su test al lado, `src/components/` las piezas que comparten las pantallas, como el menú lateral, con su test al lado, `src/components/ui/` los componentes de shadcn/ui, y `src/design-tokens.css` los tokens de diseño. `e2e/` tiene el test de punta a punta con Playwright, el stack de Compose que levanta y el proveedor del modelo simulado.
 - `site/` — portal de documentación (Astro Starlight). Se genera desde `docs/`; no es fuente.
 - `docs/` — la especificación del proyecto.
 

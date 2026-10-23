@@ -12,6 +12,7 @@ test('an expense written in the chat lowers the balance of its account', async (
 
   await expect(amountOf(page, 'Mercado Pago')).toHaveText(/^\$\s80\.000,00$/)
   const othersBefore = await otherAmounts(page)
+  expect(Object.keys(othersBefore).sort()).toEqual(['Efectivo', 'Galicia USD', 'Galicia pesos'])
 
   await page.getByRole('button', { name: 'Chat' }).click()
   await page.getByLabel('Tu mensaje').fill('gasté 1500 en el súper con Mercado Pago')
