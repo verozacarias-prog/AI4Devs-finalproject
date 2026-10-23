@@ -18,7 +18,7 @@
 
 import { statSync } from 'node:fs';
 import { copyFile, readdir, readFile, writeFile, mkdir, rm } from 'node:fs/promises';
-import { dirname, join, relative, sep } from 'node:path';
+import { basename, dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SITE = dirname(fileURLToPath(new URL('.', import.meta.url)));
@@ -96,7 +96,8 @@ function rewriteLinks(body, fileDir) {
     const inside = relative(SOURCE, absolute);
     const fragment = hash ? '#' + hash : '';
 
-    if (path.endsWith('.md') && !inside.startsWith('..')) {
+    // Un registro no se publica: su enlace va a GitHub, como lo que está fuera de docs/.
+    if (path.endsWith('.md') && !inside.startsWith('..') && !isRecord(basename(path))) {
       return `](${BASE}/${slugOf(inside)}/${fragment})`;
     }
     const fromRoot = relative(ROOT, absolute).split(sep).join('/');

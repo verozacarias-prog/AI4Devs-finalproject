@@ -2,7 +2,8 @@
 
 Registro, no especificación ([`AGENTS.md`](../AGENTS.md), sección 10). Es el `prompts.md` tal como
 quedó al cierre de la entrega 2, el 23 de octubre de 2026, con todos sus prompts, la tabla
-completa de ajustes humanos y los patrones de cada fase. [`prompts.md`](../prompts.md) conserva la
+completa de ajustes humanos y los patrones de cada fase. Desde ahí suma los prompts de la entrega
+final, en el [registro de la entrega final](#registro-de-la-entrega-final), al final. [`prompts.md`](../prompts.md) conserva la
 plantilla del curso, con hasta tres prompts por sección, y enlaza acá para el detalle.
 
 ---
@@ -876,3 +877,40 @@ el proyecto, el agente revisor y la autora probando con el modelo real.
 - Verificar la sincronización entre la documentación (`docs/02-arquitectura.md` §2.3, `docs/03-modelo-de-datos.md`, `docs/04-api.md`) y el código real antes de cada entrega, aplicando la regla de precedencia de `AGENTS.md` §10: la especificación manda, lo que se corrige es el código.
 
 Lo que depende de que exista código —el cliente generado desde el OpenAPI, el verificador del contrato de API, los tokens del Design System, los comandos de tests y linters, el flujo con los controles de código y los archivos de Docker— está en la [hoja de ruta](hoja-de-ruta.md).
+
+---
+
+## Registro de la entrega final
+
+**Prompt 1** — *Claude Code · la rama integradora de la entrega final*
+
+> "2-La rama final-project-VNZ va a ser la integradora (como hicimos con feature/entrega-2-VNZ), todos los desarrollos se van a hacer en ramas que salen a partir de final-project-VNZ y una vez probado y dado el ok se mergea a esa rama"
+
+*Qué devolvió y qué se decidió:* la IA había propuesto `feature/entrega-3-VNZ`, siguiendo la
+convención del README. Al releer el material del curso, a pedido de la autora, encontró que la
+rama de la final se llama `final-project-VNZ`, y que los workflows no corrían con ese prefijo:
+se sumó en el [pull request #68](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/68).
+La IA comparó después la protección de la rama nueva con la de la entrega 2 y encontró dos
+diferencias: faltaba el control `CodeQL`, y la regla exigía una aprobación, que con la
+protección aplicada también a los administradores habría trabado todos los merges. La autora
+las corrigió en GitHub.
+
+**Prompt 2** — *Claude Code · los tickets de la entrega final en GitHub Issues*
+
+> "3-Leiste que en la Leccion 2 (que se actualizo ayer) dice subre los tickets?, capaz seria bueno implementar algo asi"
+>
+> "antes, a cada cosa creado en issues que no sean Historias de usuario, anteponer [Backend], [FrontEnd] [Worker], no me acuerdo si habia alguno mas"
+>
+> *(ante la propuesta de usar solo las etiquetas `historia` y `ticket`)* "no, dejalo como esta"
+
+*Qué devolvió y qué se decidió:* la Lección 2 recomienda GitHub Issues, junto al código. La IA
+armó la lista desde la tabla de alcance de la hoja de ruta, en su orden de prioridad, y la
+autora la aprobó antes de crear nada: la HU4 pasó a decir "del período individual", porque los
+grupos están en la segunda versión, y el comando `/ticket` entró como opcional. Quedaron 18
+issues, de la #69 a la #86: tres historias con sus tickets como sub-issues, ocho tareas, el
+milestone "Entrega final" y un tablero kanban con automatizaciones. Los prefijos sumaron
+`[Base de datos]`, que venía de los tickets de la entrega 1, y `[DevOps]`, `[Docs]` y `[Tests]`.
+La autora mantuvo la diferencia entre ticket y tarea, que la IA había propuesto unificar. La
+fecha del milestone salió un día antes en el huso de la autora, porque GitHub guarda solo el día
+en UTC, y se corrigió.
+

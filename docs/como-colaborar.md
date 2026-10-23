@@ -83,8 +83,9 @@ cd site && npm install                # solo para ver o regenerar el portal
   ponerla como rama por defecto del repositorio, porque de ahí se publica el portal y ahí abre
   Dependabot sus pull requests; y protegerla, con los controles como obligatorios.
 - **Cerrar:** correr `/security-audit` y `/spec-drift` sobre todo el proyecto, registrar los
-  prompts en [`prompts.md`](../prompts.md) y abrir el pull request de la rama de la entrega a
-  `main`.
+  prompts en el [registro completo](registro-ia.md), y los que cambiaron una decisión también en
+  [`prompts.md`](../prompts.md), con hasta tres por sección, y abrir el pull request de la rama de
+  la entrega a `main`.
 - **Cada lunes:** revisar los pull requests de Dependabot.
 
 Los commands, el skill y el agente están descritos en el

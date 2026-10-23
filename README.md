@@ -39,8 +39,6 @@ https://github.com/verozacarias-prog/AI4Devs-finalproject
 
 ---
 
----
-
 ## Cómo se trabajó con IA
 
 Todo el proyecto, de la idea al código, se hizo con asistentes de IA, y su configuración está

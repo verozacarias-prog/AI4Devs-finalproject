@@ -1,6 +1,6 @@
 > Registro del uso de IA en el desarrollo de **Platita**. Sigue la plantilla del curso: secciones 1 a 7, con un máximo de tres prompts por sección. Cada prompt se transcribe **textual**, tal como se escribió, sin corregir la redacción. Se eligieron los que cambiaron una decisión, incluidos los que rechazaron o corrigieron una propuesta de la IA, que son los que mejor muestran dónde estuvo el criterio humano.
 >
-> El registro completo, con todos los prompts, los 64 ajustes humanos y los patrones de cada fase, está en [`docs/registro-ia.md`](docs/registro-ia.md). La conversación de la reestructuración de la documentación está entera en [`docs/conversacion-reestructuracion-docs.md`](docs/conversacion-reestructuracion-docs.md).
+> El registro completo, con todos los prompts, los ajustes humanos y los patrones de cada fase, está en [`docs/registro-ia.md`](docs/registro-ia.md). La conversación de la reestructuración de la documentación está entera en [`docs/conversacion-reestructuracion-docs.md`](docs/conversacion-reestructuracion-docs.md).
 
 ## Herramientas y modelos por fase
 
@@ -18,7 +18,7 @@
 
 ## Metodología
 
-Todo el código se escribió con un flujo fijo, con dos puntos donde decide una persona. La IA no
+Todo el código del backend se escribió con un flujo fijo, con dos puntos donde decide una persona. La IA no
 escribe un test sin casos aprobados, y nunca integra.
 
 ```mermaid
@@ -39,7 +39,8 @@ flowchart TB
     D -. pide cambios .-> C
 ```
 
-Si la autora pide cambios al probar, se vuelve a construir en la misma rama. Antes de cada
+El dibujo muestra la vuelta de los casos. La otra, sin dibujar para que el diagrama se lea: si
+la autora pide cambios al probar, se vuelve a construir en la misma rama. Antes de cada
 entrega, `/spec-drift` sobre todo el proyecto y `/security-audit`. El avance se
 sigue en el [tablero de la entrega final](https://github.com/users/verozacarias-prog/projects/1).
 
@@ -182,7 +183,7 @@ YAML es mejor diseño.
 
 *Qué se decidió:* la autora aprobó los resultados esperados antes de correr nada, y la IA
 escribió la evaluación: 30 casos, tres corridas, tres modelos, menos de un dólar. La elección se
-dio vuelta a mitad de camino: Claude Haiku 5.5 empataba en calidad y costaba cinco veces menos,
+dio vuelta a mitad de camino: Claude Haiku 5.5 empataba en calidad y costaba casi cinco veces menos,
 hasta que el agente revisor marcó que faltaban dos casos de inyección que el ADR 0013 exigía. Con
 ellos Haiku dejó de responder, y la autora eligió GPT-5.4 mini, con la calidad por encima de la
 retención ([ADR 0025](docs/adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)).
