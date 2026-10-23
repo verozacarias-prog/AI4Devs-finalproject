@@ -107,7 +107,7 @@ modelo de ramas con dos niveles:
 
 ```text
 main
- └─ feature/entrega-2-VNZ               rama de la entrega: sale de main y vuelve a main
+ └─ final-project-VNZ                   rama de la entrega: sale de main y vuelve a main
      ├─ hu3-c1-registro-de-gasto        un corte de una historia
      ├─ hu3-c2-registro-de-gasto
      └─ tarea-scaffold-y-docker         lo que no es una historia
@@ -125,10 +125,10 @@ main
 Los pasos, uno por uno, están en el [README](../README.md#cómo-colaborar). Tres detalles de
 GitHub condicionan el modelo y no son evidentes:
 
-- **Las ramas cortas no empiezan con `feature/`.** El flujo que publica el portal corre con cada
-  push a `main` y a `feature/entrega-*`. Una rama de trabajo con ese prefijo publicaría
-  documentación que todavía no se integró. Los controles no lo necesitan: corren al abrir el
-  pull request.
+- **Las ramas cortas no empiezan con `feature/` ni con `final-project-`.** El flujo que publica el
+  portal corre con cada push a `main`, a `feature/entrega-*` y a `final-project-*`. Una rama de
+  trabajo con esos prefijos publicaría documentación que todavía no se integró. Los controles no
+  lo necesitan: corren al abrir el pull request.
 - **En un pull request contra otro repositorio, GitHub ejecuta los workflows del repositorio
   base**, no los de este. Por eso los pull requests de trabajo se abren dentro del fork, contra
   la rama de la entrega.

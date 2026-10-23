@@ -11,7 +11,7 @@ on:
   # defecto de este fork, o el despliegue se rechaza aunque el workflow corra
   # entero.
   push:
-    branches: [main, 'feature/entrega-*']
+    branches: [main, 'feature/entrega-*', 'final-project-*']
     paths:
       - 'docs/**'
       - 'site/**'

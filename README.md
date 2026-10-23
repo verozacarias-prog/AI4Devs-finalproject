@@ -80,15 +80,15 @@ Todo está descrito en el [flujo de trabajo con IA](docs/flujo-de-trabajo-con-ia
 Los pasos para incluir un cambio, en orden. El detalle de cada uno está en el documento enlazado.
 En el backend se trabaja con tests primero ([ADR 0024](docs/adr/0024-tests-primero-en-el-backend.md)).
 
-**Ramas.** Cada entrega tiene su rama, `feature/entrega-N-VNZ`, que sale de `main` y vuelve a
-`main` cuando la entrega se cierra. El trabajo no se hace ahí: cada cambio va en una rama corta
-que sale de la rama de la entrega y vuelve a ella por pull request. La rama de la entrega
-despliega el entorno de pruebas, y `main`, producción. El porqué está en
+**Ramas.** Cada entrega tiene su rama (`feature/entrega-N-VNZ`; la final, `final-project-VNZ`),
+que sale de `main` y vuelve a `main` cuando la entrega se cierra. El trabajo no se hace ahí: cada
+cambio va en una rama corta que sale de la rama de la entrega y vuelve a ella por pull request. La
+rama de la entrega despliega el entorno de pruebas, y `main`, producción. El porqué está en
 [documentación viva](docs/documentacion-viva.md#7-el-modelo-de-ramas).
 
 | Rama | Sale de | Nombre | Ejemplo |
 |---|---|---|---|
-| De entrega | `main` | `feature/entrega-<N>-VNZ` | `feature/entrega-2-VNZ` |
+| De entrega | `main` | `feature/entrega-<N>-VNZ`, y `final-project-VNZ` para la final | `final-project-VNZ` |
 | De un corte de una historia | La rama de la entrega | `hu<N>-c<corte>-<tema>` | `hu3-c1-registro-de-gasto` |
 | De lo que no es una historia | La rama de la entrega | `tarea-<tema>` | `tarea-scaffold-y-docker` |
 
@@ -136,9 +136,9 @@ cd site && npm install                # solo para ver o regenerar el portal
 
 **Para abrir y cerrar una entrega.**
 
-- **Abrir:** crear `feature/entrega-<N>-VNZ` desde `main`; ponerla como rama por defecto del
-  repositorio, porque de ahí se publica el portal y ahí abre Dependabot sus pull requests; y
-  protegerla, con los controles como obligatorios.
+- **Abrir:** crear `feature/entrega-<N>-VNZ`, o `final-project-VNZ` para la final, desde `main`;
+  ponerla como rama por defecto del repositorio, porque de ahí se publica el portal y ahí abre
+  Dependabot sus pull requests; y protegerla, con los controles como obligatorios.
 - **Cerrar:** correr `/security-audit` y `/spec-drift` sobre todo el proyecto, registrar los
   prompts en [`prompts.md`](prompts.md) y abrir el pull request de la rama de la entrega a
   `main`.
