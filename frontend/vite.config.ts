@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 import { API_ROUTES } from './src/api/routes.ts'
 import { DASHBOARD_BASE, DEV_API_ORIGIN } from './src/constants.ts'
 
@@ -19,5 +19,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     restoreMocks: true,
+    // The end-to-end test runs with Playwright, against the whole application.
+    exclude: [...configDefaults.exclude, 'e2e/**'],
   },
 })
