@@ -1,10 +1,15 @@
 # Platita
 
-Asistente financiero personal y familiar que funciona por WhatsApp: el usuario registra gastos, ingresos y presupuestos conversando en lenguaje natural, y una capa de IA interpreta, categoriza y guarda cada movimiento en la cuenta correspondiente.
-Más adelante, un módulo complementario leerá los emails de notificación bancaria y de servicios para reducir la carga manual; no forma parte del MVP.
-Toda la información —cuentas y su saldo, presupuestos multimoneda y consejos financieros generados con RAG— se visualiza desde una aplicación web con dashboards, y la comparación contra la inflación queda prevista para una versión futura.
+Quien maneja varias cuentas y billeteras, en pesos y en dólares, y comparte un presupuesto con su
+familia, hoy lo ordena a mano en planillas. Platita es un asistente financiero al que se le
+escribe en lenguaje natural —"gasté 3500 en el súper con Mercado Pago"—: una capa de IA
+interpreta el mensaje, pregunta lo que falta y registra el movimiento en su cuenta y su
+presupuesto, que se consultan en un dashboard web. Está pensado para WhatsApp; en el MVP se usa
+desde el chat del dashboard, que recorre el mismo camino.
 
-**Estado:** Entrega 2 — el registro de gastos e ingresos conversando en el chat web, con el modelo de lenguaje, y la pantalla de cuentas con su saldo. Fecha límite de entrega: 22 de octubre de 2026.
+**Estado:** entrega final en curso, para el 12 de noviembre de 2026. El avance está en el
+[tablero](https://github.com/users/verozacarias-prog/projects/1) y en el milestone
+[Entrega final](https://github.com/verozacarias-prog/AI4Devs-finalproject/milestones).
 
 ---
 
@@ -34,6 +39,21 @@ https://github.com/verozacarias-prog/AI4Devs-finalproject
 
 ---
 
+## Cómo se trabajó con IA
+
+Todo el proyecto, de la idea al código, se hizo con asistentes de IA, y su configuración está
+versionada en el repositorio. El código se escribe con especificación y tests primero: la IA
+propone los casos de prueba de cada corte, la autora los aprueba antes de que exista un test, y
+cada pull request lo revisa un agente en un contexto separado antes de que la autora lo pruebe e
+integre. La IA no escribe un test sin casos aprobados, y nunca integra.
+
+- [`prompts.md`](prompts.md): la metodología en un diagrama, las herramientas y modelos por fase,
+  los prompts clave de cada sección y los ajustes humanos sobre el output de la IA.
+- [Flujo de trabajo con IA](docs/flujo-de-trabajo-con-ia.md): el contrato `AGENTS.md`, el agente
+  revisor, los commands, el skill, los verificadores y el hook de pre-commit.
+- [Registro completo](docs/registro-ia.md) y la
+  [conversación de la reestructuración](docs/conversacion-reestructuracion-docs.md), como anexos.
+
 ## Documentación
 
 | Documento | Contiene |
@@ -44,7 +64,7 @@ https://github.com/verozacarias-prog/AI4Devs-finalproject
 | [4. Especificación de la API](docs/04-api.md) | Los endpoints principales con sus contratos de request y response. |
 | [5. Historias de usuario](docs/05-historias-de-usuario.md) | Las siete historias con sus criterios de aceptación, prioridad y estimación. |
 | [6. Tickets de trabajo](docs/06-tickets.md) | Los tres tickets de backend, frontend y base de datos. |
-| [7. Pull requests](docs/07-pull-requests.md) | Los pull requests de la entrega 2, con los tres cortes de FEAT-003, y la Definition of Done. |
+| [7. Pull requests](docs/07-pull-requests.md) | Los pull requests de cada entrega y la Definition of Done. |
 | [8. Convenciones de documentación](docs/08-convenciones-de-documentacion.md) | Idioma, diagramas, nombres de archivo y estructura de `docs/`. |
 | [Recorrido completo](docs/recorrido-completo.md) | El recorrido del usuario de punta a punta: qué proceso actúa, si la llamada es HTTPS o SQL y qué tablas escribe cada paso. |
 | [Reglas de dominio](docs/reglas-de-dominio.md) | Dueño único de las reglas de negocio, agrupadas por tema. |
@@ -55,193 +75,64 @@ https://github.com/verozacarias-prog/AI4Devs-finalproject
 | [Operación](docs/operacion.md) | Entornos, pipeline, despliegue, copias de respaldo y observabilidad, con lo decidido separado de lo que sigue como propuesta. |
 | [Seguridad de la capa de IA](docs/seguridad-llm.md) | Platita contra el OWASP Top 10 para aplicaciones LLM: qué cubre cada riesgo y qué falta. |
 | [Flujo de trabajo con IA](docs/flujo-de-trabajo-con-ia.md) | Contratos, skill, commands, agente revisor, verificadores y hooks. |
+| [Cómo colaborar](docs/como-colaborar.md) | Ramas, issues, los pasos para incluir un cambio y cómo se verifica. |
 | [Documentación viva](docs/documentacion-viva.md) | Cómo se mantiene sincronizada la documentación: fuente única, portal, `llms.txt` y las tres barreras de validación. |
 
-La documentación también se publica como sitio navegable en
-**<https://verozacarias-prog.github.io/AI4Devs-finalproject/>**, generado desde `docs/` en cada
-integración a la rama de la entrega en curso y a `main`.
-
-Las decisiones de arquitectura, una por archivo y en formato Michael Nygard, viven en [`docs/adr/`](docs/adr/).
-
-Las plantillas que se copian al abrir una funcionalidad nueva están en [`docs/features/`](docs/features/).
-
-El registro de uso de IA durante el proyecto está en [`prompts.md`](prompts.md), con la [conversación completa de la reestructuración](docs/conversacion-reestructuracion-docs.md) como anexo.
-
----
-
-## Flujo de trabajo con IA
-
-El proyecto se desarrolla con asistentes de IA y la configuración está versionada en el
-repositorio: un skill, tres commands, un agente revisor, tres verificadores y un hook de pre-commit.
-Todo está descrito en el [flujo de trabajo con IA](docs/flujo-de-trabajo-con-ia.md).
-
-## Cómo colaborar
-
-Los pasos para incluir un cambio, en orden. El detalle de cada uno está en el documento enlazado.
-En el backend se trabaja con tests primero ([ADR 0024](docs/adr/0024-tests-primero-en-el-backend.md)).
-
-**Ramas.** Cada entrega tiene su rama (`feature/entrega-N-VNZ`; la final, `final-project-VNZ`),
-que sale de `main` y vuelve a `main` cuando la entrega se cierra. El trabajo no se hace ahí: cada
-cambio va en una rama corta que sale de la rama de la entrega y vuelve a ella por pull request. La
-rama de la entrega despliega el entorno de pruebas, y `main`, producción. El porqué está en
-[documentación viva](docs/documentacion-viva.md#7-el-modelo-de-ramas).
-
-| Rama | Sale de | Nombre | Ejemplo |
-|---|---|---|---|
-| De entrega | `main` | `feature/entrega-<N>-VNZ`, y `final-project-VNZ` para la final | `final-project-VNZ` |
-| De un corte de una historia | La rama de la entrega | `hu<N>-c<corte>-<tema>` | `hu3-c1-registro-de-gasto` |
-| De lo que no es una historia | La rama de la entrega | `tarea-<tema>` | `tarea-scaffold-y-docker` |
-
-**Una vez por clon.**
-
-```sh
-git config core.hooksPath .githooks   # activa el hook de pre-commit
-cd site && npm install                # solo para ver o regenerar el portal
-```
-
-**Para incluir un cambio.**
-
-1. **Crear la rama** desde la rama de la entrega, con el nombre de la tabla. Una historia son
-   tres ramas, una por [corte vertical](docs/convenciones-de-desarrollo.md#1-cortes-verticales).
-2. **Leer antes de escribir.** [`AGENTS.md`](AGENTS.md) es el contrato, y su sección 12 dice qué
-   leer según el cambio. Si toca movimientos, cuentas, presupuestos o categorías, el skill
-   `domain-rules` se activa solo y dice qué reglas aplican.
-3. **Especificar.** Copiar [`docs/features/TEMPLATE/`](docs/features/TEMPLATE/) a
-   `docs/features/FEAT-XXX/` y completar `spec.md`, con los criterios de aceptación numerados y,
-   después, los casos de prueba de cada corte, y `ui_contract.md` si hay pantalla.
-4. **Aprobar los casos de prueba** del corte en `spec.md`. El asistente los propone; sin la
-   aprobación de una persona no se escribe ningún test. En una rama `tarea-…` no hay carpeta:
-   los casos aprobados van en la descripción del pull request.
-5. **Escribir los tests del backend y verlos fallar.** Es el primer commit del corte,
-   `test(alcance): …`. Desde ahí, un test no se modifica ni se borra sin aprobación.
-6. **Implementar lo mínimo para que pasen,** y refactorizar en verde. Es el segundo commit,
-   `feat(alcance): …`. Los tests de los estados de una pantalla van en este mismo corte.
-   La documentación que el cambio afecta —API, modelo de datos, reglas de dominio— entra en el
-   mismo pull request, en sus propios commits `docs(alcance): …`, y una decisión de
-   arquitectura lleva su [ADR](docs/adr/).
-7. **Verificar antes de cada commit.** El hook corre solo los tres verificadores de
-   [Verificación](#verificación). Si cambió `docs/`, además `cd site && npm run build`, que
-   regenera `llms.txt`. Un documento nuevo se suma a la tabla de arriba y a la barra lateral de
-   `site/astro.config.mjs`.
-8. **Escribir cada commit** con el [formato de mensaje](docs/convenciones-de-desarrollo.md#1-cortes-verticales)
-   `tipo(alcance): qué cambia`, en español.
-9. **Cerrar el corte** con `/spec-drift`, y con `/ui-states` si tiene pantalla.
-10. **Abrir el pull request contra la rama de la entrega,** con el corte en verde y una
-   descripción armada desde la plantilla [`pr.md`](docs/features/TEMPLATE/pr.md), con el
-   [Definition of Done](docs/07-pull-requests.md#definition-of-done).
-   Correr el agente `pr-reviewer` y pegar su informe.
-11. **Integrar** cuando todos los controles pasan, con un commit de merge y sin aplastar los
-    commits, para que se vea que los tests fueron primero. La aprobación y el merge son de una
-    persona; un asistente hace commit solo si se lo piden, y nunca hace merge.
-
-**Para abrir y cerrar una entrega.**
-
-- **Abrir:** crear `feature/entrega-<N>-VNZ`, o `final-project-VNZ` para la final, desde `main`;
-  ponerla como rama por defecto del repositorio, porque de ahí se publica el portal y ahí abre
-  Dependabot sus pull requests; y protegerla, con los controles como obligatorios.
-- **Cerrar:** correr `/security-audit` y `/spec-drift` sobre todo el proyecto, registrar los
-  prompts en [`prompts.md`](prompts.md) y abrir el pull request de la rama de la entrega a
-  `main`.
-- **Cada lunes:** revisar los pull requests de Dependabot.
-
-Los commands, el skill y el agente están descritos en el
-[flujo de trabajo con IA](docs/flujo-de-trabajo-con-ia.md).
-
-## Verificación
-
-```sh
-git config core.hooksPath .githooks       # una vez por clon
-python3 scripts/verify_docs.py            # enlaces, anclas, duplicación, Mermaid
-python3 scripts/verify_architecture.py    # regla hexagonal, acceso a la base y aislamiento del frontend
-python3 scripts/verify_api_contract.py    # la referencia de la API, completa y fiel a 04-api.md
-```
-
-El hook de pre-commit los corre solo, y GitHub Actions los repite en cada pull request junto con
-el formato del Markdown, los enlaces externos y la construcción del portal. El sistema completo
-está en [documentación viva](docs/documentacion-viva.md).
+La documentación se publica también como sitio navegable en
+**<https://verozacarias-prog.github.io/AI4Devs-finalproject/>**. Las decisiones de arquitectura
+están en [`docs/adr/`](docs/adr/), y las plantillas de una funcionalidad nueva, en
+[`docs/features/`](docs/features/).
 
 ## Cómo ejecutar localmente
 
-Hace falta Docker. Levanta cuatro servicios: la base, las migraciones, la API, que sirve también
-el dashboard, y el worker, que responde los mensajes del chat con el modelo de lenguaje.
-
-El worker necesita la clave del proveedor, en `OPENAI_API_KEY`: en `.env`, o exportada en la
-terminal, de donde Compose la toma. Sin ella, el worker no arranca y dice qué variable falta.
+Hace falta Docker y una clave de OpenAI en `OPENAI_API_KEY`, en `.env` o exportada en la
+terminal. Compose levanta la base, las migraciones, la API, que sirve también el dashboard, y el
+worker, que responde los mensajes del chat con el modelo.
 
 ```sh
 cp .env.example .env
 docker compose up --build
-```
-
-Qué queda levantado:
-
-| Dirección | Qué es |
-|---|---|
-| <http://127.0.0.1:8000/app/> | El dashboard. Muestra si llega a la API y la API a la base |
-| <http://127.0.0.1:8000/docs> | La referencia de la API en Swagger, generada desde el código: las rutas que existen hoy. Desde ahí se prueban las de lectura; las que modifican algo se prueban desde el dashboard, porque exigen venir de su página y como JSON |
-| `127.0.0.1:5433` | PostgreSQL, con el usuario, la clave y la base de `.env` |
-
-En los registros, cada línea empieza con el nombre de su contenedor:
-`platita-api-and-dashboard`, `platita-worker`, `platita-database` o `platita-migrations`.
-
-Si ya tenías un `.env` de antes, comparalo con `.env.example`: una variable nueva no llega
-sola. La que enciende la entrada de desarrollo es `DEV_ENTRY_ENABLED=true`, y la que enciende
-el chat web, `WEB_CHAT_ENABLED=true`.
-
-Para tener con qué probar, el script de datos de prueba crea tres usuarios inventados, con sus
-cuentas, su primer período y un grupo. Se puede correr las veces que haga falta, y solo corre
-en el entorno `local`:
-
-```sh
+# en otra terminal: tres usuarios inventados, con sus cuentas y su primer período
 docker compose exec api python -m app.adapters.inbound.operator_commands.seed_test_data
 ```
 
-Qué trae cada usuario está en [operación](docs/operacion.md#2-entornos).
+| Dirección | Qué es |
+|---|---|
+| <http://127.0.0.1:8000/app/> | El dashboard, con la entrada de desarrollo: se elige un usuario de prueba y se abre una sesión real, sin código. Mejor en Chrome o Firefox, que aceptan la cookie `Secure` sin HTTPS en la propia máquina |
+| <http://127.0.0.1:8000/docs> | La referencia de la API en Swagger, generada desde el código |
+| `127.0.0.1:5433` | PostgreSQL, con el usuario, la clave y la base de `.env` |
 
-Con esos usuarios creados, el dashboard muestra la entrada de desarrollo: se elige uno y se
-abre una sesión real, sin código. Conviene abrirlo en Chrome o Firefox: la cookie de la sesión es
-`Secure`, y esos navegadores la aceptan sin HTTPS en la propia máquina.
+Qué trae cada usuario de prueba está en [operación](docs/operacion.md#2-entornos).
 
 ### Probar el flujo
 
-1. Crear los datos de prueba, con el comando de arriba.
-2. Abrir <http://127.0.0.1:8000/app/>, elegir a Lucía en la entrada de desarrollo e ir al chat.
-3. Escribir un gasto que nombre la cuenta, como "gasté 3500 en el súper con Mercado Pago". El
+1. Abrir <http://127.0.0.1:8000/app/>, elegir a Lucía en la entrada de desarrollo e ir al chat.
+2. Escribir un gasto que nombre la cuenta, como "gasté 3500 en el súper con Mercado Pago". El
    asistente confirma qué anotó, con la fecha, la moneda, la categoría y el presupuesto.
-4. Ir a Cuentas: Mercado Pago muestra $3.500 menos.
-5. Probar lo que exige preguntar: un gasto sin cuenta ("gasté 3500 en el súper"), y responder
+3. Ir a Cuentas: Mercado Pago muestra $3.500 menos.
+4. Probar lo que exige preguntar: un gasto sin cuenta ("gasté 3500 en el súper"), y responder
    la pregunta con "con MP"; o uno que no encaja en ninguna categoría ("gasté 9000 en la
    peluquería con MP"), y aceptar la que propone con "sí".
 
-Los límites de uso por día son 100 mensajes clasificados y 50 registros. Para ver qué pasa al
-superarlos sin escribir tanto, se bajan al levantar:
+Los límites de uso por día son 100 mensajes clasificados y 50 registros, y se bajan al levantar
+para verlos actuar. Cada llamada al modelo queda en la tabla `llm_call`, sin ningún contenido, y
+sus métricas de latencia, costo, calidad y alucinaciones salen de un script:
 
 ```sh
 LLM_DAILY_REGISTRATION_LIMIT=2 LLM_DAILY_CLASSIFICATION_LIMIT=5 docker compose up --build
-```
-
-Cada llamada al modelo queda en la tabla `llm_call`, sin ningún contenido. Las métricas de
-latencia, costo, calidad y alucinaciones salen de un script:
-
-```sh
 docker compose exec -T db psql -U platita -d platita < scripts/llm_metrics.sql
 ```
 
 ### Tests
 
-Para correr los tests del backend, con la base de Compose levantada:
+Los del backend, con la base de Compose levantada, y los del dashboard:
 
 ```sh
-cd backend
-python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
-.venv/bin/pytest
+(cd backend && python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt && .venv/bin/pytest)
+(cd frontend && npm ci && npm test)
 ```
 
-Para trabajar en el dashboard con recarga automática, con Compose levantado:
+## Cómo colaborar
 
-```sh
-cd frontend
-npm ci
-npm run dev                               # http://127.0.0.1:5173/app/
-npm test
-```
+Las ramas, las issues, los pasos para incluir un cambio y los verificadores están en
+[cómo colaborar](docs/como-colaborar.md).

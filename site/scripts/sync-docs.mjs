@@ -18,7 +18,7 @@
 
 import { statSync } from 'node:fs';
 import { copyFile, readdir, readFile, writeFile, mkdir, rm } from 'node:fs/promises';
-import { dirname, join, relative, sep } from 'node:path';
+import { basename, dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SITE = dirname(fileURLToPath(new URL('.', import.meta.url)));
@@ -40,7 +40,8 @@ const IMAGE_EXTENSION = /\.(png|jpe?g|gif|webp)$/i;
 
 // Registros: citan texto ajeno por definición. Mismo criterio que is_record()
 // en scripts/verify_docs.py.
-const isRecord = (name) => name === 'prompts.md' || name.startsWith('conversacion-');
+const isRecord = (name) =>
+  name === 'prompts.md' || name === 'registro-ia.md' || name.startsWith('conversacion-');
 
 async function markdownFiles(dir) {
   const out = [];
@@ -95,7 +96,8 @@ function rewriteLinks(body, fileDir) {
     const inside = relative(SOURCE, absolute);
     const fragment = hash ? '#' + hash : '';
 
-    if (path.endsWith('.md') && !inside.startsWith('..')) {
+    // Un registro no se publica: su enlace va a GitHub, como lo que está fuera de docs/.
+    if (path.endsWith('.md') && !inside.startsWith('..') && !isRecord(basename(path))) {
       return `](${BASE}/${slugOf(inside)}/${fragment})`;
     }
     const fromRoot = relative(ROOT, absolute).split(sep).join('/');

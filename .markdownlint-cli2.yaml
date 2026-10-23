@@ -10,6 +10,7 @@ globs:
 # Es el mismo criterio que is_record() en scripts/verify_docs.py.
 ignores:
   - "prompts.md"
+  - "docs/registro-ia.md"
   - "docs/conversacion-*.md"
   - "docs/use-case-walkthrough.md"
   - "node_modules"

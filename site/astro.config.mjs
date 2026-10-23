@@ -47,6 +47,7 @@ export default defineConfig({
             { label: 'Reglas de dominio', slug: 'reglas-de-dominio' },
             { label: 'Convenciones de desarrollo', slug: 'convenciones-de-desarrollo' },
             { label: 'Flujo de trabajo con IA', slug: 'flujo-de-trabajo-con-ia' },
+            { label: 'Cómo colaborar', slug: 'como-colaborar' },
             { label: 'Documentación viva', slug: 'documentacion-viva' },
             { label: 'Hoja de ruta', slug: 'hoja-de-ruta' },
             { label: 'Operación', slug: 'operacion' },

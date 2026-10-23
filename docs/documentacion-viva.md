@@ -122,7 +122,7 @@ main
   La rama se llama `hu<N>-c<corte>-<tema>`. Lo que no resuelve una historia, como el scaffold o
   un arreglo, va en una rama `tarea-<tema>`.
 
-Los pasos, uno por uno, están en el [README](../README.md#cómo-colaborar). Tres detalles de
+Los pasos, uno por uno, están en [cómo colaborar](como-colaborar.md). Tres detalles de
 GitHub condicionan el modelo y no son evidentes:
 
 - **Las ramas cortas no empiezan con `feature/` ni con `final-project-`.** El flujo que publica el

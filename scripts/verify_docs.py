@@ -155,10 +155,12 @@ def check_orphans():
 
 # --- 3. ningún contenido repetido entre archivos --------------------------------
 def is_record(path):
-    """Registros que citan texto de otros archivos por definición: prompts, transcripciones y
-    la validación por casos de uso, que cita la especificación para evaluarla."""
+    """Registros que citan texto de otros archivos por definición: prompts, el registro completo
+    del uso de IA, transcripciones y la validación por casos de uso, que cita la especificación
+    para evaluarla."""
     base = os.path.basename(path)
-    return base in ('prompts.md', 'use-case-walkthrough.md') or base.startswith('conversacion-')
+    return (base in ('prompts.md', 'registro-ia.md', 'use-case-walkthrough.md')
+            or base.startswith('conversacion-'))
 
 
 def check_duplicates(files):

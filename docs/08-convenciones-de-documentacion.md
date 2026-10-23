@@ -129,6 +129,7 @@ duplicado.
 ## 8.8. Qué tiene autoridad
 
 Los archivos de `docs/` son la especificación del proyecto, salvo los registros:
+[el registro completo del uso de IA](registro-ia.md),
 [la conversación de la reestructuración](conversacion-reestructuracion-docs.md) y
 [la validación por casos de uso](use-case-walkthrough.md), que describen la especificación en un
 momento dado y no la reemplazan. En [operación](operacion.md) conviven una parte decidida y
