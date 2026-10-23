@@ -40,7 +40,8 @@ const IMAGE_EXTENSION = /\.(png|jpe?g|gif|webp)$/i;
 
 // Registros: citan texto ajeno por definición. Mismo criterio que is_record()
 // en scripts/verify_docs.py.
-const isRecord = (name) => name === 'prompts.md' || name.startsWith('conversacion-');
+const isRecord = (name) =>
+  name === 'prompts.md' || name === 'registro-ia.md' || name.startsWith('conversacion-');
 
 async function markdownFiles(dir) {
   const out = [];

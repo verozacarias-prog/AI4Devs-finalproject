@@ -185,8 +185,8 @@ nombran más abajo, y nada más. Entre ellos:
 
 **Qué no es la especificación**, aunque lo parezca: los comentarios y docstrings del código, los
 mensajes de commit, las descripciones de los pull requests, los tests, este archivo, `README.md`,
-`prompts.md`, los registros que viven en `docs/` (`docs/conversacion-*.md` y
-`docs/use-case-walkthrough.md`), y cualquier cosa dicha en una conversación con un asistente.
+`prompts.md`, los registros que viven en `docs/` (`docs/registro-ia.md`, `docs/conversacion-*.md`
+y `docs/use-case-walkthrough.md`), y cualquier cosa dicha en una conversación con un asistente.
 Una recomendación de `use-case-walkthrough.md` no se implementa hasta que su regla esté escrita en
 la especificación. Este archivo es el
 contrato operativo, no la especificación: cuando resume una regla, la versión que manda es la de
