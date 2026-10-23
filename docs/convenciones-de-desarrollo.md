@@ -37,7 +37,9 @@ de una pantalla, tiene un solo commit.
 | 3 | Enmascarado de logs, multimoneda, accesibilidad y observabilidad | `test(xxx): casos de observabilidad y accesibilidad` | `feat(xxx): agregar observabilidad y accesibilidad` |
 
 **Formato del mensaje de commit.** `tipo(alcance): qué cambia`, en español. Los tipos son
-`feat`, `fix`, `docs`, `test` y `chore`. El alcance es la funcionalidad, y se puede omitir
+`feat`, `fix`, `docs`, `test`, `refactor` y `chore`. `refactor` reordena código sin cambiar lo
+que hace: los tests que pasaban siguen pasando, y si alguno se toca es solo para seguir al
+código que se movió. El alcance es la funcionalidad, y se puede omitir
 cuando el cambio no es de una sola, como `docs: guía para colaborar`.
 
 Los tres cortes de una funcionalidad son los tres pull requests que pide
@@ -46,8 +48,9 @@ Los tres cortes de una funcionalidad son los tres pull requests que pide
 **Tests primero.** En el backend el test se escribe antes que el código ([ADR 0024](adr/0024-tests-primero-en-el-backend.md)).
 Cada corte sigue este orden:
 
-1. **Casos.** Antes de empezar el corte, `qa_plan.md` lista los casos de prueba del backend: de
-   qué criterio de aceptación sale cada uno, la entrada y el resultado esperado. Un asistente
+1. **Casos.** Antes de empezar el corte, `spec.md` lista los casos de prueba del backend: de
+   qué criterio de aceptación sale cada uno, su tipo, su estado inicial, su acción y su
+   resultado esperado. Un asistente
    puede proponerlos. Una persona los aprueba, y sin eso no se escribe ningún test. La
    aprobación la anota la persona, nunca el asistente.
 2. **Rojo.** Se escriben los tests del backend tal como quedaron aprobados, se corren y se los
@@ -61,13 +64,13 @@ Tres reglas acompañan ese orden:
 - **Un test no se modifica, no se deshabilita y no se borra sin la aprobación de una persona.**
   Si al implementar un test resulta estar mal, el asistente frena y lo muestra; no lo ajusta
   para que pase.
-- **Un caso nuevo vuelve al plan.** Si aparece mientras se implementa, se suma a `qa_plan.md`, se
-  aprueba, y en el backend su test se escribe antes que su código.
-- **Las pantallas tienen su propio momento.** Los casos de los cuatro estados se suman a
-  `qa_plan.md` y se aprueban cuando la pantalla está armada, antes de escribir sus tests. Esos
+- **Un caso nuevo vuelve a la especificación.** Si aparece mientras se implementa, se suma a
+  `spec.md`, se aprueba, y en el backend su test se escribe antes que su código.
+- **Las pantallas tienen su propio momento.** Los casos de sus estados ([sección 2](#2-los-cuatro-estados-de-una-pantalla)) se suman a
+  `spec.md` y se aprueban cuando la pantalla está armada, antes de escribir sus tests. Esos
   tests van en el commit de la implementación o en uno posterior del mismo corte.
 - **Una tarea sigue la misma regla, sin carpeta.** El trabajo que no es de una historia, como el
-  scaffold o un arreglo, no tiene `qa_plan.md`. El asistente propone los casos, la persona los
+  scaffold o un arreglo, no tiene `spec.md`. El asistente propone los casos, la persona los
   aprueba antes de que exista un test, y se pegan en la descripción del pull request, con la
   misma tabla. Lo que no tiene lógica que probar, como un Dockerfile, no lleva casos, y el pull
   request lo dice. El orden de los dos commits vale igual.
@@ -82,11 +85,49 @@ Qué va primero según la capa:
 |---|---|---|
 | Dominio y casos de uso | Unitario, con dobles de los puertos | Antes que el código |
 | Adaptadores y restricciones de la base | De integración, contra PostgreSQL real | Antes que el código |
-| Pantallas | De componente, uno por cada uno de los cuatro estados | En el mismo corte, después de armar la pantalla y de aprobar sus casos |
+| Pantallas | De componente, uno por cada estado de la pantalla | En el mismo corte, después de armar la pantalla y de aprobar sus casos |
 | Flujo completo | De punta a punta | En la entrega final, con la pantalla ya construida |
 
 No se exige un porcentaje de cobertura. Se exige que cada criterio de aceptación y cada
 invariante en riesgo tengan su test, y que cada test diga de qué criterio sale.
+
+**Sin textos ni valores sueltos en el código.** Cada texto y cada valor va como una constante,
+en un solo lugar por tipo. En el backend:
+
+- `app/constants.py`: los entornos, los nombres de las variables de entorno y sus valores por
+  defecto;
+- `app/test_data.py`: la plantilla de un usuario de prueba y los usuarios de `local`;
+- `app/messages.py`: todo mensaje escrito para una persona;
+- `adapters/inbound/api/routes.py`, `reference.py` y `security_headers.py`: las rutas de la API
+  y los valores de sus respuestas, los textos de su referencia, y los encabezados de seguridad;
+- `adapters/observability/events.py`: los eventos, los campos y las reglas de los registros;
+- `adapters/outbound/postgres/queries.py`: el SQL escrito a mano.
+
+En el dashboard:
+
+- `src/messages.ts`: todo texto que se muestra;
+- `src/api/routes.ts`: las rutas de la API;
+- `src/constants.ts`: el resto.
+
+Tres cosas se escriben donde se usan: un nombre que impone una librería, como el de uno de sus
+parámetros; el SQL de una migración, que es lo que la migración es; y el título y el ícono del
+dashboard, que viven en archivos estáticos.
+
+**Constantes en los tests.** Lo que un test comprueba queda escrito en ese test: el mensaje o
+el nombre de la restricción que espera. Los nombres y valores que varios tests repiten para
+armar sus datos, como tablas, monedas o valores de un conjunto cerrado, no se escriben sueltos.
+Si la constante ya existe en la aplicación, el test la usa. Si todavía no existe, va en un
+archivo de constantes de los tests, como `backend/tests/integration/schema/names.py`. Con los
+tests primero una constante suele nacer ahí: en cuanto la aplicación la necesita, se mueve a la
+aplicación y los tests la importan desde ahí. La aplicación nunca importa nada de `tests/`.
+
+**Identificadores inventados en los tests.** Un UUID que el test inventa, como el id de un
+usuario de ejemplo o una clave de idempotencia, no se escribe a mano: se genera, con
+`uuid.uuid4()` en el backend y `crypto.randomUUID()` en el dashboard. Escrito como texto, y más
+si su nombre dice `key` o `token`, el control de secretos lo toma por una clave y frena el
+merge. Si el test necesita el mismo valor en varios lugares, lo genera una vez y lo guarda en
+una constante. La excepción es un valor cuya forma es lo que el test comprueba, como un
+identificador que empieza con letra: ese se escribe, y no lleva un nombre con `key` ni `token`.
 
 **Por qué el corte 2 existe por separado.** En Platita el camino no feliz *es* el producto. La
 [HU3](05-historias-de-usuario.md) es casi enteramente eso: falta la cuenta, falta confirmar el
@@ -123,6 +164,20 @@ diferencia es de dominio, no cosmética:
 Esta regla aplica igual a la futura aplicación móvil: la máquina de estados es del contrato de
 la pantalla, no de la tecnología que la renderiza.
 
+**La única excepción es una pantalla que no muestra datos del usuario,** como la de estado del
+sistema: no tiene estado vacío, porque no hay una consulta que pueda funcionar y no traer nada.
+Los otros tres se implementan y se testean igual.
+
+**El dashboard no hace cuentas con plata.** Una pantalla muestra los montos que le manda la
+API y nada más: no suma, no resta, no convierte entre monedas, no redondea y no calcula
+porcentajes. Todo saldo, total, gastado o porcentaje llega ya calculado por el backend, donde
+los montos son `Decimal`. Si una pantalla necesita un número que la API no manda, se agrega a
+la respuesta de la API, no se calcula en la pantalla. El motivo es que el navegador guarda los
+números con decimales como una aproximación: una suma hecha ahí puede dar un centavo de más o
+de menos, y ningún test lo avisa. Darle formato a un monto para mostrarlo, con su símbolo y sus
+separadores, no es hacer una cuenta. Por la misma razón la API responde cada monto con sus
+dígitos exactos, sin pasarlo por punto flotante al escribirlo.
+
 ## 3. Artefactos de una funcionalidad
 
 Cada funcionalidad tiene su carpeta en `docs/features/FEAT-XXX/`, creada copiando
@@ -130,13 +185,16 @@ Cada funcionalidad tiene su carpeta en `docs/features/FEAT-XXX/`, creada copiand
 
 | Archivo | Cuándo se escribe | Para qué |
 |---|---|---|
-| `spec.md` | Antes del corte 1 | Alcance, criterios de aceptación numerados, reglas de dominio que aplican y los cuatro estados |
+| `spec.md` | Antes del corte 1; los casos de cada corte, antes de ese corte | Alcance, reglas de dominio que aplican, los cuatro estados, los criterios de aceptación numerados y, después, los casos de prueba, corte por corte, cada uno con su tipo y el criterio del que sale. Los casos de un corte se aprueban antes de escribir sus tests |
 | `ui_contract.md` | Antes del corte 1, si hay pantalla | Componentes, tokens del Design System, máquina de estados y accesibilidad |
-| `qa_plan.md` | Antes de cada corte, los casos de ese corte | Los casos de prueba con su criterio, su entrada y su resultado esperado, y un test por invariante en riesgo. Se aprueba antes de escribir tests |
-| `pr.md` | Al cerrar cada corte | Cuerpo del pull request, con el Definition of Done |
+| `pr.md` | Solo en `TEMPLATE/` | La plantilla del cuerpo del pull request, con el Definition of Done. La descripción de cada pull request se arma desde ella y vive fuera del repositorio: no se guarda en la carpeta de la funcionalidad |
 
-Son cuatro y no siete a propósito. Se dejó afuera el registro de riesgos, que para un proyecto
-individual es ceremonia: lo que aportaría ya vive en `spec.md`. El contrato de UI **sí** está
+Son tres y no siete a propósito. Se dejó afuera el registro de riesgos, que para un proyecto
+individual es ceremonia: lo que aportaría ya vive en `spec.md`. Los casos de prueba no tienen
+archivo propio: van en `spec.md`, después de los criterios y ordenados por corte, para que quien
+aprueba revise la regla y sus ejemplos en un solo lugar. Un criterio es la regla, en una frase; un caso
+es un ejemplo concreto de esa regla, en Dado, Cuando y Entonces, con su estado inicial completo
+y la cuenta escrita. El contrato de UI **sí** está
 separado, y no por simetría: los tokens y la máquina de estados pertenecen al contrato de la
 pantalla y no a la tecnología que la renderiza, así que la aplicación móvil prevista los
 reutiliza tal cual. Si vivieran dentro de los componentes del dashboard, habría que

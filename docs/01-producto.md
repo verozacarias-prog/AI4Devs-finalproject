@@ -10,8 +10,8 @@ Las funcionalidades están clasificadas por prioridad de entrega. El MVP comprom
 
 #### Must-have — el flujo end-to-end comprometido
 
-- **Registro conversacional por WhatsApp**: cargar gastos e ingresos hablándole al asistente en tono coloquial, sin formularios.
-- **Qué se asume y qué se confirma**: el asistente completa solo lo que puede resolver sin adivinar (fecha, moneda y categoría) y exige confirmación del usuario para el monto, el tipo cuando es ambiguo, la cuenta y el presupuesto al que se imputa el gasto. Todo lo asumido queda listado en el mensaje de confirmación. La regla completa, con el detalle campo por campo, está en [reglas de dominio § 1](reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma).
+- **Registro conversacional por WhatsApp**: cargar gastos e ingresos hablándole al asistente en tono coloquial, sin formularios. El asistente contesta en español rioplatense, con voseo y vocabulario local, cálido y corto.
+- **Qué se asume y qué se confirma**: el asistente completa solo lo que puede resolver sin adivinar (fecha, moneda y categoría) y exige confirmación del usuario para el monto, el tipo cuando es ambiguo, la cuenta y, cuando hay más de uno posible, el presupuesto al que se imputa el gasto. Todo lo asumido queda listado en el mensaje de confirmación. La regla completa, con el detalle campo por campo, está en [reglas de dominio § 1](reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma).
 - **Cuentas configurables con saldo calculado**: el usuario da de alta sus cuentas (ej. "Galicia en dólares", "Banco Nación", "Mercado Pago", un broker como Balanz) con su tipo y moneda, y el sistema calcula cuánto hay en cada una a partir del saldo inicial más los movimientos registrados — no es un dato que el usuario tenga que actualizar a mano.
 - **Transferencias entre cuentas propias**: sacar efectivo, pasar plata de un banco a una billetera, comprar dólares o prestarle plata a alguien mueve saldos sin contar como gasto ni ingreso. Un reintegro o una devolución se vincula al gasto que devuelve y resta de su categoría ([reglas de dominio § 16](reglas-de-dominio.md#16-reintegros-devoluciones-y-plata-que-te-deben)). Es parte del saldo calculado: sin transferencias, esos movimientos dejarían mal los saldos. Detalle en [reglas de dominio § 13](reglas-de-dominio.md#13-tarjetas-de-crédito-y-transferencias).
 - **Presupuestos individuales y familiares, con período configurable**: un presupuesto puede pertenecer a una persona o a un grupo, sea una familia o una actividad de la persona, como un consultorio, con cadencia mensual o quincenal y una moneda primaria de referencia. El primero se crea solo al terminar el alta; los siguientes se confirman por WhatsApp o se arman en el dashboard. El período tiene que quedar confirmado antes de que arranque (ver [3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) y [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)), con ingreso estimado y topes por categoría.
@@ -45,7 +45,47 @@ Las funcionalidades están clasificadas por prioridad de entrega. El MVP comprom
 
 ### **1.3. Diseño y experiencia de usuario:**
 
-`Las capturas y el video del flujo se incorporan en la Entrega 2, cuando exista un frontend navegable.` Mientras tanto, el flujo conversacional —que es la experiencia principal del producto y no se entiende bien con capturas sueltas— se documenta como diagrama de secuencia. Este es el caso más representativo: el usuario carga un gasto y le falta un dato obligatorio.
+#### Capturas de la entrega 2
+
+Se tomaron el 19/10/2026 sobre un clon limpio de `feature/entrega-2-VNZ`, levantado con
+`docker compose up --build`, con los usuarios de prueba y el modelo real. En la entrega 2 el
+chat del dashboard reemplaza a WhatsApp, que llega en la entrega final.
+
+El recorrido de Lucía, en un GIF: arranca en Cuentas, con Mercado Pago en $80.000; en el chat
+registra tres gastos conversando y prueba uno en dólares; y vuelve a Cuentas, donde Mercado Pago
+quedó en $64.000.
+
+![Recorrido del chat: tres gastos registrados y el saldo actualizado](capturas/entrega-2/16-recorrido-del-chat.gif)
+
+Cada pantalla, en los estados que se pueden ver a mano:
+
+| Pantalla | Estado | Captura |
+|---|---|---|
+| Entrada de desarrollo | Vacía, sin usuarios de prueba | [01](capturas/entrega-2/01-entrada-vacia-y-estado-conectado.jpg) |
+| Entrada de desarrollo | Error, con la base caída | [02](capturas/entrega-2/02-entrada-y-estado-con-error-sin-base.jpg) |
+| Entrada de desarrollo | Con los usuarios de prueba | [03](capturas/entrega-2/03-entrada-con-usuarios-de-prueba.jpg) |
+| Estado del sistema | Todo conectado | [15](capturas/entrega-2/15-estado-del-sistema-conectado.jpg) |
+| Estado del sistema | Sin conexión con la base | [02](capturas/entrega-2/02-entrada-y-estado-con-error-sin-base.jpg) |
+| Cuentas | Con contenido | [04](capturas/entrega-2/04-cuentas-de-lucia-con-contenido.jpg) |
+| Cuentas | Después de los gastos: Mercado Pago pasa de $80.000 a $64.000 | [11](capturas/entrega-2/11-cuentas-mercado-pago-actualizada.jpg) |
+| Cuentas | Error, con la base caída | [13](capturas/entrega-2/13-cuentas-con-error-sin-base.jpg) |
+| Chat | Vacío | [05](capturas/entrega-2/05-chat-vacio.jpg) |
+| Chat | Platita está procesando | [06](capturas/entrega-2/06-chat-platita-esta-procesando.jpg) |
+| Chat | Un gasto registrado, con lo que asumió | [07](capturas/entrega-2/07-chat-gasto-registrado.jpg) |
+| Chat | Pregunta la cuenta, y "con MP" la completa | [08](capturas/entrega-2/08-chat-pregunta-la-cuenta-y-con-mp.jpg) |
+| Chat | Propone una categoría nueva, y "sí" la crea | [09](capturas/entrega-2/09-chat-categoria-nueva-aceptada.jpg) |
+| Chat | Un gasto en dólares recibe el texto fijo | [10](capturas/entrega-2/10-chat-gasto-en-dolares-texto-fijo.jpg) |
+| Chat | Pablo, con dos presupuestos para la fecha | [14](capturas/entrega-2/14-chat-pablo-dos-presupuestos.jpg) |
+| Chat | Error, con la base caída | [12](capturas/entrega-2/12-chat-con-error-sin-base.jpg) |
+
+Tres estados no tienen captura. Cuentas vacía necesita un usuario sin cuentas, y ninguno de los
+de prueba lo es. El estado de carga de Cuentas y el del chat duran milisegundos. Los tres los
+cubren los tests de cada pantalla: C1-25 y C2-07 de [FEAT-001](features/FEAT-001/spec.md) y
+C1-11 de [FEAT-002](features/FEAT-002/spec.md).
+
+#### El flujo por WhatsApp
+
+El flujo conversacional —que es la experiencia principal del producto y no se entiende bien con capturas sueltas— se documenta como diagrama de secuencia. Este es el caso más representativo: el usuario carga un gasto y le falta un dato obligatorio.
 
 ```mermaid
 sequenceDiagram
@@ -85,4 +125,4 @@ El mismo flujo visto por dentro, con los procesos y las tablas, y el resto del r
 
 ### **1.4. Instrucciones de instalación:**
 
-`Pendiente — se completa en la Entrega 2 con el proyecto ya scaffoldeado (backend FastAPI, frontend, base de datos y migraciones). El esquema previsto: entorno virtual + pip/uv para el backend, variables de entorno para credenciales (API de WhatsApp, LLM, base de datos), migraciones con Alembic, y un script de seed con datos de ejemplo.`
+Hace falta Docker. El [README](../README.md#cómo-ejecutar-localmente) tiene cómo levantar todo con un comando —la base, las migraciones, la API con el dashboard y el worker—, cómo cargar los datos de prueba, cómo probar el flujo y cómo correr los tests.

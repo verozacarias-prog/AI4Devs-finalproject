@@ -1,0 +1,110 @@
+"""The names that appear in a log line, in one place (docs/operacion.md 6.3).
+
+An event name is always one of these constants, never text built at the call site: that is
+what keeps data out of the message of a log record.
+"""
+
+from __future__ import annotations
+
+from enum import StrEnum
+
+# What replaces anything the filter does not let through.
+REDACTED = "[redacted]"
+# The provider and the model of a call whose adapter reported no usage, which only a test double
+# does: the columns of LLM_CALL cannot be empty.
+UNREPORTED_USAGE = "unreported"
+
+# The shape each part of a log line must have to pass the filter.
+EVENT_NAME_PATTERN = r"[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+"
+IDENTIFIER_PATTERN = r"[0-9a-f]{32}|[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}"
+CLASS_NAME_PATTERN = r"[A-Za-z_][A-Za-z0-9_]{0,63}"
+SHORT_WORD_PATTERN = r"[a-z][a-z_]{0,31}"
+# A name of the schema: PostgreSQL allows up to 63 characters.
+CONSTRAINT_PATTERN = r"[a-z][a-z0-9_]{0,62}"
+# A place of the code: module, function and line.
+CODE_PLACE_PATTERN = r"[A-Za-z_][A-Za-z0-9_.]{0,127}:[A-Za-z_<][A-Za-z0-9_<>]{0,63}:[0-9]{1,6}"
+# An endpoint: the method, and the route as the code declares it, with the names of its
+# parameters and never their values. A part of the route starts with a letter, and one that
+# is an identifier does not pass.
+ENDPOINT_PATTERN = (
+    r"(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)( (/([a-z][a-z0-9.-]*|\{[a-z][a-z_]*\}))+)?"
+)
+ROUTE_PART_SEPARATOR = "/"
+MAX_ENDPOINT_LENGTH = 128
+# What separates the method from the route.
+ENDPOINT_SEPARATOR = " "
+# Any field whose name ends like this holds an identifier, and nothing else passes in it.
+IDENTIFIER_FIELD_SUFFIX = "_id"
+MAX_STACK_DEPTH = 30
+MAX_EVENT_LENGTH = 64
+MAX_DURATION_MS = 3_600_000
+MIN_RESULT_CODE = 100
+MAX_RESULT_CODE = 599
+
+HANDLER_NAME = "platita-json"
+
+
+class Event(StrEnum):
+    HTTP_REQUEST = "http.request"
+    # The worker answered a message: one line per message.
+    MESSAGE_ANSWERED = "message.answered"
+    DATABASE_UNREACHABLE = "database.unreachable"
+    # An error the domain foresees, and any other one.
+    ERROR_EXPECTED = "error.expected"
+    ERROR_UNEXPECTED = "error.unexpected"
+    # Security events (docs/operacion.md 6.3).
+    AUTH_SESSION_CREATED = "auth.session_created"
+    # A user went over their daily cap or a quota: the field `quota` says which.
+    USAGE_QUOTA_EXCEEDED = "usage.quota_exceeded"
+    DEV_SCAFFOLD_ENABLED = "dev.scaffold_enabled"
+
+
+class Field(StrEnum):
+    """The only fields a log line may carry. Each one has its rule in logs.FIELD_RULES."""
+
+    MESSAGE_ID = "message_id"
+    REQUEST_ID = "request_id"
+    USER_ID = "user_id"
+    SESSION_ID = "session_id"
+    # How a session was opened: one of SessionMethod.
+    METHOD = "method"
+    DURATION_MS = "duration_ms"
+    RESULT = "result"
+    # Which endpoint a request was for: never the address that was asked for.
+    ENDPOINT = "endpoint"
+    ERROR_TYPE = "error_type"
+    ERROR_CODE = "error_code"
+    ERROR_STACK = "error_stack"
+    ERROR_CAUSE = "error_cause"
+    CONSTRAINT = "constraint"
+    # Which daily counter a user went over: one of UsageCounter.
+    QUOTA = "quota"
+
+
+class SessionMethod(StrEnum):
+    """The ways a session is opened."""
+
+    DEV_USER_LIST = "dev_user_list"
+
+
+class LineKey(StrEnum):
+    """The keys every log line has, written by the formatter itself."""
+
+    TIMESTAMP = "ts"
+    LEVEL = "level"
+    PROCESS = "process"
+    VERSION = "version"
+    LOGGER = "logger"
+    EVENT = "event"
+
+
+class LoggerName(StrEnum):
+    APP = "platita"
+    API = "platita.api"
+    ERRORS = "platita.errors"
+    POSTGRES = "platita.postgres"
+    WORKER = "platita.worker"
+    # Third-party loggers the process reconfigures.
+    SERVER = "uvicorn"
+    SERVER_ERROR = "uvicorn.error"
+    SERVER_ACCESS = "uvicorn.access"

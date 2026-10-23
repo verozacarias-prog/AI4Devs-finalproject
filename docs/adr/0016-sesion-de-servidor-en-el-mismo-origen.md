@@ -65,8 +65,16 @@ para que la cookie de sesión funcione sin un dominio propio.
    al servicio en el paso de despliegue. Desaparece el Static Site.
 6. **Sin CORS.** La API no habilita CORS: una página de otro origen no puede hacerle requests
    con la cookie.
-7. **CSRF.** Además de `SameSite=Strict`, toda request que modifica algo exige que el header
-   `Origin` sea el propio y que el cuerpo sea JSON. El webhook de WhatsApp queda fuera de esta
+7. **CSRF.** Además de `SameSite=Strict`, toda request que modifica algo, es decir con un método que no sea `GET`, `HEAD`
+   u `OPTIONS`, exige que el header
+   `Origin` sea el propio y que el cuerpo sea JSON. Un pedido sin `Origin` se rechaza igual: un
+   navegador siempre lo manda en esos pedidos. El `Origin` se compara con el `Host` del
+   pedido, sin el esquema, porque detrás del proxy del proveedor la API no ve si el navegador
+   usó `https`. La consecuencia es que una página servida por `http` en el mismo dominio
+   pasaría este control, y contra ella queda solo `SameSite=Strict`. Lo cierra el encabezado
+   `Strict-Transport-Security`, que obliga al navegador a usar siempre `https` con ese dominio
+   y que se suma con el primer despliegue. El control corre antes de leer el cuerpo del
+   pedido. El webhook de WhatsApp queda fuera de esta
    regla: no usa cookie y se autentica con su firma.
 8. **La consulta periódica no cuenta como actividad.** El chat web pregunta cada pocos segundos
    si hay mensajes nuevos ([ADR 0010](0010-webhook-asincrono-con-tabla-de-entrada.md)). Esa
@@ -76,15 +84,20 @@ para que la cookie de sesión funcione sin un dominio propio.
 9. **Tres entornos, y una entrada de desarrollo que no existe en producción.** La configuración
    declara el entorno: `local`, `demo` o `production`. En los dos primeros se pueden habilitar
    dos opciones: el chat web y la entrada de desarrollo. Con cualquiera de las dos encendida y
-   el entorno en `production`, ningún proceso arranca.
+   el entorno en `production`, ningún proceso arranca. Cada opción tiene su variable, que vale
+   `true` o `false`: la de la entrada de desarrollo es `DEV_ENTRY_ENABLED`. Sin la variable la
+   opción queda apagada, en cualquier entorno, y con otro valor el proceso no arranca: un
+   despliegue que la olvida queda cerrado.
 
    La entrada de desarrollo reemplaza al código mientras no exista el adaptador de WhatsApp, y
    crea una sesión real, con la misma tabla y la misma cookie. Desde ahí todo endpoint toma al
    usuario de la sesión, como siempre. No se construye nada del código de un solo uso hasta que
    haya por dónde enviarlo. Tiene dos formas, según el entorno:
 
-   - **En `local`, una lista.** La pantalla lista los usuarios de los datos de prueba y se elige
-     uno. Es una excepción deliberada a la regla de que el usuario nunca sale del request, y
+   - **En `local`, una lista.** La pantalla lista los usuarios de prueba y se elige uno. Un
+     usuario de prueba se reconoce por su teléfono inventado, que empieza con `+000`: solo esos
+     aparecen y solo con esos se puede entrar, así que una persona que hizo el alta con su
+     número real contra una base local no queda al alcance de la lista. Es una excepción deliberada a la regla de que el usuario nunca sale del request, y
      vale solo en la máquina de quien desarrolla.
    - **En `demo`, un enlace personal.** La lista no existe. Cada persona que prueba tiene un
      enlace propio, con un valor aleatorio de 256 bits, y solo ese enlace abre su cuenta. Así
@@ -94,7 +107,7 @@ para que la cookie de sesión funcione sin un dominio propio.
      lo devuelve. Todavía no crea ningún usuario. La primera vez que la persona abre el enlace
      ve un **aviso de prueba**: que es un entorno de prueba, que lo que escriba lo procesa un
      proveedor de IA, y que sus datos pueden borrarse sin aviso. Recién cuando lo acepta se
-     crea su usuario de prueba, con la etiqueta como nombre, un teléfono inventado, la fecha y
+     crea su usuario de prueba, con la etiqueta como nombre, un teléfono inventado que empieza con `+000`, la fecha y
      la versión del aviso como consentimiento, y la misma plantilla que usa el script de datos
      de prueba: país, moneda, cuentas con saldo, un primer período confirmado y un perfil,
      todos inventados. Sin aceptar, no entra y no se guarda nada que haya escrito. Es la misma
@@ -112,8 +125,9 @@ para que la cookie de sesión funcione sin un dominio propio.
    El enlace no es el login del producto. Quien lo tiene entra como esa persona, y nada
    verifica que el teléfono sea suyo.
 
-   Si alguna de las dos opciones está encendida, cada proceso lo avisa en su registro al
-   arrancar ([ADR 0023](0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
+   Si alguna de las dos opciones está encendida, la API y el worker lo avisan en su registro
+   cada vez que arrancan. Los comandos de operación no lo avisan: no sirven el chat ni procesan
+   sus mensajes, y duran segundos ([ADR 0023](0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
 10. **El chat web muestra la respuesta como texto, nunca como HTML.** Lo que escribe el modelo,
     y también lo que escribió el usuario, se inserta en la página como texto plano. Si una
     respuesta trae etiquetas, se ven como caracteres y no se interpretan. Un test lo prueba con
@@ -158,9 +172,14 @@ para que la cookie de sesión funcione sin un dominio propio.
   usuarios no se nota.
 - El dashboard y la API se despliegan juntos: un cambio solo visual reinicia también el servicio
   que recibe el webhook. Meta reintenta lo que no recibió `200`, así que no se pierden mensajes.
+  El código no queda acoplado: el backend solo sabe en qué carpeta está el dashboard compilado,
+  y un cambio visual no toca ninguna línea suya. La salida a un frontend desplegado aparte está
+  prevista: cuando haya dominio propio, o más de una persona desplegando, se quita esa carpeta
+  del servicio y los mismos archivos los sirve otro servidor, sin cambiar el dashboard.
 - Como el servicio sirve HTML, también le corresponde enviar los headers de seguridad de la
   página, incluida una política de contenido (CSP), que antes eran configuración del Static
-  Site.
+  Site. La política deja cargar solo lo que viene del propio origen, sin código en línea, y
+  prohíbe que otra página embeba el dashboard.
 - Una aplicación móvil nativa no puede usar la cookie tal cual: necesitará el mismo token en un
   header `Authorization`. Se decide cuando exista la aplicación, que es también el momento de
   revisar este registro.

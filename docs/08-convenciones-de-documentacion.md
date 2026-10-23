@@ -40,7 +40,8 @@ En consecuencia, para cualquier diagrama nuevo:
 - `README.md` es portada e índice: la ficha del proyecto, una línea por documento y los enlaces.
   Nunca el resumen de una sección ni la descripción de un subsistema: para eso está el documento
   enlazado.
-- Todo archivo de `docs/` tiene que estar enlazado desde el `README.md`.
+- Todo documento de `docs/` tiene que estar enlazado desde el `README.md`. Una imagen se enlaza
+  desde el documento que la muestra.
 
 ## 8.5. Decisiones de arquitectura
 
@@ -96,8 +97,9 @@ Chequea que los enlaces relativos resuelvan a un archivo y a un ancla que existe
 documento de `docs/` quede sin enlazar desde el `README.md`, que no haya texto duplicado entre
 archivos, que los bloques de código y de Mermaid estén completos, que los nombres de archivo no
 tengan acentos ni espacios, que la serie numerada no tenga huecos, que los ADR conserven su
-plantilla, y que los commands de `.claude/commands/` y los skills de `.claude/skills/` abran y
-cierren su frontmatter y declaren sus campos obligatorios. Un frontmatter roto no avisa: el
+plantilla, y que los commands de `.claude/commands/`, los skills de `.claude/skills/` y los
+agentes de `.claude/agents/` abran y cierren su frontmatter y declaren sus campos obligatorios.
+El `name` de un skill tiene que ser el de su directorio, y el de un agente, el de su archivo. Un frontmatter roto no avisa: el
 command no se carga y el skill pierde todos sus campos, cayendo al nombre del directorio y a la
 primera línea del cuerpo. Los avisos no frenan nada; los errores sí.
 
@@ -129,6 +131,7 @@ duplicado.
 Los archivos de `docs/` son la especificación del proyecto, salvo los registros:
 [la conversación de la reestructuración](conversacion-reestructuracion-docs.md) y
 [la validación por casos de uso](use-case-walkthrough.md), que describen la especificación en un
-momento dado y no la reemplazan. `AGENTS.md` es el contrato
+momento dado y no la reemplazan. En [operación](operacion.md) conviven una parte decidida y
+otra propuesta: la propuesta se lee, pero no se construye sin su ADR. `AGENTS.md` es el contrato
 operativo para asistentes de IA y resume algunas de estas reglas: cuando difieran, manda
 `docs/`. El criterio completo está en [`AGENTS.md`](../AGENTS.md), sección 10.

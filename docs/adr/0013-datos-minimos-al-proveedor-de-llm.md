@@ -17,7 +17,8 @@ Enviar un mensaje al proveedor es transferir esos datos a un tercero, fuera del 
 Platita y, en general, fuera del país. Qué se envía y qué hace el proveedor con eso son parte de
 lo que la política de privacidad tiene que poder explicar.
 
-Todavía no se eligió ningún proveedor, ni el del LLM ni el de embeddings.
+Cuando se tomó esta decisión no había ningún proveedor elegido. El del LLM se eligió después
+([ADR 0025](0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)); el de embeddings sigue sin elegir.
 
 Además, parte de lo que entra al prompt no lo escribió Platita: la descripción de un movimiento
 la escribió el usuario, un fragmento de la base de conocimiento salió de un documento, y el
@@ -41,10 +42,12 @@ prompts.
 3. **El adaptador de salida es el único lugar que arma lo que se envía.** El dominio le pasa al
    puerto los datos de la tarea, y el adaptador no agrega nada por su cuenta. Así la regla se
    verifica en un solo lugar, con un test que falla si aparece un identificador en el pedido.
-4. **Criterio obligatorio para elegir el proveedor:** que por contrato no use los datos enviados
-   por la API para entrenar modelos, y que los retenga el menor tiempo posible. Las condiciones se
-   verifican al elegirlo, se dejan registradas en la política de privacidad, y se vuelven a
-   revisar si el proveedor cambia sus términos.
+4. **Criterios de privacidad para elegir el proveedor.** Uno es obligatorio: que por contrato
+   no use los datos enviados por la API para entrenar modelos. El otro se pesa junto con la
+   calidad y el costo: cuánto tiempo retiene el contenido. A igual resultado se prefiere el que
+   retiene menos, y ninguno puede retenerlo más de 30 días. Las condiciones se verifican al
+   elegirlo, se dejan registradas en la política de privacidad, y se vuelven a revisar si el
+   proveedor cambia sus términos.
 5. **El LLM no accede a la base y nunca escribe.** No genera SQL que Platita ejecute ni recibe
    herramientas que escriban. Para registrar, devuelve una salida estructurada, como los campos
    de un movimiento, que el adaptador valida, y el caso de uso escribe por los repositorios
@@ -60,7 +63,7 @@ prompts.
    las funciones que pidió para esa pregunta, según el punto 1. Las funciones y sus topes están en
    las reglas de dominio, § 17.
 7. **La misma regla vale para el proveedor de embeddings.** Recibe el texto de la pregunta, sin
-   identificadores, y tiene que cumplir el criterio del punto 4. En la carga de la base de
+   identificadores, y tiene que cumplir los dos criterios del punto 4. En la carga de la base de
    conocimiento recibe contenido curado, que no es de ningún usuario.
 8. **Contra la inyección de prompts, la defensa principal son los puntos 5 y 6.** Aunque un
    texto logre engañar al modelo, el modelo no puede escribir ni pedir datos de otro usuario,

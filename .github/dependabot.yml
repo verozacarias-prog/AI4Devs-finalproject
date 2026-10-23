@@ -3,7 +3,6 @@
 # que en este fork es la rama de la entrega en curso. En un fork hay que
 # habilitarlo a mano, en Settings → Code security.
 #
-# Cuando exista el código se suman acá backend/ (pip) y frontend/ (npm).
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -11,8 +10,33 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    groups:
+      # Sus pasos tienen que correr la misma versión: se actualizan en un solo pull request.
+      codeql-action:
+        patterns: ["github/codeql-action*"]
   - package-ecosystem: npm
     directory: /site
     schedule:
       interval: weekly
       day: monday
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+  # La imagen base del Dockerfile.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+    ignore:
+      # La herramienta que genera los tipos de la API todavía no admite TypeScript 6
+      # (ADR 0026). Se quita cuando la admita.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]

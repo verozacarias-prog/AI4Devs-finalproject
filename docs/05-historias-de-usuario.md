@@ -2,6 +2,8 @@
 
 > Siete historias de usuario: seis **must-have**, que componen el flujo end-to-end comprometido para el MVP, y una **should-have**. El orden sigue la secuencia real de uso, salvo la HU6 y la HU7, que se sumaron después y conservan su número para no renumerar las referencias existentes: en el uso real, la HU6 va primera, porque es el alta, y la HU7 va antes de armar un presupuesto de grupo. Después configuro mis cuentas, después armo el presupuesto del período, ahí empiezo a registrar movimientos, los reviso en el dashboard, y el sistema me avisa si me estoy pasando.
 
+**Alcance de la entrega final.** Las historias describen el producto completo. En la entrega final todo pasa por el chat web y no por WhatsApp, y entran la HU1 (sin el alta de cuentas por conversación), la HU2 para un período individual, sin el borrador automático, el recordatorio ni los montos recurrentes, la HU3 y la HU4. La HU5 (sus alertas salen por WhatsApp), la HU6 y la HU7 pasan a una segunda versión. El detalle está en la [hoja de ruta](hoja-de-ruta.md#alcance-de-la-entrega-final).
+
 **Historia de Usuario 1** · *must-have*
 
 **Como** usuario que maneja varias cuentas y billeteras
@@ -57,8 +59,8 @@
 
 - El mensaje se interpreta y se ubica la categoría entre las existentes del usuario; si ninguna encaja, el asistente sugiere crear una nueva en vez de forzar una que no corresponde.
 - Si el mensaje no indica fecha, se toma la del día; si no indica moneda, se toma la de la cuenta que nombré, o mi moneda primaria si no nombré ninguna.
-- El asistente propone a qué presupuesto imputar el gasto (según la fecha y los períodos activos del usuario) y **el usuario lo confirma siempre** — ninguna transacción manual se imputa a un presupuesto sin visto bueno explícito.
-- **El movimiento no se registra si falta el monto, la cuenta, la confirmación del presupuesto, o el tipo cuando el mensaje no deja claro si es gasto o ingreso.** Esos no se dan por supuestos.
+- El asistente propone a qué presupuesto imputar el gasto (según la fecha y los períodos activos del usuario) y **el usuario lo confirma** — ninguna transacción manual se imputa a un presupuesto sin visto bueno explícito. La excepción es cuando hay un solo presupuesto posible para esa fecha: ahí no hay nada que elegir, el gasto se imputa a ese y la confirmación lo dice ([reglas de dominio § 1](reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma)).
+- **El movimiento no se registra si falta el monto, la cuenta, la confirmación del presupuesto cuando hay más de uno posible, o el tipo cuando el mensaje no deja claro si es gasto o ingreso.** Esos no se dan por supuestos.
 - Cuando falta más de uno, se piden todos juntos en un solo mensaje, ofreciendo las opciones disponibles del usuario (sus cuentas dadas de alta, sus presupuestos activos) para que responder sea elegir, no escribir. Lo ya interpretado se conserva: el usuario no repite el mensaje entero.
 - Si queda sin responder, el movimiento no se registra a medias ni se descarta en silencio: queda pendiente y el asistente lo recuerda una vez antes de expirarlo.
 - El asistente confirma el registro por el mismo canal, listando de forma explícita todo lo que quedó guardado —incluidos los valores que resolvió solo (fecha, moneda, categoría)—, y acepta correcciones sobre cualquiera de ellos: respondiendo con una cita a esa confirmación, en cualquier momento, o describiendo el movimiento para que el asistente lo busque. Nunca corrige un movimiento que yo no señalé.

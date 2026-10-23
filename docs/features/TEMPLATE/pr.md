@@ -14,7 +14,7 @@ Pasos concretos para reproducir el comportamiento.
 
 ## Tests primero
 
-- **Casos aprobados:** enlace a la sección del corte en [qa_plan.md](qa_plan.md), con quién los aprobó y cuándo.
+- **Casos aprobados:** enlace a la sección del corte en [spec.md](spec.md#casos-de-prueba), con quién los aprobó y cuándo.
   En una tarea que no es de una historia, la tabla de casos va acá mismo, con caso, entrada y
   resultado esperado, y quién la aprobó; o "sin lógica que probar", si es el caso.
 - **Commit de los tests:** `<hash>`, anterior al de la implementación | no aplica: el corte no toca el backend.

@@ -1,0 +1,80 @@
+/*
+ * Design tokens (ADR 0026 and ADR 0027): the only place with colours, sizes, spacing, type,
+ * shadows and radii. The first line removes the default scale of Tailwind, so a class that asks
+ * for a value of a scale that has no token here does not exist, and the build does not produce
+ * it. Two kinds of class are produced anyway, and accepted (ADR 0027): the fixed ones, which are
+ * no design value, such as `rounded-full`; and a transparency over a colour of this theme, such
+ * as `bg-primary/90`, which makes no new colour. The future mobile app inherits every value from
+ * this file. The colour names are the ones shadcn/ui expects.
+ */
+@theme {
+  --*: initial;
+
+  /* Layout. */
+  --breakpoint-md: 48rem;
+  --container-xl: 36rem;
+  --container-3xl: 48rem;
+  --spacing: 0.25rem;
+
+  /* Type. */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 2rem;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --tracking-tight: -0.025em;
+  --tracking-wide: 0.025em;
+
+  /* Shape. */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --shadow-xs: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 oklch(0 0 0 / 0.1), 0 1px 2px -1px oklch(0 0 0 / 0.1);
+  --default-transition-duration: 150ms;
+  --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Colour. Every text colour reaches at least 4.5:1 against the background it is used on. */
+  --color-background: oklch(0.985 0.002 197);
+  --color-foreground: oklch(0.21 0.02 255);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.21 0.02 255);
+  --color-muted: oklch(0.965 0.004 197);
+  --color-muted-foreground: oklch(0.5 0.02 255);
+  --color-accent: oklch(0.955 0.025 180);
+  --color-accent-foreground: oklch(0.38 0.07 182);
+  --color-border: oklch(0.92 0.006 255);
+  --color-input: oklch(0.92 0.006 255);
+  --color-ring: oklch(0.6 0.1 182);
+  /* The brand: a deep teal, the colour of Platita. */
+  --color-primary: oklch(0.51 0.09 182);
+  --color-primary-foreground: oklch(0.99 0 0);
+  --color-success: oklch(0.52 0.13 150);
+  --color-destructive: oklch(0.55 0.2 27);
+  --color-sidebar: oklch(0.21 0.03 220);
+  --color-sidebar-foreground: oklch(0.93 0.01 220);
+  --color-sidebar-muted: oklch(0.7 0.02 220);
+  --color-sidebar-accent: oklch(0.29 0.04 210);
+  --color-sidebar-primary: oklch(0.78 0.11 180);
+  /* An error on the dark menu: the red of the cards would not reach 4.5:1 there. */
+  --color-sidebar-destructive: oklch(0.72 0.16 27);
+}
+
+/* Sizes that are not a step of a scale. */
+:root {
+  --sidebar-width: 16rem;
+  /* How wide a chat bubble may grow: a share of the conversation, not a step of the scale. */
+  --chat-bubble-max-width: 80%;
+  --focus-ring-width: 3px;
+}

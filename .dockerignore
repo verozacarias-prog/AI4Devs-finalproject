@@ -1,0 +1,20 @@
+# The image only needs backend/ and frontend/. Everything else stays out of the build context.
+.git
+.github
+.githooks
+.claude
+docs
+site
+scripts
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/node_modules
+backend/tests
+.env
+.env.*
+!.env.example
+frontend/dist
+frontend/src/**/*.test.tsx

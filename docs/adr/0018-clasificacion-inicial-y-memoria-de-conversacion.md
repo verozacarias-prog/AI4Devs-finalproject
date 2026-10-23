@@ -28,9 +28,14 @@ Los mensajes ya se guardan, por otros motivos, en `INBOUND_MESSAGE` y `OUTBOUND_
    funciones de solo lectura, así que una consulta se resuelve en dos llamadas y no en tres: la
    segunda redacta con los datos ya leídos. Si es un consejo, devuelve solo la clase y, cuando se
    reconoce, el tema.
-3. **Antes de clasificar hay un tope diario total por usuario.** Cuenta las llamadas de
-   clasificación del día, en un contador propio de `LLM_USAGE`, y no descuenta de ninguna de las
-   tres cuotas. Vale 100 por día, y es configuración. Un mensaje que llega con el tope alcanzado
+3. **Antes de clasificar hay un tope diario total por usuario.** Cuenta los mensajes
+   clasificados del día, en un contador propio de `LLM_USAGE`, y no descuenta de ninguna de las
+   tres cuotas. Cuenta también el mensaje que el modelo se niega a interpretar, que se procesa
+   con su texto fijo. Una llamada que falla y se reintenta no cuenta: una caída del proveedor
+   no le consume el tope al usuario, y su costo lo acota el tope mensual de la cuenta del
+   proveedor (reglas de dominio § 12). Decidido por Vero el 18/10/2026, con la revisión de
+   `pr-reviewer` del corte 3 de [FEAT-003](../features/FEAT-003/spec.md). Vale 100 por día, y es
+   configuración. Un mensaje que llega con el tope alcanzado
    no se clasifica: se guarda y se procesa al día siguiente, y el usuario recibe un solo aviso
    por día.
 4. **La cuota de la clase se cobra después de clasificar.** Si está agotada, sale un texto fijo
@@ -76,8 +81,8 @@ Los mensajes ya se guardan, por otros motivos, en `INBOUND_MESSAGE` y `OUTBOUND_
 - Cada mensaje carga la descripción de las funciones de lectura, también cuando resulta ser un
   gasto, que es lo más frecuente. Son más tokens de entrada por mensaje.
 - Una llamada que clasifica, extrae y pide datos puede clasificar peor que una que solo
-  clasifica. Lo mide la evaluación de proveedores ([ADR 0019](0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md)).
-  Si baja la calidad, se separan.
+  clasifica. Lo midió la evaluación del proveedor, y con el modelo elegido no bajó
+  ([ADR 0025](0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)). Si con otro modelo baja, se separan.
 - Clasificar un mensaje cuya cuota resulta agotada es una llamada sin resultado, y un registro
   demorado se clasifica dos veces.
 - Los mensajes de un remitente dejan de procesarse en orden estricto cuando uno queda demorado.

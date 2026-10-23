@@ -32,13 +32,17 @@ docs/  ──┬──▶  GitHub lo renderiza directamente, incluidos los diagr
          └──▶  site/scripts/sync-docs.mjs
                  ├──▶  site/src/content/docs/   (generado, no versionado)
                  ├──▶  site/public/llms-full.txt (generado, no versionado)
+                 ├──▶  site/public/capturas/     (copiado de docs/capturas/, no versionado)
                  └──▶  llms.txt                  (generado y versionado)
 ```
 
 `docs/` no se modifica para alimentar al portal: el script agrega el frontmatter que Starlight
 exige, reescribe los enlaces y extrae los diagramas, que se renderizan en el cliente y se
-verificaron sobre el sitio publicado. El fundamento y los problemas concretos que
-resuelve están en el [ADR 0008](adr/0008-astro-starlight-como-portal.md).
+verificaron sobre el sitio publicado. Un enlace a otra página de `docs/` va a esa página del
+portal; una imagen de `docs/capturas/` se copia al portal y se enlaza ahí, y cualquier otro
+archivo se enlaza a GitHub, en la rama por defecto del repositorio, que es la de la entrega en
+curso. El fundamento y los problemas concretos que resuelve están en el
+[ADR 0008](adr/0008-astro-starlight-como-portal.md).
 
 `llms.txt` está versionado, a diferencia de los otros dos, porque un agente que clona el
 repositorio no ve el portal. Por eso la integración continua falla si quedó desfasado de `docs/`.
@@ -49,8 +53,8 @@ Cada cambio pasa por tres controles, de más cerca a más lejos de quien escribe
 
 | Cuándo | Qué corre | Se saltea |
 |---|---|---|
-| Antes de cada commit | Los dos verificadores propios, vía `.githooks/pre-commit` | Sí, con `--no-verify` |
-| En cada pull request | Los dos verificadores, `markdownlint-cli2`, `lychee`, la construcción del portal y `gitleaks`, que busca secretos | No |
+| Antes de cada commit | Los tres verificadores propios, vía `.githooks/pre-commit` | Sí, con `--no-verify` |
+| En cada pull request | Los tres verificadores, `markdownlint-cli2`, `lychee`, la construcción del portal y `gitleaks`, que busca secretos | No |
 | Todos los lunes | `lychee`, porque un enlace externo se rompe sin que nadie toque nada | No |
 
 El detalle de qué valida cada herramienta está en
@@ -76,10 +80,12 @@ actualiza el documento que lo describe **en ese mismo pull request**, no despué
 forma de que la documentación no se desactualice: si el cambio se aplaza, no ocurre.
 
 La lista completa está en la sección Documentación del
-[Definition of Done](07-pull-requests.md#definition-of-done). Hoy se verifica leyendo, con la
-ayuda de `/spec-drift`. La parte que es binaria —comparar el contrato generado por FastAPI contra
-[`04-api.md`](04-api.md)— se automatiza con `verify_api_contract.py` cuando exista la API, y está
-en la [hoja de ruta](hoja-de-ruta.md).
+[Definition of Done](07-pull-requests.md#definition-of-done). Se verifica leyendo, con la
+ayuda de `/spec-drift`. La parte que es binaria la automatiza
+[`scripts/verify_api_contract.py`](../scripts/verify_api_contract.py), sobre el contrato que
+genera FastAPI. Corre en el hook de pre-commit y en cada pull request, y sus reglas están en
+el encabezado del script. Que el contrato versionado sea el que
+genera el código lo comprueban un test del backend y el pipeline.
 
 ## 6. Trabajar con el portal
 

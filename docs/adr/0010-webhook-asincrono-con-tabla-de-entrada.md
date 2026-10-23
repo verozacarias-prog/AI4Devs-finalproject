@@ -67,15 +67,24 @@ El webhook solo recibe y confirma; el procesamiento ocurre después, en un proce
 
    El tiempo máximo de la llamada al LLM, reintentos incluidos, es menor que la duración del
    `locked_until`, y los dos son configuración. Así el fencing cubre un caso excepcional, como
-   una pausa larga del proceso, y no un LLM lento de todos los días.
+   una pausa larga del proceso, y no un LLM lento de todos los días. La configuración lo valida
+   al arrancar: si el tiempo de la llamada no es menor que el lock, ningún proceso arranca. El
+   lock ya es configurable (`WORKER_LOCK_SECONDS`); la validación llega con el cliente del LLM,
+   que es el que trae su tiempo máximo.
 
    El registro de la llamada al LLM queda fuera de esa transacción final: se guarda apenas
    responde el proveedor, en una transacción corta propia. Si el fencing deshace la
    transacción final, la llamada igual quedó registrada con su costo
    ([ADR 0023](0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
-4. **Reintentos.** Si el procesamiento falla (el LLM no responde, por ejemplo), el mensaje vuelve
-   a quedar disponible con espera creciente entre intentos. Superado un máximo de intentos queda
-   como `failed` y el usuario recibe un aviso de que su mensaje no se pudo procesar. Un mensaje
+4. **Reintentos.** Si el procesamiento falla por algo pasajero, que puede salir bien al rato (el
+   LLM no responde, la base se cae o dos transacciones chocan, por ejemplo), el mensaje vuelve a
+   quedar disponible con espera creciente entre intentos. Superado un máximo de intentos queda
+   como `failed` y el usuario recibe un aviso de que su mensaje no se pudo procesar. Si falla por
+   algo permanente, cuyo estado no va a cambiar (una escritura que la base rechaza, datos
+   guardados que rompen una regla o un error del código), no se reintenta: queda `failed`
+   enseguida, con el mismo aviso. Así ningún mensaje queda tomado sin fin, ni paga una llamada al
+   modelo en cada vuelta inútil. La distinción la decidió Vero el 17 de octubre de 2026, con el
+   corte 2 de [FEAT-003](../features/FEAT-003/spec.md) (CA-44). Un mensaje
    nunca se descarta en silencio. Mientras se reintenta, los mensajes siguientes del mismo
    remitente esperan detrás, para respetar el orden; una vez en `failed` deja de bloquearlos, y
    el siguiente se procesa normalmente. Un mensaje **demorado** por un límite de uso, sea la
@@ -109,8 +118,11 @@ El webhook solo recibe y confirma; el procesamiento ocurre después, en un proce
 9. **El mensaje citado se guarda resuelto.** `INBOUND_MESSAGE` tiene una columna con el mensaje
    de salida que el usuario citó. El chat web manda ese identificador directo. En WhatsApp, el
    caso de uso que guarda el mensaje lo resuelve desde el identificador de Meta del mensaje
-   citado. En los dos casos se valida que el mensaje citado sea del mismo usuario; si no se
-   encuentra, la columna queda nula y el mensaje se procesa como si no citara nada.
+   citado. En los dos casos se valida que el mensaje citado sea una respuesta de Platita al mismo
+   usuario. En WhatsApp, si no se encuentra, la columna queda nula y el mensaje se procesa como si
+   no citara nada: Meta manda lo que el usuario citó, y no es un error del pedido. En el chat web
+   el identificador lo manda el dashboard, así que uno ajeno o inexistente es un pedido inválido:
+   responde `404` y no se guarda nada ([la API](../04-api.md)).
 
 Los procesos programados (gastos recurrentes, alertas de presupuesto, expiración de pendientes)
 siguen siendo cron jobs separados. Esta decisión no los cambia, salvo que envían por la tabla de

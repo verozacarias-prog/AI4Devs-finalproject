@@ -6,21 +6,29 @@ dist/
 # Contenido del portal generado desde docs/ por site/scripts/sync-docs.mjs.
 # La fuente es docs/; esto se regenera en cada build y no se versiona.
 site/src/content/docs/
+# Las capturas de docs/capturas/ que el mismo script copia al portal.
+site/public/capturas/
 
 # Caché de lychee (verificación de enlaces externos)
 .lycheecache
 
 # Secretos: se configuran como variables de entorno, nunca versionados (AGENTS.md §7).
-# La plantilla sin valores sí se versiona.
+# La plantilla sí se versiona: sus valores sirven solo para el entorno local.
 .env
 .env.*
 !.env.example
 
 # Python
 __pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 *.py[cod]
 .venv/
 venv/
 
 # Sistema operativo y editores
 .DS_Store
+
+# Salidas de la evaluación del proveedor de LLM: se regeneran en cada corrida.
+scripts/llm_eval/results/
