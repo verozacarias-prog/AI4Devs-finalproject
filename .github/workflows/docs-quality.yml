@@ -12,7 +12,7 @@ on:
   # corre pull_request. El push cubre main y la rama de la entrega, que es
   # donde queda lo integrado. Ver docs/documentacion-viva.md, sección 7.
   push:
-    branches: [main, 'feature/entrega-*']
+    branches: [main, 'feature/entrega-*', 'final-project-*']
   pull_request:
   schedule:
     # Los enlaces externos se rompen sin que nadie toque la documentación.

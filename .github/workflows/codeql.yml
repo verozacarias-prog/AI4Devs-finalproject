@@ -9,7 +9,7 @@ name: Código — análisis de seguridad
 
 on:
   push:
-    branches: [main, 'feature/entrega-*']
+    branches: [main, 'feature/entrega-*', 'final-project-*']
   pull_request:
   schedule:
     # The queries change with each CodeQL release: code nobody touched can get a new alert.

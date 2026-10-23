@@ -293,9 +293,9 @@ En el backend el test va antes que el código
 - Si alguien pide implementar sin que existan los casos aprobados o los tests, avisalo antes de
   escribir código.
 
-Nadie escribe directo en la rama de la entrega, `feature/entrega-N-VNZ`. Las ramas de trabajo
-se llaman `hu<N>-c<corte>-<tema>` para un corte de una historia y `tarea-<tema>` para el resto,
-y entran por pull request. Los pasos están en el [README](README.md#cómo-colaborar).
+Nadie escribe directo en la rama de la entrega, `feature/entrega-N-VNZ` o, en la final,
+`final-project-VNZ`. Las ramas de trabajo se llaman `hu<N>-c<corte>-<tema>` para un corte de una
+historia y `tarea-<tema>` para el resto, y entran por pull request. Los pasos están en el [README](README.md#cómo-colaborar).
 
 Un asistente hace commit solo cuando una persona se lo pide, y nunca hace merge: la aprobación
 final de un pull request es de una persona.
