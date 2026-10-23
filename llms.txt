@@ -29,6 +29,7 @@ nombres de archivo de código están en inglés.
 - [6. Tickets de trabajo](https://verozacarias-prog.github.io/AI4Devs-finalproject/06-tickets/)
 - [7. Pull requests](https://verozacarias-prog.github.io/AI4Devs-finalproject/07-pull-requests/)
 - [8. Convenciones de documentación](https://verozacarias-prog.github.io/AI4Devs-finalproject/08-convenciones-de-documentacion/)
+- [Cómo colaborar](https://verozacarias-prog.github.io/AI4Devs-finalproject/como-colaborar/)
 - [Convenciones de desarrollo](https://verozacarias-prog.github.io/AI4Devs-finalproject/convenciones-de-desarrollo/)
 - [Documentación viva](https://verozacarias-prog.github.io/AI4Devs-finalproject/documentacion-viva/)
 - [Especificación — FEAT-001 · Pantalla de cuentas](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/feat-001/spec/)
