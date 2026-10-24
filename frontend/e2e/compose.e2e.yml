@@ -1,0 +1,30 @@
+# The stack of the end-to-end test (#79), on top of docker-compose.yml. The global setup of
+# Playwright starts it with compose.env, under the project name platita-e2e, so it has its own
+# containers, ports and database and leaves the one of `docker compose up` alone. The worker
+# talks to a fake of the model provider instead of OpenAI.
+services:
+  db:
+    container_name: platita-e2e-database
+
+  migrations:
+    container_name: platita-e2e-migrations
+
+  api:
+    container_name: platita-e2e-api-and-dashboard
+
+  worker:
+    container_name: platita-e2e-worker
+    environment:
+      # Read by the OpenAI SDK itself: the real adapter, pointed at the fake.
+      OPENAI_BASE_URL: http://fake-openai:8080/v1
+    depends_on:
+      fake-openai:
+        condition: service_started
+
+  fake-openai:
+    image: node:24-alpine
+    container_name: platita-e2e-fake-openai
+    command: ["node", "/e2e/fake-openai.mjs"]
+    # Relative to the first Compose file, at the root of the repository.
+    volumes:
+      - ./frontend/e2e/fake-openai.mjs:/e2e/fake-openai.mjs:ro

@@ -229,6 +229,7 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
     design-tokens.css    # design tokens: the only place with colours, sizes and spacing
     App.tsx
     main.tsx
+  /e2e                   # the end-to-end test with Playwright, the Compose stack it starts and the fake of the model provider
 docs/
   01-producto.md
   02-arquitectura.md
@@ -346,7 +347,7 @@ Cuatro niveles, cada uno con su momento ([ADR 0024](adr/0024-tests-primero-en-el
 | Unitario | El dominio y los casos de uso: conversión de moneda, saldo por cuenta, categorización, pendientes, presupuesto | Dobles de los puertos, incluido el del LLM. Es la ventaja directa de tener puertos | Antes que el código |
 | De integración | Los adaptadores, las restricciones de la base y los endpoints | PostgreSQL real con pgvector, con las migraciones aplicadas desde cero | Antes que el código |
 | De componente | Los estados de cada pantalla: los cuatro, o tres si no muestra datos del usuario | El dashboard, con la API simulada | En el mismo corte que la pantalla |
-| De punta a punta | Al menos el flujo principal: registrar un gasto por WhatsApp y verlo reflejado en el saldo de la cuenta y en el presupuesto del dashboard | El sistema levantado completo | En la entrega final, con la pantalla ya construida |
+| De punta a punta | Al menos el flujo principal: registrar un gasto por el chat web y verlo reflejado en el saldo de la cuenta del dashboard. El presupuesto se suma con su pantalla, en la HU4 | El sistema levantado completo con Docker Compose, en un navegador real, con un proveedor del modelo simulado | En la entrega final, con la pantalla ya construida |
 
 El método, con quién aprueba los casos y cómo queda a la vista el orden, está en las [convenciones de desarrollo](convenciones-de-desarrollo.md#1-cortes-verticales).
 

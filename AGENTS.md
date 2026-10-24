@@ -93,7 +93,7 @@ de pre-commit. No son una recomendación: rompen el commit.
 - `backend/app/adapters/observability/` — envoltorios de los puertos de LLM y de embeddings, que registran cada llamada sin su contenido, y el formato JSON de los registros con su filtro.
 - `backend/tests/` — tests unitarios, de integración y end-to-end.
 - `backend/migrations/` — migraciones de Alembic.
-- `frontend/` — dashboard web, en React con TypeScript y Vite ([ADR 0026](docs/adr/0026-react-typescript-y-vite-para-el-dashboard.md)), con Tailwind CSS y shadcn/ui ([ADR 0027](docs/adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md)). `src/api/` tiene el contrato exportado y los tipos generados, `src/pages/` una pantalla por archivo con su test al lado, `src/components/` las piezas que comparten las pantallas, como el menú lateral, con su test al lado, `src/components/ui/` los componentes de shadcn/ui, y `src/design-tokens.css` los tokens de diseño.
+- `frontend/` — dashboard web, en React con TypeScript y Vite ([ADR 0026](docs/adr/0026-react-typescript-y-vite-para-el-dashboard.md)), con Tailwind CSS y shadcn/ui ([ADR 0027](docs/adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md)). `src/api/` tiene el contrato exportado y los tipos generados, `src/pages/` una pantalla por archivo con su test al lado, `src/components/` las piezas que comparten las pantallas, como el menú lateral, con su test al lado, `src/components/ui/` los componentes de shadcn/ui, y `src/design-tokens.css` los tokens de diseño. `e2e/` tiene el test de punta a punta con Playwright, el stack de Compose que levanta y el proveedor del modelo simulado.
 - `site/` — portal de documentación (Astro Starlight). Se genera desde `docs/`; no es fuente.
 - `docs/` — la especificación del proyecto.
 
@@ -246,7 +246,8 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   tiene comando local: una alerta que no es un problema se descarta en GitHub con su motivo.
 - Dashboard, desde `frontend/`: `npm test` corre los tests de las pantallas, `npm run lint` el
   linter, `npm run typecheck` los tipos, `npm run build` la compilación y
-  `npm audit --audit-level=high` las vulnerabilidades.
+  `npm audit --audit-level=high` las vulnerabilidades. `npm run test:e2e` corre el test de punta
+  a punta: levanta todo con Docker Compose, con un proveedor del modelo simulado.
 - Si cambia una ruta o una respuesta de la API, se regenera el contrato y sus tipos: desde
   `backend/`, `python -m app.adapters.inbound.api.export_openapi > ../frontend/src/api/openapi.json`,
   y desde `frontend/`, `npm run api:generate`. El pipeline y un test del backend fallan si
