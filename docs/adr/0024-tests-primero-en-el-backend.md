@@ -40,7 +40,7 @@ integración y al menos uno de punta a punta.
    Una tarea que no es de una historia, como el scaffold o un arreglo, no tiene carpeta de
    funcionalidad. Sigue la misma regla con un lugar más liviano: el asistente propone los
    casos, la persona los aprueba antes de que se escriba ningún test, y quedan en la
-   descripción del pull request, en la misma tabla. Lo que no tiene lógica que probar, como un
+   descripción del pull request, cada uno en una línea con su resultado esperado. Lo que no tiene lógica que probar, como un
    Dockerfile o un archivo de configuración, no lleva casos, y el pull request lo dice.
 5. **Cada criterio de aceptación tiene un identificador,** y cada caso y cada test dicen de cuál
    salen.

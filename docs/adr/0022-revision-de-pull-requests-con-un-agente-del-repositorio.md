@@ -36,8 +36,10 @@ para otras tareas es un costo, acá es lo que se busca.
      [seguridad de la capa de IA](../seguridad-llm.md) esté actualizada.
 4. **El revisor solo lee e informa.** No edita, no hace commit y no hace merge. Tiene
    herramientas de lectura y nada más.
-5. **La plantilla del pull request lo recuerda,** con una casilla y un lugar para pegar el
-   informe. Es la plantilla que ya existe, [`features/TEMPLATE/pr.md`](../features/TEMPLATE/pr.md).
+5. **La plantilla del pull request lo recuerda,** con un lugar para resumir el informe: el
+   veredicto y qué se hizo con las observaciones, en dos o tres líneas. El informe completo no
+   se pega, para que la descripción se lea en un minuto. Es la plantilla que ya existe,
+   [`features/TEMPLATE/pr.md`](../features/TEMPLATE/pr.md).
 6. **La aprobación final es de una persona.** El merge lo hace siempre una persona. Un asistente
    hace commit solo cuando una persona se lo pide.
 
@@ -53,8 +55,9 @@ para otras tareas es un costo, acá es lo que se busca.
 
 ### Negativas y costos asumidos
 
-- Depende de que la persona se acuerde de correrlo. La casilla lo recuerda, pero no lo obliga.
-- El informe se pega a mano, y nada comprueba que corresponda a la última versión del cambio.
+- Depende de que la persona se acuerde de correrlo. La plantilla lo recuerda, pero no lo obliga.
+- El resumen se escribe a mano, y nada comprueba que corresponda a la última versión del
+  cambio. El informe completo no queda en el pull request.
 - El revisor puede equivocarse en los dos sentidos: marcar algo que está bien, o dejar pasar
   algo que está mal. Por eso no reemplaza la lectura de la persona.
 - Cada corrida cuesta tokens, porque el agente lee desde cero las reglas y el cambio.

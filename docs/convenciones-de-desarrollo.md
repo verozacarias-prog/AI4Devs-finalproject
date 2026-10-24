@@ -71,8 +71,8 @@ Tres reglas acompañan ese orden:
   tests van en el commit de la implementación o en uno posterior del mismo corte.
 - **Una tarea sigue la misma regla, sin carpeta.** El trabajo que no es de una historia, como el
   scaffold o un arreglo, no tiene `spec.md`. El asistente propone los casos, la persona los
-  aprueba antes de que exista un test, y se pegan en la descripción del pull request, con la
-  misma tabla. Lo que no tiene lógica que probar, como un Dockerfile, no lleva casos, y el pull
+  aprueba antes de que exista un test, y van en la descripción del pull request, cada uno en
+  una línea con su resultado esperado. Lo que no tiene lógica que probar, como un Dockerfile, no lleva casos, y el pull
   request lo dice. El orden de los dos commits vale igual.
 - **Se integra con un commit de merge.** Aplastar los commits del pull request en uno borraría
   el orden entre tests e implementación.
