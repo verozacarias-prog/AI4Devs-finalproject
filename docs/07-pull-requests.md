@@ -99,7 +99,7 @@ desde [`features/TEMPLATE/pr.md`](features/TEMPLATE/pr.md).
 
 ### Revisión
 
-- [ ] El agente `pr-reviewer` corrió sobre la última versión del cambio, y su informe está pegado en el pull request ([ADR 0022](adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md)).
+- [ ] El agente `pr-reviewer` corrió sobre la última versión del cambio, y su veredicto y lo que se hizo con sus observaciones están resumidos en el pull request ([ADR 0022](adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md)).
 - [ ] La aprobación y el merge los hace una persona.
 
 ## Entrega final

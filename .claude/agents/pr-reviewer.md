@@ -64,7 +64,7 @@ rama de la entrega con `git diff` y `git log`. Usá Bash solo para leer: `git di
 
 ## Qué entregás
 
-Un informe corto, para pegar en el pull request:
+Un informe corto, que quien abre el pull request resume ahí:
 
 - **Veredicto**, en una línea: se puede pedir el merge, o no.
 - **Bloqueantes:** cada uno con el archivo y la línea, qué regla rompe y dónde está escrita.

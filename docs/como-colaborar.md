@@ -72,7 +72,7 @@ cd site && npm install                # solo para ver o regenerar el portal
 10. **Abrir el pull request contra la rama de la entrega,** con el corte en verde y una
    descripción armada desde la plantilla [`pr.md`](features/TEMPLATE/pr.md), con el
    [Definition of Done](07-pull-requests.md#definition-of-done) y `Closes #N`.
-   Correr el agente `pr-reviewer` y pegar su informe.
+   Correr el agente `pr-reviewer` y resumir su informe.
 11. **Integrar** cuando todos los controles pasan, con un commit de merge y sin aplastar los
     commits, para que se vea que los tests fueron primero. La aprobación y el merge son de una
     persona; un asistente hace commit solo si se lo piden, y nunca hace merge.
