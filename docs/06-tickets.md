@@ -4,7 +4,7 @@
 
 **Título:** Implementar webhook de recepción de mensajes de WhatsApp e interpretación por IA
 **HU relacionada:** [HU3](05-historias-de-usuario.md)
-**Entrega:** el worker, la clasificación y el registro entran en la entrega 2, con el chat web como entrada. `GET /budgets/{budget_id}`, varios movimientos en un mensaje, y la corrección, el borrado y la restauración van en la entrega final. El webhook de WhatsApp y la elección entre el presupuesto individual y el de un grupo pasan a una segunda versión. El reparto completo está en la [hoja de ruta](hoja-de-ruta.md#alcance-de-la-entrega-final).
+**Entrega:** el worker, la clasificación y el registro entran en la entrega 2, con el chat web como entrada. La lectura del presupuesto (`GET /budget-periods`, `GET /budget-periods/{period_id}/summary` y `GET /budgets/{budget_id}`), varios movimientos en un mensaje, y la corrección, el borrado y la restauración van en la entrega final. El webhook de WhatsApp y la elección entre el presupuesto individual y el de un grupo pasan a una segunda versión. El reparto completo está en la [hoja de ruta](hoja-de-ruta.md#alcance-de-la-entrega-final).
 **Descripción:** Endpoint `POST /webhook/whatsapp` (adaptador de entrada) que verifica y guarda el mensaje, y un worker de mensajes (otro proceso) que lo toma después y lo pasa al caso de uso `RegisterTransaction`, el cual extrae los datos y exige los que dependen del usuario. La respuesta no vuelve en la respuesta HTTP del webhook: se encola en `OUTBOUND_MESSAGE` y el worker la envía.
 **Alcance técnico:**
 
@@ -19,7 +19,7 @@
 - Corrección, borrado y restauración de movimientos confirmados por WhatsApp, citando la confirmación o por búsqueda, como pendientes de tipo cambio, según [reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado). Al cerrar un lote con su confirmación se guarda `confirmation_message_id`.
 - Promoción de `PENDING_TRANSACTION` a `TRANSACTION` cuando se completan todos los campos, en una transacción de base de datos.
 - Job de expiración de `PENDING_TRANSACTION` vencidas, con un recordatorio previo.
-- Endpoint `GET /budgets/{budget_id}` (adaptador de entrada) sobre el caso de uso `GetBudgetStatus`, con el contrato de [la API](04-api.md): límite, gastado convertido a la moneda primaria del período y movimientos asociados. Va en este ticket porque es lo único que consume el Ticket 2 y ninguna otra parte del sistema lo provee: el webhook escribe movimientos, no los expone.
+- Endpoint `GET /budgets/{budget_id}` (adaptador de entrada) sobre el caso de uso `GetBudgetStatus`, con el contrato de [la API](04-api.md): límite, gastado convertido a la moneda primaria del período y movimientos asociados. Junto con él, `GET /budget-periods/{period_id}/summary`, el resumen del período con todas sus categorías, y la lectura de `GET /budget-periods`, con el período que cubre hoy marcado en `is_current`. Van en este ticket porque es lo único que consume el Ticket 2 y ninguna otra parte del sistema lo provee: el webhook escribe movimientos, no los expone.
 - *Fuera del alcance de este ticket (could-have):* el chequeo de duplicados contra movimientos de origen automático, que depende de la carga por email. El punto de inserción queda identificado dentro del caso de uso para poder sumarlo después sin reescribirlo.
 **Criterios de aceptación:** cubren lo definido en [HU3](05-historias-de-usuario.md); además, un mensaje que el LLM no logra interpretar responde pidiendo una aclaración en vez de fallar en silencio. Del procesamiento asíncrono ([ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md)):
 
@@ -40,7 +40,7 @@
 **Título:** Vista de detalle de presupuesto por categoría
 **HU relacionada:** [HU4](05-historias-de-usuario.md)
 **Entrega:** entrega final. En la entrega 2 la pantalla que muestra el efecto de un gasto es la de cuentas, sobre `GET /accounts` ([hoja de ruta](hoja-de-ruta.md#alcance-de-la-entrega-2)).
-**Descripción:** Pantalla del dashboard que consume `GET /budgets/{id}` y muestra límite, gastado y porcentaje usado, con el detalle de movimientos de esa categoría en el período.
+**Descripción:** Pantalla del dashboard que abre el período que cubre hoy, con un selector para los demás (`GET /budget-periods`), y muestra su resumen (`GET /budget-periods/{period_id}/summary`): ingreso estimado y real, y por cada categoría, tenga tope o no, lo gastado y, si tiene tope, el límite y el porcentaje usado. Desde una categoría con tope se ve el detalle de sus movimientos en el período (`GET /budgets/{budget_id}`).
 **Alcance técnico:**
 
 - Componente de barra de progreso con estado (normal / cerca del límite / excedido).
@@ -48,7 +48,7 @@
 - Manejo de estado de carga y error de la petición.
 - *Should-have:* desglose por moneda original con la cotización usada visible, cuando el soporte multimoneda esté implementado.
 **Criterios de aceptación:** cubren lo definido en [HU4](05-historias-de-usuario.md).
-**Riesgos:** ninguno de infraestructura; depende de que `GET /budgets/{budget_id}`, que implementa el Ticket 1, esté disponible primero.
+**Riesgos:** ninguno de infraestructura; depende de que la lectura del presupuesto, que implementa el Ticket 1, esté disponible primero.
 
 ---
 

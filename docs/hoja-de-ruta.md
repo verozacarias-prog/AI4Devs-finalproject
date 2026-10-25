@@ -79,7 +79,7 @@ configuración de Meta, que no suma a lo que se evalúa.
 | Entra en la entrega final, además de la entrega 2 | Dónde está la regla |
 |---|---|
 | El entorno `demo` desplegado, con el enlace personal de cada persona y el aviso de prueba | [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md) |
-| La pantalla de presupuesto y `GET /budgets/{budget_id}`: cuánto se lleva gastado contra el tope | [HU4](05-historias-de-usuario.md), [la API](04-api.md) |
+| La pantalla de presupuesto: el resumen del período con todas sus categorías, el detalle de una categoría con sus movimientos, y un selector que abre el período que cubre hoy. Sale de `GET /budget-periods/{period_id}/summary`, `GET /budgets/{budget_id}` y la lectura de `GET /budget-periods`, que se adelanta de la HU2. Decidido el 24 de octubre de 2026, porque sin el resumen la pantalla mostraba una sola categoría y no tenía de dónde sacar su id | [HU4](05-historias-de-usuario.md), [la API](04-api.md) |
 | Armar y confirmar el presupuesto de un período individual desde el dashboard: cadencia, día de inicio, ingreso estimado y tope por categoría, en borrador hasta confirmarlo | [HU2](05-historias-de-usuario.md), [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio), [la API](04-api.md) |
 | Varios movimientos en un mensaje, con respuestas por número | [Reglas de dominio § 1 y § 5](reglas-de-dominio.md) |
 | Corregir, borrar y restaurar un movimiento confirmado, con el botón de responder un mensaje | [Reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado) |

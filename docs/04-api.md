@@ -175,6 +175,14 @@ quien haya salido del grupo, solo si el período se superpone con su intervalo d
 ([reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad)).
 En cualquier otro caso, `404`, por el mismo criterio que `POST /transactions`.
 
+Los movimientos asociados son los que suman en `spent_amount`: los gastos de la categoría en el
+período y los reintegros vinculados a ellos que llegaron en el período, que restan. No aparecen
+los borrados ni los marcados como duplicado, igual que no suman
+([reglas de dominio § 2 y § 7](reglas-de-dominio.md)). Van del más nuevo al más viejo, sin
+paginar. Cada uno trae el monto como se hizo (`amount`, `currency`), lo que pesa en el tope en la
+moneda del período (`budget_amount`), la cotización solo si hubo conversión, el nombre de la
+cuenta afectada y su origen.
+
 ```yaml
 responses:
   200:
@@ -188,6 +196,31 @@ responses:
           limit_amount: 300000
           spent_amount: 214500
           used_percentage: 71.5
+          transactions:
+            - id: "t2..."
+              transaction_date: "2026-10-18"
+              description: "super"
+              type: "expense"              # an "income" is a linked refund and subtracts
+              amount: 50
+              currency: "USD"
+              budget_amount: 60000         # in primary_currency, rounded per movement
+              exchange_rate: 1200          # null when there was no conversion
+              account: "Galicia USD"
+              source: "manual"
+            - id: "t1..."
+              transaction_date: "2026-10-12"
+              description: null
+              type: "expense"
+              amount: 154500
+              currency: "ARS"
+              budget_amount: 154500
+              exchange_rate: null
+              account: "Galicia pesos"
+              source: "manual"
+  401:
+    description: No valid session
+  404:
+    description: The budget does not exist or the user cannot read its period
 ```
 
 ### `GET /budget-periods`, `POST /budget-periods`, `PUT /budget-periods/{period_id}` y `POST /budget-periods/{period_id}/confirm`
@@ -200,6 +233,10 @@ está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual
   grupos y, de un grupo del que salió, los que se superponen con su membresía
   ([reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad)). Cada uno
   trae sus topes y si el usuario puede editarlo.
+- Cada período dice, con `is_current`, si cubre el día de hoy. Lo calcula el backend, con el día
+  en la zona horaria del usuario y no en la del navegador ([reglas de dominio § 1](reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma)).
+  Como los períodos de un mismo dueño no se solapan (§ 3), lo marca como mucho uno por dueño, y
+  ninguno si ningún período cubre hoy. Es el que la pantalla de presupuesto abre primero.
 - `POST /budget-periods` crea un borrador. Sin `family_group_id` es individual. En un período
   mensual, `period_end` es opcional y se calcula desde `period_start`.
 - `PUT /budget-periods/{period_id}` reemplaza el contenido de un borrador: fechas, moneda,
@@ -222,6 +259,34 @@ Validaciones, en este orden:
 4. Fechas invertidas, un tope menor o igual a cero, o una categoría repetida responden `422`.
 
 ```yaml
+# GET /budget-periods
+responses:
+  200:
+    content:
+      application/json:
+        example:
+          budget_periods:
+            - id: "bp1..."
+              family_group_id: null          # null: individual
+              family_group_name: null        # the group's name, to tell the budgets apart
+              period_type: "monthly"
+              period_start: "2026-10-10"
+              period_end: "2026-11-09"
+              status: "confirmed"
+              primary_currency: "ARS"
+              estimated_income: 1450000
+              can_edit: true
+              is_current: true               # covers today, in the user's time zone
+              budgets:
+                - id: "c1a2..."
+                  category_id: "cat-supermercado"
+                  category: "Supermercado"
+                  limit_amount: 300000
+              # variable recurring rules with their last confirmed amount are added
+              # when recurring rules arrive
+  401:
+    description: No valid session
+
 # POST /budget-periods
 requestBody:
   content:
@@ -275,7 +340,9 @@ responses:
 
 ### `GET /budget-periods/{period_id}/summary`
 
-El resumen de un período para el dashboard, con todas sus categorías, tengan tope o no. Qué
+El resumen de un período para el dashboard: cada categoría con tope, aunque no tenga gastos, y
+cada categoría sin tope que tuvo movimientos en el período, por nombre y sin distinguir
+mayúsculas. El porcentaje usado va con un decimal, redondeado con la mitad hacia arriba. Qué
 incluye y cómo se calcula está en
 [reglas de dominio § 17](reglas-de-dominio.md#17-preguntas-sobre-los-propios-datos). Quién puede leerlo sigue la misma regla que
 `GET /budgets/{budget_id}`: si no puede, `404`.
@@ -293,13 +360,17 @@ responses:
           total_spent: 982300
           categories:
             - category: "Supermercado"
+              budget_id: "c1a2..."         # opens GET /budgets/{budget_id}
               limit_amount: 300000
               spent_amount: 214500
               used_percentage: 71.5
             - category: "Comida afuera y delivery"
-              limit_amount: null           # no limit: listed anyway
+              budget_id: null              # no limit: listed anyway, if it has movements
+              limit_amount: null
               spent_amount: 38500
               used_percentage: null
+          # The next three arrive with the flows that feed them, in a second version:
+          # recurring rules, transfers and registering into a group.
           committed_next_periods: 1100000
           withdrawn_from_investments: 400000   # individual period only: transfers from investment accounts to other accounts, not income
           by_member:                   # only in a group period: what each member charged to it
