@@ -1,7 +1,7 @@
 # Especificación — FEAT-004 · Pantalla de presupuesto
 
 - **Historia de usuario:** [HU4](../../05-historias-de-usuario.md)
-- **Estado:** aprobada para el corte 1
+- **Estado:** aprobada para los cortes 1 y 2
 - **Fecha:** 2026-10-25
 
 ## Alcance
@@ -557,13 +557,166 @@ caso.
 
 ### Corte 2 — errores y estado vacío
 
-- **Aprobado por:** pendiente
+- **Aprobado por:** Verónica Zacarías 26/10/2026
+- **C2-10 cambiado por la revisión (un ingreso estimado sin topes se muestra):** Veronica Zacarias 26/10/2026
+- **C2-12 retitulado por la revisión (se titula por lo que prueba, el detalle):** Veronica Zacarias 26/10/2026
+- **Total:** 14 casos, 8 de integración y 6 de componente.
 
-Los casos se escriben antes de este corte. Cubre, como mínimo: sin sesión, `401`; el período,
-el resumen o el tope de otro usuario, `404`; el período de un grupo del que no es miembro,
-`404`; quien salió de un grupo ve los períodos que se superponen con su membresía y no los
-posteriores; un usuario sin períodos; un período sin topes ni movimientos; un id que no es un
-UUID; y los estados de vacío y error de la pantalla.
+En los de integración, Pablo y Sofía son los de los datos de `local`: "Casa" es de Pablo, y
+Sofía es miembro desde el 1 de octubre de 2026.
+
+| Caso | Qué prueba | Tipo | Sale de |
+|---|---|---|---|
+| C2-01 | Sin sesión, los tres endpoints responden `401` | Integración | CA-15 y CA-16 |
+| C2-02 | El resumen de un período de otro usuario responde `404` | Integración | CA-16 |
+| C2-03 | El detalle de un tope de otro usuario responde `404` | Integración | CA-16 |
+| C2-04 | Quien no es miembro de un grupo no ve sus períodos | Integración | CA-15 |
+| C2-05 | Quien salió de un grupo ve solo los períodos de su membresía | Integración | CA-15 |
+| C2-06 | Un id que no es un UUID responde `422` | Integración | CA-15 |
+| C2-07 | Un período sin topes ni movimientos está vacío, no falla | Integración | CA-12 y CA-13 |
+| C2-08 | Un usuario sin períodos recibe la lista vacía | Integración | CA-1 |
+| C2-09 | Sin períodos, el estado vacío y no un spinner | Componente | CA-1 |
+| C2-10 | Un período sin topes ni movimientos, el estado vacío | Componente | CA-12 |
+| C2-11 | Si falla la lista de períodos, un error por cada causa | Componente | CA-1 |
+| C2-12 | Si falla el detalle, Reintentar repite esa consulta | Componente | CA-12 y CA-14 |
+| C2-13 | Reintentar después de un error trae el presupuesto | Componente | CA-1 |
+| C2-14 | Sin sesión, la pantalla vuelve a la entrada | Componente | CA-15 y CA-16 |
+
+#### C2-01 · Sin sesión, los tres endpoints responden `401`
+
+- **Sale de:** CA-15 y CA-16 · **Tipo:** integración
+- **Dado** el período de Lucía con su tope de Supermercado, y un pedido sin la cookie de sesión,
+- **cuando** se pide `GET /budget-periods`, el resumen del período y el detalle del tope,
+- **entonces** los tres responden `401` con `{"error": "unauthorized"}`, y ninguno trae datos del
+  presupuesto.
+- **Test:** `tests/integration/test_budgets.py::test_without_a_session_the_three_endpoints_answer_401`
+
+#### C2-02 · El resumen de un período de otro usuario responde `404`
+
+- **Sale de:** CA-16 · **Tipo:** integración
+- **Dado** un período individual de Pablo, del 10 de octubre al 9 de noviembre,
+- **cuando** Lucía, con su sesión, pide su resumen, y después el de un UUID que no es de ningún
+  período,
+- **entonces** los dos responden `404` con `{"error": "not_found"}`, iguales: la respuesta no dice
+  si el período existe.
+- **Test:** `tests/integration/test_budgets.py::test_the_summary_of_another_users_period_answers_404`
+
+#### C2-03 · El detalle de un tope de otro usuario responde `404`
+
+- **Sale de:** CA-16 · **Tipo:** integración
+- **Dado** el período de Pablo del caso C2-02, con un tope en Supermercado de $200.000,00,
+- **cuando** Lucía pide `GET /budgets/{budget_id}` de ese tope,
+- **entonces** responde `404` con `{"error": "not_found"}`.
+- **Test:** `tests/integration/test_budgets.py::test_the_detail_of_another_users_limit_answers_404`
+
+#### C2-04 · Quien no es miembro de un grupo no ve sus períodos
+
+- **Sale de:** CA-15 · **Tipo:** integración
+- **Dado** un período de "Casa" del 10 de octubre al 9 de noviembre, con un tope en Supermercado,
+  y Lucía, que no es miembro de "Casa",
+- **cuando** Lucía pide `GET /budget-periods`, el resumen de ese período y el detalle de su tope,
+- **entonces** la lista trae solo su período, y el resumen y el detalle responden `404`.
+- **Test:** `tests/integration/test_budgets.py::test_who_is_not_a_member_of_a_group_does_not_see_its_periods`
+
+#### C2-05 · Quien salió de un grupo ve solo los períodos de su membresía
+
+- **Sale de:** CA-15 · **Tipo:** integración
+- **Dado** dos períodos de "Casa", del 10 de octubre al 9 de noviembre y del 10 de noviembre al 9
+  de diciembre, y Sofía, que salió de "Casa" el 15 de octubre de 2026,
+- **cuando** Sofía pide `GET /budget-periods` y el resumen de cada período de "Casa",
+- **entonces** la lista trae el de octubre, que se superpone con su membresía, y no el de
+  noviembre; el resumen de octubre responde `200`, el de noviembre `404`, y el de octubre ya no
+  se puede editar.
+- **Test:** `tests/integration/test_budgets.py::test_who_left_a_group_sees_only_the_periods_of_their_membership`
+
+#### C2-06 · Un id que no es un UUID responde `422`
+
+- **Sale de:** CA-15 · **Tipo:** integración
+- **Dado** Lucía con su sesión,
+- **cuando** pide el resumen de `/budget-periods/abc/summary` y el detalle de `/budgets/abc`,
+- **entonces** los dos responden `422` con el cuerpo de un error, y no `404` ni `500`.
+- **Test:** `tests/integration/test_budgets.py::test_an_id_that_is_not_a_uuid_answers_422`
+
+#### C2-07 · Un período sin topes ni movimientos está vacío, no falla
+
+- **Sale de:** CA-12 y CA-13 · **Tipo:** integración
+- **Dado** el período de Lucía sin topes, sin movimientos y con un ingreso estimado de 0,
+- **cuando** Lucía pide su resumen,
+- **entonces** responde `200` con el ingreso estimado, el real y el total gastado en 0.00, y la
+  lista de categorías vacía.
+- **Test:** `tests/integration/test_budgets.py::test_a_period_without_limits_or_movements_is_empty_not_a_failure`
+
+#### C2-08 · Un usuario sin períodos recibe la lista vacía
+
+- **Sale de:** CA-1 · **Tipo:** integración
+- **Dado** Lucía sin ningún período,
+- **cuando** pide `GET /budget-periods`,
+- **entonces** responde `200` con `{"budget_periods": []}`.
+- **Test:** `tests/integration/test_budgets.py::test_a_user_without_periods_gets_an_empty_list`
+
+#### C2-09 · Sin períodos, el estado vacío y no un spinner
+
+- **Sale de:** CA-1 · **Tipo:** componente
+- **Dado** una respuesta de `GET /budget-periods` con la lista vacía,
+- **cuando** se abre la pantalla,
+- **entonces** dice "Todavía no tenés un presupuesto" y "Cuando armes tu primer período, acá vas
+  a ver cuánto llevás gastado.", sin "Consultando tu presupuesto…", sin selector, sin alerta y
+  sin Reintentar, y no se pide ningún resumen.
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C2-09: without periods it is empty, not a spinner"
+
+#### C2-10 · Un período sin topes ni movimientos, el estado vacío
+
+- **Sale de:** CA-12 · **Tipo:** componente
+- **Dado** los dos períodos de Lucía, y un resumen del actual con los tres montos en 0.00 y sin
+  categorías,
+- **cuando** se abre la pantalla,
+- **entonces** dice "Este período todavía no tiene topes ni gastos" y "Contale tus gastos a
+  Platita y aparecen acá.", sin los tres montos y sin alerta; el selector sigue a la vista y al
+  elegir el anterior se pide su resumen. Si el mismo resumen trae un ingreso estimado de
+  1450000.00, muestra además los tres montos, con el estimado $ 1.450.000,00: un ingreso cargado
+  sin topes no se esconde.
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C2-10: a period without limits or movements is empty"
+
+#### C2-11 · Si falla la lista de períodos, un error por cada causa
+
+- **Sale de:** CA-1 · **Tipo:** componente
+- **Dado** que `GET /budget-periods` responde `500`, o no se llega a la API, o no responde a
+  tiempo,
+- **cuando** se abre la pantalla,
+- **entonces** una alerta dice "No se pudo consultar tu presupuesto", la causa ("La API respondió
+  con un error.", "No se puede llegar a la API." o "La API no respondió a tiempo.") y Reintentar,
+  sin ningún monto.
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C2-11: when the periods fail, an error for each cause"
+
+#### C2-12 · Si falla el detalle, Reintentar repite esa consulta
+
+- **Sale de:** CA-12 y CA-14 · **Tipo:** componente
+- **Dado** los períodos de Lucía y el resumen del caso C1-29, y que el detalle de Supermercado
+  responde `500` la primera vez y bien la segunda,
+- **cuando** se elige Supermercado y, después del error, Reintentar,
+- **entonces** primero se ve la alerta "No se pudo consultar tu presupuesto" sin el resumen, y
+  después el detalle de Supermercado; los períodos se pidieron una sola vez y el detalle dos.
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C2-12: when the detail fails, retrying repeats that query"
+
+#### C2-13 · Reintentar después de un error trae el presupuesto
+
+- **Sale de:** CA-1 · **Tipo:** componente
+- **Dado** que `GET /budget-periods` responde `500` la primera vez, y después los períodos de
+  Lucía, con una respuesta que tarda,
+- **cuando** se aprieta Reintentar,
+- **entonces** se ve "Consultando tu presupuesto…" con el foco en esa línea, y al llegar la
+  respuesta, el resumen del período actual, sin alerta.
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C2-13: retrying after an error brings the budget"
+
+#### C2-14 · Sin sesión, la pantalla vuelve a la entrada
+
+- **Sale de:** CA-15 y CA-16 · **Tipo:** componente
+- **Dado** que la lista de períodos responde `401`, o que la lista responde bien y el resumen
+  responde `401`,
+- **cuando** se abre la pantalla,
+- **entonces** se avisa que no hay sesión, para que el dashboard vuelva a la entrada, y la
+  pantalla no muestra ningún error.
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C2-14: without a session the screen goes back to the entry"
 
 ### Corte 3 — observabilidad y accesibilidad
 
