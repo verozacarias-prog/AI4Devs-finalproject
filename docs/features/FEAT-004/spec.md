@@ -1,7 +1,7 @@
 # Especificación — FEAT-004 · Pantalla de presupuesto
 
 - **Historia de usuario:** [HU4](../../05-historias-de-usuario.md)
-- **Estado:** aprobada para el corte 1
+- **Estado:** aprobada para los cortes 1 y 2
 - **Fecha:** 2026-10-25
 
 ## Alcance
@@ -558,6 +558,8 @@ caso.
 ### Corte 2 — errores y estado vacío
 
 - **Aprobado por:** Verónica Zacarías 26/10/2026
+- **C2-10 cambiado por la revisión (un ingreso estimado sin topes se muestra):** Veronica Zacarias 26/10/2026
+- **C2-12 retitulado por la revisión (se titula por lo que prueba, el detalle):** Veronica Zacarias 26/10/2026
 - **Total:** 14 casos, 8 de integración y 6 de componente.
 
 En los de integración, Pablo y Sofía son los de los datos de `local`: "Casa" es de Pablo, y
@@ -576,7 +578,7 @@ Sofía es miembro desde el 1 de octubre de 2026.
 | C2-09 | Sin períodos, el estado vacío y no un spinner | Componente | CA-1 |
 | C2-10 | Un período sin topes ni movimientos, el estado vacío | Componente | CA-12 |
 | C2-11 | Si falla la lista de períodos, un error por cada causa | Componente | CA-1 |
-| C2-12 | Si falla el resumen o el detalle, Reintentar repite esa consulta | Componente | CA-12 y CA-14 |
+| C2-12 | Si falla el detalle, Reintentar repite esa consulta | Componente | CA-12 y CA-14 |
 | C2-13 | Reintentar después de un error trae el presupuesto | Componente | CA-1 |
 | C2-14 | Sin sesión, la pantalla vuelve a la entrada | Componente | CA-15 y CA-16 |
 
@@ -669,8 +671,10 @@ Sofía es miembro desde el 1 de octubre de 2026.
   categorías,
 - **cuando** se abre la pantalla,
 - **entonces** dice "Este período todavía no tiene topes ni gastos" y "Contale tus gastos a
-  Platita y aparecen acá.", sin alerta; el selector sigue a la vista y al elegir el anterior se
-  pide su resumen.
+  Platita y aparecen acá.", sin los tres montos y sin alerta; el selector sigue a la vista y al
+  elegir el anterior se pide su resumen. Si el mismo resumen trae un ingreso estimado de
+  1450000.00, muestra además los tres montos, con el estimado $ 1.450.000,00: un ingreso cargado
+  sin topes no se esconde.
 - **Test:** `src/pages/BudgetPage.test.tsx` › "case C2-10: a period without limits or movements is empty"
 
 #### C2-11 · Si falla la lista de períodos, un error por cada causa
@@ -684,7 +688,7 @@ Sofía es miembro desde el 1 de octubre de 2026.
   sin ningún monto.
 - **Test:** `src/pages/BudgetPage.test.tsx` › "case C2-11: when the periods fail, an error for each cause"
 
-#### C2-12 · Si falla el resumen o el detalle, Reintentar repite esa consulta
+#### C2-12 · Si falla el detalle, Reintentar repite esa consulta
 
 - **Sale de:** CA-12 y CA-14 · **Tipo:** componente
 - **Dado** los períodos de Lucía y el resumen del caso C1-29, y que el detalle de Supermercado
@@ -692,7 +696,7 @@ Sofía es miembro desde el 1 de octubre de 2026.
 - **cuando** se elige Supermercado y, después del error, Reintentar,
 - **entonces** primero se ve la alerta "No se pudo consultar tu presupuesto" sin el resumen, y
   después el detalle de Supermercado; los períodos se pidieron una sola vez y el detalle dos.
-- **Test:** `src/pages/BudgetPage.test.tsx` › "case C2-12: when the summary or the detail fails, retrying repeats that query"
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C2-12: when the detail fails, retrying repeats that query"
 
 #### C2-13 · Reintentar después de un error trae el presupuesto
 

@@ -493,7 +493,7 @@ test('case C2-09: without periods it is empty, not a spinner', async () => {
 
 test('case C2-10: a period without limits or movements is empty', async () => {
   const asked = apiWith([CURRENT, PREVIOUS], {
-    [CURRENT.id]: summary(CURRENT.id, [], 0, 0),
+    [CURRENT.id]: { ...summary(CURRENT.id, [], 0, 0), estimated_income: 0 },
     [PREVIOUS.id]: summary(PREVIOUS.id, LUCIA_CATEGORIES, 108256.04),
   })
 
@@ -501,10 +501,23 @@ test('case C2-10: a period without limits or movements is empty', async () => {
 
   await screen.findByText('Este período todavía no tiene topes ni gastos')
   screen.getByText('Contale tus gastos a Platita y aparecen acá.')
+  expect(screen.queryByText('Ingreso estimado')).toBeNull()
   expect(screen.queryByRole('alert')).toBeNull()
   fireEvent.change(selector(), { target: { value: PREVIOUS.id } })
   await screen.findByText('Supermercado', { selector: '.budget-category__name' })
   expect(asked.summaries).toEqual([CURRENT.id, PREVIOUS.id])
+})
+
+test('case C2-10: an estimated income without limits is not hidden', async () => {
+  apiWith([CURRENT], { [CURRENT.id]: summary(CURRENT.id, [], 0, 0) })
+
+  render(<BudgetPage onNoSession={nothing} />)
+
+  await screen.findByText('Este período todavía no tiene topes ni gastos')
+  expect(figure('Ingreso estimado')).toBe('$ 1.450.000,00')
+  expect(figure('Ingreso real')).toBe('$ 0,00')
+  expect(figure('Total gastado')).toBe('$ 0,00')
+  expect(screen.queryByRole('alert')).toBeNull()
 })
 
 test.each([
@@ -530,7 +543,7 @@ test.each([
   expect(document.body.textContent).not.toContain('$')
 })
 
-test('case C2-12: when the summary or the detail fails, retrying repeats that query', async () => {
+test('case C2-12: when the detail fails, retrying repeats that query', async () => {
   let periodsAsked = 0
   let detailsAsked = 0
   api.use(
