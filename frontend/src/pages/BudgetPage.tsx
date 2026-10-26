@@ -17,6 +17,9 @@ import type { Failure } from '../api/request'
 import {
   AMOUNT_DECIMALS,
   AMOUNT_LOCALE,
+  DATE_FORMAT,
+  DATE_LOCALE,
+  DATE_TIME_ZONE,
   EXCHANGE_RATE_MAX_DECIMALS,
   NEAR_LIMIT_PERCENTAGE,
   OVER_LIMIT_PERCENTAGE,
@@ -166,7 +169,7 @@ function periodLabel(period: BudgetPeriod): string {
     TEXT.periodRange(formatDate(period.period_start), formatDate(period.period_end)),
   ]
   if (period.status === 'draft') parts.push(TEXT.draft)
-  return parts.join(' · ')
+  return parts.join(TEXT.separator)
 }
 
 /**
@@ -183,8 +186,9 @@ function Summary({ summary, onOpen }: { summary: PeriodSummary; onOpen: (budgetI
         <Figure label={TEXT.totalSpent} value={formatAmount(summary.total_spent, currency)} />
       </dl>
       <ul aria-label={TEXT.categories} className="divide-y rounded-lg border">
-        {summary.categories.map((category) => (
-          <CategoryRow key={category.category} category={category} currency={currency} onOpen={onOpen} />
+        {summary.categories.map((category, index) => (
+          // Two categories of different members can share a name, so the name is no key.
+          <CategoryRow key={category.budget_id ?? index} category={category} currency={currency} onOpen={onOpen} />
         ))}
       </ul>
     </div>
@@ -364,18 +368,24 @@ function formatAmount(amount: number, currency: string): string {
 
 /** The percentage as the API rounded it, with its one decimal. */
 function formatPercentage(percentage: number): string {
-  return `${new Intl.NumberFormat(AMOUNT_LOCALE, {
-    minimumFractionDigits: PERCENTAGE_DECIMALS,
-    maximumFractionDigits: PERCENTAGE_DECIMALS,
-  }).format(percentage)} %`
+  return TEXT.percentage(
+    new Intl.NumberFormat(AMOUNT_LOCALE, {
+      minimumFractionDigits: PERCENTAGE_DECIMALS,
+      maximumFractionDigits: PERCENTAGE_DECIMALS,
+    }).format(percentage),
+  )
 }
 
 function formatRate(rate: number): string {
   return new Intl.NumberFormat(AMOUNT_LOCALE, { maximumFractionDigits: EXCHANGE_RATE_MAX_DECIMALS }).format(rate)
 }
 
-/** An ISO date, as 2026-10-09, written as 9/10/2026: a calendar day, with no time zone. */
+/**
+ * An ISO date, as 2026-10-09, written as 9/10/2026. It is a calendar day: it is read and
+ * written in UTC, so no time zone moves it to the day before.
+ */
 function formatDate(isoDate: string): string {
-  const [year, month, day] = isoDate.split('-').map(Number)
-  return `${day}/${month}/${year}`
+  return new Intl.DateTimeFormat(DATE_LOCALE, { ...DATE_FORMAT, timeZone: DATE_TIME_ZONE }).format(
+    new Date(isoDate),
+  )
 }

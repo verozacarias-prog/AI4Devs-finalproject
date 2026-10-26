@@ -101,7 +101,10 @@ class GetBudgetStatus:
                     {transaction.account_id for transaction in counted}
                 )
             }
-            category = unit_of_work.categories.list_by_ids({budget.category_id})[0]
+            category = next(iter(unit_of_work.categories.list_by_ids({budget.category_id})), None)
+            if category is None:
+                # The foreign key of the limit guarantees its category.
+                raise InconsistentDataError
         spent = sum((signed_weight(transaction, period) for transaction in counted), ZERO)
         movements = [
             BudgetMovement(

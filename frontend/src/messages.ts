@@ -72,6 +72,8 @@ export const MESSAGES = {
     personal: 'Personal',
     periodRange: (start: string, end: string) => `del ${start} al ${end}`,
     draft: 'Borrador',
+    separator: ' · ',
+    percentage: (value: string) => `${value} %`,
     draftNotice: 'Este período está en borrador: confirmalo para que reciba movimientos',
     estimatedIncome: 'Ingreso estimado',
     actualIncome: 'Ingreso real',

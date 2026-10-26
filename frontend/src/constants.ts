@@ -27,6 +27,10 @@ export const JSON_CONTENT_TYPE = 'application/json'
 /** How the dashboard writes an amount: Argentine format, always with two decimals. */
 export const AMOUNT_LOCALE = 'es-AR'
 export const AMOUNT_DECIMALS = 2
+/** How the dashboard writes a calendar day, such as 9/10/2026. */
+export const DATE_LOCALE = 'es-AR'
+export const DATE_FORMAT: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'numeric', year: 'numeric' }
+export const DATE_TIME_ZONE = 'UTC'
 /** A used percentage has one decimal, as the API rounds it (FEAT-004, CA-10). */
 export const PERCENTAGE_DECIMALS = 1
 /** An exchange rate is shown with every decimal it has, up to the ten the database keeps. */
