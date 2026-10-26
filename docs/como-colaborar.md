@@ -32,7 +32,8 @@ milestone de la entrega, y su avance se sigue en el
 - Una issue organiza el trabajo y enlaza a `docs/`: la especificación sigue estando en `docs/`.
 - El pull request que resuelve una issue la cierra con `Closes #N` en su descripción. Al
   integrarlo, la issue se cierra y su tarjeta pasa a "Hecho". Si la resuelve en parte, lleva
-  `Parte de #N` y la issue queda abierta.
+  `Parte de #N` y la issue queda abierta. El del último corte de una historia cierra también la
+  issue de la historia de usuario, que ningún otro pull request nombra.
 
 **Una vez por clon.**
 
