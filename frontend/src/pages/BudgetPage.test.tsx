@@ -1,5 +1,5 @@
 /**
- * Cases C1-26 to C1-37 and C2-09 to C2-14 of FEAT-004 (docs/features/FEAT-004/spec.md): the
+ * Cases C1-26 to C1-37, C2-09 to C2-14 and C3-02 to C3-05 of FEAT-004 (docs/features/FEAT-004/spec.md): the
  * four states of the budget screen. The API is simulated at the network level, so the page and its API calls are
  * tested together.
  */
@@ -617,4 +617,118 @@ test.each([
 
   await waitFor(() => expect(ended).toBe(1))
   expect(screen.queryByRole('alert')).toBeNull()
+})
+
+/** Native, enabled and with no tabindex that takes it out of the order: Tab reaches it. */
+function expectReachable(control: HTMLElement, tagName: string) {
+  expect(control.tagName).toBe(tagName)
+  expect((control as HTMLButtonElement | HTMLSelectElement).disabled).toBe(false)
+  expect(control.tabIndex).toBe(0)
+}
+
+test('case C3-02: the controls have a name and are used with the keyboard', async () => {
+  let detailsAsked = 0
+  api.use(
+    http.get(PERIODS, () => HttpResponse.json({ budget_periods: [CURRENT, PREVIOUS] })),
+    http.get(SUMMARY, () => HttpResponse.json(summary(CURRENT.id, LUCIA_CATEGORIES, 108256.04))),
+    http.get(DETAIL, () => {
+      detailsAsked += 1
+      return detailsAsked === 1 ? failure() : HttpResponse.json(SUPERMERCADO_DETAIL)
+    }),
+  )
+
+  render(<BudgetPage onNoSession={nothing} />)
+  const supermercado = await screen.findByRole('button', { name: 'Supermercado' })
+  expectReachable(selector(), 'SELECT')
+  expectReachable(supermercado, 'BUTTON')
+  fireEvent.click(supermercado)
+  const retry = await screen.findByRole('button', { name: 'Reintentar' })
+  expectReachable(retry, 'BUTTON')
+  fireEvent.click(retry)
+
+  expectReachable(await screen.findByRole('button', { name: 'Volver al resumen' }), 'BUTTON')
+})
+
+test('case C3-03: each bar announces its percentage and state', async () => {
+  const salud = crypto.randomUUID()
+  apiWith(
+    [CURRENT],
+    {
+      [CURRENT.id]: summary(
+        CURRENT.id,
+        [
+          limited('Supermercado', SUPERMERCADO, 300000, 135000, 45),
+          limited('Salud', salud, 50000, 42500, 85),
+          limited('Transporte', TRANSPORTE, 80000, 89600, 112),
+        ],
+        267100,
+      ),
+    },
+    {
+      [TRANSPORTE]: {
+        ...detail(TRANSPORTE, 89600, 112, [movement('2026-10-12', 'expense', 89600, 'ARS')]),
+        category: 'Transporte',
+        limit_amount: 80000,
+      },
+    },
+  )
+
+  render(<BudgetPage onNoSession={nothing} />)
+
+  await screen.findByRole('button', { name: 'Transporte' })
+  const announced = (meter: HTMLElement) => [meter.getAttribute('aria-label'), meter.getAttribute('aria-valuetext')]
+  expect(screen.getAllByRole('meter').map(announced)).toEqual([
+    ['Supermercado', '45,0 %'],
+    ['Salud', '85,0 %, cerca del tope'],
+    ['Transporte', '112,0 %, excedido'],
+  ])
+  fireEvent.click(screen.getByRole('button', { name: 'Transporte' }))
+  await screen.findByRole('region', { name: 'Transporte' })
+  expect(screen.getAllByRole('meter').map(announced)).toEqual([['Transporte', '112,0 %, excedido']])
+})
+
+test('case C3-04: every amount is written with its currency', async () => {
+  apiWith(
+    [CURRENT],
+    { [CURRENT.id]: summary(CURRENT.id, LUCIA_CATEGORIES, 108256.04) },
+    {
+      [SUPERMERCADO]: detail(SUPERMERCADO, 17345.68, 5.8, [
+        movement('2026-10-18', 'expense', 10, 'USD', {
+          budget_amount: 12345.68,
+          exchange_rate: 1234.5678,
+          account: 'Galicia USD',
+        }),
+        movement('2026-10-12', 'expense', 5000, 'ARS'),
+      ]),
+    },
+  )
+  const withCurrency = /^(US)?\$ /
+
+  render(<BudgetPage onNoSession={nothing} />)
+
+  await screen.findByRole('button', { name: 'Supermercado' })
+  const summaryAmounts = [
+    ...['Ingreso estimado', 'Ingreso real', 'Total gastado'].map(figure),
+    ...Array.from(document.querySelectorAll('.budget-category__spent')).flatMap((spent) =>
+      read(spent).split(' de '),
+    ),
+  ]
+  expect(summaryAmounts).toHaveLength(8)
+  for (const amount of summaryAmounts) expect(amount).toMatch(withCurrency)
+  fireEvent.click(screen.getByRole('button', { name: 'Supermercado' }))
+  await screen.findByRole('region', { name: 'Supermercado' })
+  const movementAmounts = Array.from(
+    document.querySelectorAll('.budget-movement__amount, .budget-movement__weight'),
+  ).map(read)
+  expect(movementAmounts).toEqual(['US$ 10,00', '$ 12.345,68', '$ 5.000,00'])
+  for (const amount of movementAmounts) expect(amount).toMatch(withCurrency)
+})
+
+test('case C3-05: without periods the notice is a heading, not a status', async () => {
+  apiWith([], {})
+
+  render(<BudgetPage onNoSession={nothing} />)
+
+  await screen.findByRole('heading', { name: 'Todavía no tenés un presupuesto' })
+  expect(screen.getByRole('status').textContent).toBe('')
 })
