@@ -93,7 +93,8 @@ cd site && npm install                # solo para ver o regenerar el portal
   la entrega a `main`.
 - **Cada lunes:** revisar los pull requests de Dependabot.
 
-Los commands, el skill y el agente están descritos en el
+Los pasos 1 a 12 se pueden recorrer con el command `/ticket`, que se detiene en cada punto que
+decide una persona. Los commands, el skill y el agente están descritos en el
 [flujo de trabajo con IA](flujo-de-trabajo-con-ia.md).
 
 ## 2. Verificación

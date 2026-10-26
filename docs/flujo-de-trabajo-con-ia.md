@@ -23,12 +23,14 @@ persona se acuerde de invocarla derrota el propósito.
 
 ## Commands
 
-Tres comandos versionados en `.claude/commands/`, que se invocan escribiendo `/nombre`. Son
-verificaciones, y una verificación se corre cuando la persona decide, no cuando el modelo lo
-infiere.
+Cuatro comandos versionados en `.claude/commands/`, que se invocan escribiendo `/nombre`. Tres
+son verificaciones, y una verificación se corre cuando la persona decide, no cuando el modelo lo
+infiere. El cuarto, `/ticket`, recorre el flujo de un corte y se detiene en cada punto que decide
+una persona.
 
 | Command | Cuándo | Qué hace |
 |---|---|---|
+| `/ticket` | Al empezar un corte o una tarea, con sus issues | Recorre los pasos de [cómo colaborar](como-colaborar.md#1-incluir-un-cambio), de la issue a la descripción del pull request. Se detiene para que la persona apruebe los casos, pida cada commit, pruebe a mano, y abra e integre el pull request |
 | `/ui-states` | Al cerrar el corte vertical 2 | Verifica que la pantalla implemente y testee los cuatro estados, con foco en que *vacío* no esté resuelto como *error* |
 | `/spec-drift` | Antes del último commit de un corte, y antes de cada entrega | Compara la especificación contra el código y reporta las diferencias **sin resolverlas** |
 | `/security-audit` | Antes de cada entrega, no en cada pull request | Audita todo el backend contra el OWASP Top 10 web y el de aplicaciones LLM, de a un hallazgo por vez y por criticidad. No modifica nada. El cruce de diseño está en [seguridad de la capa de IA](seguridad-llm.md) |
