@@ -43,7 +43,7 @@ Salen de `frontend/src/design-tokens.css`, con las excepciones que admite el
 | Con contenido: resumen | Llegaron los períodos y el resumen del elegido | El selector, el aviso si es un borrador, los ingresos, el total gastado y una fila por categoría | Elegir otro período, o una categoría con tope |
 | Con contenido: detalle | Se eligió una categoría con tope y llegó su detalle | El tope, lo gastado, el porcentaje y los movimientos | "Volver al resumen", al mismo período |
 | Vacío: sin períodos | `GET /budget-periods` trae la lista vacía | "Todavía no tenés un presupuesto" y qué va a ver cuando arme uno, sin selector ni alerta | — |
-| Vacío: período sin nada | El resumen del elegido no trae categorías ni ingreso real | "Este período todavía no tiene topes ni gastos" y que los gastos se cuentan por el chat, sin alerta; el selector sigue a la vista | Elegir otro período |
+| Vacío: período sin topes ni gastos | El resumen del elegido no trae categorías | "Este período todavía no tiene topes ni gastos" y que los gastos se cuentan por el chat, sin alerta; el selector sigue a la vista. Los tres montos se muestran si alguno no es cero, como un ingreso estimado cargado sin topes | Elegir otro período |
 | Error | La API responde con un error, no responde a tiempo o no se llega a ella, en cualquiera de las consultas | "No se pudo consultar tu presupuesto", la causa y Reintentar, sin ningún monto | Reintentar vuelve a Cargando y repite solo la consulta que falló |
 
 Qué período se abre está en la [decisión 8 de la especificación](spec.md#decisiones-tomadas-al-especificar).

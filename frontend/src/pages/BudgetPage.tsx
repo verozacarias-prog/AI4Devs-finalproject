@@ -186,28 +186,33 @@ function periodLabel(period: BudgetPeriod): string {
  */
 function Summary({ summary, onOpen }: { summary: PeriodSummary; onOpen: (budgetId: string) => void }) {
   const currency = summary.primary_currency
-  if (summary.categories.length === 0 && summary.actual_income === 0) {
-    // Nothing to show yet: no limits and no movements. Empty, not a failure.
-    return (
-      <div className="flex flex-col gap-1">
-        <p className="text-sm font-medium">{TEXT.emptyPeriod}</p>
-        <CardDescription>{TEXT.emptyPeriodDetail}</CardDescription>
-      </div>
-    )
-  }
+  const noCategories = summary.categories.length === 0
+  // With nothing at all the amounts would all be zero, so they are left out. An estimated
+  // income loaded without limits is shown, though: hiding it would hide what the user wrote.
+  const showAmounts = !noCategories || summary.actual_income !== 0 || summary.estimated_income !== 0
   return (
     <div className="flex flex-col gap-6">
-      <dl className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <Figure label={TEXT.estimatedIncome} value={formatAmount(summary.estimated_income, currency)} />
-        <Figure label={TEXT.actualIncome} value={formatAmount(summary.actual_income, currency)} />
-        <Figure label={TEXT.totalSpent} value={formatAmount(summary.total_spent, currency)} />
-      </dl>
-      <ul aria-label={TEXT.categories} className="divide-y rounded-lg border">
-        {summary.categories.map((category, index) => (
-          // Two categories of different members can share a name, so the name is no key.
-          <CategoryRow key={category.budget_id ?? index} category={category} currency={currency} onOpen={onOpen} />
-        ))}
-      </ul>
+      {showAmounts && (
+        <dl className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <Figure label={TEXT.estimatedIncome} value={formatAmount(summary.estimated_income, currency)} />
+          <Figure label={TEXT.actualIncome} value={formatAmount(summary.actual_income, currency)} />
+          <Figure label={TEXT.totalSpent} value={formatAmount(summary.total_spent, currency)} />
+        </dl>
+      )}
+      {noCategories ? (
+        // No limits and no spending yet: empty, not a failure.
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-medium">{TEXT.emptyPeriod}</p>
+          <CardDescription>{TEXT.emptyPeriodDetail}</CardDescription>
+        </div>
+      ) : (
+        <ul aria-label={TEXT.categories} className="divide-y rounded-lg border">
+          {summary.categories.map((category, index) => (
+            // Two categories of different members can share a name, so the name is no key.
+            <CategoryRow key={category.budget_id ?? index} category={category} currency={currency} onOpen={onOpen} />
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
