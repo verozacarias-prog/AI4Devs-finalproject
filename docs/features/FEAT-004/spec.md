@@ -1,7 +1,7 @@
 # Especificación — FEAT-004 · Pantalla de presupuesto
 
 - **Historia de usuario:** [HU4](../../05-historias-de-usuario.md)
-- **Estado:** aprobada para los cortes 1 y 2
+- **Estado:** aprobada para los cortes 1, 2 y 3
 - **Fecha:** 2026-10-25
 
 ## Alcance
@@ -720,11 +720,72 @@ Sofía es miembro desde el 1 de octubre de 2026.
 
 ### Corte 3 — observabilidad y accesibilidad
 
-- **Aprobado por:** pendiente
+- **Aprobado por:** Veronica Zacarias 26/10/2026
+- **Total:** 5 casos, 1 de integración y 4 de componente.
 
-Los casos se escriben antes de este corte. Cubre que la línea de cada pedido no lleve montos,
-nombres de categorías, de cuentas ni del grupo, y la accesibilidad de la pantalla: las barras
-anuncian su porcentaje y los montos su moneda.
+Cubre que la línea de cada pedido no lleve montos ni nombres, y la accesibilidad de la pantalla.
+El contraste no tiene caso, porque el entorno de los tests no calcula colores: se calcula cada
+color contra su fondo y queda anotado en la lista de accesibilidad del
+[contrato de UI](ui_contract.md), como en FEAT-001. El ámbar de "cerca del tope" se oscurece
+para llegar a 3:1 contra el fondo de la barra, el mínimo de WCAG AA para un gráfico.
+
+| Caso | Qué prueba | Tipo | Sale de |
+|---|---|---|---|
+| C3-01 | Los registros no llevan montos ni nombres | Integración | AGENTS.md § 7 |
+| C3-02 | Los controles tienen nombre y se usan con el teclado | Componente | Accesibilidad |
+| C3-03 | Cada barra anuncia su porcentaje y su estado, sin depender del color | Componente | Accesibilidad |
+| C3-04 | Todo monto se escribe con su moneda | Componente | Accesibilidad y CA-14 |
+| C3-05 | Sin períodos, el aviso es un título y no se anuncia como carga | Componente | Accesibilidad |
+
+#### C3-01 · Los registros no llevan montos ni nombres
+
+- **Sale de:** AGENTS.md § 7 · **Tipo:** integración
+- **Dado** el período de "Casa" del 10/10 al 9/11, con un tope de Supermercado de $ 500.000,00 y
+  un gasto de $ 154.500,00 en esa categoría desde la cuenta "Galicia pesos" de Pablo, y Pablo con
+  una sesión abierta,
+- **cuando** pide la lista de períodos, el resumen del de "Casa" y el detalle del tope,
+- **entonces** la línea de cada pedido lleva su endpoint, y ninguna línea escrita durante los tres
+  contiene un monto, "Supermercado", "Galicia", "Casa" ni "Pablo".
+- **Test:** `tests/integration/test_budgets.py::test_the_logs_carry_no_amounts_or_names`
+
+#### C3-02 · Los controles tienen nombre y se usan con el teclado
+
+- **Sale de:** Accesibilidad · **Tipo:** componente
+- **Dado** los períodos de Lucía, con el resumen de C1-29, un detalle de Supermercado que falla una
+  vez,
+- **cuando** se abre la pantalla, se abre Supermercado y falla,
+- **entonces** el selector "Período", el botón de Supermercado y Reintentar son controles nativos,
+  habilitados y sin nada que los saque del orden de Tab; y después de reintentar, Volver también.
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C3-02: the controls have a name and are used with the keyboard"
+
+#### C3-03 · Cada barra anuncia su porcentaje y su estado, sin depender del color
+
+- **Sale de:** Accesibilidad · **Tipo:** componente
+- **Dado** un resumen con tres categorías con tope: Supermercado al 45.0 %, Salud al 85.0 % y
+  Transporte al 112.0 %,
+- **cuando** se abre la pantalla, y después el detalle de Transporte,
+- **entonces** cada barra es un medidor con el nombre de su categoría, que se lee "45,0 %",
+  "85,0 %, cerca del tope" y "112,0 %, excedido"; en el detalle, la barra de Transporte se lee
+  igual.
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C3-03: each bar announces its percentage and state"
+
+#### C3-04 · Todo monto se escribe con su moneda
+
+- **Sale de:** Accesibilidad y CA-14 · **Tipo:** componente
+- **Dado** el resumen de C1-29 y el detalle de C1-35, con un gasto en dólares,
+- **cuando** se abre la pantalla, y después el detalle de Supermercado,
+- **entonces** los tres montos del resumen, lo gastado y el tope de cada categoría, y el monto y
+  lo que pesa cada movimiento empiezan con "$" o "US$": ninguno es un número suelto.
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C3-04: every amount is written with its currency"
+
+#### C3-05 · Sin períodos, el aviso es un título y no se anuncia como carga
+
+- **Sale de:** Accesibilidad · **Tipo:** componente
+- **Dado** la lista de períodos vacía de C2-09,
+- **cuando** se abre la pantalla,
+- **entonces** "Todavía no tenés un presupuesto" es un título, y la línea que anuncia la carga
+  queda vacía.
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C3-05: without periods the notice is a heading, not a status"
 
 ## Estados de pantalla
 

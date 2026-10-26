@@ -63,7 +63,7 @@
   --color-success: oklch(0.52 0.13 150);
   --color-destructive: oklch(0.55 0.2 27);
   /* Near a limit: a budget bar past 80 % and a period still in draft (FEAT-004). */
-  --color-warning: oklch(0.75 0.16 70);
+  --color-warning: oklch(0.62 0.13 70);
   --color-sidebar: oklch(0.21 0.03 220);
   --color-sidebar-foreground: oklch(0.93 0.01 220);
   --color-sidebar-muted: oklch(0.7 0.02 220);

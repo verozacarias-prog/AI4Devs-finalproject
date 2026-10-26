@@ -49,6 +49,9 @@ type BarState = 'normal' | 'near' | 'over'
 
 const TEXT = MESSAGES.budget
 
+/** The label of each state of a bar, written next to it and read aloud with it. */
+const STATE_LABELS: Record<BarState, string | null> = { normal: null, near: TEXT.nearLimit, over: TEXT.overLimit }
+
 type Props = {
   /** Called when the API says there is no session: the entry is shown again. */
   onNoSession: () => void
@@ -142,9 +145,14 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
         </label>
       )}
       <p ref={statusLine} role="status" tabIndex={-1} className="text-sm text-muted-foreground outline-none empty:hidden">
-        {view.kind === 'loading' ? TEXT.loading : view.kind === 'no-periods' ? TEXT.noPeriods : ''}
+        {view.kind === 'loading' ? TEXT.loading : ''}
       </p>
-      {view.kind === 'no-periods' && <CardDescription>{TEXT.noPeriodsDetail}</CardDescription>}
+      {view.kind === 'no-periods' && (
+        <div className="flex flex-col gap-1">
+          <h3 className="text-sm font-medium">{TEXT.noPeriods}</h3>
+          <CardDescription>{TEXT.noPeriodsDetail}</CardDescription>
+        </div>
+      )}
       {chosen?.status === 'draft' && view.kind !== 'loading' && view.kind !== 'error' && (
         <p className="rounded-lg border border-warning bg-warning/15 px-4 py-3 text-sm">{TEXT.draftNotice}</p>
       )}
@@ -257,7 +265,7 @@ function CategoryRow({
           currency={currency}
         />
       </div>
-      {category.used_percentage !== null && <Bar percentage={category.used_percentage} />}
+      {category.used_percentage !== null && <Bar label={category.category} percentage={category.used_percentage} />}
     </li>
   )
 }
@@ -291,12 +299,23 @@ function Spending({
   )
 }
 
-/** Full at 100 % or more, empty when what is spent is negative. */
-function Bar({ percentage }: { percentage: number }) {
+/**
+ * Full at 100 % or more, empty when what is spent is negative. It is read aloud as a meter
+ * named by its category, with its percentage and state, so the colour is never the only cue.
+ */
+function Bar({ label, percentage }: { label: string; percentage: number }) {
   const state = barState(percentage)
   const width = Math.min(Math.max(percentage, 0), OVER_LIMIT_PERCENTAGE)
   return (
-    <div className={cn('budget-bar h-2 overflow-hidden rounded-full bg-muted', `budget-bar--${state}`)}>
+    <div
+      role="meter"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={OVER_LIMIT_PERCENTAGE}
+      aria-valuenow={width}
+      aria-valuetext={TEXT.barValue(formatPercentage(percentage), STATE_LABELS[state])}
+      className={cn('budget-bar h-2 overflow-hidden rounded-full bg-muted', `budget-bar--${state}`)}
+    >
       <div
         className={cn(
           'budget-bar__fill h-full rounded-full',
@@ -332,7 +351,7 @@ function Detail({ status, onBack }: { status: BudgetStatus; onBack: () => void }
           currency={currency}
         />
       </div>
-      <Bar percentage={status.used_percentage} />
+      <Bar label={status.category} percentage={status.used_percentage} />
       <ul aria-label={TEXT.movements} className="divide-y rounded-lg border">
         {status.transactions.map((movement) => (
           <MovementRow key={movement.id} movement={movement} currency={currency} />

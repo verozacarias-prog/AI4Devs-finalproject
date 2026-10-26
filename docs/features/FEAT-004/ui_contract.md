@@ -13,7 +13,7 @@ Sigue la forma del [contrato de la pantalla de cuentas](../FEAT-001/ui_contract.
 | `Card` y `CardTitle` de shadcn/ui | Existen, desde el [ADR 0027](../../adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md) | El marco de la pantalla, como en la de cuentas: una sección que un lector de pantalla anuncia como "Tu presupuesto" |
 | `Button` de shadcn/ui | Existe, desde el ADR 0027 | Reintentar, abrir el detalle de una categoría con tope y volver al resumen |
 | Selector de período | Nuevo, en `BudgetPage`, sobre un `select` nativo | Elegir el período. Es nativo porque shadcn/ui no tiene uno instalado y sumarlo trae una librería nueva; el nativo ya se opera con teclado y anuncia su opción |
-| Línea de estado (`role="status"`) | Existe, como en la pantalla de cuentas | Anuncia cargando y vacío |
+| Línea de estado (`role="status"`) | Existe, como en la pantalla de cuentas | Anuncia la carga; el vacío sin períodos es un título (C3-05) |
 | Alerta de error (`role="alert"`) | Existe, como en la pantalla de cuentas | El estado de error |
 | Aviso de borrador | Nuevo, en `BudgetPage` | Dice que el período elegido está en borrador y falta confirmarlo |
 | Barra de una categoría | Nuevo, en `BudgetPage` | Lo gastado sobre el tope, con tres estados: normal, cerca del tope y excedida. Llena hasta el 100 %, aunque el porcentaje lo pase, y vacía si es negativo |
@@ -65,14 +65,19 @@ llega. Lo único que calcula es el estado de la barra, con los umbrales de `src/
 
 ## Accesibilidad
 
-Se completa en el corte 3, que la cubre.
-
-- [ ] Todo control tiene nombre accesible: el selector, cada categoría con tope, Volver y
-  Reintentar.
-- [ ] El contraste cumple el mínimo de WCAG AA, también el del color nuevo de advertencia.
-- [ ] La pantalla se puede operar sólo con teclado.
-- [ ] Las barras anuncian su porcentaje, y su estado no se dice solo con el color.
-- [ ] Los montos se anuncian con su moneda.
+- [x] Todo control tiene nombre accesible: el selector "Período", el botón de cada categoría con
+  tope, Volver y Reintentar, todos nativos (C3-02).
+- [x] El contraste cumple el mínimo de WCAG AA: 4,5:1 para el texto y 3:1 para las barras. Se
+  calculó cada color contra su fondo. El texto más bajo es el error en rojo sobre la tarjeta, con
+  5,37:1, y la barra más baja es la de cerca del tope contra el fondo de la barra, con 3,39:1: el
+  ámbar se oscureció en el corte 3, porque el anterior daba 2,07:1.
+- [x] La pantalla se puede operar sólo con teclado: el selector y los botones son nativos y Tab
+  llega a todos (C3-02).
+- [x] Las barras anuncian su porcentaje, y su estado no se dice solo con el color: cada una es un
+  medidor con el nombre de su categoría, que se lee "85,0 %, cerca del tope", y al lado se
+  escriben el porcentaje y la etiqueta (C3-03 y C1-30).
+- [x] Los montos se anuncian con su moneda, igual que en las cuentas de FEAT-001: los del
+  resumen, lo gastado, el tope y cada movimiento, también lo que pesa en el tope (C3-04).
 
 ## Textos
 
@@ -95,6 +100,7 @@ Van en `frontend/src/messages.ts`, bajo `budget`, salvo los compartidos, bajo `c
 | `spentOf` | {gastado} de {tope} |
 | `nearLimit` | Cerca del tope |
 | `overLimit` | Excedido |
+| `barValue` | {porcentaje}, {estado}, con el estado de `nearLimit` u `overLimit` en minúscula; solo el porcentaje si la barra es normal |
 | `noLimit` | Sin tope |
 | `back` | Volver al resumen |
 | `noPeriods` | Todavía no tenés un presupuesto |

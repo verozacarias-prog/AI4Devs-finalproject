@@ -1,7 +1,7 @@
 """Reading the budget over HTTP, against PostgreSQL (FEAT-004, docs/features/FEAT-004/spec.md).
 
-Cases C1-19 to C1-25 and C2-01 to C2-08, the integration ones: GET /budget-periods, the
-summary of a period and GET /budgets/{budget_id}. Each test has a database of its own, with
+Cases C1-19 to C1-25, C2-01 to C2-08 and C3-01, the integration ones: GET /budget-periods,
+the summary of a period and GET /budgets/{budget_id}. Each test has a database of its own, with
 the test data of the script, and talks to the API the way the dashboard does: it enters
 through the development entry and asks with the session cookie.
 
@@ -762,3 +762,54 @@ def test_a_user_without_periods_gets_an_empty_list(client: TestClient, engine: E
     _enter_as(client, "Lucía")
 
     assert _get(client, "/budget-periods") == {"budget_periods": []}
+
+
+# Cut 3: observability.
+
+
+def test_the_logs_carry_no_amounts_or_names(seeded_database_url: str, engine: Engine) -> None:
+    # Case C3-01. Every value of every line, except the moment and the identifiers, which have
+    # a fixed shape and may hold a digit by chance.
+    pablo = _user_id(engine, "Pablo")
+    period = _period(engine, OCTOBER_10, NOVEMBER_9, group_id=_group_id(engine, "Casa"))
+    limit = _limit(engine, period, SUPERMARKET, "500000.00")
+    _movement(
+        engine,
+        pablo,
+        period,
+        account="Galicia pesos",
+        type="expense",
+        category=SUPERMARKET,
+        amount="154500.00",
+        day=OCTOBER_12,
+    )
+    stream = io.StringIO()
+    environ = {
+        "DATABASE_URL": seeded_database_url,
+        "APP_ENV": "local",
+        "APP_VERSION": "test",
+        "DEV_ENTRY_ENABLED": "true",
+    }
+    app = create_app(load_settings(environ), log_stream=stream, clock=FixedClock(TODAY_AT_NOON))
+    client = TestClient(app, base_url=BASE_URL)
+    _enter_as(client, "Pablo")
+    written_before = len(stream.getvalue().splitlines())
+
+    _get(client, "/budget-periods")
+    _get(client, f"/budget-periods/{period}/summary")
+    _get(client, f"/budgets/{limit}")
+
+    lines = [json.loads(line) for line in stream.getvalue().splitlines()[written_before:]]
+    assert [line["endpoint"] for line in lines if line["event"] == "http.request"] == [
+        "GET /budget-periods",
+        "GET /budget-periods/{period_id}/summary",
+        "GET /budgets/{budget_id}",
+    ]
+    free_text = "\n".join(
+        str(value)
+        for line in lines
+        for key, value in line.items()
+        if key != "ts" and not key.endswith("_id")
+    )
+    for data in ("500000", "154500", "Supermercado", "Galicia", "Casa", "Pablo"):
+        assert data not in free_text, data
