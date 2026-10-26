@@ -38,6 +38,7 @@ nombres de archivo de código están en inglés.
 - [Contrato de UI — FEAT-002 · Chat web](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/feat-002/ui_contract/)
 - [Especificación — FEAT-003 · Registro de un gasto y de un ingreso](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/feat-003/spec/)
 - [Especificación — FEAT-004 · Pantalla de presupuesto](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/feat-004/spec/)
+- [Contrato de UI — FEAT-004 · Pantalla de presupuesto](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/feat-004/ui_contract/)
 - [FEAT-XXX · <título>](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/template/pr/)
 - [Especificación — FEAT-XXX · <título>](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/template/spec/)
 - [Contrato de UI — FEAT-XXX · <pantalla>](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/template/ui_contract/)

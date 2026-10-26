@@ -14,8 +14,8 @@ Entra la lectura del presupuesto de un período, que es lo que la entrega final 
 - `GET /budget-periods/{period_id}/summary`: el resumen de un período, con el ingreso estimado y
   el real, y lo gastado de cada categoría.
 - `GET /budgets/{budget_id}`: una categoría con tope, con sus movimientos.
-- La pantalla del dashboard que los consume (issue #71), con sus cuatro estados. Sus casos de
-  componente se suman cuando la pantalla esté armada.
+- La pantalla del dashboard que los consume (issue #71), con sus cuatro estados y su
+  [contrato de UI](ui_contract.md).
 
 La regla de quién puede leer un período de grupo entra completa, aunque los grupos pasan a una
 segunda versión, porque los datos de `local` ya tienen uno ("Casa", de Pablo, con Sofía como
@@ -90,7 +90,8 @@ Siguen la forma de [FEAT-001](../FEAT-001/spec.md#casos-de-prueba), con otras ac
 - En un caso **unitario** se calcula lo gastado, el resumen o qué período cubre hoy, en memoria.
 - En un caso de **integración** se pide `GET /budget-periods`, el resumen o el detalle de un
   tope a [la API](../../04-api.md), con los datos guardados en PostgreSQL.
-- Los de **componente** llegan con la pantalla (#71).
+- En un caso de **componente** se abre la pantalla de presupuesto (#71) con las respuestas de la
+  API simuladas, y se mira lo que muestra.
 
 Salvo que el caso diga otra cosa: el usuario es Lucía, de Buenos Aires, con moneda primaria
 ARS; tiene las cuentas "Galicia pesos", en ARS, y "Galicia USD", en USD, dadas de alta el 1 de
@@ -101,7 +102,8 @@ $300.000,00 y Transporte $80.000,00; y hoy es 25 de octubre de 2026.
 ### Corte 1 — camino feliz
 
 - **Aprobado por:** Verónica Zacarías 25/10/2026
-- **Total:** 25 casos, 18 unitarios y 7 de integración.
+- **C1-26 a C1-38, de componente, sumados para la pantalla:** Veronica Zacarias 25/10/2026
+- **Total:** 38 casos, 18 unitarios, 7 de integración y 13 de componente.
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
@@ -130,6 +132,19 @@ $300.000,00 y Transporte $80.000,00; y hoy es 25 de octubre de 2026.
 | C1-23 | El detalle de Supermercado, con sus movimientos | Integración | CA-14 |
 | C1-24 | La consulta a la base aplica las mismas reglas que el cálculo | Integración | CA-6 a CA-9 |
 | C1-25 | Los montos y el porcentaje llegan con sus dígitos exactos | Integración | CA-7 y CA-10 |
+| C1-26 | Mientras se consulta, lo dice y no muestra montos | Componente | CA-1 |
+| C1-27 | Abre el período que cubre hoy | Componente | CA-2 |
+| C1-28 | Un período en borrador avisa que falta confirmarlo | Componente | CA-1 y CA-2 |
+| C1-29 | El resumen del período de Lucía | Componente | CA-10, CA-11, CA-12 y CA-13 |
+| C1-30 | La barra dice si la categoría está cerca del tope o lo pasó | Componente | CA-10 |
+| C1-31 | Los montos se muestran tal como llegan, sin cuentas propias | Componente | CA-13 |
+| C1-32 | Lo gastado negativo se ve con su signo | Componente | CA-8 |
+| C1-33 | Se elige otro período, y el de un grupo dice su nombre | Componente | CA-1, CA-3 y CA-5 |
+| C1-34 | El detalle de Supermercado, con sus movimientos | Componente | CA-14 |
+| C1-35 | Un gasto en dólares muestra su cotización | Componente | CA-7 y CA-14 |
+| C1-36 | Una categoría sin tope no abre un detalle | Componente | CA-14 |
+| C1-37 | Del detalle se vuelve al resumen del mismo período | Componente | CA-14 |
+| C1-38 | El menú lleva a la pantalla de presupuesto | Componente | CA-1 |
 
 #### C1-01 · Lo gastado suma los gastos de la categoría
 
@@ -398,6 +413,147 @@ $300.000,00 y Transporte $80.000,00; y hoy es 25 de octubre de 2026.
   100 = 8,238…), y Transporte trae 80040.00 y 100.1, escritos en el JSON con esos dígitos.
 - **Test:** `tests/integration/test_budgets.py::test_the_amounts_and_the_percentage_arrive_with_their_exact_digits`
 
+Los casos de componente simulan las respuestas de la API con los datos de Lucía. Salvo que el
+caso diga otra cosa, `GET /budget-periods` trae dos períodos, en este orden: el actual, del 10
+de octubre al 9 de noviembre de 2026, confirmado, con `is_current` en verdadero; y el anterior,
+del 10 de septiembre al 9 de octubre, confirmado. El resumen y el detalle son los que dice cada
+caso.
+
+#### C1-26 · Mientras se consulta, lo dice y no muestra montos
+
+- **Sale de:** CA-1 · **Tipo:** componente
+- **Dado** una respuesta de `GET /budget-periods` o del resumen que todavía no llegó,
+- **cuando** se abre la pantalla,
+- **entonces** dice "Consultando tu presupuesto…" y no muestra ningún monto ni ninguna barra.
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C1-26: while the budget is being asked for, it says so and shows no amount"
+
+#### C1-27 · Abre el período que cubre hoy
+
+- **Sale de:** CA-2 · **Tipo:** componente
+- **Dado** los dos períodos de Lucía, con el actual marcado,
+- **cuando** se abre la pantalla,
+- **entonces** el selector muestra elegido "Personal · del 10/10/2026 al 9/11/2026", y se pide el
+  resumen de ese período y no el del anterior.
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C1-27: it opens the period that covers today"
+
+#### C1-28 · Un período en borrador avisa que falta confirmarlo
+
+- **Sale de:** CA-1 y CA-2 · **Tipo:** componente
+- **Dado** que el período actual de Lucía viene con el estado `draft`, con sus dos topes y un
+  resumen sin gastos,
+- **cuando** se abre la pantalla,
+- **entonces** abre ese período, con el aviso "Este período está en borrador: confirmalo para
+  que reciba movimientos", y muestra sus topes con $ 0,00 gastado.
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C1-28: a draft period warns that it still has to be confirmed"
+
+#### C1-29 · El resumen del período de Lucía
+
+- **Sale de:** CA-10, CA-11, CA-12 y CA-13 · **Tipo:** componente
+- **Dado** un resumen con ingreso estimado 1450000.00, ingreso real 1500000.00, total gastado
+  108256.04 y tres categorías, en este orden: "Café", sin tope, gastado 3500.00; "Supermercado",
+  tope 300000.00, gastado 24716.04, porcentaje 8.2; y "Transporte", tope 80000.00, gastado
+  80040.00, porcentaje 100.1,
+- **cuando** se abre la pantalla,
+- **entonces** muestra el ingreso estimado $ 1.450.000,00, el real $ 1.500.000,00 y el total
+  gastado $ 108.256,04, y las tres categorías en ese orden: Café con $ 3.500,00 gastado, sin
+  barra ni porcentaje; Supermercado con una barra, $ 24.716,04 de $ 300.000,00 y 8,2 %; y
+  Transporte con una barra, $ 80.040,00 de $ 80.000,00 y 100,1 %.
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C1-29: the summary of the period of Lucía"
+
+#### C1-30 · La barra dice si la categoría está cerca del tope o lo pasó
+
+- **Sale de:** CA-10 · **Tipo:** componente
+- **Dado** un resumen con cuatro categorías con tope, con los porcentajes 80.0, 80.1, 100.0 y
+  100.1,
+- **cuando** se abre la pantalla,
+- **entonces** la barra de 80,0 % es normal, las de 80,1 % y 100,0 % están cerca del tope, con
+  el color de advertencia y la etiqueta "Cerca del tope", y la de 100,1 % está excedida: llena,
+  en rojo, el color de error, con la etiqueta "Excedido". Pasar el 80 % es estar cerca, y pasar
+  el 100 % es haberlo pasado, con los mismos umbrales que las alertas ([§ 3](../../reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)).
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C1-30: the bar says whether the category is near its limit or over it"
+
+#### C1-31 · Los montos se muestran tal como llegan, sin cuentas propias
+
+- **Sale de:** CA-13 · **Tipo:** componente
+- **Dado** un resumen con una sola categoría, "Supermercado", gastado 0.10, y un total gastado
+  escrito como `0.30`,
+- **cuando** se abre la pantalla,
+- **entonces** el total gastado es $ 0,30 y no $ 0,10: la pantalla no suma ni redondea.
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C1-31: the amounts are shown as they arrive, without sums of its own"
+
+#### C1-32 · Lo gastado negativo se ve con su signo
+
+- **Sale de:** CA-8 · **Tipo:** componente
+- **Dado** un resumen con "Supermercado", tope 300000.00, gastado -5000.00 y porcentaje -1.7,
+- **cuando** se abre la pantalla,
+- **entonces** Supermercado muestra -$ 5.000,00, con el guion que pone el formato de moneda de
+  `es-AR`, y -1,7 %, con la barra vacía.
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C1-32: a negative spent is shown with its sign"
+
+#### C1-33 · Se elige otro período, y el de un grupo dice su nombre
+
+- **Sale de:** CA-1, CA-3 y CA-5 · **Tipo:** componente
+- **Dado** que la lista trae cuatro períodos, en el orden de CA-5: uno de Lucía del 10 de
+  noviembre al 9 de diciembre, en borrador; su actual; uno del grupo "Casa", del que es miembro,
+  del 10 de octubre al 9 de noviembre; y su anterior,
+- **cuando** se abre el selector y se elige el anterior,
+- **entonces** el selector lista los cuatro en el orden en que llegan: "Personal · del
+  10/11/2026 al 9/12/2026 · Borrador", "Personal · del 10/10/2026 al 9/11/2026", "Casa · del
+  10/10/2026 al 9/11/2026" y "Personal · del 10/9/2026 al 9/10/2026"; se pide el resumen del
+  anterior y se muestra ese.
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C1-33: another period is chosen, and the one of a group says its name"
+
+#### C1-34 · El detalle de Supermercado, con sus movimientos
+
+- **Sale de:** CA-14 · **Tipo:** componente
+- **Dado** el resumen del caso C1-29, y un detalle de Supermercado con tope 300000.00, gastado
+  184500.00, porcentaje 61.5 y tres movimientos, en este orden: un reintegro del 20 de octubre,
+  30000.00 ARS, "devolución", "Galicia pesos", manual; un gasto del 18, 60000.00 ARS, "super",
+  "Galicia pesos", automático; y un gasto del 12, 154500.00 ARS, sin descripción, "Galicia
+  pesos", manual,
+- **cuando** se elige Supermercado,
+- **entonces** se pide `GET /budgets/{budget_id}` de su tope, y se ven $ 184.500,00 de
+  $ 300.000,00 y 61,5 %, y los tres movimientos en ese orden, cada uno con su fecha, su
+  descripción o nada, "Reintegro" o "Gasto", su monto con su moneda, la cuenta y una etiqueta
+  "Manual" o "Automático".
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C1-34: the detail of Supermercado, with its movements"
+
+#### C1-35 · Un gasto en dólares muestra su cotización
+
+- **Sale de:** CA-7 y CA-14 · **Tipo:** componente
+- **Dado** un detalle con dos gastos: uno de 10.00 USD, cotización 1234.5678, que pesa
+  12345.68, con "Galicia USD"; y uno de 5000.00 ARS, sin cotización, con "Galicia pesos",
+- **cuando** se elige la categoría,
+- **entonces** el de dólares muestra US$ 10,00, "cotización 1.234,5678" y que pesa
+  $ 12.345,68; el de pesos muestra $ 5.000,00 y ninguna cotización.
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C1-35: an expense in dollars shows its exchange rate"
+
+#### C1-36 · Una categoría sin tope no abre un detalle
+
+- **Sale de:** CA-14 · **Tipo:** componente
+- **Dado** el resumen del caso C1-29,
+- **cuando** se abre la pantalla,
+- **entonces** Supermercado y Transporte se pueden elegir, y Café no: no es un botón ni un
+  enlace, y no se pide ningún detalle.
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C1-36: a category without a limit does not open a detail"
+
+#### C1-37 · Del detalle se vuelve al resumen del mismo período
+
+- **Sale de:** CA-14 · **Tipo:** componente
+- **Dado** el detalle de Supermercado del caso C1-34 abierto,
+- **cuando** se elige "Volver al resumen",
+- **entonces** se ve el resumen del mismo período, con el selector en el mismo período.
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C1-37: from the detail it goes back to the summary of the same period"
+
+#### C1-38 · El menú lleva a la pantalla de presupuesto
+
+- **Sale de:** CA-1 · **Tipo:** componente
+- **Dado** el dashboard con la sesión de Lucía, en la pantalla de cuentas,
+- **cuando** se elige "Presupuesto" en el menú,
+- **entonces** se ve la pantalla de presupuesto y "Presupuesto" queda marcada como la pantalla
+  actual.
+- **Test:** `src/components/AppShell.test.tsx` › "case C1-38: the menu leads to the budget screen"
+
 ### Corte 2 — errores y estado vacío
 
 - **Aprobado por:** pendiente
@@ -425,8 +581,8 @@ anuncian su porcentaje y los montos su moneda.
 | Vacío | El usuario no tiene ningún período, o el elegido no tiene topes ni movimientos | Que no hay nada que mostrar y qué hacer |
 | Error | Alguna de las consultas falló | Qué pasó y un botón para reintentar |
 
-El detalle exacto, incluido qué se abre cuando ningún período cubre hoy, se escribe con los
-casos de componente de la pantalla (#71).
+Qué período se abre está en la decisión 8, y la máquina de estados entera en el
+[contrato de UI](ui_contract.md).
 
 ## Mensajes al usuario
 
@@ -476,3 +632,11 @@ No hay mensajes de WhatsApp. Los textos de la pantalla van en `frontend/src/mess
    CA-12.
 7. ~~De qué depende que un período diga que se puede editar.~~ Resuelta el 25 de octubre de
    2026: de quién es el dueño y no del estado (CA-4).
+8. ~~Qué período abre la pantalla.~~ Resuelta el 25 de octubre de 2026: el primero de la lista
+   que viene marcado como actual, aunque esté en borrador, y entonces con su aviso (C1-27 y
+   C1-28). Si ninguno cubre hoy, el primero de la lista, sin aviso ni caso propio: pasa solo
+   mientras el borrador del período siguiente no se genere solo, que es de una segunda versión,
+   y con el selector a la vista y las fechas en cada período no se confunde con el actual.
+9. ~~Cuándo una barra está cerca del tope.~~ Resuelta el 25 de octubre de 2026: al pasar el 80 %,
+   y excedida al pasar el 100 %, los mismos umbrales que las alertas (C1-30). Van como constante
+   del dashboard, porque la configuración de las alertas todavía no existe.
