@@ -25,3 +25,5 @@ class Membership:
     family_group_id: uuid.UUID
     role: GroupRole
     joined_at: datetime
+    # Set when the user left the group: the membership is closed, never deleted (§ 10).
+    left_at: datetime | None = None

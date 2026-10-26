@@ -94,6 +94,51 @@ test('case T-03: choosing the status in the menu shows it and marks it as the cu
   expect(screen.queryByRole('heading', { name: 'Tus cuentas' })).toBeNull()
 })
 
+test('case C1-38: the menu leads to the budget screen', async () => {
+  // Case C1-38 of FEAT-004 (docs/features/FEAT-004/spec.md).
+  apiWithLuciaIn()
+  const current = { id: crypto.randomUUID(), period_type: 'monthly', status: 'confirmed', primary_currency: 'ARS' }
+  api.use(
+    http.get('*/budget-periods', () =>
+      HttpResponse.json({
+        budget_periods: [
+          {
+            ...current,
+            family_group_id: null,
+            family_group_name: null,
+            period_start: '2026-10-10',
+            period_end: '2026-11-09',
+            estimated_income: 1450000,
+            can_edit: true,
+            is_current: true,
+            budgets: [],
+          },
+        ],
+      }),
+    ),
+    http.get('*/budget-periods/:periodId/summary', () =>
+      HttpResponse.json({
+        budget_period_id: current.id,
+        primary_currency: 'ARS',
+        estimated_income: 1450000,
+        actual_income: 0,
+        total_spent: 3500,
+        categories: [{ category: 'Café', budget_id: null, limit_amount: null, spent_amount: 3500, used_percentage: null }],
+      }),
+    ),
+  )
+
+  render(<App />)
+  const nav = await menu()
+  await screen.findByRole('heading', { name: 'Tus cuentas' })
+  within(nav).getByRole('button', { name: 'Presupuesto' }).click()
+
+  await screen.findByRole('heading', { name: 'Tu presupuesto' })
+  expect(within(nav).getByRole('button', { name: 'Presupuesto' }).getAttribute('aria-current')).toBe('page')
+  expect(within(nav).getByRole('button', { name: 'Cuentas' }).getAttribute('aria-current')).toBeNull()
+  expect(screen.queryByRole('heading', { name: 'Tus cuentas' })).toBeNull()
+})
+
 test('case T-04: closing the session from the menu brings back the entry, without the menu', async () => {
   apiWithLuciaIn()
 
@@ -114,7 +159,7 @@ test('case T-05: the menu is announced as navigation and every option is a butto
 
   // A native button is reached with Tab and pressed with Enter; none takes itself out of the order.
   const options = within(nav).getAllByRole('button')
-  expect(options.map((option) => option.textContent)).toEqual(['Cuentas', 'Estado del sistema'])
+  expect(options.map((option) => option.textContent)).toEqual(['Cuentas', 'Presupuesto', 'Estado del sistema'])
   expect(options.every((option) => option.tagName === 'BUTTON' && option.tabIndex === 0)).toBe(true)
 })
 

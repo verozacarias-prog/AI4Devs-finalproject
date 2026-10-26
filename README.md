@@ -114,6 +114,20 @@ Qué trae cada usuario de prueba está en [operación](docs/operacion.md#2-entor
    la pregunta con "con MP"; o uno que no encaja en ninguna categoría ("gasté 9000 en la
    peluquería con MP"), y aceptar la que propone con "sí".
 
+### Probar el presupuesto
+
+Armar los topes de un período todavía no se puede desde la aplicación, así que un script le
+carga a Lucía un ingreso estimado, tres topes y algunos movimientos, en su período actual. Se
+corre una sola vez, después de los datos de prueba:
+
+```sh
+docker compose exec -T db psql -U platita -d platita < scripts/budget_test_data.sql
+```
+
+En Presupuesto, Supermercado queda por debajo del tope, Salud cerca y Transporte excedido; las
+categorías sin tope muestran solo lo gastado, y desde Supermercado se ve el detalle, con un
+gasto en dólares y su cotización y un reintegro que resta.
+
 Los límites de uso por día son 100 mensajes clasificados y 50 registros, y se bajan al levantar
 para verlos actuar. Cada llamada al modelo queda en la tabla `llm_call`, sin ningún contenido, y
 sus métricas de latencia, costo, calidad y alucinaciones salen de un script:

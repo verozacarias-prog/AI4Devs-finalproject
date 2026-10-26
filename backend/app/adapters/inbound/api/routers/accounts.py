@@ -4,24 +4,19 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Callable
-from decimal import Decimal
-from typing import Annotated
 
 from fastapi import APIRouter, Request, status
-from pydantic import BaseModel, Field, WithJsonSchema
+from pydantic import BaseModel, Field
 
 from app.adapters.inbound.api import reference
 from app.adapters.inbound.api.errors import documented_errors
-from app.adapters.inbound.api.exact_json import ExactJSONResponse
+from app.adapters.inbound.api.exact_json import ExactAmount, ExactJSONResponse
 from app.adapters.inbound.api.request_logging import identify_user
 from app.adapters.inbound.api.routers.session import SessionToken
 from app.adapters.inbound.api.routes import ACCOUNTS, ACCOUNTS_TAG
 from app.domain.entities.account import AccountType, BalanceKind
 from app.domain.use_cases.accounts.list_accounts import ListAccounts
 from app.domain.use_cases.sessions.authenticate_session import AuthenticateSession
-
-# An amount travels as a JSON number with its exact digits, never as a string.
-ExactAmount = Annotated[Decimal, WithJsonSchema({"type": "number"})]
 
 
 class AccountItem(BaseModel):

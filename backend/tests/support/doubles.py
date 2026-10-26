@@ -65,6 +65,9 @@ class InMemoryAccounts:
     def list_by_user(self, user_id: uuid.UUID) -> list[Account]:
         return [account for account in self.added if account.user_id == user_id]
 
+    def list_by_ids(self, account_ids: set[uuid.UUID]) -> list[Account]:
+        return [account for account in self.added if account.id in account_ids]
+
 
 class InMemoryBudgetPeriods:
     def __init__(self) -> None:
@@ -80,6 +83,16 @@ class InMemoryBudgetPeriods:
             period
             for period in self.added
             if period.user_id == user_id and period.period_start <= day <= period.period_end
+        ]
+
+    def find_by_id(self, period_id: uuid.UUID) -> BudgetPeriod | None:
+        return next((period for period in self.added if period.id == period_id), None)
+
+    def list_owned_by(self, user_id: uuid.UUID, group_ids: set[uuid.UUID]) -> list[BudgetPeriod]:
+        return [
+            period
+            for period in self.added
+            if period.user_id == user_id or period.family_group_id in group_ids
         ]
 
     def confirm(self, period_id: uuid.UUID) -> None:
@@ -99,6 +112,9 @@ class InMemoryBudgets:
     def list_by_period(self, period_id: uuid.UUID) -> list[Budget]:
         return [budget for budget in self.added if budget.budget_period_id == period_id]
 
+    def find_by_id(self, budget_id: uuid.UUID) -> Budget | None:
+        return next((budget for budget in self.added if budget.id == budget_id), None)
+
 
 class InMemoryCategories:
     def __init__(self) -> None:
@@ -113,6 +129,9 @@ class InMemoryCategories:
             for category in self.added
             if category.user_id is None or category.user_id == user_id
         ]
+
+    def list_by_ids(self, category_ids: set[uuid.UUID]) -> list[Category]:
+        return [category for category in self.added if category.id in category_ids]
 
 
 class InMemoryPendings:
@@ -177,6 +196,9 @@ class InMemoryFamilyGroups:
     def find_by_id(self, group_id: uuid.UUID) -> FamilyGroup | None:
         return next((group for group in self.added if group.id == group_id), None)
 
+    def list_memberships(self, user_id: uuid.UUID) -> list[Membership]:
+        return [membership for membership in self.memberships if membership.user_id == user_id]
+
 
 class InMemorySessions:
     def __init__(self) -> None:
@@ -211,6 +233,14 @@ class InMemoryTransactions:
 
     def list_by_user(self, user_id: uuid.UUID) -> list[Transaction]:
         return [transaction for transaction in self.added if transaction.user_id == user_id]
+
+    def list_by_period(self, period_id: uuid.UUID) -> list[Transaction]:
+        return [
+            transaction for transaction in self.added if transaction.budget_period_id == period_id
+        ]
+
+    def list_by_ids(self, transaction_ids: set[uuid.UUID]) -> list[Transaction]:
+        return [transaction for transaction in self.added if transaction.id in transaction_ids]
 
 
 class InMemoryTransfers:

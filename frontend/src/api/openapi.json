@@ -82,6 +82,359 @@
         "title": "BalanceKind",
         "type": "string"
       },
+      "BudgetLimitItem": {
+        "properties": {
+          "category": {
+            "description": "The name of the category.",
+            "title": "Category",
+            "type": "string"
+          },
+          "category_id": {
+            "description": "The category the limit is for.",
+            "format": "uuid",
+            "title": "Category Id",
+            "type": "string"
+          },
+          "id": {
+            "description": "The identifier of the limit.",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "limit_amount": {
+            "description": "The limit, in the currency of the period.",
+            "title": "Limit Amount",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "category_id",
+          "category",
+          "limit_amount"
+        ],
+        "title": "BudgetLimitItem",
+        "type": "object"
+      },
+      "BudgetMovementItem": {
+        "properties": {
+          "account": {
+            "description": "The name of the account it moved.",
+            "title": "Account",
+            "type": "string"
+          },
+          "amount": {
+            "description": "The amount as it was made, in its own currency.",
+            "title": "Amount",
+            "type": "number"
+          },
+          "budget_amount": {
+            "description": "What it weighs on the limit, in the currency of the period, rounded on its own.",
+            "title": "Budget Amount",
+            "type": "number"
+          },
+          "currency": {
+            "description": "The currency the movement was made in, as an ISO 4217 code.",
+            "title": "Currency",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the user wrote about it, or null.",
+            "title": "Description"
+          },
+          "exchange_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The rate it was converted to the period with, or null when it was already in its currency.",
+            "title": "Exchange Rate"
+          },
+          "id": {
+            "description": "The identifier of the movement.",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/TransactionSource",
+            "description": "`manual`, or `automatic` when the system generated it."
+          },
+          "transaction_date": {
+            "description": "The day of the movement.",
+            "format": "date",
+            "title": "Transaction Date",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TransactionType",
+            "description": "`expense`, or `income` when it is a linked refund, which subtracts."
+          }
+        },
+        "required": [
+          "id",
+          "transaction_date",
+          "description",
+          "type",
+          "amount",
+          "currency",
+          "budget_amount",
+          "exchange_rate",
+          "account",
+          "source"
+        ],
+        "title": "BudgetMovementItem",
+        "type": "object"
+      },
+      "BudgetPeriodItem": {
+        "properties": {
+          "budgets": {
+            "description": "The limits of the period, by category name.",
+            "items": {
+              "$ref": "#/components/schemas/BudgetLimitItem"
+            },
+            "title": "Budgets",
+            "type": "array"
+          },
+          "can_edit": {
+            "description": "Whether the user can change it: an individual period of their own, or one of a group they currently own. It does not look at the status.",
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "estimated_income": {
+            "description": "What the user expects to receive in the period.",
+            "title": "Estimated Income",
+            "type": "number"
+          },
+          "family_group_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The group the period belongs to, or null in an individual period.",
+            "title": "Family Group Id"
+          },
+          "family_group_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name of the group, to tell the budgets apart, or null in an individual one.",
+            "title": "Family Group Name"
+          },
+          "id": {
+            "description": "The identifier of the period.",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_current": {
+            "description": "Whether it covers today, in the time zone of the user. At most one per owner: an individual one and one of each group.",
+            "title": "Is Current",
+            "type": "boolean"
+          },
+          "period_end": {
+            "description": "The last day of the period, included.",
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "description": "The first day of the period.",
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "$ref": "#/components/schemas/PeriodType",
+            "description": "`monthly` or `biweekly`."
+          },
+          "primary_currency": {
+            "description": "The currency of the period, as an ISO 4217 code. What it spent is in it.",
+            "title": "Primary Currency",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PeriodStatus",
+            "description": "`draft` while it is being built, `confirmed` once it can receive movements."
+          }
+        },
+        "required": [
+          "id",
+          "family_group_id",
+          "family_group_name",
+          "period_type",
+          "period_start",
+          "period_end",
+          "status",
+          "primary_currency",
+          "estimated_income",
+          "can_edit",
+          "is_current",
+          "budgets"
+        ],
+        "title": "BudgetPeriodItem",
+        "type": "object"
+      },
+      "BudgetPeriodList": {
+        "properties": {
+          "budget_periods": {
+            "description": "The periods, in the order the dashboard shows them.",
+            "items": {
+              "$ref": "#/components/schemas/BudgetPeriodItem"
+            },
+            "title": "Budget Periods",
+            "type": "array"
+          }
+        },
+        "required": [
+          "budget_periods"
+        ],
+        "title": "BudgetPeriodList",
+        "type": "object"
+      },
+      "BudgetStatusBody": {
+        "properties": {
+          "budget_period_id": {
+            "description": "The period the limit belongs to.",
+            "format": "uuid",
+            "title": "Budget Period Id",
+            "type": "string"
+          },
+          "category": {
+            "description": "The name of the category.",
+            "title": "Category",
+            "type": "string"
+          },
+          "id": {
+            "description": "The identifier of the limit.",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "limit_amount": {
+            "description": "The limit, in the currency of the period.",
+            "title": "Limit Amount",
+            "type": "number"
+          },
+          "primary_currency": {
+            "description": "The currency of the period, as an ISO 4217 code. What it spent is in it.",
+            "title": "Primary Currency",
+            "type": "string"
+          },
+          "spent_amount": {
+            "description": "What the category spent in the period, net of refunds, in the currency of the period. Each movement is converted with its own rate and rounded before adding.",
+            "title": "Spent Amount",
+            "type": "number"
+          },
+          "transactions": {
+            "description": "The movements that count in the limit, the newest first.",
+            "items": {
+              "$ref": "#/components/schemas/BudgetMovementItem"
+            },
+            "title": "Transactions",
+            "type": "array"
+          },
+          "used_percentage": {
+            "description": "What is spent over the limit, times a hundred, with one decimal and the half up. Null without a limit.",
+            "title": "Used Percentage",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "budget_period_id",
+          "category",
+          "primary_currency",
+          "limit_amount",
+          "spent_amount",
+          "used_percentage",
+          "transactions"
+        ],
+        "title": "BudgetStatusBody",
+        "type": "object"
+      },
+      "CategorySpendingItem": {
+        "properties": {
+          "budget_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The limit of the category, to read its detail, or null without one.",
+            "title": "Budget Id"
+          },
+          "category": {
+            "description": "The name of the category.",
+            "title": "Category",
+            "type": "string"
+          },
+          "limit_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The limit, or null in a category without one.",
+            "title": "Limit Amount"
+          },
+          "spent_amount": {
+            "description": "What the category spent in the period, net of refunds, in the currency of the period. Each movement is converted with its own rate and rounded before adding.",
+            "title": "Spent Amount",
+            "type": "number"
+          },
+          "used_percentage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What is spent over the limit, times a hundred, with one decimal and the half up. Null without a limit.",
+            "title": "Used Percentage"
+          }
+        },
+        "required": [
+          "category",
+          "budget_id",
+          "limit_amount",
+          "spent_amount",
+          "used_percentage"
+        ],
+        "title": "CategorySpendingItem",
+        "type": "object"
+      },
       "ChatConversation": {
         "properties": {
           "messages": {
@@ -346,6 +699,70 @@
         "title": "Me",
         "type": "object"
       },
+      "PeriodStatus": {
+        "enum": [
+          "draft",
+          "confirmed"
+        ],
+        "title": "PeriodStatus",
+        "type": "string"
+      },
+      "PeriodSummaryBody": {
+        "properties": {
+          "actual_income": {
+            "description": "What the period received, without the refunds.",
+            "title": "Actual Income",
+            "type": "number"
+          },
+          "budget_period_id": {
+            "description": "The identifier of the period.",
+            "format": "uuid",
+            "title": "Budget Period Id",
+            "type": "string"
+          },
+          "categories": {
+            "description": "The categories of the summary, by name.",
+            "items": {
+              "$ref": "#/components/schemas/CategorySpendingItem"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "estimated_income": {
+            "description": "What the user expects to receive in the period.",
+            "title": "Estimated Income",
+            "type": "number"
+          },
+          "primary_currency": {
+            "description": "The currency of the period, as an ISO 4217 code. What it spent is in it.",
+            "title": "Primary Currency",
+            "type": "string"
+          },
+          "total_spent": {
+            "description": "What every category of the summary spent, added.",
+            "title": "Total Spent",
+            "type": "number"
+          }
+        },
+        "required": [
+          "budget_period_id",
+          "primary_currency",
+          "estimated_income",
+          "actual_income",
+          "total_spent",
+          "categories"
+        ],
+        "title": "PeriodSummaryBody",
+        "type": "object"
+      },
+      "PeriodType": {
+        "enum": [
+          "monthly",
+          "biweekly"
+        ],
+        "title": "PeriodType",
+        "type": "string"
+      },
       "ResponseKind": {
         "description": "What kind of reply a message was (docs/03-modelo-de-datos.md, OUTBOUND_MESSAGE).",
         "enum": [
@@ -381,6 +798,22 @@
         ],
         "title": "StoredChatMessage",
         "type": "object"
+      },
+      "TransactionSource": {
+        "enum": [
+          "manual",
+          "automatic"
+        ],
+        "title": "TransactionSource",
+        "type": "string"
+      },
+      "TransactionType": {
+        "enum": [
+          "expense",
+          "income"
+        ],
+        "title": "TransactionType",
+        "type": "string"
       }
     },
     "securitySchemes": {
@@ -473,6 +906,185 @@
         "summary": "Close this session",
         "tags": [
           "session"
+        ]
+      }
+    },
+    "/budget-periods": {
+      "get": {
+        "description": "The periods the user of the session can read: their own, every period of the groups they are a current member of, and of a group they left, the ones that overlap their membership. Each one with its limits, whether the user can edit it, and whether it covers today, in the time zone of the user. The one that starts latest comes first; with the same start, the individual one before those of groups, by name.",
+        "operationId": "budget_periods_budget_periods_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetPeriodList"
+                }
+              }
+            },
+            "description": "The periods the user can read. An empty list when there are none."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "List the budget periods",
+        "tags": [
+          "budgets"
+        ]
+      }
+    },
+    "/budget-periods/{period_id}/summary": {
+      "get": {
+        "description": "The incomes of the period and what each category spent, in the currency of the period. Every category with a limit, even without expenses, and every one without a limit that had movements in the period, by name. What a category spent is net of the refunds linked to its expenses that arrived in the period, and can be negative.",
+        "operationId": "period_summary_budget_periods__period_id__summary_get",
+        "parameters": [
+          {
+            "description": "The identifier of the period.",
+            "in": "path",
+            "name": "period_id",
+            "required": true,
+            "schema": {
+              "description": "The identifier of the period.",
+              "format": "uuid",
+              "title": "Period Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeriodSummaryBody"
+                }
+              }
+            },
+            "description": "The summary of the period."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The period does not exist, or the user cannot read it. The same answer for both."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`period_id` is not a UUID."
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Read the summary of a period",
+        "tags": [
+          "budgets"
+        ]
+      }
+    },
+    "/budgets/{budget_id}": {
+      "get": {
+        "description": "One limit of a period, what its category spent and the movements that count in it: the expenses of the category and the refunds linked to them that arrived in the period, the newest first. Deleted movements and those marked as duplicates are not there.",
+        "operationId": "budget_status_budgets__budget_id__get",
+        "parameters": [
+          {
+            "description": "The identifier of the limit.",
+            "in": "path",
+            "name": "budget_id",
+            "required": true,
+            "schema": {
+              "description": "The identifier of the limit.",
+              "format": "uuid",
+              "title": "Budget Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetStatusBody"
+                }
+              }
+            },
+            "description": "The limit and its movements."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The limit does not exist, or the user cannot read its period. The same answer for both."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`budget_id` is not a UUID."
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Read what a limit spent",
+        "tags": [
+          "budgets"
         ]
       }
     },
@@ -876,6 +1488,10 @@
     {
       "description": "The accounts of the user of the session, with their computed balance.",
       "name": "accounts"
+    },
+    {
+      "description": "The budget periods the user of the session can read, the summary of one, and what one limit spent, computed from the movements.",
+      "name": "budgets"
     },
     {
       "description": "The chat of the dashboard, for development and demonstration. A message goes the same way as one of WhatsApp: it is stored, and the worker answers it later. These routes exist only when the web chat is enabled, and never in production.",

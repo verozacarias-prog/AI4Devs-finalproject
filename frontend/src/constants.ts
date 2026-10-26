@@ -27,6 +27,22 @@ export const JSON_CONTENT_TYPE = 'application/json'
 /** How the dashboard writes an amount: Argentine format, always with two decimals. */
 export const AMOUNT_LOCALE = 'es-AR'
 export const AMOUNT_DECIMALS = 2
+/** How the dashboard writes a calendar day, such as 9/10/2026. */
+export const DATE_LOCALE = 'es-AR'
+export const DATE_FORMAT: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'numeric', year: 'numeric' }
+export const DATE_TIME_ZONE = 'UTC'
+/** A used percentage has one decimal, as the API rounds it (FEAT-004, CA-10). */
+export const PERCENTAGE_DECIMALS = 1
+/** An exchange rate is shown with every decimal it has, up to the ten the database keeps. */
+export const EXCHANGE_RATE_MAX_DECIMALS = 10
+
+/**
+ * When a budget bar is near its limit and when it is over it: past 80 % and past 100 %, the
+ * same thresholds as the budget alerts (domain rules, § 3; FEAT-004, decision 9). They are
+ * here because the configuration of the alerts does not exist yet.
+ */
+export const NEAR_LIMIT_PERCENTAGE = 80
+export const OVER_LIMIT_PERCENTAGE = 100
 
 /** The command that creates the test users of the local environment (docs/operacion.md). */
 export const SEED_TEST_DATA_COMMAND =

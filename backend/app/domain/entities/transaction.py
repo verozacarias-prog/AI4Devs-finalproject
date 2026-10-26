@@ -45,3 +45,6 @@ class Transaction:
     category_id: uuid.UUID | None = None
     source: TransactionSource | None = None
     description: str | None = None
+    # Only in an income: the expense it refunds. It subtracts from the spent of the category
+    # of that expense, in the period of the income (domain rules, § 16).
+    refund_of: uuid.UUID | None = None

@@ -5,6 +5,7 @@ import type { SessionUser } from './api/session'
 import { AppShell, type LogoutFailure, type Screen } from './components/AppShell'
 import { Brand } from './components/Brand'
 import { AccountsPage } from './pages/AccountsPage'
+import { BudgetPage } from './pages/BudgetPage'
 import { ChatPage } from './pages/ChatPage'
 import { DevEntryPage } from './pages/DevEntryPage'
 import { StatusPage } from './pages/StatusPage'
@@ -64,6 +65,7 @@ export default function App() {
       chatAvailable={chatAvailable}
     >
       {screen === 'accounts' && <AccountsPage key={user.id} onNoSession={sessionEnded} />}
+      {screen === 'budget' && <BudgetPage key={user.id} onNoSession={sessionEnded} />}
       {screen === 'chat' && <ChatPage key={user.id} onNoSession={sessionEnded} />}
       {screen === 'status' && <StatusPage />}
     </AppShell>
