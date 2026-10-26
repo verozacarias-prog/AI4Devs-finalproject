@@ -1,9 +1,9 @@
 """Reading the budget over HTTP, against PostgreSQL (FEAT-004, docs/features/FEAT-004/spec.md).
 
-Cases C1-19 to C1-25, the integration ones: GET /budget-periods, the summary of a period and
-GET /budgets/{budget_id}. Each test has a database of its own, with the test data of the
-script, and talks to the API the way the dashboard does: it enters through the development
-entry and asks with the session cookie.
+Cases C1-19 to C1-25 and C2-01 to C2-08, the integration ones: GET /budget-periods, the
+summary of a period and GET /budgets/{budget_id}. Each test has a database of its own, with
+the test data of the script, and talks to the API the way the dashboard does: it enters
+through the development entry and asks with the session cookie.
 
 The API runs with a fixed clock, 25 October 2026 at noon in Buenos Aires. The periods the
 script creates start on the real day it runs, so each test replaces them with its own, and the
@@ -622,3 +622,143 @@ def test_the_amounts_and_the_percentage_arrive_with_their_exact_digits(
     assert re.search(r'"used_percentage":\s*8\.2[,}\s]', response.text), response.text
     assert re.search(r'"spent_amount":\s*80040\.00[,}\s]', response.text), response.text
     assert re.search(r'"used_percentage":\s*100\.1[,}\s]', response.text), response.text
+
+
+# Cut 2: errors and empty states.
+
+NOVEMBER_10 = date(2026, 11, 10)
+DECEMBER_9 = date(2026, 12, 9)
+NOT_A_UUID = "abc"
+
+
+def _status_and_body(client: TestClient, path: str) -> tuple[int, dict[str, object]]:
+    response = client.get(path)
+    body: dict[str, object] = response.json()
+    return response.status_code, body
+
+
+def _pablo_october(engine: Engine) -> tuple[uuid.UUID, uuid.UUID]:
+    """An individual period of Pablo, with a limit in Supermercado: its id and the limit's."""
+    pablo = _user_id(engine, "Pablo")
+    period = _period(engine, OCTOBER_10, NOVEMBER_9, user_id=pablo)
+    return period, _limit(engine, period, SUPERMARKET, "200000.00")
+
+
+def test_without_a_session_the_three_endpoints_answer_401(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C2-01. The client never enters, so it has no session cookie.
+    _, period, limits = _lucia_october(engine)
+
+    answers = [
+        _status_and_body(client, path)
+        for path in (
+            "/budget-periods",
+            f"/budget-periods/{period}/summary",
+            f"/budgets/{limits[SUPERMARKET]}",
+        )
+    ]
+
+    assert answers == [(401, {"error": "unauthorized"})] * 3
+
+
+def test_the_summary_of_another_users_period_answers_404(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C2-02.
+    of_pablo, _ = _pablo_october(engine)
+    _enter_as(client, "Lucía")
+
+    another = _status_and_body(client, f"/budget-periods/{of_pablo}/summary")
+    nobodys = _status_and_body(client, f"/budget-periods/{uuid.uuid4()}/summary")
+
+    assert another == (404, {"error": "not_found"})
+    assert nobodys == another
+
+
+def test_the_detail_of_another_users_limit_answers_404(client: TestClient, engine: Engine) -> None:
+    # Case C2-03.
+    _, limit_of_pablo = _pablo_october(engine)
+    _enter_as(client, "Lucía")
+
+    assert _status_and_body(client, f"/budgets/{limit_of_pablo}") == (
+        404,
+        {"error": "not_found"},
+    )
+
+
+def test_who_is_not_a_member_of_a_group_does_not_see_its_periods(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C2-04.
+    _, own, _ = _lucia_october(engine)
+    of_home = _period(engine, OCTOBER_10, NOVEMBER_9, group_id=_group_id(engine, "Casa"))
+    limit_of_home = _limit(engine, of_home, SUPERMARKET, "500000.00")
+    _enter_as(client, "Lucía")
+
+    assert [period["id"] for period in _periods(client)] == [str(own)]
+    assert _status_and_body(client, f"/budget-periods/{of_home}/summary")[0] == 404
+    assert _status_and_body(client, f"/budgets/{limit_of_home}")[0] == 404
+
+
+def test_who_left_a_group_sees_only_the_periods_of_their_membership(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C2-05. Sofía joined "Casa" on 1 October and left it on 15 October.
+    home = _group_id(engine, "Casa")
+    october = _period(engine, OCTOBER_10, NOVEMBER_9, group_id=home)
+    november = _period(engine, NOVEMBER_10, DECEMBER_9, group_id=home, status="draft")
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "UPDATE user_group SET joined_at = :joined, left_at = :left "
+                "WHERE family_group_id = :home "
+                "AND user_id = (SELECT id FROM app_user WHERE name = 'Sofía')"
+            ),
+            {
+                "joined": datetime.combine(OCTOBER_1, time(12), tzinfo=BUENOS_AIRES),
+                "left": datetime.combine(date(2026, 10, 15), time(12), tzinfo=BUENOS_AIRES),
+                "home": home,
+            },
+        )
+    _enter_as(client, "Sofía")
+
+    periods = _periods(client)
+
+    assert [(period["id"], period["can_edit"]) for period in periods] == [(str(october), False)]
+    assert _status_and_body(client, f"/budget-periods/{october}/summary")[0] == 200
+    assert _status_and_body(client, f"/budget-periods/{november}/summary")[0] == 404
+
+
+def test_an_id_that_is_not_a_uuid_answers_422(client: TestClient, engine: Engine) -> None:
+    # Case C2-06.
+    _enter_as(client, "Lucía")
+
+    for path in (f"/budget-periods/{NOT_A_UUID}/summary", f"/budgets/{NOT_A_UUID}"):
+        status, body = _status_and_body(client, path)
+        assert status == 422, path
+        assert set(body) >= {"error"}, path
+
+
+def test_a_period_without_limits_or_movements_is_empty_not_a_failure(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C2-07.
+    period = _period(engine, OCTOBER_10, NOVEMBER_9, user_id=_user_id(engine, "Lucía"))
+    _enter_as(client, "Lucía")
+
+    summary = _get(client, f"/budget-periods/{period}/summary")
+
+    assert (
+        summary["estimated_income"],
+        summary["actual_income"],
+        summary["total_spent"],
+        summary["categories"],
+    ) == (Decimal("0.00"), Decimal("0.00"), Decimal("0.00"), [])
+
+
+def test_a_user_without_periods_gets_an_empty_list(client: TestClient, engine: Engine) -> None:
+    # Case C2-08. The fixture leaves nobody with a period.
+    _enter_as(client, "Lucía")
+
+    assert _get(client, "/budget-periods") == {"budget_periods": []}

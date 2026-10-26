@@ -1,10 +1,10 @@
 /**
- * Cases C1-26 to C1-37 of FEAT-004 (docs/features/FEAT-004/spec.md): the budget screen with
- * its content. The API is simulated at the network level, so the page and its API calls are
+ * Cases C1-26 to C1-37 and C2-09 to C2-14 of FEAT-004 (docs/features/FEAT-004/spec.md): the
+ * four states of the budget screen. The API is simulated at the network level, so the page and its API calls are
  * tested together.
  */
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
-import { http, HttpResponse } from 'msw'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { delay, http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { afterAll, afterEach, beforeAll, expect, test } from 'vitest'
 import { BudgetPage } from './BudgetPage'
@@ -472,4 +472,136 @@ test('case C1-37: from the detail it goes back to the summary of the same period
   await screen.findByText('Transporte', { selector: '.budget-category__name' })
   expect(screen.queryByRole('region', { name: 'Supermercado' })).toBeNull()
   expect(chosenPeriod()).toBe('Personal · del 10/10/2026 al 9/11/2026')
+})
+
+const failure = () => HttpResponse.json({ error: 'internal_error' }, { status: 500 })
+const noSession = () => HttpResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+test('case C2-09: without periods it is empty, not a spinner', async () => {
+  const asked = apiWith([], {})
+
+  render(<BudgetPage onNoSession={nothing} />)
+
+  await screen.findByText('Todavía no tenés un presupuesto')
+  screen.getByText('Cuando armes tu primer período, acá vas a ver cuánto llevás gastado.')
+  expect(screen.queryByText('Consultando tu presupuesto…')).toBeNull()
+  expect(screen.queryByRole('combobox', { name: 'Período' })).toBeNull()
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Reintentar' })).toBeNull()
+  expect(asked.summaries).toEqual([])
+})
+
+test('case C2-10: a period without limits or movements is empty', async () => {
+  const asked = apiWith([CURRENT, PREVIOUS], {
+    [CURRENT.id]: summary(CURRENT.id, [], 0, 0),
+    [PREVIOUS.id]: summary(PREVIOUS.id, LUCIA_CATEGORIES, 108256.04),
+  })
+
+  render(<BudgetPage onNoSession={nothing} />)
+
+  await screen.findByText('Este período todavía no tiene topes ni gastos')
+  screen.getByText('Contale tus gastos a Platita y aparecen acá.')
+  expect(screen.queryByRole('alert')).toBeNull()
+  fireEvent.change(selector(), { target: { value: PREVIOUS.id } })
+  await screen.findByText('Supermercado', { selector: '.budget-category__name' })
+  expect(asked.summaries).toEqual([CURRENT.id, PREVIOUS.id])
+})
+
+test.each([
+  ['the API answers 500', failure, 'La API respondió con un error.'],
+  ['the API cannot be reached', () => HttpResponse.error(), 'No se puede llegar a la API.'],
+  [
+    'the API does not answer in time',
+    async () => {
+      await delay('infinite')
+      return HttpResponse.json({ budget_periods: [CURRENT] })
+    },
+    'La API no respondió a tiempo.',
+  ],
+])('case C2-11: when the periods fail, an error for each cause: %s', async (_, answer, cause) => {
+  api.use(http.get(PERIODS, answer))
+
+  render(<BudgetPage onNoSession={nothing} timeoutMs={50} />)
+
+  const alert = await screen.findByRole('alert')
+  within(alert).getByText('No se pudo consultar tu presupuesto')
+  within(alert).getByText(cause)
+  within(alert).getByRole('button', { name: 'Reintentar' })
+  expect(document.body.textContent).not.toContain('$')
+})
+
+test('case C2-12: when the summary or the detail fails, retrying repeats that query', async () => {
+  let periodsAsked = 0
+  let detailsAsked = 0
+  api.use(
+    http.get(PERIODS, () => {
+      periodsAsked += 1
+      return HttpResponse.json({ budget_periods: [CURRENT, PREVIOUS] })
+    }),
+    http.get(SUMMARY, () => HttpResponse.json(summary(CURRENT.id, LUCIA_CATEGORIES, 108256.04))),
+    http.get(DETAIL, () => {
+      detailsAsked += 1
+      return detailsAsked === 1 ? failure() : HttpResponse.json(SUPERMERCADO_DETAIL)
+    }),
+  )
+
+  render(<BudgetPage onNoSession={nothing} />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Supermercado' }))
+
+  const alert = await screen.findByRole('alert')
+  within(alert).getByText('No se pudo consultar tu presupuesto')
+  expect(document.querySelectorAll('.budget-category')).toHaveLength(0)
+  fireEvent.click(within(alert).getByRole('button', { name: 'Reintentar' }))
+
+  await screen.findByRole('region', { name: 'Supermercado' })
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(periodsAsked).toBe(1)
+  expect(detailsAsked).toBe(2)
+})
+
+test('case C2-13: retrying after an error brings the budget', async () => {
+  let answer: () => void = () => {}
+  const pending = new Promise<void>((resolve) => {
+    answer = resolve
+  })
+  api.use(
+    http.get(PERIODS, failure, { once: true }),
+    http.get(SUMMARY, () => HttpResponse.json(summary(CURRENT.id, LUCIA_CATEGORIES, 108256.04))),
+  )
+
+  render(<BudgetPage onNoSession={nothing} />)
+  const retry = await screen.findByRole('button', { name: 'Reintentar' })
+  api.use(
+    http.get(PERIODS, async () => {
+      await pending
+      return HttpResponse.json({ budget_periods: [CURRENT, PREVIOUS] })
+    }),
+  )
+  fireEvent.click(retry)
+
+  const status = await screen.findByText('Consultando tu presupuesto…')
+  expect(document.activeElement).toBe(status)
+  answer()
+  await screen.findByText('Supermercado', { selector: '.budget-category__name' })
+  expect(screen.queryByRole('alert')).toBeNull()
+})
+
+test.each([
+  ['the periods', () => api.use(http.get(PERIODS, noSession))],
+  [
+    'the summary',
+    () =>
+      api.use(
+        http.get(PERIODS, () => HttpResponse.json({ budget_periods: [CURRENT] })),
+        http.get(SUMMARY, noSession),
+      ),
+  ],
+])('case C2-14: without a session the screen goes back to the entry: %s', async (_, answers) => {
+  answers()
+  let ended = 0
+
+  render(<BudgetPage onNoSession={() => (ended += 1)} />)
+
+  await waitFor(() => expect(ended).toBe(1))
+  expect(screen.queryByRole('alert')).toBeNull()
 })
