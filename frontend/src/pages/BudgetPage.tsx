@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardTitle } from '@/components/ui/card'
+import { Card, CardDescription, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/class-names'
 import {
   loadBudgetPeriods,
@@ -34,6 +34,8 @@ import { MESSAGES } from '../messages'
  */
 type View =
   | { kind: 'loading' }
+  // The user has no period at all.
+  | { kind: 'no-periods' }
   | { kind: 'summary'; summary: PeriodSummary }
   | { kind: 'detail'; status: BudgetStatus }
   | { kind: 'error'; cause: ErrorCause }
@@ -59,7 +61,9 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
   const [periodId, setPeriodId] = useState<string | null>(null)
   const [showing, setShowing] = useState<Showing>({ kind: 'summary' })
   const [view, setView] = useState<View>({ kind: 'loading' })
-  const [attempt, setAttempt] = useState(0)
+  // Retrying repeats only the query that failed: the periods, or what is shown of one.
+  const [periodsAttempt, setPeriodsAttempt] = useState(0)
+  const [viewAttempt, setViewAttempt] = useState(0)
   const statusLine = useRef<HTMLParagraphElement>(null)
 
   useEffect(() => {
@@ -69,10 +73,11 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
       if (loaded.kind === 'no-session') return onNoSession()
       if (loaded.kind !== 'loaded') return setView({ kind: 'error', cause: loaded.kind })
       setPeriods(loaded.value)
+      if (loaded.value.length === 0) return setView({ kind: 'no-periods' })
       setPeriodId(opening(loaded.value)?.id ?? null)
     })
     return () => abandon.abort()
-  }, [attempt, timeoutMs, onNoSession])
+  }, [periodsAttempt, timeoutMs, onNoSession])
 
   useEffect(() => {
     if (periodId === null) return
@@ -93,7 +98,7 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
       )
     }
     return () => abandon.abort()
-  }, [periodId, showing, attempt, timeoutMs, onNoSession])
+  }, [periodId, showing, viewAttempt, timeoutMs, onNoSession])
 
   function choosePeriod(id: string) {
     setView({ kind: 'loading' })
@@ -108,7 +113,8 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
 
   function retry() {
     setView({ kind: 'loading' })
-    setAttempt((current) => current + 1)
+    if (periods === null) setPeriodsAttempt((current) => current + 1)
+    else setViewAttempt((current) => current + 1)
     statusLine.current?.focus()
   }
 
@@ -136,8 +142,9 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
         </label>
       )}
       <p ref={statusLine} role="status" tabIndex={-1} className="text-sm text-muted-foreground outline-none empty:hidden">
-        {view.kind === 'loading' ? TEXT.loading : ''}
+        {view.kind === 'loading' ? TEXT.loading : view.kind === 'no-periods' ? TEXT.noPeriods : ''}
       </p>
+      {view.kind === 'no-periods' && <CardDescription>{TEXT.noPeriodsDetail}</CardDescription>}
       {chosen?.status === 'draft' && view.kind !== 'loading' && view.kind !== 'error' && (
         <p className="rounded-lg border border-warning bg-warning/15 px-4 py-3 text-sm">{TEXT.draftNotice}</p>
       )}
@@ -147,6 +154,7 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
       {view.kind === 'detail' && <Detail status={view.status} onBack={() => show({ kind: 'summary' })} />}
       {view.kind === 'error' && (
         <div role="alert" className="flex flex-col items-start gap-2">
+          <p className="font-semibold text-destructive">{TEXT.failed}</p>
           <p className="text-sm text-muted-foreground">{MESSAGES.common.apiFailures[view.cause]}</p>
           <Button onClick={retry}>{MESSAGES.common.retry}</Button>
         </div>
@@ -178,6 +186,15 @@ function periodLabel(period: BudgetPeriod): string {
  */
 function Summary({ summary, onOpen }: { summary: PeriodSummary; onOpen: (budgetId: string) => void }) {
   const currency = summary.primary_currency
+  if (summary.categories.length === 0 && summary.actual_income === 0) {
+    // Nothing to show yet: no limits and no movements. Empty, not a failure.
+    return (
+      <div className="flex flex-col gap-1">
+        <p className="text-sm font-medium">{TEXT.emptyPeriod}</p>
+        <CardDescription>{TEXT.emptyPeriodDetail}</CardDescription>
+      </div>
+    )
+  }
   return (
     <div className="flex flex-col gap-6">
       <dl className="grid grid-cols-1 gap-3 md:grid-cols-3">

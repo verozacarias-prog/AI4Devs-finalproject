@@ -42,8 +42,9 @@ Salen de `frontend/src/design-tokens.css`, con las excepciones que admite el
 | Cargando | Se abre la pantalla, se elige otro período, se abre un detalle o se aprieta Reintentar | "Consultando tu presupuesto…", sin montos ni barras | Llega la respuesta, o falla |
 | Con contenido: resumen | Llegaron los períodos y el resumen del elegido | El selector, el aviso si es un borrador, los ingresos, el total gastado y una fila por categoría | Elegir otro período, o una categoría con tope |
 | Con contenido: detalle | Se eligió una categoría con tope y llegó su detalle | El tope, lo gastado, el porcentaje y los movimientos | "Volver al resumen", al mismo período |
-| Vacío | Los períodos llegan vacíos, o el elegido no tiene topes ni movimientos | Que no hay nada que mostrar y qué hacer; se define con los casos del corte 2 | — |
-| Error | Alguna de las consultas falló | Qué pasó y Reintentar; se define con los casos del corte 2 | Reintentar vuelve a Cargando |
+| Vacío: sin períodos | `GET /budget-periods` trae la lista vacía | "Todavía no tenés un presupuesto" y qué va a ver cuando arme uno, sin selector ni alerta | — |
+| Vacío: período sin nada | El resumen del elegido no trae categorías ni ingreso real | "Este período todavía no tiene topes ni gastos" y que los gastos se cuentan por el chat, sin alerta; el selector sigue a la vista | Elegir otro período |
+| Error | La API responde con un error, no responde a tiempo o no se llega a ella, en cualquiera de las consultas | "No se pudo consultar tu presupuesto", la causa y Reintentar, sin ningún monto | Reintentar vuelve a Cargando y repite solo la consulta que falló |
 
 Qué período se abre está en la [decisión 8 de la especificación](spec.md#decisiones-tomadas-al-especificar).
 Sin sesión no es un estado de esta pantalla: como en la de cuentas, un `401` vuelve a la entrada.
@@ -96,6 +97,11 @@ Van en `frontend/src/messages.ts`, bajo `budget`, salvo los compartidos, bajo `c
 | `overLimit` | Excedido |
 | `noLimit` | Sin tope |
 | `back` | Volver al resumen |
+| `noPeriods` | Todavía no tenés un presupuesto |
+| `noPeriodsDetail` | Cuando armes tu primer período, acá vas a ver cuánto llevás gastado. |
+| `emptyPeriod` | Este período todavía no tiene topes ni gastos |
+| `emptyPeriodDetail` | Contale tus gastos a Platita y aparecen acá. |
+| `failed` | No se pudo consultar tu presupuesto |
 | `movements` | Movimientos, el nombre de la lista del detalle |
 | `weighs` | Pesa en el tope, el título de lo que pesa un movimiento convertido |
 | `types` | Gasto, Reintegro |
