@@ -49,6 +49,9 @@ type BarState = 'normal' | 'near' | 'over'
 
 const TEXT = MESSAGES.budget
 
+/** The label of each state of a bar, written next to it and read aloud with it. */
+const STATE_LABELS: Record<BarState, string | null> = { normal: null, near: TEXT.nearLimit, over: TEXT.overLimit }
+
 type Props = {
   /** Called when the API says there is no session: the entry is shown again. */
   onNoSession: () => void
@@ -310,7 +313,7 @@ function Bar({ label, percentage }: { label: string; percentage: number }) {
       aria-valuemin={0}
       aria-valuemax={OVER_LIMIT_PERCENTAGE}
       aria-valuenow={width}
-      aria-valuetext={TEXT.barValue(formatPercentage(percentage), state === 'normal' ? null : TEXT.barStates[state])}
+      aria-valuetext={TEXT.barValue(formatPercentage(percentage), STATE_LABELS[state])}
       className={cn('budget-bar h-2 overflow-hidden rounded-full bg-muted', `budget-bar--${state}`)}
     >
       <div

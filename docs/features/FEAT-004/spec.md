@@ -1,7 +1,7 @@
 # Especificación — FEAT-004 · Pantalla de presupuesto
 
 - **Historia de usuario:** [HU4](../../05-historias-de-usuario.md)
-- **Estado:** aprobada para los cortes 1 y 2
+- **Estado:** aprobada para los cortes 1, 2 y 3
 - **Fecha:** 2026-10-25
 
 ## Alcance

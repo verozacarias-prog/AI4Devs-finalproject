@@ -13,7 +13,7 @@ Sigue la forma del [contrato de la pantalla de cuentas](../FEAT-001/ui_contract.
 | `Card` y `CardTitle` de shadcn/ui | Existen, desde el [ADR 0027](../../adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md) | El marco de la pantalla, como en la de cuentas: una sección que un lector de pantalla anuncia como "Tu presupuesto" |
 | `Button` de shadcn/ui | Existe, desde el ADR 0027 | Reintentar, abrir el detalle de una categoría con tope y volver al resumen |
 | Selector de período | Nuevo, en `BudgetPage`, sobre un `select` nativo | Elegir el período. Es nativo porque shadcn/ui no tiene uno instalado y sumarlo trae una librería nueva; el nativo ya se opera con teclado y anuncia su opción |
-| Línea de estado (`role="status"`) | Existe, como en la pantalla de cuentas | Anuncia cargando y vacío |
+| Línea de estado (`role="status"`) | Existe, como en la pantalla de cuentas | Anuncia la carga; el vacío sin períodos es un título (C3-05) |
 | Alerta de error (`role="alert"`) | Existe, como en la pantalla de cuentas | El estado de error |
 | Aviso de borrador | Nuevo, en `BudgetPage` | Dice que el período elegido está en borrador y falta confirmarlo |
 | Barra de una categoría | Nuevo, en `BudgetPage` | Lo gastado sobre el tope, con tres estados: normal, cerca del tope y excedida. Llena hasta el 100 %, aunque el porcentaje lo pase, y vacía si es negativo |
@@ -100,8 +100,7 @@ Van en `frontend/src/messages.ts`, bajo `budget`, salvo los compartidos, bajo `c
 | `spentOf` | {gastado} de {tope} |
 | `nearLimit` | Cerca del tope |
 | `overLimit` | Excedido |
-| `barValue` | {porcentaje}, {estado}; solo el porcentaje si la barra es normal |
-| `barStates` | cerca del tope · excedido |
+| `barValue` | {porcentaje}, {estado}, con el estado de `nearLimit` u `overLimit` en minúscula; solo el porcentaje si la barra es normal |
 | `noLimit` | Sin tope |
 | `back` | Volver al resumen |
 | `noPeriods` | Todavía no tenés un presupuesto |
