@@ -82,6 +82,9 @@ export const MESSAGES = {
     spentOf: (spent: string, limit: string) => `${spent} de ${limit}`,
     nearLimit: 'Cerca del tope',
     overLimit: 'Excedido',
+    // How a bar is read aloud: its percentage, and its state when it is not normal.
+    barValue: (percentage: string, state: string | null) => (state ? `${percentage}, ${state}` : percentage),
+    barStates: { near: 'cerca del tope', over: 'excedido' },
     noLimit: 'Sin tope',
     back: 'Volver al resumen',
     noPeriods: 'Todavía no tenés un presupuesto',
