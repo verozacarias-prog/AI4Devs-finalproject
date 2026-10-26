@@ -272,6 +272,8 @@ test('case C1-29: the summary of the period of Lucía', async () => {
 
   const cafe = categoryRow('Café')
   expect(read(part(cafe, 'spent'))).toBe('$ 3.500,00')
+  expect(read(part(cafe, 'no-limit'))).toBe('Sin tope')
+  expect(part(cafe, 'no-limit')?.classList).toContain('text-muted-foreground')
   expect(part(cafe, 'percentage')).toBeNull()
   expect(cafe.querySelector('.budget-bar')).toBeNull()
 

@@ -180,7 +180,7 @@ function Summary({ summary, onOpen }: { summary: PeriodSummary; onOpen: (budgetI
   const currency = summary.primary_currency
   return (
     <div className="flex flex-col gap-6">
-      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <dl className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <Figure label={TEXT.estimatedIncome} value={formatAmount(summary.estimated_income, currency)} />
         <Figure label={TEXT.actualIncome} value={formatAmount(summary.actual_income, currency)} />
         <Figure label={TEXT.totalSpent} value={formatAmount(summary.total_spent, currency)} />
@@ -259,6 +259,7 @@ function Spending({
       <span className={cn('budget-category__spent ml-auto tabular-nums', spent < 0 && 'text-destructive')}>
         {limit === null ? spentText : TEXT.spentOf(spentText, formatAmount(limit, currency))}
       </span>
+      {limit === null && <span className="budget-category__no-limit text-xs text-muted-foreground">{TEXT.noLimit}</span>}
       {percentage !== null && (
         <span className="budget-category__percentage font-semibold tabular-nums">{formatPercentage(percentage)}</span>
       )}

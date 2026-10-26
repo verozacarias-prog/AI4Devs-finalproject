@@ -17,7 +17,7 @@ Sigue la forma del [contrato de la pantalla de cuentas](../FEAT-001/ui_contract.
 | Alerta de error (`role="alert"`) | Existe, como en la pantalla de cuentas | El estado de error |
 | Aviso de borrador | Nuevo, en `BudgetPage` | Dice que el período elegido está en borrador y falta confirmarlo |
 | Barra de una categoría | Nuevo, en `BudgetPage` | Lo gastado sobre el tope, con tres estados: normal, cerca del tope y excedida. Llena hasta el 100 %, aunque el porcentaje lo pase, y vacía si es negativo |
-| Fila de una categoría sin tope | Nuevo, en `BudgetPage` | El nombre y lo gastado, sin barra ni porcentaje, y sin detalle |
+| Fila de una categoría sin tope | Nuevo, en `BudgetPage` | El nombre, lo gastado y "Sin tope" en gris, sin barra ni porcentaje, y sin detalle |
 | Lista de movimientos del detalle | Nuevo, en `BudgetPage` | Cada movimiento en una fila, con una etiqueta para su tipo y otra para su origen. Lo que pesa en el tope y la cotización aparecen solo si hubo conversión: si no, lo que pesa es su monto |
 
 ## Tokens del Design System
@@ -94,6 +94,7 @@ Van en `frontend/src/messages.ts`, bajo `budget`, salvo los compartidos, bajo `c
 | `spentOf` | {gastado} de {tope} |
 | `nearLimit` | Cerca del tope |
 | `overLimit` | Excedido |
+| `noLimit` | Sin tope |
 | `back` | Volver al resumen |
 | `movements` | Movimientos, el nombre de la lista del detalle |
 | `weighs` | Pesa en el tope, el título de lo que pesa un movimiento convertido |

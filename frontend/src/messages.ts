@@ -82,6 +82,7 @@ export const MESSAGES = {
     spentOf: (spent: string, limit: string) => `${spent} de ${limit}`,
     nearLimit: 'Cerca del tope',
     overLimit: 'Excedido',
+    noLimit: 'Sin tope',
     back: 'Volver al resumen',
     movements: 'Movimientos',
     weighs: 'Pesa en el tope',

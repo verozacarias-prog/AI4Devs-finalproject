@@ -103,6 +103,7 @@ $300.000,00 y Transporte $80.000,00; y hoy es 25 de octubre de 2026.
 
 - **Aprobado por:** Verónica Zacarías 25/10/2026
 - **C1-26 a C1-38, de componente, sumados para la pantalla:** Veronica Zacarias 25/10/2026
+- **C1-29 cambiado al probar la pantalla (una categoría sin tope dice "Sin tope"):** Verónica Zacarías 25//10/2026
 - **Total:** 38 casos, 18 unitarios, 7 de integración y 13 de componente.
 
 | Caso | Qué prueba | Tipo | Sale de |
@@ -455,8 +456,8 @@ caso.
   80040.00, porcentaje 100.1,
 - **cuando** se abre la pantalla,
 - **entonces** muestra el ingreso estimado $ 1.450.000,00, el real $ 1.500.000,00 y el total
-  gastado $ 108.256,04, y las tres categorías en ese orden: Café con $ 3.500,00 gastado, sin
-  barra ni porcentaje; Supermercado con una barra, $ 24.716,04 de $ 300.000,00 y 8,2 %; y
+  gastado $ 108.256,04, y las tres categorías en ese orden: Café con $ 3.500,00 gastado y
+  "Sin tope" en gris, sin barra ni porcentaje; Supermercado con una barra, $ 24.716,04 de $ 300.000,00 y 8,2 %; y
   Transporte con una barra, $ 80.040,00 de $ 80.000,00 y 100,1 %.
 - **Test:** `src/pages/BudgetPage.test.tsx` › "case C1-29: the summary of the period of Lucía"
 
