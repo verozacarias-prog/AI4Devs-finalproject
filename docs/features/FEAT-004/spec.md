@@ -103,7 +103,7 @@ $300.000,00 y Transporte $80.000,00; y hoy es 25 de octubre de 2026.
 
 - **Aprobado por:** Verónica Zacarías 25/10/2026
 - **C1-26 a C1-38, de componente, sumados para la pantalla:** Veronica Zacarias 25/10/2026
-- **C1-29 cambiado al probar la pantalla (una categoría sin tope dice "Sin tope"):** Verónica Zacarías 25//10/2026
+- **C1-29 cambiado al probar la pantalla (una categoría sin tope dice "Sin tope"):** Verónica Zacarías 25/10/2026
 - **Total:** 38 casos, 18 unitarios, 7 de integración y 13 de componente.
 
 | Caso | Qué prueba | Tipo | Sale de |
