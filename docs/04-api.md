@@ -221,6 +221,8 @@ responses:
     description: No valid session
   404:
     description: The budget does not exist or the user cannot read its period
+  422:
+    description: budget_id is not a UUID
 ```
 
 ### `GET /budget-periods`, `POST /budget-periods`, `PUT /budget-periods/{period_id}` y `POST /budget-periods/{period_id}/confirm`
@@ -378,8 +380,12 @@ responses:
               spent_amount: 540000
             - member: "Nico"
               spent_amount: 442300
+  401:
+    description: No valid session
   404:
     description: The period does not exist or the user cannot read it
+  422:
+    description: period_id is not a UUID
 ```
 
 ### `POST /transactions`

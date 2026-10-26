@@ -17,6 +17,14 @@ class BudgetPeriodRepositoryPort(Protocol):
         """
         ...
 
+    def find_by_id(self, period_id: uuid.UUID) -> BudgetPeriod | None:
+        """The period, whoever it belongs to: whether the user may read it is for the use case."""
+        ...
+
+    def list_owned_by(self, user_id: uuid.UUID, group_ids: set[uuid.UUID]) -> list[BudgetPeriod]:
+        """The individual periods of the user and every period of those groups."""
+        ...
+
     def confirm(self, period_id: uuid.UUID) -> None:
         """A draft becomes confirmed, as it is: nothing else of it changes (domain rules, § 3)."""
         ...

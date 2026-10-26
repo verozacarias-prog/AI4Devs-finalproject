@@ -173,7 +173,7 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
   /app
     /domain
       /entities         # User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, PendingTransaction, PendingBatch, AdviceDocument, AdviceChunk, InboundMessage, OutboundMessage, ChatMessage, Classification, LlmCall, LlmUsage
-      /use_cases         # one folder per feature, such as sessions/, messages/ or accounts/: CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, ListAccounts, SendChatMessage, ListChatMessages, ClaimNextMessage, AnswerMessage, ProcessNextMessage, ValidateSession, CheckReadiness, CheckQueue, GenerateProactiveAlert...
+      /use_cases         # one folder per feature, such as sessions/, messages/ or accounts/: CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, GetPeriodSummary, ListBudgetPeriods, ListAccounts, SendChatMessage, ListChatMessages, ClaimNextMessage, AnswerMessage, ProcessNextMessage, ValidateSession, CheckReadiness, CheckQueue, GenerateProactiveAlert...
       /ports             # interfaces the domain depends on but does not implement
         - unit_of_work_port.py
         - one <name>_repository_port.py per repository: user, session, account, transaction, transfer,
@@ -187,6 +187,7 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
           exchange_rate_port.py, with the features that need them
       /services          # domain services: business rules that belong to no single entity, as functions, one folder per topic
         /accounts        # the balance of an account
+        /budgets         # what a period spent and received, and who reads and edits a period
         /transactions    # which account a message names, whether a movement can be registered without asking, and its confirmation
         /dates           # which day it is for a user, in the time zone of that user
       errors.py          # the errors a business rule foresees, each with a stable code and a category; the only file loose in domain/

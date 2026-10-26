@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from app.adapters.inbound.api.routes import (
     ACCOUNTS_TAG,
+    BUDGETS_TAG,
     CHAT_TAG,
     DEV_TAG,
     HEALTH_TAG,
@@ -43,6 +44,11 @@ TAGS: list[dict[str, str]] = [
     {
         "name": ACCOUNTS_TAG,
         "description": "The accounts of the user of the session, with their computed balance.",
+    },
+    {
+        "name": BUDGETS_TAG,
+        "description": "The budget periods the user of the session can read, the summary of "
+        "one, and what one limit spent, computed from the movements.",
     },
     {
         "name": CHAT_TAG,
@@ -140,6 +146,94 @@ ACCOUNT_BALANCE_KIND = (
     "`balance`, or `net_contributed` in an investment account: what was declared on opening, "
     "plus transfers in, minus transfers out. Never added to any total."
 )
+
+# Reading the budget.
+BUDGET_PERIODS_SUMMARY = "List the budget periods"
+BUDGET_PERIODS_DESCRIPTION = (
+    "The periods the user of the session can read: their own, every period of the groups they "
+    "are a current member of, and of a group they left, the ones that overlap their "
+    "membership. Each one with its limits, whether the user can edit it, and whether it covers "
+    "today, in the time zone of the user. The one that starts latest comes first; with the "
+    "same start, the individual one before those of groups, by name."
+)
+BUDGET_PERIODS_OK = "The periods the user can read. An empty list when there are none."
+BUDGET_PERIODS_LIST = "The periods, in the order the dashboard shows them."
+PERIOD_ID = "The identifier of the period."
+PERIOD_GROUP_ID = "The group the period belongs to, or null in an individual period."
+PERIOD_GROUP_NAME = (
+    "The name of the group, to tell the budgets apart, or null in an individual one."
+)
+PERIOD_TYPE = "`monthly` or `biweekly`."
+PERIOD_START = "The first day of the period."
+PERIOD_END = "The last day of the period, included."
+PERIOD_STATUS = "`draft` while it is being built, `confirmed` once it can receive movements."
+PERIOD_CURRENCY = "The currency of the period, as an ISO 4217 code. What it spent is in it."
+PERIOD_ESTIMATED_INCOME = "What the user expects to receive in the period."
+PERIOD_CAN_EDIT = (
+    "Whether the user can change it: an individual period of their own, or one of a group "
+    "they currently own. It does not look at the status."
+)
+PERIOD_IS_CURRENT = (
+    "Whether it covers today, in the time zone of the user. At most one per owner: an "
+    "individual one and one of each group."
+)
+PERIOD_BUDGETS = "The limits of the period, by category name."
+BUDGET_ID = "The identifier of the limit."
+BUDGET_CATEGORY_ID = "The category the limit is for."
+BUDGET_CATEGORY = "The name of the category."
+BUDGET_LIMIT = "The limit, in the currency of the period."
+PERIOD_SUMMARY_SUMMARY = "Read the summary of a period"
+PERIOD_SUMMARY_DESCRIPTION = (
+    "The incomes of the period and what each category spent, in the currency of the period. "
+    "Every category with a limit, even without expenses, and every one without a limit that "
+    "had movements in the period, by name. What a category spent is net of the refunds linked "
+    "to its expenses that arrived in the period, and can be negative."
+)
+PERIOD_SUMMARY_OK = "The summary of the period."
+PERIOD_NOT_FOUND = (
+    "The period does not exist, or the user cannot read it. The same answer for both."
+)
+PERIOD_ID_INVALID = "`period_id` is not a UUID."
+PERIOD_ACTUAL_INCOME = "What the period received, without the refunds."
+PERIOD_TOTAL_SPENT = "What every category of the summary spent, added."
+PERIOD_CATEGORIES = "The categories of the summary, by name."
+SPENDING_BUDGET_ID = "The limit of the category, to read its detail, or null without one."
+SPENDING_LIMIT = "The limit, or null in a category without one."
+SPENT_AMOUNT = (
+    "What the category spent in the period, net of refunds, in the currency of the period. "
+    "Each movement is converted with its own rate and rounded before adding."
+)
+USED_PERCENTAGE = (
+    "What is spent over the limit, times a hundred, with one decimal and the half up. Null "
+    "without a limit."
+)
+BUDGET_STATUS_SUMMARY = "Read what a limit spent"
+BUDGET_STATUS_DESCRIPTION = (
+    "One limit of a period, what its category spent and the movements that count in it: the "
+    "expenses of the category and the refunds linked to them that arrived in the period, the "
+    "newest first. Deleted movements and those marked as duplicates are not there."
+)
+BUDGET_STATUS_OK = "The limit and its movements."
+BUDGET_NOT_FOUND = (
+    "The limit does not exist, or the user cannot read its period. The same answer for both."
+)
+BUDGET_ID_INVALID = "`budget_id` is not a UUID."
+BUDGET_PERIOD_ID = "The period the limit belongs to."
+BUDGET_TRANSACTIONS = "The movements that count in the limit, the newest first."
+MOVEMENT_ID = "The identifier of the movement."
+MOVEMENT_DATE = "The day of the movement."
+MOVEMENT_DESCRIPTION = "What the user wrote about it, or null."
+MOVEMENT_TYPE = "`expense`, or `income` when it is a linked refund, which subtracts."
+MOVEMENT_AMOUNT = "The amount as it was made, in its own currency."
+MOVEMENT_CURRENCY = "The currency the movement was made in, as an ISO 4217 code."
+MOVEMENT_BUDGET_AMOUNT = (
+    "What it weighs on the limit, in the currency of the period, rounded on its own."
+)
+MOVEMENT_EXCHANGE_RATE = (
+    "The rate it was converted to the period with, or null when it was already in its currency."
+)
+MOVEMENT_ACCOUNT = "The name of the account it moved."
+MOVEMENT_SOURCE = "`manual`, or `automatic` when the system generated it."
 
 # The web chat.
 SEND_CHAT_MESSAGE_SUMMARY = "Write to Platita"

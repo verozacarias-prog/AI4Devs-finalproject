@@ -15,6 +15,7 @@ from app.adapters.inbound.api.errors import install_error_handlers
 from app.adapters.inbound.api.origin_check import refuse_requests_from_elsewhere
 from app.adapters.inbound.api.request_logging import log_request
 from app.adapters.inbound.api.routers.accounts import build_accounts_router
+from app.adapters.inbound.api.routers.budgets import build_budgets_router
 from app.adapters.inbound.api.routers.chat import build_chat_router
 from app.adapters.inbound.api.routers.dev_entry import build_dev_entry_router
 from app.adapters.inbound.api.routers.health import build_health_router
@@ -28,6 +29,9 @@ from app.adapters.outbound.postgres.queue_health import PostgresQueueHealth
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
 from app.constants import APP_TITLE, Environment
 from app.domain.use_cases.accounts.list_accounts import ListAccounts
+from app.domain.use_cases.budgets.get_budget_status import GetBudgetStatus
+from app.domain.use_cases.budgets.get_period_summary import GetPeriodSummary
+from app.domain.use_cases.budgets.list_budget_periods import ListBudgetPeriods
 from app.domain.use_cases.health.check_queue import CheckQueue
 from app.domain.use_cases.health.check_readiness import CheckReadiness
 from app.domain.use_cases.messages.list_chat_messages import ListChatMessages
@@ -85,6 +89,14 @@ def create_app(
         build_accounts_router(
             lambda: AuthenticateSession(unit_of_work(), clock),
             lambda: ListAccounts(unit_of_work(), clock),
+        )
+    )
+    app.include_router(
+        build_budgets_router(
+            lambda: AuthenticateSession(unit_of_work(), clock),
+            lambda: ListBudgetPeriods(unit_of_work(), clock),
+            lambda: GetPeriodSummary(unit_of_work()),
+            lambda: GetBudgetStatus(unit_of_work()),
         )
     )
     if settings.web_chat_enabled:

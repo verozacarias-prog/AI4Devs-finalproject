@@ -78,13 +78,25 @@ SELECT_ACCOUNTS_BY_USER = """
     WHERE user_id = :user_id
 """
 
-# Deleted and duplicated movements included: which ones count is a rule of the domain.
-SELECT_TRANSACTIONS_BY_USER = """
-    SELECT id, user_id, account_id, type, amount, currency, exchange_rate, transaction_date,
-           duplicate_of, deleted_at
-    FROM transaction
-    WHERE user_id = :user_id
+SELECT_ACCOUNTS_BY_IDS = """
+    SELECT id, user_id, name, type, currency, initial_balance, created_at AS opened_at
+    FROM account
+    WHERE id = ANY(:ids)
 """
+
+# Deleted and duplicated movements included: which ones count is a rule of the domain.
+TRANSACTION_COLUMNS = """
+    SELECT id, user_id, account_id, type, amount, currency, exchange_rate, transaction_date,
+           duplicate_of, deleted_at, budget_period_id, category_id, source, description,
+           refund_of
+    FROM transaction
+"""
+
+SELECT_TRANSACTIONS_BY_USER = TRANSACTION_COLUMNS + "WHERE user_id = :user_id"
+
+SELECT_TRANSACTIONS_BY_PERIOD = TRANSACTION_COLUMNS + "WHERE budget_period_id = :period_id"
+
+SELECT_TRANSACTIONS_BY_IDS = TRANSACTION_COLUMNS + "WHERE id = ANY(:ids)"
 
 SELECT_TRANSFERS_BY_USER = """
     SELECT id, user_id, from_account_id, from_amount, from_currency, to_account_id, to_amount,
@@ -135,10 +147,35 @@ SELECT_BUDGETS_BY_PERIOD = """
      WHERE budget_period_id = :period_id
 """
 
+SELECT_BUDGET_BY_ID = """
+    SELECT id, budget_period_id, category_id, limit_amount
+      FROM budget
+     WHERE id = :budget_id
+"""
+
+BUDGET_PERIOD_COLUMNS = """
+    SELECT id, user_id, family_group_id, period_type, period_start, period_end,
+           primary_currency, estimated_income, status
+      FROM budget_period
+"""
+
+SELECT_BUDGET_PERIOD_BY_ID = BUDGET_PERIOD_COLUMNS + "WHERE id = :period_id"
+
+# Who may read each of them is a rule of the domain, with the memberships of the user.
+SELECT_BUDGET_PERIODS_OWNED_BY = (
+    BUDGET_PERIOD_COLUMNS + "WHERE user_id = :user_id OR family_group_id = ANY(:group_ids)"
+)
+
 SELECT_CATEGORIES_AVAILABLE = """
     SELECT id, name, kind, user_id
       FROM category
      WHERE user_id IS NULL OR user_id = :user_id
+"""
+
+SELECT_CATEGORIES_BY_IDS = """
+    SELECT id, name, kind, user_id
+      FROM category
+     WHERE id = ANY(:ids)
 """
 
 INSERT_PENDING_BATCH = """
@@ -260,6 +297,13 @@ SELECT_GROUP_OWNED_BY = """
 """
 
 SELECT_GROUP_BY_ID = "SELECT id, name FROM family_group WHERE id = :group_id"
+
+# The closed ones included: who left still reads the periods of their membership.
+SELECT_MEMBERSHIPS_BY_USER = """
+    SELECT user_id, family_group_id, role, joined_at, left_at
+      FROM user_group
+     WHERE user_id = :user_id
+"""
 
 # The messages of the channel (ADR 0010). The text of a message lives in its JSON, under this
 # key, both in the payload of what came in and in the content of what goes out. The queries

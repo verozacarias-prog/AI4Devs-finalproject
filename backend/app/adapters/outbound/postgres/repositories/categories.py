@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import Connection, text
+from sqlalchemy import Connection, Row, text
 
 from app.adapters.outbound.postgres import queries
 from app.adapters.outbound.postgres.rejections import execute_write
@@ -30,7 +30,14 @@ class PostgresCategoryRepository:
         rows = self._connection.execute(
             text(queries.SELECT_CATEGORIES_AVAILABLE), {"user_id": user_id}
         ).all()
-        return [
-            Category(id=row.id, name=row.name, kind=TransactionType(row.kind), user_id=row.user_id)
-            for row in rows
-        ]
+        return [_category_from(row) for row in rows]
+
+    def list_by_ids(self, category_ids: set[uuid.UUID]) -> list[Category]:
+        rows = self._connection.execute(
+            text(queries.SELECT_CATEGORIES_BY_IDS), {"ids": list(category_ids)}
+        ).all()
+        return [_category_from(row) for row in rows]
+
+
+def _category_from(row: Row[tuple[object, ...]]) -> Category:
+    return Category(id=row.id, name=row.name, kind=TransactionType(row.kind), user_id=row.user_id)

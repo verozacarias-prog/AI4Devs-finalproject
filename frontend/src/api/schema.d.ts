@@ -44,6 +44,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/budget-periods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the budget periods
+         * @description The periods the user of the session can read: their own, every period of the groups they are a current member of, and of a group they left, the ones that overlap their membership. Each one with its limits, whether the user can edit it, and whether it covers today, in the time zone of the user. The one that starts latest comes first; with the same start, the individual one before those of groups, by name.
+         */
+        get: operations["budget_periods_budget_periods_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/budget-periods/{period_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the summary of a period
+         * @description The incomes of the period and what each category spent, in the currency of the period. Every category with a limit, even without expenses, and every one without a limit that had movements in the period, by name. What a category spent is net of the refunds linked to its expenses that arrived in the period, and can be negative.
+         */
+        get: operations["period_summary_budget_periods__period_id__summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/budgets/{budget_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read what a limit spent
+         * @description One limit of a period, what its category spent and the movements that count in it: the expenses of the category and the refunds linked to them that arrived in the period, the newest first. Deleted movements and those marked as duplicates are not there.
+         */
+        get: operations["budget_status_budgets__budget_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/chat/messages": {
         parameters: {
             query?: never;
@@ -239,6 +299,221 @@ export interface components {
          * @enum {string}
          */
         BalanceKind: "balance" | "net_contributed";
+        /** BudgetLimitItem */
+        BudgetLimitItem: {
+            /**
+             * Category
+             * @description The name of the category.
+             */
+            category: string;
+            /**
+             * Category Id
+             * Format: uuid
+             * @description The category the limit is for.
+             */
+            category_id: string;
+            /**
+             * Id
+             * Format: uuid
+             * @description The identifier of the limit.
+             */
+            id: string;
+            /**
+             * Limit Amount
+             * @description The limit, in the currency of the period.
+             */
+            limit_amount: number;
+        };
+        /** BudgetMovementItem */
+        BudgetMovementItem: {
+            /**
+             * Account
+             * @description The name of the account it moved.
+             */
+            account: string;
+            /**
+             * Amount
+             * @description The amount as it was made, in its own currency.
+             */
+            amount: number;
+            /**
+             * Budget Amount
+             * @description What it weighs on the limit, in the currency of the period, rounded on its own.
+             */
+            budget_amount: number;
+            /**
+             * Currency
+             * @description The currency the movement was made in, as an ISO 4217 code.
+             */
+            currency: string;
+            /**
+             * Description
+             * @description What the user wrote about it, or null.
+             */
+            description: string | null;
+            /**
+             * Exchange Rate
+             * @description The rate it was converted to the period with, or null when it was already in its currency.
+             */
+            exchange_rate: number | null;
+            /**
+             * Id
+             * Format: uuid
+             * @description The identifier of the movement.
+             */
+            id: string;
+            /** @description `manual`, or `automatic` when the system generated it. */
+            source: components["schemas"]["TransactionSource"];
+            /**
+             * Transaction Date
+             * Format: date
+             * @description The day of the movement.
+             */
+            transaction_date: string;
+            /** @description `expense`, or `income` when it is a linked refund, which subtracts. */
+            type: components["schemas"]["TransactionType"];
+        };
+        /** BudgetPeriodItem */
+        BudgetPeriodItem: {
+            /**
+             * Budgets
+             * @description The limits of the period, by category name.
+             */
+            budgets: components["schemas"]["BudgetLimitItem"][];
+            /**
+             * Can Edit
+             * @description Whether the user can change it: an individual period of their own, or one of a group they currently own. It does not look at the status.
+             */
+            can_edit: boolean;
+            /**
+             * Estimated Income
+             * @description What the user expects to receive in the period.
+             */
+            estimated_income: number;
+            /**
+             * Family Group Id
+             * @description The group the period belongs to, or null in an individual period.
+             */
+            family_group_id: string | null;
+            /**
+             * Family Group Name
+             * @description The name of the group, to tell the budgets apart, or null in an individual one.
+             */
+            family_group_name: string | null;
+            /**
+             * Id
+             * Format: uuid
+             * @description The identifier of the period.
+             */
+            id: string;
+            /**
+             * Is Current
+             * @description Whether it covers today, in the time zone of the user. At most one per owner: an individual one and one of each group.
+             */
+            is_current: boolean;
+            /**
+             * Period End
+             * Format: date
+             * @description The last day of the period, included.
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             * @description The first day of the period.
+             */
+            period_start: string;
+            /** @description `monthly` or `biweekly`. */
+            period_type: components["schemas"]["PeriodType"];
+            /**
+             * Primary Currency
+             * @description The currency of the period, as an ISO 4217 code. What it spent is in it.
+             */
+            primary_currency: string;
+            /** @description `draft` while it is being built, `confirmed` once it can receive movements. */
+            status: components["schemas"]["PeriodStatus"];
+        };
+        /** BudgetPeriodList */
+        BudgetPeriodList: {
+            /**
+             * Budget Periods
+             * @description The periods, in the order the dashboard shows them.
+             */
+            budget_periods: components["schemas"]["BudgetPeriodItem"][];
+        };
+        /** BudgetStatusBody */
+        BudgetStatusBody: {
+            /**
+             * Budget Period Id
+             * Format: uuid
+             * @description The period the limit belongs to.
+             */
+            budget_period_id: string;
+            /**
+             * Category
+             * @description The name of the category.
+             */
+            category: string;
+            /**
+             * Id
+             * Format: uuid
+             * @description The identifier of the limit.
+             */
+            id: string;
+            /**
+             * Limit Amount
+             * @description The limit, in the currency of the period.
+             */
+            limit_amount: number;
+            /**
+             * Primary Currency
+             * @description The currency of the period, as an ISO 4217 code. What it spent is in it.
+             */
+            primary_currency: string;
+            /**
+             * Spent Amount
+             * @description What the category spent in the period, net of refunds, in the currency of the period. Each movement is converted with its own rate and rounded before adding.
+             */
+            spent_amount: number;
+            /**
+             * Transactions
+             * @description The movements that count in the limit, the newest first.
+             */
+            transactions: components["schemas"]["BudgetMovementItem"][];
+            /**
+             * Used Percentage
+             * @description What is spent over the limit, times a hundred, with one decimal and the half up. Null without a limit.
+             */
+            used_percentage: number;
+        };
+        /** CategorySpendingItem */
+        CategorySpendingItem: {
+            /**
+             * Budget Id
+             * @description The limit of the category, to read its detail, or null without one.
+             */
+            budget_id: string | null;
+            /**
+             * Category
+             * @description The name of the category.
+             */
+            category: string;
+            /**
+             * Limit Amount
+             * @description The limit, or null in a category without one.
+             */
+            limit_amount: number | null;
+            /**
+             * Spent Amount
+             * @description What the category spent in the period, net of refunds, in the currency of the period. Each movement is converted with its own rate and rounded before adding.
+             */
+            spent_amount: number;
+            /**
+             * Used Percentage
+             * @description What is spent over the limit, times a hundred, with one decimal and the half up. Null without a limit.
+             */
+            used_percentage: number | null;
+        };
         /** ChatConversation */
         ChatConversation: {
             /**
@@ -377,6 +652,50 @@ export interface components {
             name: string;
         };
         /**
+         * PeriodStatus
+         * @enum {string}
+         */
+        PeriodStatus: "draft" | "confirmed";
+        /** PeriodSummaryBody */
+        PeriodSummaryBody: {
+            /**
+             * Actual Income
+             * @description What the period received, without the refunds.
+             */
+            actual_income: number;
+            /**
+             * Budget Period Id
+             * Format: uuid
+             * @description The identifier of the period.
+             */
+            budget_period_id: string;
+            /**
+             * Categories
+             * @description The categories of the summary, by name.
+             */
+            categories: components["schemas"]["CategorySpendingItem"][];
+            /**
+             * Estimated Income
+             * @description What the user expects to receive in the period.
+             */
+            estimated_income: number;
+            /**
+             * Primary Currency
+             * @description The currency of the period, as an ISO 4217 code. What it spent is in it.
+             */
+            primary_currency: string;
+            /**
+             * Total Spent
+             * @description What every category of the summary spent, added.
+             */
+            total_spent: number;
+        };
+        /**
+         * PeriodType
+         * @enum {string}
+         */
+        PeriodType: "monthly" | "biweekly";
+        /**
          * ResponseKind
          * @description What kind of reply a message was (docs/03-modelo-de-datos.md, OUTBOUND_MESSAGE).
          * @enum {string}
@@ -393,6 +712,16 @@ export interface components {
             /** @description `pending` until the worker takes it. */
             status: components["schemas"]["InboundStatus"];
         };
+        /**
+         * TransactionSource
+         * @enum {string}
+         */
+        TransactionSource: "manual" | "automatic";
+        /**
+         * TransactionType
+         * @enum {string}
+         */
+        TransactionType: "expense" | "income";
     };
     responses: never;
     parameters: never;
@@ -458,6 +787,135 @@ export interface operations {
             };
             /** @description The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    budget_periods_budget_periods_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The periods the user can read. An empty list when there are none. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetPeriodList"];
+                };
+            };
+            /** @description There is no valid session: missing, unknown, revoked or expired, told apart nowhere. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    period_summary_budget_periods__period_id__summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The identifier of the period. */
+                period_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The summary of the period. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeriodSummaryBody"];
+                };
+            };
+            /** @description There is no valid session: missing, unknown, revoked or expired, told apart nowhere. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description The period does not exist, or the user cannot read it. The same answer for both. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description `period_id` is not a UUID. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    budget_status_budgets__budget_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The identifier of the limit. */
+                budget_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The limit and its movements. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetStatusBody"];
+                };
+            };
+            /** @description There is no valid session: missing, unknown, revoked or expired, told apart nowhere. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description The limit does not exist, or the user cannot read its period. The same answer for both. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description `budget_id` is not a UUID. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

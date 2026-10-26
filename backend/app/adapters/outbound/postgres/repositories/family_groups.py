@@ -32,3 +32,18 @@ class PostgresFamilyGroupRepository:
             text(queries.SELECT_GROUP_BY_ID), {"group_id": group_id}
         ).one_or_none()
         return None if row is None else FamilyGroup(id=row.id, name=row.name)
+
+    def list_memberships(self, user_id: uuid.UUID) -> list[Membership]:
+        rows = self._connection.execute(
+            text(queries.SELECT_MEMBERSHIPS_BY_USER), {"user_id": user_id}
+        ).all()
+        return [
+            Membership(
+                user_id=row.user_id,
+                family_group_id=row.family_group_id,
+                role=GroupRole(row.role),
+                joined_at=row.joined_at,
+                left_at=row.left_at,
+            )
+            for row in rows
+        ]

@@ -9,12 +9,26 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import date
 from decimal import Decimal
+from typing import Annotated
 
 from fastapi.responses import JSONResponse
+from pydantic import WithJsonSchema
+
+# An amount travels as a JSON number with its exact digits, never as a string.
+ExactAmount = Annotated[Decimal, WithJsonSchema({"type": "number"})]
 
 JsonValue = (
-    Decimal | uuid.UUID | str | int | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
+    Decimal
+    | uuid.UUID
+    | date
+    | str
+    | int
+    | bool
+    | None
+    | list["JsonValue"]
+    | dict[str, "JsonValue"]
 )
 
 
@@ -28,6 +42,8 @@ def _encode(value: JsonValue) -> str:
         return format(value, "f")
     if isinstance(value, uuid.UUID):
         return json.dumps(str(value))
+    if isinstance(value, date):
+        return json.dumps(value.isoformat())
     if isinstance(value, dict):
         members = (f"{json.dumps(key)}:{_encode(item)}" for key, item in value.items())
         return "{" + ",".join(members) + "}"

@@ -177,6 +177,9 @@ class _GroupsThatFail:
     def find_by_id(self, group_id: uuid.UUID) -> FamilyGroup | None:
         return None
 
+    def list_memberships(self, user_id: uuid.UUID) -> list[Membership]:
+        return []
+
 
 class _FailsAtTheGroup(SqlAlchemyUnitOfWork):
     """The real unit of work, except that creating the group fails."""
