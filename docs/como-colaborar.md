@@ -69,11 +69,16 @@ cd site && npm install                # solo para ver o regenerar el portal
 8. **Escribir cada commit** con el [formato de mensaje](convenciones-de-desarrollo.md#1-cortes-verticales)
    `tipo(alcance): qué cambia`, en español.
 9. **Cerrar el corte** con `/spec-drift`, y con `/ui-states` si tiene pantalla.
-10. **Abrir el pull request contra la rama de la entrega,** con el corte en verde y una
+10. **Probar el corte a mano,** en local y como lo usaría una persona: `docker compose up
+   --build`, los datos de prueba y la pantalla o el chat. Lo que la aplicación todavía no deja
+   cargar sale de un script de `scripts/`, como `budget_test_data.sql` para el presupuesto. Lo
+   que surge al probar se corrige en la misma rama, y los pasos y lo que se vio van en la
+   descripción del pull request.
+11. **Abrir el pull request contra la rama de la entrega,** con el corte en verde y una
    descripción armada desde la plantilla [`pr.md`](features/TEMPLATE/pr.md), con el
    [Definition of Done](07-pull-requests.md#definition-of-done) y `Closes #N`.
    Correr el agente `pr-reviewer` y resumir su informe.
-11. **Integrar** cuando todos los controles pasan, con un commit de merge y sin aplastar los
+12. **Integrar** cuando todos los controles pasan, con un commit de merge y sin aplastar los
     commits, para que se vea que los tests fueron primero. La aprobación y el merge son de una
     persona; un asistente hace commit solo si se lo piden, y nunca hace merge.
 
