@@ -1,4 +1,4 @@
-import { Activity, LogOut, MessageCircle, Wallet } from 'lucide-react'
+import { Activity, ChartPie, LogOut, MessageCircle, Wallet } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { Failure } from '@/api/request'
 import type { SessionUser } from '@/api/session'
@@ -7,7 +7,7 @@ import { cn } from '@/lib/class-names'
 import { MESSAGES } from '@/messages'
 
 /** The screens of the menu. The menu is a state of the page, without a router (ADR 0027). */
-export type Screen = 'accounts' | 'chat' | 'status'
+export type Screen = 'accounts' | 'budget' | 'chat' | 'status'
 
 export type LogoutFailure = Exclude<Failure['kind'], 'cancelled'>
 
@@ -41,6 +41,9 @@ export function AppShell({
           <ul className="flex gap-1 md:flex-col">
             <NavItem current={screen === 'accounts'} onSelect={() => onSelect('accounts')} icon={<Wallet />}>
               {NAV.accounts}
+            </NavItem>
+            <NavItem current={screen === 'budget'} onSelect={() => onSelect('budget')} icon={<ChartPie />}>
+              {NAV.budget}
             </NavItem>
           </ul>
           <div className="flex items-center gap-1 md:flex-col md:items-stretch">

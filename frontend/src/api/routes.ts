@@ -13,8 +13,16 @@ export const API_ROUTES = {
   devUsers: '/dev/users',
   devSession: '/dev/session',
   accounts: '/accounts',
+  budgetPeriods: '/budget-periods',
+  budgetPeriodSummary: '/budget-periods/{period_id}/summary',
+  budget: '/budgets/{budget_id}',
   chatMessages: '/chat/messages',
 } as const satisfies Record<string, keyof paths>
+
+/** A route with its `{name}` parameters filled in, each one escaped. */
+export function fillRoute(route: string, parameters: Record<string, string>): string {
+  return route.replace(/\{(\w+)\}/g, (_, name: string) => encodeURIComponent(parameters[name] ?? ''))
+}
 
 /** The answer of a health route when everything is fine. */
 export const HEALTH_OK: components['schemas']['HealthState'] = 'ok'
