@@ -16,7 +16,7 @@ decidida y el resto sigue como propuesta, escrita para que esté a mano cuando s
 | Las tres rutas de salud | [6.4](#64-alertas) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | `/healthz` y `/readyz`, el primer commit de código. `/queuez`, la tabla de mensajes entrantes |
 | Sentry, el monitor externo y las dos alertas críticas | [6.4](#64-alertas) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | El primer despliegue |
 
-**Qué sigue como propuesta.** Todo lo demás: el proveedor y el plan, los costos, el despliegue y
+**Qué sigue como propuesta.** Todo lo demás: el proveedor y el plan de `production`, los costos, el despliegue y
 la vuelta atrás, las copias de respaldo, los objetivos de servicio, las otras cinco alertas y
 cuándo crecer. Cada sección lo marca con `Propuesto, sin decidir:`. Para eso, lo vigente es
 [2.4. Infraestructura y despliegue](02-arquitectura.md#24-infraestructura-y-despliegue), y lo que
