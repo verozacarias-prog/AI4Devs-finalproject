@@ -126,7 +126,6 @@ sus planes pagos más chicos ([ADR 0029](adr/0029-el-entorno-demo-en-render-en-p
 | Revisar las dependencias que trae `langchain-text-splitters` y que ninguna envíe datos por su cuenta | Se instale, con la carga de la base de conocimiento | Lo pide el [ADR 0020](adr/0020-sin-framework-de-orquestacion-de-ia.md). Es para la entrega final |
 | Política de acceso central y tests de aislamiento entre usuarios | Exista el scaffold | La regla ya está en la [API](04-api.md): el usuario sale de la sesión y un recurso ajeno responde `404`. Lo que falta es aplicarla en un solo lugar del dominio, incluida la visibilidad por intervalos de membresía de los grupos familiares y las respuestas por WhatsApp que citan un lote, y probarla en cada endpoint y en el worker. Implementada caso por caso, alguno se escapa |
 | Que la API y el worker se conecten a la base con el rol `platita_app`, y solo las migraciones con el dueño de las tablas | Exista la migración del esquema, que crea el rol | Hoy Compose usa un solo usuario para todo, que puede eliminar filas. Mientras la aplicación no se conecte con su rol, la prohibición de `DELETE` del [ADR 0015](adr/0015-borrado-logico-de-movimientos.md) existe en la base pero no la protege |
-| Topes de tamaño: el cuerpo de un pedido, el texto de un mensaje del chat, la carga inicial de la conversación y la salida del modelo | Haya un primer despliegue | Hoy la API lee el cuerpo entero antes de mirar la sesión y nada lo limita: un pedido de cientos de MB puede tumbar la instancia, y un mensaje enorme va entero al modelo. Lo encontró `/security-audit` el 19/10/2026 (A06 y LLM10). Dos de los topes cambian el contrato, así que primero va [4. API](04-api.md). El de la salida del modelo es parte del tope de tokens por mensaje que sigue en [decisiones abiertas](#decisiones-abiertas) |
 | Fijar las dependencias indirectas del backend con sus hashes, y las imágenes base por digest | Haya un primer despliegue | Hoy cada build vuelve a resolver las dependencias indirectas, entre ellas el cliente HTTP del SDK del modelo, que corre con la clave del proveedor y ve el texto de los mensajes. Lo encontró `/security-audit` el 19/10/2026 (A03 y LLM03). Al hacerlo se actualiza la fila LLM03 de [seguridad de la capa de IA](seguridad-llm.md) |
 | Cambiar la rama por defecto del fork al abrir la rama de la entrega final | Exista esa rama | El portal se publica desde ahí, si el entorno `github-pages` la tiene autorizada, Dependabot abre ahí sus pull requests, y los enlaces del portal a GitHub apuntan a la rama por defecto. En la entrega 2 ya se hizo. Detalle en [documentación viva](documentacion-viva.md#7-el-modelo-de-ramas) |
 
@@ -206,8 +205,9 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   usuario ([reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente)). Que
   varias cuentas creadas con números descartables agoten el tope global de 20 dólares ya no es
   posible sin pasar por quien opera Platita, porque solo escriben los números habilitados
-  (§ 11), y cada usuario tiene además un tope diario total de mensajes clasificados. Falta
-  decidir un tope de tokens por mensaje, cuotas menores para cuentas nuevas y una alerta de
+  (§ 11), y cada usuario tiene además un tope diario total de mensajes clasificados. Cada llamada
+  tiene un tope de salida de 2000 tokens y el texto del chat web, uno de 4096 caracteres. Falta
+  decidir un tope de tokens de entrada por mensaje, cuotas menores para cuentas nuevas y una alerta de
   gasto diario antes de llegar al tope. El costo por día ya se puede leer de la tabla de
   llamadas al modelo ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
 - **Qué responde el asistente ante lo que pasó a la entrega final: decidido en parte.** Los
