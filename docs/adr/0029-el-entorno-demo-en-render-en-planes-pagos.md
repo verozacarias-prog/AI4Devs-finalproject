@@ -69,10 +69,10 @@ Los límites del plan gratuito de Render, verificados en su
    - El dominio propio. `demo` se sirve desde un subdominio de `onrender.com`, y el dominio
      propio sigue siendo requisito antes de abrir a usuarios reales
      ([hoja de ruta](../hoja-de-ruta.md#decisiones-abiertas)).
-
-   Sentry y los monitores siguen el
-   [ADR 0023](0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) y
-   la hoja de ruta, y este ADR no los decide.
+   - Sentry, el monitor externo y las dos alertas críticas del
+     [ADR 0023](0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md).
+     `demo` se vigila con los registros de Render y con `/readyz` como control de salud del
+     servicio web. Llegan con el primer despliegue de `production`, como corrige el ADR 0023.
 7. **`demo` vive mientras dura la evaluación de la entrega final.** Después se suspende o se
    borra. Sus datos son de usuarios de prueba, y borrarlos es lo que el aviso de prueba
    advierte.

@@ -121,7 +121,10 @@ Lo que ya está decidido acota la solución:
    [la API](../04-api.md#get-healthz-get-readyz-y-get-queuez). Las dos primeras llegan con el
    primer commit de código, y la tercera con la tabla de mensajes entrantes, que es lo que lee.
 
-### Con el primer despliegue
+### Con el primer despliegue de `production`
+
+El entorno `demo` no los lleva: se vigila con los registros del proveedor y con `/readyz`
+([ADR 0029](0029-el-entorno-demo-en-render-en-planes-pagos.md)).
 
 1. **Sentry, en su plan gratuito, para los errores,** con el filtro de datos personales. Pasa a
    ser un proveedor más en [términos y privacidad](../terminos-y-privacidad.md).
