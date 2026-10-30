@@ -526,6 +526,7 @@ test('issue #81, case T-10: a message over the limit is not sent, says why and s
   await screen.findByText('Tu mensaje es muy largo: el máximo es de 4096 caracteres.')
   expect(sends).toBe(0)
   expect(input).toHaveProperty('value', tooLong)
+  expect(screen.getByRole('button', { name: 'Enviar' })).toHaveProperty('disabled', true)
 })
 
 test('issue #81, case T-11: a message of exactly the limit is sent, counting each emoji as one', async () => {
