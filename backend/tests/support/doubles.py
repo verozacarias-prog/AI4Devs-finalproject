@@ -72,9 +72,16 @@ class InMemoryAccounts:
 class InMemoryBudgetPeriods:
     def __init__(self) -> None:
         self.added: list[BudgetPeriod] = []
+        # Every write the port is asked for, so that a case can tell nothing was written.
+        self.writes = 0
 
     def add(self, period: BudgetPeriod) -> None:
+        self.writes += 1
         self.added.append(period)
+
+    def update(self, period: BudgetPeriod) -> None:
+        self.writes += 1
+        self.added = [period if kept.id == period.id else kept for kept in self.added]
 
     def list_covering(self, user_id: uuid.UUID, day: date) -> list[BudgetPeriod]:
         # The periods of the groups of the user are a rule of the query: the integration tests
@@ -96,6 +103,7 @@ class InMemoryBudgetPeriods:
         ]
 
     def confirm(self, period_id: uuid.UUID) -> None:
+        self.writes += 1
         self.added = [
             replace(period, status=PeriodStatus.CONFIRMED) if period.id == period_id else period
             for period in self.added
@@ -105,9 +113,16 @@ class InMemoryBudgetPeriods:
 class InMemoryBudgets:
     def __init__(self) -> None:
         self.added: list[Budget] = []
+        self.writes = 0
 
     def add(self, budget: Budget) -> None:
+        self.writes += 1
         self.added.append(budget)
+
+    def replace_for_period(self, period_id: uuid.UUID, budgets: list[Budget]) -> None:
+        self.writes += 1
+        kept = [budget for budget in self.added if budget.budget_period_id != period_id]
+        self.added = kept + budgets
 
     def list_by_period(self, period_id: uuid.UUID) -> list[Budget]:
         return [budget for budget in self.added if budget.budget_period_id == period_id]
