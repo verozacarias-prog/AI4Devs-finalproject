@@ -561,6 +561,8 @@ responses:
     description: No valid session
   403:
     description: The request did not come from the page of the API itself, or it is not JSON
+  413:
+    description: The body is over 64 KiB
 ```
 
 ### `GET /dev/users` y `POST /dev/session`
@@ -623,6 +625,8 @@ responses:
           notice_version: "demo-1"
   403:
     description: The request did not come from the page of the API itself, or it is not JSON
+  413:
+    description: The body is over 64 KiB
   404:
     description: The development entry is disabled, the link is unknown or was regenerated, user_id was sent outside local, or user_id is not a test user
   422:

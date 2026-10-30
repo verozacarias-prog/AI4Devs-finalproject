@@ -51,6 +51,7 @@ DEV_TAG = "dev"
 ORIGIN_HEADER = "origin"
 HOST_HEADER = "host"
 CONTENT_TYPE_HEADER = "content-type"
+CONTENT_LENGTH_HEADER = "content-length"
 JSON_CONTENT_TYPE = "application/json"
 MEDIA_TYPE_PARAMETER_SEPARATOR = ";"
 READ_ONLY_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})

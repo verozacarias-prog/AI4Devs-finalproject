@@ -77,6 +77,7 @@ ERROR_CODE = "The code of the error: a short lowercase word that never changes."
 
 # Responses shared by several operations.
 NO_SESSION = "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
+BODY_TOO_LARGE = "The body is over 64 KiB. What was left of it was not read."
 FOREIGN_REQUEST = (
     "The request did not come from the page of the API itself, or it is not JSON. Nothing "
     "of what it sent was read."
@@ -244,7 +245,8 @@ SEND_CHAT_MESSAGE_DESCRIPTION = (
 )
 SEND_CHAT_MESSAGE_ACCEPTED = "The message was stored, pending. The worker processes it later."
 SEND_CHAT_MESSAGE_INVALID = (
-    "The text is empty or only spaces, or the header `Idempotency-Key` is missing."
+    "The text is empty, only spaces or over 4096 characters, or the header `Idempotency-Key` "
+    "is missing."
 )
 SEND_CHAT_MESSAGE_REPEATED = (
     "This user already sent a message with that `Idempotency-Key`: nothing is stored, and the "
@@ -264,8 +266,9 @@ CHAT_MESSAGE_STATUS = "`pending` until the worker takes it."
 LIST_CHAT_MESSAGES_SUMMARY = "Read the conversation"
 LIST_CHAT_MESSAGES_DESCRIPTION = (
     "The messages of the web chat of the user of the session, what the user wrote and what "
-    "Platita replied, in the order they happened. With `after`, only the ones that come after "
-    "that message: it is what the dashboard asks every few seconds. It does not count as "
+    "Platita replied, in the order they happened. Without `after`, the latest 200. With `after`, "
+    "every one that comes after that message: it is what the dashboard asks every few seconds. "
+    "It does not count as "
     "activity of the session."
 )
 LIST_CHAT_MESSAGES_OK = "The conversation. An empty list when there is nothing (new)."

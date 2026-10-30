@@ -20,12 +20,15 @@ class PostgresChatMessageRepository:
         ).scalar_one()
         return exists
 
-    def list_by_user(self, user_id: uuid.UUID, after: uuid.UUID | None) -> list[ChatMessage]:
+    def list_by_user(
+        self, user_id: uuid.UUID, after: uuid.UUID | None, latest: int | None
+    ) -> list[ChatMessage]:
         rows = self._connection.execute(
             text(queries.SELECT_CHAT_MESSAGES_BY_USER),
             {
                 "user_id": user_id,
                 "after": after,
+                "latest": latest,
                 "text_key": queries.MESSAGE_TEXT_KEY,
                 "response_kind_key": queries.RESPONSE_KIND_KEY,
             },

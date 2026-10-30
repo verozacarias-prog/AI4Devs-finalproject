@@ -441,7 +441,8 @@ INSERT_OUTBOUND_MESSAGE = """
 # What the user wrote is ordered by when it arrived, and a reply by when it was written. At
 # the same instant the message of the user goes first, since a reply never comes before what
 # it answers; then the id breaks the tie, so the order never changes and the cursor never
-# skips a message.
+# skips a message. The inner order picks the latest ones when there is a limit; a NULL limit
+# leaves them all.
 SELECT_CHAT_MESSAGES_BY_USER = """
     WITH conversation AS (
         SELECT id, 'inbound' AS direction, 0 AS turn, payload ->> :text_key AS text,
@@ -457,11 +458,16 @@ SELECT_CHAT_MESSAGES_BY_USER = """
          WHERE provider = 'web' AND user_id = :user_id AND purged_at IS NULL
     )
     SELECT id, direction, text, quoted_message_id, response_kind, created_at
-      FROM conversation
-     WHERE CAST(:after AS uuid) IS NULL
-        OR (created_at, turn, id) > (
-            SELECT created_at, turn, id FROM conversation WHERE id = CAST(:after AS uuid)
-        )
+      FROM (
+        SELECT id, direction, turn, text, quoted_message_id, response_kind, created_at
+          FROM conversation
+         WHERE CAST(:after AS uuid) IS NULL
+            OR (created_at, turn, id) > (
+                SELECT created_at, turn, id FROM conversation WHERE id = CAST(:after AS uuid)
+            )
+         ORDER BY created_at DESC, turn DESC, id DESC
+         LIMIT CAST(:latest AS integer)
+      ) AS shown
      ORDER BY created_at, turn, id
 """
 

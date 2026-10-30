@@ -10,6 +10,10 @@ from typing import TextIO
 from fastapi import FastAPI
 
 from app.adapters.inbound.api import reference
+from app.adapters.inbound.api.body_limit import (
+    CountedBody,
+    refuse_declared_bodies_over_the_limit,
+)
 from app.adapters.inbound.api.dashboard import mount_dashboard
 from app.adapters.inbound.api.errors import install_error_handlers
 from app.adapters.inbound.api.origin_check import refuse_requests_from_elsewhere
@@ -67,8 +71,11 @@ def create_app(
         redoc_url=None,
     )
     # The middleware added last runs first: the request is logged, gets its headers, and
-    # only then is checked, so a refused one leaves its line and carries its reference.
+    # only then is checked, so a refused one leaves its line and carries its reference. The
+    # size goes before the origin, and what is read is counted after it (docs/04-api.md).
+    app.add_middleware(CountedBody)
     app.middleware("http")(refuse_requests_from_elsewhere)
+    app.middleware("http")(refuse_declared_bodies_over_the_limit)
     app.middleware("http")(add_security_headers)
     install_error_handlers(app, settings.environment)
     app.middleware("http")(log_request)

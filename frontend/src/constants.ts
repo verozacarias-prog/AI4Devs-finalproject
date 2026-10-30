@@ -12,6 +12,8 @@ export const API_TIMEOUT_MS = 10_000
  */
 export const CHAT_WAITING_POLL_MS = 500
 export const CHAT_POLL_MS = 3_000
+/** The longest message the API takes, in characters (docs/04-api.md). */
+export const CHAT_TEXT_MAX_LENGTH = 4096
 /** The header that lets the API tell a repeated message from a new one (docs/04-api.md). */
 export const IDEMPOTENCY_KEY_HEADER = 'Idempotency-Key'
 /** Where a time starts and ends in an ISO 8601 date, such as 2026-10-15T14:58:00-03:00. */

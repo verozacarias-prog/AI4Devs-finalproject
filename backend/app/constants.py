@@ -99,6 +99,9 @@ MESSAGE_RETRY_WAIT_GROWTH = 4
 LLM_PROVIDER = "openai"
 LLM_MODEL = "gpt-5.4-mini"
 LLM_REASONING_EFFORT: Final[Literal["low"]] = "low"
+# The most the model may write in one call, its reasoning included. An answer it cuts is a
+# failed call, retried like any other (ADR 0010). The audit of 19/10/2026 asked for it (LLM10).
+LLM_MAX_OUTPUT_TOKENS = 2000
 LLM_PRICES_USD_PER_MILLION_TOKENS: dict[str, tuple[str, str]] = {"gpt-5.4-mini": ("0.75", "4.50")}
 # Shorter than the lock of a message, so the call ends before another worker can take it: with
 # a lock not longer than this, no process starts (ADR 0010). LLM_TIMEOUT_SECONDS changes it.
@@ -112,6 +115,13 @@ DEFAULT_LLM_DAILY_REGISTRATION_LIMIT = 50
 # The worker retries a failed round itself (ADR 0010): the SDK does not retry on its own.
 LLM_SDK_RETRIES = 0
 TOKENS_PER_MILLION = 1_000_000
+
+# The most a request and the web chat take (docs/04-api.md). The body fits the longest text
+# even with every character escaped in JSON, at 12 bytes each.
+MAX_REQUEST_BODY_BYTES = 64 * 1024
+MAX_CHAT_TEXT_LENGTH = 4096
+# How many messages the first read of the conversation brings, the latest ones.
+CHAT_FIRST_READ_MESSAGES = 200
 
 # The currencies a message can say, as the model returns them (domain rules, § 1).
 MESSAGE_CURRENCIES = ("ARS", "USD")

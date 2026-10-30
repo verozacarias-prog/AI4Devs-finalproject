@@ -4,7 +4,7 @@ import { Card, CardDescription, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/class-names'
 import { loadConversation, sendMessage, type ChatMessage } from '../api/chat'
 import type { Failure } from '../api/request'
-import { CHAT_POLL_MS, CHAT_WAITING_POLL_MS, ISO_TIME_END, ISO_TIME_START } from '../constants'
+import { CHAT_POLL_MS, CHAT_TEXT_MAX_LENGTH, CHAT_WAITING_POLL_MS, ISO_TIME_END, ISO_TIME_START } from '../constants'
 import { MESSAGES } from '../messages'
 
 /**
@@ -154,10 +154,13 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
     [timeoutMs, onNoSession],
   )
 
+  // Counted by characters, as the API does: an emoji is one, though it takes two in a string.
+  const tooLong = [...draft.trim()].length > CHAT_TEXT_MAX_LENGTH
+
   function send(event?: FormEvent) {
     event?.preventDefault()
     const text = draft.trim()
-    if (text === '') return
+    if (text === '' || tooLong) return
     const message: Outgoing = { key: crypto.randomUUID(), text, status: 'sending' }
     setOutgoing((current) => [...current, message])
     setDraft('')
@@ -219,6 +222,11 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
         </ol>
       )}
       {ready && pollFailed && <p className="text-sm text-destructive">{TEXT.pollFailed}</p>}
+      {ready && tooLong && (
+        <p role="alert" className="text-sm text-destructive">
+          {TEXT.tooLong}
+        </p>
+      )}
       {ready && (
         <form onSubmit={send} className="flex items-end gap-2">
           <label htmlFor="chat-input" className="sr-only">
@@ -232,7 +240,7 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
             onKeyDown={sendOnEnter}
             className="min-h-10 flex-1 resize-none rounded-md border border-input bg-card px-3 py-2 text-sm outline-none focus-visible:ring-(length:--focus-ring-width) focus-visible:ring-ring"
           />
-          <Button type="submit" disabled={draft.trim() === ''}>
+          <Button type="submit" disabled={draft.trim() === '' || tooLong}>
             {TEXT.send}
           </Button>
         </form>

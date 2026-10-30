@@ -113,7 +113,7 @@ export interface paths {
         };
         /**
          * Read the conversation
-         * @description The messages of the web chat of the user of the session, what the user wrote and what Platita replied, in the order they happened. With `after`, only the ones that come after that message: it is what the dashboard asks every few seconds. It does not count as activity of the session.
+         * @description The messages of the web chat of the user of the session, what the user wrote and what Platita replied, in the order they happened. Without `after`, the latest 200. With `after`, every one that comes after that message: it is what the dashboard asks every few seconds. It does not count as activity of the session.
          */
         get: operations["conversation_chat_messages_get"];
         put?: never;
@@ -794,6 +794,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
+            /** @description The body is over 64 KiB. What was left of it was not read. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
         };
     };
     budget_periods_budget_periods_get: {
@@ -1036,7 +1045,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description The text is empty or only spaces, or the header `Idempotency-Key` is missing. */
+            /** @description The body is over 64 KiB. What was left of it was not read. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description The text is empty, only spaces or over 4096 characters, or the header `Idempotency-Key` is missing. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1078,6 +1096,15 @@ export interface operations {
             };
             /** @description The development entry is disabled, the user does not exist or is not a test user, `user_id` was sent outside the local environment, or the personal link is unknown. The same answer for all of them. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description The body is over 64 KiB. What was left of it was not read. */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
