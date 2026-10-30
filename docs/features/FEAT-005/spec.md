@@ -372,8 +372,17 @@ Entran las validaciones de [la API](../../04-api.md), en su orden: el período d
 (CA-14); un ingreso estimado negativo, `422` con `estimated_income_negative` (CA-15), y el `CHECK` que
 lo impide en la base, en una migración nueva (AGENTS.md § 8); y fechas
 invertidas, un tope menor o igual a cero o
-una categoría repetida, `422`. También la categoría de otro usuario, `404`, y los estados vacío
-y de error de la pantalla.
+una categoría repetida, `422`. También la categoría de otro usuario, `404`; un campo que la API
+no conoce, como `family_group_id` mientras crear un período de grupo no entra, `422` en vez de
+ignorarlo; y los estados vacío y de error de la pantalla. El `404` del período de otro usuario, en
+`PUT` y en la confirmación, el `403`, los dos `409` de arriba, el `422` con
+`period_end_required`, el `404` de la categoría ajena y el `422` del campo desconocido no están
+en el corte 1: entran acá, con sus tests primero (ADR 0024). Hasta entonces, un tope sobre una
+categoría que no existe termina en `500`, porque la base rechaza la referencia, y lo cubre el
+`404` de la categoría ajena. Decidido por Vero el 30 de octubre de 2026.
+
+Queda por resolver, en el corte que corresponda: un tope que un `PUT` deja afuera se borra, y si
+ya tiene alertas enviadas la referencia de `sent_alert` a `budget` impide borrarlo.
 
 ### Corte 3 — observabilidad y accesibilidad
 

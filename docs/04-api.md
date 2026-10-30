@@ -380,6 +380,8 @@ responses:
               category_id: "cat-supermercado"
               category: "Supermercado"
               limit_amount: 300000
+  401:
+    description: No valid session
   403:
     description: The user is a member but not the owner of the family group
   404:
@@ -424,6 +426,16 @@ responses:
               category_id: "cat-supermercado"
               category: "Supermercado"
               limit_amount: 320000
+  401:
+    description: No valid session
+  403:
+    description: The period belongs to a family group the user is a member of but does not own
+  404:
+    description: The period belongs to another user or to a group the user is not in, or a category does not belong to the authenticated user
+  409:
+    description: Changes the dates or the currency of a confirmed period, or overlaps another period of the same owner
+  422:
+    description: Invalid dates, a biweekly period without period_end, non-positive limit, repeated category, a category that is not an expense one, a negative estimated income, or a period_id that is not a UUID
 
 # POST /budget-periods/{period_id}/confirm
 requestBody:
@@ -455,8 +467,14 @@ responses:
               category_id: "cat-supermercado"
               category: "Supermercado"
               limit_amount: 320000
+  401:
+    description: No valid session
+  403:
+    description: The period belongs to a family group the user is a member of but does not own
   404:
-    description: A listed rule is not a variable rule of this user due in the period
+    description: The period belongs to another user or to a group the user is not in, or a listed rule is not a variable rule of this user due in the period
+  422:
+    description: The period_id is not a UUID
 ```
 
 ### `GET /budget-periods/{period_id}/summary`

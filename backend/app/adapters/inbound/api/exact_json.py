@@ -19,6 +19,11 @@ from pydantic import WithJsonSchema
 # An amount travels as a JSON number with its exact digits, never as a string.
 ExactAmount = Annotated[Decimal, WithJsonSchema({"type": "number"})]
 
+# An amount a client sends: a JSON number or a decimal text, kept exact (docs/04-api.md).
+AmountInput = Annotated[
+    Decimal, WithJsonSchema({"anyOf": [{"type": "number"}, {"type": "string"}]})
+]
+
 JsonValue = (
     Decimal
     | uuid.UUID

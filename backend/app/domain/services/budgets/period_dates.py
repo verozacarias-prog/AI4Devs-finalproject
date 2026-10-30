@@ -1,0 +1,24 @@
+"""When a budget period ends (domain rules, § 3)."""
+
+from __future__ import annotations
+
+import calendar
+from datetime import date, timedelta
+
+from app.domain.entities.budget_period import PeriodType
+
+
+def period_end(period_type: PeriodType, period_start: date, indicated_end: date | None) -> date:
+    """The end the user gave, or for a monthly period without one, the day before the same day
+    of the next month. That day is taken to the last of the month when the month lacks it, as
+    in the recurring rules: one that starts on 31 January ends on 27 February."""
+    if indicated_end is not None:
+        return indicated_end
+    if period_type is not PeriodType.MONTHLY:
+        # A biweekly end is never computed. Telling the user is the 422 of the second cut.
+        raise ValueError
+    year, month = divmod(period_start.month, 12)
+    next_year, next_month = period_start.year + year, month + 1
+    last_day = calendar.monthrange(next_year, next_month)[1]
+    same_day = date(next_year, next_month, min(period_start.day, last_day))
+    return same_day - timedelta(days=1)

@@ -1,4 +1,4 @@
-"""Reading the budget of the user of the session: periods, summaries and limits (docs/04-api.md)."""
+"""The budget of the user of the session: its periods, summaries and limits (docs/04-api.md)."""
 
 from __future__ import annotations
 
@@ -12,20 +12,29 @@ from pydantic import BaseModel, Field
 
 from app.adapters.inbound.api import reference
 from app.adapters.inbound.api.errors import documented_errors
-from app.adapters.inbound.api.exact_json import ExactAmount, ExactJSONResponse
+from app.adapters.inbound.api.exact_json import AmountInput, ExactAmount, ExactJSONResponse
 from app.adapters.inbound.api.request_logging import identify_user
 from app.adapters.inbound.api.routers.session import SessionToken
 from app.adapters.inbound.api.routes import (
     BUDGET,
+    BUDGET_PERIOD,
+    BUDGET_PERIOD_CONFIRM,
     BUDGET_PERIOD_SUMMARY,
     BUDGET_PERIODS,
     BUDGETS_TAG,
 )
 from app.domain.entities.budget_period import PeriodStatus, PeriodType
 from app.domain.entities.transaction import TransactionSource, TransactionType
+from app.domain.use_cases.budgets.confirm_budget_period import ConfirmBudgetPeriod
+from app.domain.use_cases.budgets.create_budget_period import (
+    CreateBudgetPeriod,
+    LimitContent,
+    PeriodContent,
+)
 from app.domain.use_cases.budgets.get_budget_status import GetBudgetStatus
 from app.domain.use_cases.budgets.get_period_summary import GetPeriodSummary
-from app.domain.use_cases.budgets.list_budget_periods import ListBudgetPeriods
+from app.domain.use_cases.budgets.list_budget_periods import ListBudgetPeriods, ReadablePeriod
+from app.domain.use_cases.budgets.update_budget_period import UpdateBudgetPeriod
 from app.domain.use_cases.sessions.authenticate_session import AuthenticateSession
 
 
@@ -53,6 +62,32 @@ class BudgetPeriodItem(BaseModel):
 
 class BudgetPeriodList(BaseModel):
     budget_periods: list[BudgetPeriodItem] = Field(description=reference.BUDGET_PERIODS_LIST)
+
+
+class BudgetLimitRequest(BaseModel):
+    category_id: uuid.UUID = Field(description=reference.BUDGET_CATEGORY_ID)
+    limit_amount: AmountInput = Field(description=reference.BUDGET_LIMIT)
+
+
+class BudgetPeriodRequest(BaseModel):
+    period_type: PeriodType = Field(description=reference.PERIOD_TYPE)
+    period_start: date = Field(description=reference.PERIOD_START)
+    period_end: date | None = Field(default=None, description=reference.PERIOD_CONTENT_END)
+    primary_currency: str = Field(description=reference.PERIOD_CURRENCY)
+    estimated_income: AmountInput = Field(description=reference.PERIOD_ESTIMATED_INCOME)
+    budgets: list[BudgetLimitRequest] = Field(description=reference.PERIOD_CONTENT_BUDGETS)
+
+    def content(self) -> PeriodContent:
+        return PeriodContent(
+            period_type=self.period_type,
+            period_start=self.period_start,
+            period_end=self.period_end,
+            primary_currency=self.primary_currency,
+            estimated_income=self.estimated_income,
+            limits=tuple(
+                LimitContent(limit.category_id, limit.limit_amount) for limit in self.budgets
+            ),
+        )
 
 
 class CategorySpendingItem(BaseModel):
@@ -96,9 +131,37 @@ class BudgetStatusBody(BaseModel):
     transactions: list[BudgetMovementItem] = Field(description=reference.BUDGET_TRANSACTIONS)
 
 
+def _period_item(item: ReadablePeriod) -> BudgetPeriodItem:
+    return BudgetPeriodItem(
+        id=item.period.id,
+        family_group_id=item.period.family_group_id,
+        family_group_name=item.family_group_name,
+        period_type=item.period.period_type,
+        period_start=item.period.period_start,
+        period_end=item.period.period_end,
+        status=item.period.status,
+        primary_currency=item.period.primary_currency,
+        estimated_income=item.period.estimated_income,
+        can_edit=item.can_edit,
+        is_current=item.is_current,
+        budgets=[
+            BudgetLimitItem(
+                id=limit.budget.id,
+                category_id=limit.budget.category_id,
+                category=limit.category,
+                limit_amount=limit.budget.limit_amount,
+            )
+            for limit in item.budgets
+        ],
+    )
+
+
 def build_budgets_router(
     authenticate_session: Callable[[], AuthenticateSession],
     list_budget_periods: Callable[[], ListBudgetPeriods],
+    create_budget_period: Callable[[], CreateBudgetPeriod],
+    update_budget_period: Callable[[], UpdateBudgetPeriod],
+    confirm_budget_period: Callable[[], ConfirmBudgetPeriod],
     get_period_summary: Callable[[], GetPeriodSummary],
     get_budget_status: Callable[[], GetBudgetStatus],
 ) -> APIRouter:
@@ -117,33 +180,86 @@ def build_budgets_router(
         user = authenticate_session().execute(token)
         identify_user(request, user.id)
         listed = BudgetPeriodList(
-            budget_periods=[
-                BudgetPeriodItem(
-                    id=item.period.id,
-                    family_group_id=item.period.family_group_id,
-                    family_group_name=item.family_group_name,
-                    period_type=item.period.period_type,
-                    period_start=item.period.period_start,
-                    period_end=item.period.period_end,
-                    status=item.period.status,
-                    primary_currency=item.period.primary_currency,
-                    estimated_income=item.period.estimated_income,
-                    can_edit=item.can_edit,
-                    is_current=item.is_current,
-                    budgets=[
-                        BudgetLimitItem(
-                            id=limit.budget.id,
-                            category_id=limit.budget.category_id,
-                            category=limit.category,
-                            limit_amount=limit.budget.limit_amount,
-                        )
-                        for limit in item.budgets
-                    ],
-                )
-                for item in list_budget_periods().execute(user.id)
-            ]
+            budget_periods=[_period_item(item) for item in list_budget_periods().execute(user.id)]
         )
         return ExactJSONResponse(listed.model_dump())
+
+    @router.post(
+        BUDGET_PERIODS,
+        status_code=status.HTTP_201_CREATED,
+        response_model=BudgetPeriodItem,
+        response_class=ExactJSONResponse,
+        summary=reference.CREATE_PERIOD_SUMMARY,
+        description=reference.CREATE_PERIOD_DESCRIPTION,
+        response_description=reference.CREATE_PERIOD_CREATED,
+        responses=documented_errors(
+            {
+                status.HTTP_401_UNAUTHORIZED: reference.NO_SESSION,
+                status.HTTP_403_FORBIDDEN: reference.FOREIGN_REQUEST,
+                status.HTTP_422_UNPROCESSABLE_CONTENT: reference.PERIOD_CONTENT_INVALID,
+            }
+        ),
+    )
+    def create_period(
+        body: BudgetPeriodRequest, request: Request, token: SessionToken
+    ) -> ExactJSONResponse:
+        user = authenticate_session().execute(token)
+        identify_user(request, user.id)
+        created = create_budget_period().execute(user.id, body.content())
+        return ExactJSONResponse(
+            _period_item(created).model_dump(), status_code=status.HTTP_201_CREATED
+        )
+
+    @router.put(
+        BUDGET_PERIOD,
+        response_model=BudgetPeriodItem,
+        response_class=ExactJSONResponse,
+        summary=reference.UPDATE_PERIOD_SUMMARY,
+        description=reference.UPDATE_PERIOD_DESCRIPTION,
+        response_description=reference.UPDATE_PERIOD_OK,
+        responses=documented_errors(
+            {
+                status.HTTP_401_UNAUTHORIZED: reference.NO_SESSION,
+                status.HTTP_403_FORBIDDEN: reference.FOREIGN_REQUEST,
+                status.HTTP_422_UNPROCESSABLE_CONTENT: reference.PERIOD_CONTENT_INVALID,
+            }
+        ),
+    )
+    def update_period(
+        body: BudgetPeriodRequest,
+        request: Request,
+        token: SessionToken,
+        period_id: Annotated[uuid.UUID, Path(description=reference.PERIOD_ID)],
+    ) -> ExactJSONResponse:
+        user = authenticate_session().execute(token)
+        identify_user(request, user.id)
+        changed = update_budget_period().execute(user.id, period_id, body.content())
+        return ExactJSONResponse(_period_item(changed).model_dump())
+
+    @router.post(
+        BUDGET_PERIOD_CONFIRM,
+        response_model=BudgetPeriodItem,
+        response_class=ExactJSONResponse,
+        summary=reference.CONFIRM_PERIOD_SUMMARY,
+        description=reference.CONFIRM_PERIOD_DESCRIPTION,
+        response_description=reference.CONFIRM_PERIOD_OK,
+        responses=documented_errors(
+            {
+                status.HTTP_401_UNAUTHORIZED: reference.NO_SESSION,
+                status.HTTP_403_FORBIDDEN: reference.FOREIGN_REQUEST,
+                status.HTTP_422_UNPROCESSABLE_CONTENT: reference.PERIOD_ID_INVALID,
+            }
+        ),
+    )
+    def confirm_period(
+        request: Request,
+        token: SessionToken,
+        period_id: Annotated[uuid.UUID, Path(description=reference.PERIOD_ID)],
+    ) -> ExactJSONResponse:
+        user = authenticate_session().execute(token)
+        identify_user(request, user.id)
+        confirmed = confirm_budget_period().execute(user.id, period_id)
+        return ExactJSONResponse(_period_item(confirmed).model_dump())
 
     @router.get(
         BUDGET_PERIOD_SUMMARY,

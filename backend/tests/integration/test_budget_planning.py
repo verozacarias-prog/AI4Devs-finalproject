@@ -293,7 +293,7 @@ def test_lucia_changes_the_draft(client: TestClient, engine: Engine) -> None:
         changed["estimated_income"],
         changed["can_edit"],
     ) == (draft["id"], "2026-11-15", "2026-12-14", "draft", Decimal("1600000"), True)
-    assert _limits(changed) == [(SUPERMARKET, Decimal("350000")), (HEALTH, Decimal("50000"))]
+    assert _limits(changed) == [(HEALTH, Decimal("50000")), (SUPERMARKET, Decimal("350000"))]
     listed = next(period for period in _periods(client) if period["id"] == draft["id"])
     assert listed == changed
 
@@ -393,7 +393,7 @@ def test_lucia_puts_another_income_and_other_limits_on_her_current_period(
         listed["period_end"],
         listed["estimated_income"],
     ) == ("confirmed", "2026-10-10", "2026-11-09", Decimal("1520000"))
-    assert _limits(listed) == [(SUPERMARKET, Decimal("310000")), (HEALTH, Decimal("40000"))]
+    assert _limits(listed) == [(HEALTH, Decimal("40000")), (SUPERMARKET, Decimal("310000"))]
 
 
 def test_lucia_sees_her_expense_categories_base_and_own_by_name(

@@ -11,6 +11,7 @@ from __future__ import annotations
 from app.adapters.inbound.api.routes import (
     ACCOUNTS_TAG,
     BUDGETS_TAG,
+    CATEGORIES_TAG,
     CHAT_TAG,
     DEV_TAG,
     HEALTH_TAG,
@@ -48,7 +49,12 @@ TAGS: list[dict[str, str]] = [
     {
         "name": BUDGETS_TAG,
         "description": "The budget periods the user of the session can read, the summary of "
-        "one, and what one limit spent, computed from the movements.",
+        "one, and what one limit spent, computed from the movements. Building, changing and "
+        "confirming a period of their own.",
+    },
+    {
+        "name": CATEGORIES_TAG,
+        "description": "The categories of expenses the user of the session can put a limit on.",
     },
     {
         "name": CHAT_TAG,
@@ -182,6 +188,30 @@ BUDGET_ID = "The identifier of the limit."
 BUDGET_CATEGORY_ID = "The category the limit is for."
 BUDGET_CATEGORY = "The name of the category."
 BUDGET_LIMIT = "The limit, in the currency of the period."
+CREATE_PERIOD_SUMMARY = "Build a budget period"
+CREATE_PERIOD_DESCRIPTION = (
+    "A draft of an individual period of the user of the session, with its limits. A monthly "
+    "period without `period_end` ends the day before the same day of the next month. Each "
+    "amount is accepted as a JSON number or as a decimal text, and kept exact."
+)
+CREATE_PERIOD_CREATED = "The draft, whole, in the same shape as an item of the list."
+PERIOD_CONTENT_INVALID = "A field is missing or has no valid value."
+UPDATE_PERIOD_SUMMARY = "Change a budget period"
+UPDATE_PERIOD_DESCRIPTION = (
+    "Replaces the content of a period: its dates, currency, estimated income and limits. A "
+    "limit that stays keeps its id."
+)
+UPDATE_PERIOD_OK = "The period, whole, in the same shape as an item of the list."
+CONFIRM_PERIOD_SUMMARY = "Confirm a budget period"
+CONFIRM_PERIOD_DESCRIPTION = (
+    "A draft becomes confirmed, and from then on receives movements. Confirming one already "
+    "confirmed answers the same, and changes nothing."
+)
+CONFIRM_PERIOD_OK = "The period, confirmed, in the same shape as an item of the list."
+PERIOD_CONTENT_BUDGETS = "The limits of the period, one per category."
+PERIOD_CONTENT_END = (
+    "The last day of the period, included. Optional in a monthly period, where it is computed."
+)
 PERIOD_SUMMARY_SUMMARY = "Read the summary of a period"
 PERIOD_SUMMARY_DESCRIPTION = (
     "The incomes of the period and what each category spent, in the currency of the period. "
@@ -310,3 +340,15 @@ DEV_SESSION_INVALID = "Neither `user_id` nor `access_token` was sent, or `user_i
 DEV_SESSION_USER_ID = "The test user to enter as, from the list. Only in the local environment."
 # Not a secret: the description of the field that carries the value of a link.
 DEV_SESSION_ACCESS_TOKEN = "The value of a personal link. Not built yet: it answers `404`."  # noqa: S105
+
+# The categories.
+CATEGORIES_SUMMARY = "List the categories of expenses"
+CATEGORIES_DESCRIPTION = (
+    "The categories of expenses the user of the session can put a limit on: those of the base "
+    "catalog and their own, by name, without telling capitals apart."
+)
+CATEGORIES_OK = "The categories of expenses of the user."
+CATEGORIES_LIST = "The categories, by name."
+CATEGORY_ID = "The identifier of the category."
+CATEGORY_NAME = "The name of the category."
+CATEGORY_IS_BASE = "Whether it is of the base catalog, which every user has."

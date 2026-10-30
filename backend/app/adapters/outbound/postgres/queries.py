@@ -141,6 +141,26 @@ CONFIRM_BUDGET_PERIOD = """
     UPDATE budget_period SET status = 'confirmed' WHERE id = :period_id AND status = 'draft'
 """
 
+# The owner and the status never change here: confirming has its own query.
+UPDATE_BUDGET_PERIOD = """
+    UPDATE budget_period
+       SET period_type = :period_type, period_start = :period_start, period_end = :period_end,
+           primary_currency = :primary_currency, estimated_income = :estimated_income
+     WHERE id = :id
+"""
+
+# The limits of a period that are not given any more.
+DELETE_BUDGETS_NOT_IN = """
+    DELETE FROM budget WHERE budget_period_id = :period_id AND NOT (id = ANY(:ids))
+"""
+
+# A limit that is already there keeps its id and takes its new amount.
+UPSERT_BUDGET = """
+    INSERT INTO budget (id, budget_period_id, category_id, limit_amount)
+    VALUES (:id, :budget_period_id, :category_id, :limit_amount)
+    ON CONFLICT (id) DO UPDATE SET limit_amount = EXCLUDED.limit_amount
+"""
+
 SELECT_BUDGETS_BY_PERIOD = """
     SELECT id, budget_period_id, category_id, limit_amount
       FROM budget

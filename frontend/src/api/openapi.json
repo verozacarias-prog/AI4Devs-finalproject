@@ -116,6 +116,34 @@
         "title": "BudgetLimitItem",
         "type": "object"
       },
+      "BudgetLimitRequest": {
+        "properties": {
+          "category_id": {
+            "description": "The category the limit is for.",
+            "format": "uuid",
+            "title": "Category Id",
+            "type": "string"
+          },
+          "limit_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "The limit, in the currency of the period.",
+            "title": "Limit Amount"
+          }
+        },
+        "required": [
+          "category_id",
+          "limit_amount"
+        ],
+        "title": "BudgetLimitRequest",
+        "type": "object"
+      },
       "BudgetMovementItem": {
         "properties": {
           "account": {
@@ -314,6 +342,67 @@
         "title": "BudgetPeriodList",
         "type": "object"
       },
+      "BudgetPeriodRequest": {
+        "properties": {
+          "budgets": {
+            "description": "The limits of the period, one per category.",
+            "items": {
+              "$ref": "#/components/schemas/BudgetLimitRequest"
+            },
+            "title": "Budgets",
+            "type": "array"
+          },
+          "estimated_income": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "What the user expects to receive in the period.",
+            "title": "Estimated Income"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The last day of the period, included. Optional in a monthly period, where it is computed.",
+            "title": "Period End"
+          },
+          "period_start": {
+            "description": "The first day of the period.",
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "$ref": "#/components/schemas/PeriodType",
+            "description": "`monthly` or `biweekly`."
+          },
+          "primary_currency": {
+            "description": "The currency of the period, as an ISO 4217 code. What it spent is in it.",
+            "title": "Primary Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period_type",
+          "period_start",
+          "primary_currency",
+          "estimated_income",
+          "budgets"
+        ],
+        "title": "BudgetPeriodRequest",
+        "type": "object"
+      },
       "BudgetStatusBody": {
         "properties": {
           "budget_period_id": {
@@ -373,6 +462,50 @@
           "transactions"
         ],
         "title": "BudgetStatusBody",
+        "type": "object"
+      },
+      "CategoryItem": {
+        "properties": {
+          "id": {
+            "description": "The identifier of the category.",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_base": {
+            "description": "Whether it is of the base catalog, which every user has.",
+            "title": "Is Base",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "The name of the category.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "is_base"
+        ],
+        "title": "CategoryItem",
+        "type": "object"
+      },
+      "CategoryList": {
+        "properties": {
+          "categories": {
+            "description": "The categories, by name.",
+            "items": {
+              "$ref": "#/components/schemas/CategoryItem"
+            },
+            "title": "Categories",
+            "type": "array"
+          }
+        },
+        "required": [
+          "categories"
+        ],
+        "title": "CategoryList",
         "type": "object"
       },
       "CategorySpendingItem": {
@@ -944,6 +1077,223 @@
         "tags": [
           "budgets"
         ]
+      },
+      "post": {
+        "description": "A draft of an individual period of the user of the session, with its limits. A monthly period without `period_end` ends the day before the same day of the next month. Each amount is accepted as a JSON number or as a decimal text, and kept exact.",
+        "operationId": "create_period_budget_periods_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BudgetPeriodRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetPeriodItem"
+                }
+              }
+            },
+            "description": "The draft, whole, in the same shape as an item of the list."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "A field is missing or has no valid value."
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Build a budget period",
+        "tags": [
+          "budgets"
+        ]
+      }
+    },
+    "/budget-periods/{period_id}": {
+      "put": {
+        "description": "Replaces the content of a period: its dates, currency, estimated income and limits. A limit that stays keeps its id.",
+        "operationId": "update_period_budget_periods__period_id__put",
+        "parameters": [
+          {
+            "description": "The identifier of the period.",
+            "in": "path",
+            "name": "period_id",
+            "required": true,
+            "schema": {
+              "description": "The identifier of the period.",
+              "format": "uuid",
+              "title": "Period Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BudgetPeriodRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetPeriodItem"
+                }
+              }
+            },
+            "description": "The period, whole, in the same shape as an item of the list."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "A field is missing or has no valid value."
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Change a budget period",
+        "tags": [
+          "budgets"
+        ]
+      }
+    },
+    "/budget-periods/{period_id}/confirm": {
+      "post": {
+        "description": "A draft becomes confirmed, and from then on receives movements. Confirming one already confirmed answers the same, and changes nothing.",
+        "operationId": "confirm_period_budget_periods__period_id__confirm_post",
+        "parameters": [
+          {
+            "description": "The identifier of the period.",
+            "in": "path",
+            "name": "period_id",
+            "required": true,
+            "schema": {
+              "description": "The identifier of the period.",
+              "format": "uuid",
+              "title": "Period Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetPeriodItem"
+                }
+              }
+            },
+            "description": "The period, confirmed, in the same shape as an item of the list."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "`period_id` is not a UUID."
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Confirm a budget period",
+        "tags": [
+          "budgets"
+        ]
       }
     },
     "/budget-periods/{period_id}/summary": {
@@ -1085,6 +1435,43 @@
         "summary": "Read what a limit spent",
         "tags": [
           "budgets"
+        ]
+      }
+    },
+    "/categories": {
+      "get": {
+        "description": "The categories of expenses the user of the session can put a limit on: those of the base catalog and their own, by name, without telling capitals apart.",
+        "operationId": "categories_categories_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryList"
+                }
+              }
+            },
+            "description": "The categories of expenses of the user."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "List the categories of expenses",
+        "tags": [
+          "categories"
         ]
       }
     },
@@ -1490,8 +1877,12 @@
       "name": "accounts"
     },
     {
-      "description": "The budget periods the user of the session can read, the summary of one, and what one limit spent, computed from the movements.",
+      "description": "The budget periods the user of the session can read, the summary of one, and what one limit spent, computed from the movements. Building, changing and confirming a period of their own.",
       "name": "budgets"
+    },
+    {
+      "description": "The categories of expenses the user of the session can put a limit on.",
+      "name": "categories"
     },
     {
       "description": "The chat of the dashboard, for development and demonstration. A message goes the same way as one of WhatsApp: it is stored, and the worker answers it later. These routes exist only when the web chat is enabled, and never in production.",

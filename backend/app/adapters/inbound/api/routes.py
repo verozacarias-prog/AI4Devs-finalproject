@@ -33,9 +33,15 @@ ACCOUNTS_TAG = "accounts"
 
 # Reading the budget: the periods, the summary of one, and one limit with its movements.
 BUDGET_PERIODS = "/budget-periods"
+BUDGET_PERIOD = "/budget-periods/{period_id}"
+BUDGET_PERIOD_CONFIRM = "/budget-periods/{period_id}/confirm"
 BUDGET_PERIOD_SUMMARY = "/budget-periods/{period_id}/summary"
 BUDGET = "/budgets/{budget_id}"
 BUDGETS_TAG = "budgets"
+
+# The categories of expenses a limit can go on.
+CATEGORIES = "/categories"
+CATEGORIES_TAG = "categories"
 
 # The web chat. It exists only when it is enabled, and never in production (ADR 0016).
 CHAT_MESSAGES = "/chat/messages"
