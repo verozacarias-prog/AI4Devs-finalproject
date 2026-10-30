@@ -1,6 +1,6 @@
 """The size limits of a request and of the web chat, against PostgreSQL (issue #81).
 
-Cases T-1 to T-8 of the task, from the description of its pull request. Each test has a
+Cases T-1 to T-8 and T-12 of the task, from the description of its pull request. Each test has a
 database of its own, with the test data of the script, and talks to the API the way the
 dashboard does, with a fixed clock.
 """
@@ -208,3 +208,14 @@ def test_a_read_from_a_cursor_brings_every_later_message(lucia: TestClient, engi
     answer = lucia.get("/chat/messages", params={"after": ids[0]}).json()
 
     assert [message["id"] for message in answer["messages"]] == ids[1:]
+
+
+def test_a_declared_size_too_long_to_be_a_number_is_refused(
+    browser: TestClient, stream: io.StringIO
+) -> None:
+    # Case T-12. Python refuses to turn that many digits into a number.
+    response = browser.post("/chat/messages", headers={"Content-Length": "9" * 5000})
+
+    assert response.status_code == 413
+    assert response.json() == TOO_LARGE
+    assert events_of(stream, "error.unexpected") == []
