@@ -14,9 +14,9 @@ decidida y el resto sigue como propuesta, escrita para que esté a mano cuando s
 | Métricas de las llamadas al modelo | [6.2](#62-métricas) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | Entrega 2 |
 | Registros en JSON, filtro de datos personales y eventos de seguridad | [6.3](#63-registros) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | Los registros y el filtro, el primer commit de código. Cada evento, la funcionalidad que lo produce |
 | Las tres rutas de salud | [6.4](#64-alertas) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | `/healthz` y `/readyz`, el primer commit de código. `/queuez`, la tabla de mensajes entrantes |
-| Sentry, el monitor externo y las dos alertas críticas | [6.4](#64-alertas) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | El primer despliegue |
+| Sentry, el monitor externo y las dos alertas críticas | [6.4](#64-alertas) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | El primer despliegue de `production`: `demo` no los lleva ([ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md)) |
 
-**Qué sigue como propuesta.** Todo lo demás: el proveedor y el plan, los costos, el despliegue y
+**Qué sigue como propuesta.** Todo lo demás: el proveedor y el plan de `production`, los costos, el despliegue y
 la vuelta atrás, las copias de respaldo, los objetivos de servicio, las otras cinco alertas y
 cuándo crecer. Cada sección lo marca con `Propuesto, sin decidir:`. Para eso, lo vigente es
 [2.4. Infraestructura y despliegue](02-arquitectura.md#24-infraestructura-y-despliegue), y lo que
@@ -498,7 +498,7 @@ Pocas, por síntoma, y cada una con qué hacer.
 
 **Decidido** ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)): tres rutas de salud, dos desde el primer commit de código y la de la cola con la tabla de
 mensajes entrantes, y con el
-primer despliegue Sentry en su plan gratuito, un monitor externo y las dos alertas críticas.
+primer despliegue de `production` Sentry en su plan gratuito, un monitor externo y las dos alertas críticas.
 `GET /healthz` dice si el proceso vive, `GET /readyz` si llega a la base, y `GET /queuez` falla
 cuando un mensaje espera hace más de 10 minutos, o lo que diga `QUEUE_MAX_WAIT_MINUTES`
 ([2](#2-entornos)), o cuando no llega a la base ([la API](04-api.md#get-healthz-get-readyz-y-get-queuez)).

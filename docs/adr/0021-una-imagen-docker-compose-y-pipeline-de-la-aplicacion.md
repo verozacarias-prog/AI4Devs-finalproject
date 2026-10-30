@@ -89,7 +89,7 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
     entorno de pruebas: ahí prueba a mano quien desarrolla y quien reciba un enlace personal
     ([ADR 0016](0016-sesion-de-servidor-en-el-mismo-origen.md)). `main`, que recibe solo
     entregas cerradas, despliega `production` cuando exista. Cada entorno tiene su propia base.
-    Dónde se aloja cada uno sigue sin decidir.
+    Dónde se aloja `demo` lo decide el [ADR 0029](0029-el-entorno-demo-en-render-en-planes-pagos.md); el de `production` sigue sin decidir.
 12. **Quedan para la entrega final:** el escaneo de la imagen, la prueba de la migración desde
     el esquema de la versión anterior y el inventario de componentes de la imagen.
 

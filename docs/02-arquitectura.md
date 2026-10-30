@@ -262,7 +262,7 @@ para que ninguno termine siendo un cajón de funciones sueltas.
 
 ### **2.4. Infraestructura y despliegue**
 
-`Propuesto, a confirmar en la Entrega 2 contra el despliegue real:` Render para backend + PostgreSQL, por simplicidad de despliegue para un proyecto individual y porque pgvector está soportado como extensión estándar de su Postgres gestionado, sin depender de elegir la plantilla correcta como sí pasa en otras plataformas. El build del frontend lo sirve el mismo servicio web que la API, bajo `/app`, para que la cookie de sesión funcione sin un dominio propio ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). El entorno `demo` ya está decidido sobre esta topología, sin los procesos programados: Render, en sus planes pagos más chicos ([ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md)).
+`Propuesto para production, a confirmar contra su despliegue real:` Render para backend + PostgreSQL, por simplicidad de despliegue para un proyecto individual y porque pgvector está soportado como extensión estándar de su Postgres gestionado, sin depender de elegir la plantilla correcta como sí pasa en otras plataformas. El build del frontend lo sirve el mismo servicio web que la API, bajo `/app`, para que la cookie de sesión funcione sin un dominio propio ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). El entorno `demo` ya está decidido sobre esta topología, sin los procesos programados: Render, en sus planes pagos más chicos ([ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md)).
 
 ```mermaid
 flowchart TB
@@ -272,7 +272,7 @@ flowchart TB
         BROWSER(["💻 Navegador"])
     end
 
-    DEV["🗂 Repositorio GitHub<br/><i>push a main → deploy automático</i>"]
+    DEV["🗂 Repositorio GitHub<br/><i>main → production · rama de la entrega → demo</i>"]
     WACLOUD["<b>WhatsApp Business Cloud API</b><br/><i>Meta</i>"]
 
     subgraph RENDER["Render"]
