@@ -81,6 +81,7 @@ nombres de archivo de código están en inglés.
 - [0026 — React, TypeScript y Vite para el dashboard](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0026-react-typescript-y-vite-para-el-dashboard/)
 - [0027 — Tailwind CSS y shadcn/ui para el dashboard](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0027-tailwind-y-shadcn-ui-para-el-dashboard/)
 - [0028 — El modelo interpreta, el código controla las invariantes](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes/)
+- [0029 — El entorno demo en Render, en sus planes pagos más chicos](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0029-el-entorno-demo-en-render-en-planes-pagos/)
 
 ## Contrato para asistentes de IA
 

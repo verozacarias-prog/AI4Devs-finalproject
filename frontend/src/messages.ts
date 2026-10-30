@@ -82,8 +82,16 @@ export const MESSAGES = {
     spentOf: (spent: string, limit: string) => `${spent} de ${limit}`,
     nearLimit: 'Cerca del tope',
     overLimit: 'Excedido',
+    // How a bar is read aloud: its percentage, and its label in lower case when it is not normal.
+    barValue: (percentage: string, label: string | null) =>
+      label ? `${percentage}, ${label.toLowerCase()}` : percentage,
     noLimit: 'Sin tope',
     back: 'Volver al resumen',
+    noPeriods: 'Todavía no tenés un presupuesto',
+    noPeriodsDetail: 'Cuando armes tu primer período, acá vas a ver cuánto llevás gastado.',
+    emptyPeriod: 'Este período todavía no tiene topes ni gastos',
+    emptyPeriodDetail: 'Contale tus gastos a Platita y aparecen acá.',
+    failed: 'No se pudo consultar tu presupuesto',
     movements: 'Movimientos',
     weighs: 'Pesa en el tope',
     exchangeRate: (rate: string) => `cotización ${rate}`,

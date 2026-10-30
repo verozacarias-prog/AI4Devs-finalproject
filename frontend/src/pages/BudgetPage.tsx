@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardTitle } from '@/components/ui/card'
+import { Card, CardDescription, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/class-names'
 import {
   loadBudgetPeriods,
@@ -34,6 +34,8 @@ import { MESSAGES } from '../messages'
  */
 type View =
   | { kind: 'loading' }
+  // The user has no period at all.
+  | { kind: 'no-periods' }
   | { kind: 'summary'; summary: PeriodSummary }
   | { kind: 'detail'; status: BudgetStatus }
   | { kind: 'error'; cause: ErrorCause }
@@ -47,6 +49,9 @@ type BarState = 'normal' | 'near' | 'over'
 
 const TEXT = MESSAGES.budget
 
+/** The label of each state of a bar, written next to it and read aloud with it. */
+const STATE_LABELS: Record<BarState, string | null> = { normal: null, near: TEXT.nearLimit, over: TEXT.overLimit }
+
 type Props = {
   /** Called when the API says there is no session: the entry is shown again. */
   onNoSession: () => void
@@ -59,7 +64,9 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
   const [periodId, setPeriodId] = useState<string | null>(null)
   const [showing, setShowing] = useState<Showing>({ kind: 'summary' })
   const [view, setView] = useState<View>({ kind: 'loading' })
-  const [attempt, setAttempt] = useState(0)
+  // Retrying repeats only the query that failed: the periods, or what is shown of one.
+  const [periodsAttempt, setPeriodsAttempt] = useState(0)
+  const [viewAttempt, setViewAttempt] = useState(0)
   const statusLine = useRef<HTMLParagraphElement>(null)
 
   useEffect(() => {
@@ -69,10 +76,11 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
       if (loaded.kind === 'no-session') return onNoSession()
       if (loaded.kind !== 'loaded') return setView({ kind: 'error', cause: loaded.kind })
       setPeriods(loaded.value)
+      if (loaded.value.length === 0) return setView({ kind: 'no-periods' })
       setPeriodId(opening(loaded.value)?.id ?? null)
     })
     return () => abandon.abort()
-  }, [attempt, timeoutMs, onNoSession])
+  }, [periodsAttempt, timeoutMs, onNoSession])
 
   useEffect(() => {
     if (periodId === null) return
@@ -93,7 +101,7 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
       )
     }
     return () => abandon.abort()
-  }, [periodId, showing, attempt, timeoutMs, onNoSession])
+  }, [periodId, showing, viewAttempt, timeoutMs, onNoSession])
 
   function choosePeriod(id: string) {
     setView({ kind: 'loading' })
@@ -108,7 +116,8 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
 
   function retry() {
     setView({ kind: 'loading' })
-    setAttempt((current) => current + 1)
+    if (periods === null) setPeriodsAttempt((current) => current + 1)
+    else setViewAttempt((current) => current + 1)
     statusLine.current?.focus()
   }
 
@@ -138,6 +147,12 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
       <p ref={statusLine} role="status" tabIndex={-1} className="text-sm text-muted-foreground outline-none empty:hidden">
         {view.kind === 'loading' ? TEXT.loading : ''}
       </p>
+      {view.kind === 'no-periods' && (
+        <div className="flex flex-col gap-1">
+          <h3 className="text-sm font-medium">{TEXT.noPeriods}</h3>
+          <CardDescription>{TEXT.noPeriodsDetail}</CardDescription>
+        </div>
+      )}
       {chosen?.status === 'draft' && view.kind !== 'loading' && view.kind !== 'error' && (
         <p className="rounded-lg border border-warning bg-warning/15 px-4 py-3 text-sm">{TEXT.draftNotice}</p>
       )}
@@ -147,6 +162,7 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
       {view.kind === 'detail' && <Detail status={view.status} onBack={() => show({ kind: 'summary' })} />}
       {view.kind === 'error' && (
         <div role="alert" className="flex flex-col items-start gap-2">
+          <p className="font-semibold text-destructive">{TEXT.failed}</p>
           <p className="text-sm text-muted-foreground">{MESSAGES.common.apiFailures[view.cause]}</p>
           <Button onClick={retry}>{MESSAGES.common.retry}</Button>
         </div>
@@ -178,19 +194,33 @@ function periodLabel(period: BudgetPeriod): string {
  */
 function Summary({ summary, onOpen }: { summary: PeriodSummary; onOpen: (budgetId: string) => void }) {
   const currency = summary.primary_currency
+  const noCategories = summary.categories.length === 0
+  // With nothing at all the amounts would all be zero, so they are left out. An estimated
+  // income loaded without limits is shown, though: hiding it would hide what the user wrote.
+  const showAmounts = !noCategories || summary.actual_income !== 0 || summary.estimated_income !== 0
   return (
     <div className="flex flex-col gap-6">
-      <dl className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <Figure label={TEXT.estimatedIncome} value={formatAmount(summary.estimated_income, currency)} />
-        <Figure label={TEXT.actualIncome} value={formatAmount(summary.actual_income, currency)} />
-        <Figure label={TEXT.totalSpent} value={formatAmount(summary.total_spent, currency)} />
-      </dl>
-      <ul aria-label={TEXT.categories} className="divide-y rounded-lg border">
-        {summary.categories.map((category, index) => (
-          // Two categories of different members can share a name, so the name is no key.
-          <CategoryRow key={category.budget_id ?? index} category={category} currency={currency} onOpen={onOpen} />
-        ))}
-      </ul>
+      {showAmounts && (
+        <dl className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <Figure label={TEXT.estimatedIncome} value={formatAmount(summary.estimated_income, currency)} />
+          <Figure label={TEXT.actualIncome} value={formatAmount(summary.actual_income, currency)} />
+          <Figure label={TEXT.totalSpent} value={formatAmount(summary.total_spent, currency)} />
+        </dl>
+      )}
+      {noCategories ? (
+        // No limits and no spending yet: empty, not a failure.
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-medium">{TEXT.emptyPeriod}</p>
+          <CardDescription>{TEXT.emptyPeriodDetail}</CardDescription>
+        </div>
+      ) : (
+        <ul aria-label={TEXT.categories} className="divide-y rounded-lg border">
+          {summary.categories.map((category, index) => (
+            // Two categories of different members can share a name, so the name is no key.
+            <CategoryRow key={category.budget_id ?? index} category={category} currency={currency} onOpen={onOpen} />
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
@@ -235,7 +265,7 @@ function CategoryRow({
           currency={currency}
         />
       </div>
-      {category.used_percentage !== null && <Bar percentage={category.used_percentage} />}
+      {category.used_percentage !== null && <Bar label={category.category} percentage={category.used_percentage} />}
     </li>
   )
 }
@@ -269,12 +299,23 @@ function Spending({
   )
 }
 
-/** Full at 100 % or more, empty when what is spent is negative. */
-function Bar({ percentage }: { percentage: number }) {
+/**
+ * Full at 100 % or more, empty when what is spent is negative. It is read aloud as a meter
+ * named by its category, with its percentage and state, so the colour is never the only cue.
+ */
+function Bar({ label, percentage }: { label: string; percentage: number }) {
   const state = barState(percentage)
   const width = Math.min(Math.max(percentage, 0), OVER_LIMIT_PERCENTAGE)
   return (
-    <div className={cn('budget-bar h-2 overflow-hidden rounded-full bg-muted', `budget-bar--${state}`)}>
+    <div
+      role="meter"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={OVER_LIMIT_PERCENTAGE}
+      aria-valuenow={width}
+      aria-valuetext={TEXT.barValue(formatPercentage(percentage), STATE_LABELS[state])}
+      className={cn('budget-bar h-2 overflow-hidden rounded-full bg-muted', `budget-bar--${state}`)}
+    >
       <div
         className={cn(
           'budget-bar__fill h-full rounded-full',
@@ -310,7 +351,7 @@ function Detail({ status, onBack }: { status: BudgetStatus; onBack: () => void }
           currency={currency}
         />
       </div>
-      <Bar percentage={status.used_percentage} />
+      <Bar label={status.category} percentage={status.used_percentage} />
       <ul aria-label={TEXT.movements} className="divide-y rounded-lg border">
         {status.transactions.map((movement) => (
           <MovementRow key={movement.id} movement={movement} currency={currency} />

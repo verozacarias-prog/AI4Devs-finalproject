@@ -1,10 +1,10 @@
 /**
- * Cases C1-26 to C1-37 of FEAT-004 (docs/features/FEAT-004/spec.md): the budget screen with
- * its content. The API is simulated at the network level, so the page and its API calls are
+ * Cases C1-26 to C1-37, C2-09 to C2-14 and C3-02 to C3-05 of FEAT-004 (docs/features/FEAT-004/spec.md): the
+ * four states of the budget screen. The API is simulated at the network level, so the page and its API calls are
  * tested together.
  */
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
-import { http, HttpResponse } from 'msw'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { delay, http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { afterAll, afterEach, beforeAll, expect, test } from 'vitest'
 import { BudgetPage } from './BudgetPage'
@@ -472,4 +472,263 @@ test('case C1-37: from the detail it goes back to the summary of the same period
   await screen.findByText('Transporte', { selector: '.budget-category__name' })
   expect(screen.queryByRole('region', { name: 'Supermercado' })).toBeNull()
   expect(chosenPeriod()).toBe('Personal · del 10/10/2026 al 9/11/2026')
+})
+
+const failure = () => HttpResponse.json({ error: 'internal_error' }, { status: 500 })
+const noSession = () => HttpResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+test('case C2-09: without periods it is empty, not a spinner', async () => {
+  const asked = apiWith([], {})
+
+  render(<BudgetPage onNoSession={nothing} />)
+
+  await screen.findByText('Todavía no tenés un presupuesto')
+  screen.getByText('Cuando armes tu primer período, acá vas a ver cuánto llevás gastado.')
+  expect(screen.queryByText('Consultando tu presupuesto…')).toBeNull()
+  expect(screen.queryByRole('combobox', { name: 'Período' })).toBeNull()
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Reintentar' })).toBeNull()
+  expect(asked.summaries).toEqual([])
+})
+
+test('case C2-10: a period without limits or movements is empty', async () => {
+  const asked = apiWith([CURRENT, PREVIOUS], {
+    [CURRENT.id]: { ...summary(CURRENT.id, [], 0, 0), estimated_income: 0 },
+    [PREVIOUS.id]: summary(PREVIOUS.id, LUCIA_CATEGORIES, 108256.04),
+  })
+
+  render(<BudgetPage onNoSession={nothing} />)
+
+  await screen.findByText('Este período todavía no tiene topes ni gastos')
+  screen.getByText('Contale tus gastos a Platita y aparecen acá.')
+  expect(screen.queryByText('Ingreso estimado')).toBeNull()
+  expect(screen.queryByRole('alert')).toBeNull()
+  fireEvent.change(selector(), { target: { value: PREVIOUS.id } })
+  await screen.findByText('Supermercado', { selector: '.budget-category__name' })
+  expect(asked.summaries).toEqual([CURRENT.id, PREVIOUS.id])
+})
+
+test('case C2-10: an estimated income without limits is not hidden', async () => {
+  apiWith([CURRENT], { [CURRENT.id]: summary(CURRENT.id, [], 0, 0) })
+
+  render(<BudgetPage onNoSession={nothing} />)
+
+  await screen.findByText('Este período todavía no tiene topes ni gastos')
+  expect(figure('Ingreso estimado')).toBe('$ 1.450.000,00')
+  expect(figure('Ingreso real')).toBe('$ 0,00')
+  expect(figure('Total gastado')).toBe('$ 0,00')
+  expect(screen.queryByRole('alert')).toBeNull()
+})
+
+test.each([
+  ['the API answers 500', failure, 'La API respondió con un error.'],
+  ['the API cannot be reached', () => HttpResponse.error(), 'No se puede llegar a la API.'],
+  [
+    'the API does not answer in time',
+    async () => {
+      await delay('infinite')
+      return HttpResponse.json({ budget_periods: [CURRENT] })
+    },
+    'La API no respondió a tiempo.',
+  ],
+])('case C2-11: when the periods fail, an error for each cause: %s', async (_, answer, cause) => {
+  api.use(http.get(PERIODS, answer))
+
+  render(<BudgetPage onNoSession={nothing} timeoutMs={50} />)
+
+  const alert = await screen.findByRole('alert')
+  within(alert).getByText('No se pudo consultar tu presupuesto')
+  within(alert).getByText(cause)
+  within(alert).getByRole('button', { name: 'Reintentar' })
+  expect(document.body.textContent).not.toContain('$')
+})
+
+test('case C2-12: when the detail fails, retrying repeats that query', async () => {
+  let periodsAsked = 0
+  let detailsAsked = 0
+  api.use(
+    http.get(PERIODS, () => {
+      periodsAsked += 1
+      return HttpResponse.json({ budget_periods: [CURRENT, PREVIOUS] })
+    }),
+    http.get(SUMMARY, () => HttpResponse.json(summary(CURRENT.id, LUCIA_CATEGORIES, 108256.04))),
+    http.get(DETAIL, () => {
+      detailsAsked += 1
+      return detailsAsked === 1 ? failure() : HttpResponse.json(SUPERMERCADO_DETAIL)
+    }),
+  )
+
+  render(<BudgetPage onNoSession={nothing} />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Supermercado' }))
+
+  const alert = await screen.findByRole('alert')
+  within(alert).getByText('No se pudo consultar tu presupuesto')
+  expect(document.querySelectorAll('.budget-category')).toHaveLength(0)
+  fireEvent.click(within(alert).getByRole('button', { name: 'Reintentar' }))
+
+  await screen.findByRole('region', { name: 'Supermercado' })
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(periodsAsked).toBe(1)
+  expect(detailsAsked).toBe(2)
+})
+
+test('case C2-13: retrying after an error brings the budget', async () => {
+  let answer: () => void = () => {}
+  const pending = new Promise<void>((resolve) => {
+    answer = resolve
+  })
+  api.use(
+    http.get(PERIODS, failure, { once: true }),
+    http.get(SUMMARY, () => HttpResponse.json(summary(CURRENT.id, LUCIA_CATEGORIES, 108256.04))),
+  )
+
+  render(<BudgetPage onNoSession={nothing} />)
+  const retry = await screen.findByRole('button', { name: 'Reintentar' })
+  api.use(
+    http.get(PERIODS, async () => {
+      await pending
+      return HttpResponse.json({ budget_periods: [CURRENT, PREVIOUS] })
+    }),
+  )
+  fireEvent.click(retry)
+
+  const status = await screen.findByText('Consultando tu presupuesto…')
+  expect(document.activeElement).toBe(status)
+  answer()
+  await screen.findByText('Supermercado', { selector: '.budget-category__name' })
+  expect(screen.queryByRole('alert')).toBeNull()
+})
+
+test.each([
+  ['the periods', () => api.use(http.get(PERIODS, noSession))],
+  [
+    'the summary',
+    () =>
+      api.use(
+        http.get(PERIODS, () => HttpResponse.json({ budget_periods: [CURRENT] })),
+        http.get(SUMMARY, noSession),
+      ),
+  ],
+])('case C2-14: without a session the screen goes back to the entry: %s', async (_, answers) => {
+  answers()
+  let ended = 0
+
+  render(<BudgetPage onNoSession={() => (ended += 1)} />)
+
+  await waitFor(() => expect(ended).toBe(1))
+  expect(screen.queryByRole('alert')).toBeNull()
+})
+
+/** Native, enabled and with no tabindex that takes it out of the order: Tab reaches it. */
+function expectReachable(control: HTMLElement, tagName: string) {
+  expect(control.tagName).toBe(tagName)
+  expect((control as HTMLButtonElement | HTMLSelectElement).disabled).toBe(false)
+  expect(control.tabIndex).toBe(0)
+}
+
+test('case C3-02: the controls have a name and are used with the keyboard', async () => {
+  let detailsAsked = 0
+  api.use(
+    http.get(PERIODS, () => HttpResponse.json({ budget_periods: [CURRENT, PREVIOUS] })),
+    http.get(SUMMARY, () => HttpResponse.json(summary(CURRENT.id, LUCIA_CATEGORIES, 108256.04))),
+    http.get(DETAIL, () => {
+      detailsAsked += 1
+      return detailsAsked === 1 ? failure() : HttpResponse.json(SUPERMERCADO_DETAIL)
+    }),
+  )
+
+  render(<BudgetPage onNoSession={nothing} />)
+  const supermercado = await screen.findByRole('button', { name: 'Supermercado' })
+  expectReachable(selector(), 'SELECT')
+  expectReachable(supermercado, 'BUTTON')
+  fireEvent.click(supermercado)
+  const retry = await screen.findByRole('button', { name: 'Reintentar' })
+  expectReachable(retry, 'BUTTON')
+  fireEvent.click(retry)
+
+  expectReachable(await screen.findByRole('button', { name: 'Volver al resumen' }), 'BUTTON')
+})
+
+test('case C3-03: each bar announces its percentage and state', async () => {
+  const salud = crypto.randomUUID()
+  apiWith(
+    [CURRENT],
+    {
+      [CURRENT.id]: summary(
+        CURRENT.id,
+        [
+          limited('Supermercado', SUPERMERCADO, 300000, 135000, 45),
+          limited('Salud', salud, 50000, 42500, 85),
+          limited('Transporte', TRANSPORTE, 80000, 89600, 112),
+        ],
+        267100,
+      ),
+    },
+    {
+      [TRANSPORTE]: {
+        ...detail(TRANSPORTE, 89600, 112, [movement('2026-10-12', 'expense', 89600, 'ARS')]),
+        category: 'Transporte',
+        limit_amount: 80000,
+      },
+    },
+  )
+
+  render(<BudgetPage onNoSession={nothing} />)
+
+  await screen.findByRole('button', { name: 'Transporte' })
+  const announced = (meter: HTMLElement) => [meter.getAttribute('aria-label'), meter.getAttribute('aria-valuetext')]
+  expect(screen.getAllByRole('meter').map(announced)).toEqual([
+    ['Supermercado', '45,0 %'],
+    ['Salud', '85,0 %, cerca del tope'],
+    ['Transporte', '112,0 %, excedido'],
+  ])
+  fireEvent.click(screen.getByRole('button', { name: 'Transporte' }))
+  await screen.findByRole('region', { name: 'Transporte' })
+  expect(screen.getAllByRole('meter').map(announced)).toEqual([['Transporte', '112,0 %, excedido']])
+})
+
+test('case C3-04: every amount is written with its currency', async () => {
+  apiWith(
+    [CURRENT],
+    { [CURRENT.id]: summary(CURRENT.id, LUCIA_CATEGORIES, 108256.04) },
+    {
+      [SUPERMERCADO]: detail(SUPERMERCADO, 17345.68, 5.8, [
+        movement('2026-10-18', 'expense', 10, 'USD', {
+          budget_amount: 12345.68,
+          exchange_rate: 1234.5678,
+          account: 'Galicia USD',
+        }),
+        movement('2026-10-12', 'expense', 5000, 'ARS'),
+      ]),
+    },
+  )
+  const withCurrency = /^(US)?\$ /
+
+  render(<BudgetPage onNoSession={nothing} />)
+
+  await screen.findByRole('button', { name: 'Supermercado' })
+  const summaryAmounts = [
+    ...['Ingreso estimado', 'Ingreso real', 'Total gastado'].map(figure),
+    ...Array.from(document.querySelectorAll('.budget-category__spent')).flatMap((spent) =>
+      read(spent).split(' de '),
+    ),
+  ]
+  expect(summaryAmounts).toHaveLength(8)
+  for (const amount of summaryAmounts) expect(amount).toMatch(withCurrency)
+  fireEvent.click(screen.getByRole('button', { name: 'Supermercado' }))
+  await screen.findByRole('region', { name: 'Supermercado' })
+  const movementAmounts = Array.from(
+    document.querySelectorAll('.budget-movement__amount, .budget-movement__weight'),
+  ).map(read)
+  expect(movementAmounts).toEqual(['US$ 10,00', '$ 12.345,68', '$ 5.000,00'])
+  for (const amount of movementAmounts) expect(amount).toMatch(withCurrency)
+})
+
+test('case C3-05: without periods the notice is a heading, not a status', async () => {
+  apiWith([], {})
+
+  render(<BudgetPage onNoSession={nothing} />)
+
+  await screen.findByRole('heading', { name: 'Todavía no tenés un presupuesto' })
+  expect(screen.getByRole('status').textContent).toBe('')
 })

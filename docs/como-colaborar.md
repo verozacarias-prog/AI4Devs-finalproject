@@ -32,7 +32,8 @@ milestone de la entrega, y su avance se sigue en el
 - Una issue organiza el trabajo y enlaza a `docs/`: la especificación sigue estando en `docs/`.
 - El pull request que resuelve una issue la cierra con `Closes #N` en su descripción. Al
   integrarlo, la issue se cierra y su tarjeta pasa a "Hecho". Si la resuelve en parte, lleva
-  `Parte de #N` y la issue queda abierta.
+  `Parte de #N` y la issue queda abierta. El del último corte de una historia cierra también la
+  issue de la historia de usuario, que ningún otro pull request nombra.
 
 **Una vez por clon.**
 
@@ -93,7 +94,8 @@ cd site && npm install                # solo para ver o regenerar el portal
   la entrega a `main`.
 - **Cada lunes:** revisar los pull requests de Dependabot.
 
-Los commands, el skill y el agente están descritos en el
+Los pasos 1 a 12 se pueden recorrer con el command `/ticket`, que se detiene en cada punto que
+decide una persona. Los commands, el skill y el agente están descritos en el
 [flujo de trabajo con IA](flujo-de-trabajo-con-ia.md).
 
 ## 2. Verificación
