@@ -53,7 +53,7 @@ Dentro de "Con contenido" hay cuatro situaciones, que no son estados de la panta
   "Platita está procesando…".
 - **No enviado.** El `POST` de un mensaje falló: la burbuja queda con "No enviado" y Reintentar,
   y el reintento repite el pedido con la misma `Idempotency-Key`.
-- **Mensaje muy largo.** El texto pasa los 4096 caracteres, donde un emoji cuenta como uno: se ve
+- **Mensaje muy largo.** El texto pasa los 4096 caracteres, donde un emoji simple cuenta como uno y uno compuesto, como una bandera, puede contar más: se ve
   un aviso, Enviar queda deshabilitado y el texto sigue en el campo para que se pueda acortar.
 - **Consulta periódica caída.** Una consulta de mensajes nuevos falló con la conversación en
   pantalla: la conversación sigue, se ve un aviso, y se sigue preguntando.

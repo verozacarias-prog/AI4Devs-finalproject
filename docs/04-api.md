@@ -73,11 +73,11 @@ El chat web de desarrollo y demostración ([ADR 0002](adr/0002-whatsapp-como-can
 `POST /chat/messages` guarda el mensaje y responde enseguida, **sin procesarlo**. La respuesta de Platita no viene acá: aparece después en `GET /chat/messages`.
 
 - El usuario sale de la sesión. El mensaje se guarda con `provider = 'web'`, su `user_id` y su teléfono.
-- El texto no puede estar vacío ni ser solo espacios, y tiene como máximo 4096 caracteres, donde un emoji cuenta como uno. Si no cumple, `422` y no se guarda nada.
+- El texto no puede estar vacío ni ser solo espacios, y tiene como máximo 4096 caracteres, donde un emoji simple cuenta como uno y uno compuesto, como una bandera, puede contar más. Si no cumple, `422` y no se guarda nada.
 - El header `Idempotency-Key` es obligatorio: un UUID que el navegador genera una vez por mensaje y reenvía igual si repite el pedido. El servidor lo guarda en `provider_message_id` con el usuario de la sesión adelante. Si ese usuario ya mandó esa clave, no guarda nada y responde `200` con el mensaje original. Sin el header, `422`.
 - `quoted_message_id` es opcional: el mensaje de Platita que el usuario cita con el botón de responder. Tiene que ser un mensaje de salida de ese usuario; si no, `404`.
 
-`GET /chat/messages` devuelve los mensajes web del usuario, entrantes y salientes, en orden. Sin `after`, trae los últimos 200: los anteriores no se pueden pedir. Con `after`, trae todos los posteriores a ese cursor: es lo que el dashboard consulta cada pocos segundos, y un tope haría saltear mensajes. Un `after` que no es un mensaje de la conversación del usuario, sea de otro o de ninguno, responde `404`. No trae los mensajes cuyo contenido ya se purgó. **No cuenta como actividad de la sesión**: no renueva el plazo de inactividad ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
+`GET /chat/messages` devuelve los mensajes web del usuario, entrantes y salientes, en orden. Sin `after`, trae los últimos 200, y el dashboard no pide los anteriores. Con `after`, trae todos los posteriores a ese cursor, sin tope: es lo que el dashboard consulta cada pocos segundos, y un tope haría saltear mensajes. Un `after` que no es un mensaje de la conversación del usuario, sea de otro o de ninguno, responde `404`. No trae los mensajes cuyo contenido ya se purgó. **No cuenta como actividad de la sesión**: no renueva el plazo de inactividad ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 
 ```yaml
 # POST /chat/messages
