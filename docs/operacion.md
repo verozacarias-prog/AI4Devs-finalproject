@@ -9,6 +9,7 @@ decidida y el resto sigue como propuesta, escrita para que esté a mano cuando s
 |---|---|---|---|
 | Una imagen y Docker Compose en local | [2](#2-entornos) | [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) | Entrega 2 |
 | Qué rama despliega cada entorno: la de la entrega, `demo`; `main`, `production` | [2](#2-entornos) | [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) | El primer despliegue |
+| Dónde se aloja `demo`: Render, en sus planes pagos más chicos, sin copia externa, cron ni dominio propio | [2](#2-entornos) | [ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md) | La entrega final |
 | Los seis controles del pipeline | [3](#3-pipeline-de-la-aplicación) | [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) | El primer commit de código. El control de secretos y las acciones fijadas, desde ahora |
 | Métricas de las llamadas al modelo | [6.2](#62-métricas) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | Entrega 2 |
 | Registros en JSON, filtro de datos personales y eventos de seguridad | [6.3](#63-registros) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | Los registros y el filtro, el primer commit de código. Cada evento, la funcionalidad que lo produce |
@@ -95,7 +96,7 @@ El entorno local y el de CI están decididos, y también qué rama despliega cad
 de la entrega despliega `demo`, y `main`, `production` ([ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md)). El local levanta cuatro servicios
 con un comando: la base, las migraciones, la API y el worker, los tres últimos con la misma
 imagen. Las pruebas manuales usan el modelo real, con la clave en un `.env` sin versionar. Dónde
-se despliegan demostración y producción sigue como propuesta.
+se despliega producción sigue como propuesta; demostración se aloja en Render ([ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md)).
 
 Cada proceso de la aplicación (la API, el worker y los comandos de operación) recibe su
 entorno en la variable `APP_ENV`, y no hay un valor por defecto: sin
@@ -157,7 +158,7 @@ ningún otro entorno se define.
 |---|---|---|---|
 | Local | Desarrollo y pruebas manuales del flujo por WhatsApp | Docker Compose con la imagen `pgvector/pgvector:pg16`, el número de prueba gratuito de Meta detrás de un túnel, y datos semilla que se niegan a correr contra producción | Pull request |
 | CI, efímero | Tests de integración y migraciones contra un PostgreSQL real, y el test de punta a punta | PostgreSQL como contenedor del job, sin secretos, con dobles de prueba para Meta, el LLM, los embeddings y las cotizaciones. El test de punta a punta levanta todo con Docker Compose, con un proveedor del modelo simulado | Merge a la rama de despliegue con todos los checks en verde |
-| Demostración y pruebas | Mostrar el flujo conversacional por el chat web, sin WhatsApp, y que lo pruebe otra persona | Entorno `demo`: usuarios de prueba, chat web encendido y entrada por un enlace personal, uno por persona, con un aviso de prueba que se acepta la primera vez ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Tiene su propia base. Dónde se aloja está sin decidir | Con cada integración a la rama de la entrega |
+| Demostración y pruebas | Mostrar el flujo conversacional por el chat web, sin WhatsApp, y que lo pruebe otra persona | Entorno `demo`: usuarios de prueba, chat web encendido y entrada por un enlace personal, uno por persona, con un aviso de prueba que se acepta la primera vez ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Tiene su propia base. Se aloja en Render ([ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md)) | Con cada integración a la rama de la entrega |
 | Producción | Usuarios | Entorno `production`: Render, con los secretos en un Environment Group y registros en nivel INFO. No arranca con el chat web ni la entrada de desarrollo encendidos | Despliegue automático de Render cuando pasan los checks |
 
 **Datos de prueba.** Un usuario de prueba nace de una plantilla, la misma en `local` y en

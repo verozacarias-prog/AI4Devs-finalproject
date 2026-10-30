@@ -97,8 +97,8 @@ reglas recurrentes; los procesos programados, entre ellos las alertas y el venci
 pendientes; y la sección "Me deben".
 
 El entorno `demo` llega en la entrega final. Se despliega desde la rama de la entrega y hace de
-entorno de pruebas: cada persona que prueba tiene su usuario y su enlace. Dónde se aloja depende
-de la decisión abierta sobre el proveedor y el plan. En la entrega 2 Platita se prueba en `local`.
+entorno de pruebas: cada persona que prueba tiene su usuario y su enlace. Se aloja en Render, en
+sus planes pagos más chicos ([ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md)). En la entrega 2 Platita se prueba en `local`.
 
 ## Entrega 2
 
@@ -270,8 +270,9 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   que el alcance de los consejos, educación financiera que no elige instrumentos
   ([reglas de dominio § 18](reglas-de-dominio.md#18-alcance-de-los-consejos)), no se encuadre como
   asesoramiento de inversiones regulado. Bloquea abrir a usuarios reales.
-- **Proveedor y plan de despliegue: sin decidir.** [Operación](operacion.md), en su parte
-  todavía propuesta, plantea Render en su
+- **Proveedor y plan de despliegue de `production`: sin decidir.** El de `demo` ya está
+  decidido: Render, en sus planes pagos más chicos ([ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md)). Para
+  `production`, [operación](operacion.md), en su parte todavía propuesta, plantea Render en su
   plan pago más chico, por unos US$23 a 25 por mes, con una copia diaria cifrada fuera de Render.
   La alternativa es un servidor virtual único por unos US$6, que suma a quien opera parchear el
   sistema, administrar PostgreSQL y montar las copias. Hay que decidir cuánto vale no operar un
