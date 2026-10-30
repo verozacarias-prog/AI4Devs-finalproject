@@ -154,7 +154,7 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
     [timeoutMs, onNoSession],
   )
 
-  // Counted by characters, as the API does: an emoji is one, though it takes two in a string.
+  // Counted by code points, as the API does: a plain emoji is one, a flag or a skin tone is more.
   const tooLong = [...draft.trim()].length > CHAT_TEXT_MAX_LENGTH
 
   function send(event?: FormEvent) {

@@ -16,12 +16,18 @@ from app.adapters.inbound.api.errors import answer_for_status
 from app.adapters.inbound.api.routes import CONTENT_LENGTH_HEADER
 from app.constants import MAX_REQUEST_BODY_BYTES
 
+_LEADING_ZERO = "0"
+_DIGITS_OF_THE_LIMIT = len(str(MAX_REQUEST_BODY_BYTES))
+
 
 async def refuse_declared_bodies_over_the_limit(
     request: Request, call_next: Callable[[Request], Awaitable[Response]]
 ) -> Response:
-    declared = request.headers.get(CONTENT_LENGTH_HEADER, "")
-    if declared.isdecimal() and int(declared) > MAX_REQUEST_BODY_BYTES:
+    declared = request.headers.get(CONTENT_LENGTH_HEADER, "").lstrip(_LEADING_ZERO)
+    # The digits come first: Python refuses to turn a very long string into a number.
+    if declared.isdecimal() and (
+        len(declared) > _DIGITS_OF_THE_LIMIT or int(declared) > MAX_REQUEST_BODY_BYTES
+    ):
         return answer_for_status(status.HTTP_413_CONTENT_TOO_LARGE)
     return await call_next(request)
 
