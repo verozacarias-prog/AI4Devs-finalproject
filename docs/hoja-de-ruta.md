@@ -185,6 +185,10 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   salud. Falta decidir si en `production` se apagan o piden sesión, antes de que describan los
   endpoints del producto. La referencia pública de la API tiene su propio punto en la lista de
   arriba.
+- **El tope del cuerpo de un pedido en el webhook de WhatsApp: sin decidir.** Hoy es de 64 KiB en
+  cualquier ruta ([contrato de la API](04-api.md)), y el webhook todavía no existe. Un lote de
+  Meta de más de 64 KiB recibiría `413` y sus mensajes se podrían perder. Antes de construirlo hay
+  que verificar el tamaño máximo que manda Meta y decidir el tope de esa ruta.
 - **Metadatos de los mensajes: sin plazo de borrado.** Pasado el plazo de retención se borran el
   texto y el teléfono de cada mensaje ([reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos)),
   pero la fila con sus metadatos queda para siempre. Con pocos usuarios no pesa; se revisa cuando
