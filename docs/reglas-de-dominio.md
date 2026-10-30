@@ -251,8 +251,9 @@ desde el dashboard.
 
 **Un período mensual puede empezar cualquier día.** Termina el día anterior al mismo día del mes
 siguiente: uno que empieza el 10 de octubre termina el 9 de noviembre. Si ese día no existe en el
-mes, como el 31, se usa el último día del mes, igual que en las reglas recurrentes (§ 8). El
-período siguiente empieza el día después de que termina el anterior. Para mover el día de
+mes, como el 31, se usa el último día del mes, igual que en las reglas recurrentes (§ 8): uno que
+empieza el 31 de enero termina el 27 de febrero, el día anterior al 28. Decidido por Vero el 29 de
+octubre de 2026. El período siguiente empieza el día después de que termina el anterior. Para mover el día de
 inicio, por ejemplo para alinearlo con el cobro, el usuario cambia las fechas de un borrador, y
 desde ahí los siguientes se calculan a partir de ese. El período de transición puede durar más o
 menos de un mes.
@@ -262,6 +263,10 @@ genera el borrador del siguiente para el mismo dueño, copiando del último per�
 la moneda, el ingreso estimado y cada tope. La anticipación con que se genera y la del
 recordatorio son configuración, igual que las cuotas de uso (§ 12). La sugerencia ajustada por
 inflación (could-have) reemplazará a la copia cuando exista, sin cambiar el resto de la regla.
+Mientras el borrador no se genera solo, que llega en una segunda versión, el dashboard ofrece la
+misma copia al armar un período nuevo: el formulario viene con la cadencia, la moneda, el ingreso
+estimado y los topes del último período del usuario, y con el inicio en el día después de que
+termina ese período, y el usuario cambia lo que quiera antes de guardar. Decidido por Vero el 29 de octubre de 2026.
 
 **Dónde se arma y dónde se confirma.**
 
@@ -275,7 +280,9 @@ inflación (could-have) reemplazará a la copia cuando exista, sin cambiar el re
   la cuota de registro.
 - **Armar o cambiar, en el dashboard.** Crear un período, cambiar sus fechas, el ingreso estimado
   o los topes, y confirmarlo, se hace en el dashboard; del ingreso estimado, también por WhatsApp
-  al confirmar (ver arriba). Por WhatsApp no se editan topes: el
+  al confirmar (ver arriba). Un borrador cambia sus fechas, su moneda, el ingreso estimado y los
+  topes. Un período confirmado cambia solo el ingreso estimado y los topes: sus fechas y su moneda
+  no se cambian. Decidido por Vero el 29 de octubre de 2026. Por WhatsApp no se editan topes: el
   recordatorio incluye el enlace para hacerlo.
 - **Sin confirmar al empezar.** Si un período empieza sin confirmar, lo que caiga en él queda
   pendiente como siempre. La pregunta de ese pendiente ofrece confirmar el borrador en el mismo

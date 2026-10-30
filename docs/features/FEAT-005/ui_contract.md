@@ -1,0 +1,54 @@
+# Contrato de UI — FEAT-005 · Armar y confirmar el presupuesto
+
+- **Historia de usuario:** [HU2](../../05-historias-de-usuario.md)
+- **Especificación:** [spec.md](spec.md)
+- **Se escribe:** antes de la pantalla del corte 1, junto con sus casos de componente.
+- **Estado:** borrador.
+
+Sigue la forma del [contrato de la pantalla de presupuesto](../FEAT-004/ui_contract.md).
+
+## Componentes
+
+| Componente | ¿Existe o es nuevo? | Para qué |
+|---|---|---|
+| `Card` y `CardTitle` de shadcn/ui | Existen, desde el [ADR 0027](../../adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md) | El marco del formulario, como en las otras pantallas |
+| `Button` de shadcn/ui | Existe, desde el ADR 0027 | Guardar el borrador, confirmarlo, sumar y quitar un tope, reintentar y volver |
+| Entrada al formulario | Nuevo, en `BudgetPage` | "Armar un período" en el resumen, y "Editar" en un período en borrador que el usuario puede editar (`can_edit`) |
+| Formulario del período | Nuevo, `BudgetPeriodFormPage` | La cadencia, el día de inicio, el fin, la moneda, el ingreso estimado y la lista de topes. Al armar uno nuevo viene con la cadencia, la moneda, el ingreso y los topes del último período del usuario, y el inicio el día después de su fin (CA-13); en uno confirmado, las fechas y la moneda no se editan (CA-10) |
+| Cadencia y categoría de un tope | Nuevos, sobre un `select` nativo | Como el selector de período de la FEAT-004: shadcn/ui no tiene uno instalado |
+| Fecha de inicio y de fin | Nuevos, sobre un `input type="date"` nativo | El fin es optativo en un período mensual: vacío, lo calcula el backend |
+| Montos | Nuevos, sobre un `input` de texto con `inputMode="decimal"` | El ingreso y cada tope viajan como texto decimal, nunca como `number` de JavaScript |
+| Línea de estado (`role="status"`) | Existe, como en las otras pantallas | Anuncia la carga, el guardado y la confirmación |
+| Alerta de error (`role="alert"`) | Existe, como en las otras pantallas | El estado de error |
+
+## Tokens del Design System
+
+Los mismos que la [pantalla de presupuesto](../FEAT-004/ui_contract.md#tokens-del-design-system),
+sin tokens nuevos.
+
+## Máquina de estados
+
+| Estado | Qué lo dispara | Qué muestra | Cómo se sale |
+|---|---|---|---|
+| Cargando | Se abre el formulario | "Preparando el formulario…", sin campos editables | Llegan las categorías y, al editar, el borrador, o falla |
+| Con contenido: armando | Llegó lo necesario | El formulario y "Guardar borrador". Al crear, con la cadencia, la moneda, el ingreso y los topes del último período del usuario y el inicio sugerido el día después de su fin, que se puede cambiar, con el fin vacío, o todo vacío si no tiene ninguno; al editar, con el período | Guardar, o volver al resumen |
+| Guardando | Se aprieta "Guardar borrador" o "Confirmar" | El formulario sin poder editarse y la línea de estado | Llega la respuesta, o falla |
+| Con contenido: guardado | El borrador quedó guardado | Lo guardado, con el fin calculado, "Editar" y "Confirmar" | Confirmar, editar o volver |
+| Confirmado | Se confirmó | Que el período quedó confirmado y desde cuándo recibe movimientos | Volver al resumen, con ese período elegido |
+| Error | La API responde con un error, no responde a tiempo o no se llega a ella | Qué falló y Reintentar, sin perder lo cargado en el formulario | Reintentar repite solo el pedido que falló |
+
+Vacío no aplica: el catálogo base de categorías nunca está vacío
+([convenciones de desarrollo](../../convenciones-de-desarrollo.md#2-los-cuatro-estados-de-una-pantalla)).
+Sin sesión no es un estado de esta pantalla: un `401` vuelve a la entrada.
+
+## Datos que consume
+
+- Crear, cambiar y confirmar el borrador, con los tres endpoints de escritura de
+  [la API](../../04-api.md).
+- La lista de períodos, para abrir un período al editarlo y para precargar uno nuevo con el
+  último del usuario (CA-13).
+- `GET /categories`, las categorías de gasto del usuario, para elegir a cuáles ponerles tope.
+
+El último período es el individual que empieza más tarde, aunque sea un borrador (CA-13).
+
+Los casos de componente, también los de la precarga, se proponen cuando la pantalla esté armada.

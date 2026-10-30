@@ -252,7 +252,7 @@ erDiagram
         date period_start "NOT NULL"
         date period_end "NOT NULL, CHECK (period_end >= period_start)"
         string primary_currency "NOT NULL, FK to CURRENCY — fixed once confirmed"
-        decimal estimated_income "NUMERIC(20,2), NOT NULL, DEFAULT 0"
+        decimal estimated_income "NUMERIC(20,2), NOT NULL, DEFAULT 0, >= 0"
         string status "NOT NULL, CHECK IN ('draft','confirmed'), DEFAULT 'draft'"
         timestamptz created_at "NOT NULL, DEFAULT now()"
     }
@@ -681,6 +681,7 @@ El "presupuesto del mes" (o de la quincena) como concepto completo — puede per
 - En `BUDGET_PERIOD`, exactamente uno de `user_id` / `family_group_id` debe ser no nulo (`CHECK` a nivel de base de datos) — un período de presupuesto es individual o familiar, nunca ambos ni ninguno.
 - En `BUDGET_PERIOD`, los períodos de un mismo dueño no se solapan: dos restricciones de exclusión (`EXCLUDE USING gist`), una sobre `user_id` y otra sobre `family_group_id`, cada una con el rango `[period_start, period_end]` y el operador de superposición. Requieren la extensión `btree_gist`. La regla está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio).
 - Crear, cambiar o confirmar un `BUDGET_PERIOD` familiar es solo del dueño vigente del grupo. No se puede expresar con una clave foránea: lo valida la aplicación dentro de la misma transacción, igual que la pertenencia al grupo ([reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)).
+- En `BUDGET_PERIOD`, `estimated_income` es 0 o más (`CHECK` a nivel de base de datos): 0 es el de un período sin ingreso, como el primero. Decidido por Vero el 29 de octubre de 2026.
 - En `BUDGET_PERIOD`, `primary_currency` no cambia una vez confirmado el período: un trigger `BEFORE UPDATE` rechaza el cambio si `status` ya era `confirmed`. Un presupuesto en otra moneda es otro período. Mientras está en `draft` se puede cambiar, porque todavía no tiene movimientos.
 
 Ver también, en otra tabla: [la imputación solo a un período confirmado y la cotización del movimiento, en TRANSACTION](#transaction).
