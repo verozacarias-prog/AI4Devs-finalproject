@@ -8,7 +8,7 @@ from alembic import command, context
 from sqlalchemy import create_engine
 
 from app.constants import EnvVar
-from migrations.application_role import enable_application_role
+from migrations.application_role import enable_application_role, refuse_unsafe_password
 
 _LATEST_REVISION = "head"
 
@@ -29,6 +29,8 @@ def run_migrations() -> None:
     # A test passes the URL of its own empty database; every other run uses the owner of the tables.
     url = config.get_main_option("sqlalchemy.url") or os.environ[EnvVar.MIGRATIONS_DATABASE_URL]
     password = os.environ[EnvVar.APPLICATION_DB_PASSWORD] if is_upgrade_to_the_latest() else None
+    if password is not None:
+        refuse_unsafe_password(password)
     engine = create_engine(url)
     with engine.connect() as connection:
         context.configure(connection=connection, target_metadata=None)
