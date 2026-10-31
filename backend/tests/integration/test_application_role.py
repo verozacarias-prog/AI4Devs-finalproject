@@ -135,12 +135,18 @@ def test_logged_in_as_the_role_a_movement_can_be_read_but_not_deleted(
     assert getattr(refused.value.orig, "sqlstate", None) == INSUFFICIENT_PRIVILEGE
 
 
-def test_a_password_with_quotes_and_spaces_works(fresh_database_url: str) -> None:
-    # Case T-4.
-    password = f"a'b \"c d {_password()}"
-
+def test_a_password_that_would_break_the_url_is_refused(fresh_database_url: str) -> None:
+    # Case T-4. `DATABASE_URL` carries it as it is, so an `@` would end the password there.
+    password = _password()
     _migrate_with(fresh_database_url, password)
+    refused = f"abc@{_password()}"
 
+    done = _migrate(**{OWNER_URL_VARIABLE: fresh_database_url, PASSWORD_VARIABLE: refused})
+
+    assert done.returncode != 0
+    assert PASSWORD_VARIABLE in done.stderr
+    assert refused not in done.stdout
+    assert refused not in done.stderr
     engine = _as_application(fresh_database_url, password)
     with engine.connect() as connection:
         assert connection.execute(text("SELECT 1")).scalar_one() == 1
