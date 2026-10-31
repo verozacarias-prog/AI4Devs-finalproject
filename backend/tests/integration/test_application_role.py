@@ -1,6 +1,6 @@
 """The API and the worker reach the database with `platita_app`, against PostgreSQL (issue #83).
 
-Cases T-1 to T-7 of the task, from the description of its pull request. Each case runs the
+Cases T-1 to T-8 of the task, from the description of its pull request. Each case runs the
 migrations the way Compose does, as a process with its environment. A role belongs to the whole
 server, so the local stack uses the same one: a fixture leaves it as it found it.
 """
@@ -15,10 +15,13 @@ import uuid
 from collections.abc import Iterator
 from pathlib import Path
 
+import psycopg
 import pytest
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import DBAPIError, OperationalError
+
+from migrations.application_role import enable_application_role
 
 pytestmark = pytest.mark.integration
 
@@ -189,6 +192,27 @@ def test_a_failed_step_does_not_print_the_password(
     assert "KeyError" not in done.stderr
     assert password not in done.stdout
     assert password not in done.stderr
+
+
+def test_the_statement_carries_the_hash_and_not_the_password(
+    database_url: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Case T-8. PostgreSQL writes a failed statement to its log, whatever `log_statement` says.
+    password = _password()
+    sent: list[str] = []
+    monkeypatch.setattr(
+        psycopg.Connection,
+        "execute",
+        lambda connection, statement: sent.append(statement.as_string(connection)),
+    )
+    url = make_url(database_url).set(drivername="postgresql")
+
+    with psycopg.connect(url.render_as_string(hide_password=False)) as connection:
+        enable_application_role(connection, password)
+
+    assert len(sent) == 1
+    assert password not in sent[0]
+    assert "SCRAM-SHA-256$" in sent[0]
 
 
 def _service(name: str) -> str:
