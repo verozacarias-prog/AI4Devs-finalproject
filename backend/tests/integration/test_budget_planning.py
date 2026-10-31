@@ -1,14 +1,15 @@
 """Building and confirming a budget period over HTTP, against PostgreSQL (FEAT-005).
 
-Cases C1-11 to C1-16, C1-18, C1-20 and C1-21 of docs/features/FEAT-005/spec.md, the integration
-ones: POST /budget-periods, PUT /budget-periods/{period_id},
+Cases C1-11 to C1-16, C1-18, C1-20, C1-21 and the integration ones of C2-01 to C2-29 of
+docs/features/FEAT-005/spec.md: POST /budget-periods, PUT /budget-periods/{period_id},
 POST /budget-periods/{period_id}/confirm, GET /budget-periods and GET /categories. Each test has a
 database of its own, with the test data of the script, and talks to the API the way the
 dashboard does: it enters through the development entry and asks with the session cookie.
 
 The API runs with a fixed clock, 29 October 2026 at noon in Buenos Aires. The periods the
 script creates start on the real day it runs, so each test replaces them with the October one
-of Lucía, from 10 October to 9 November 2026, confirmed, with its two limits.
+of Lucía, from 10 October to 9 November 2026, confirmed, with its two limits, and with the ones
+of Pablo and of "Casa" a case asks for.
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ import pytest
 from fastapi.testclient import TestClient
 from httpx2 import Response
 from sqlalchemy import Engine, create_engine, text
+from sqlalchemy.exc import IntegrityError
 
 from app.adapters.inbound.api.app import create_app
 from app.adapters.inbound.operator_commands.seed_test_data import main as seed_test_data
@@ -128,15 +130,80 @@ def _base_category(engine: Engine, name: str) -> str:
     return str(found)
 
 
-def _own_category(engine: Engine, user_id: uuid.UUID, name: str, kind: str) -> None:
+def _own_category(engine: Engine, user_id: uuid.UUID, name: str, kind: str) -> uuid.UUID:
     with engine.begin() as connection:
-        connection.execute(
+        category: uuid.UUID = connection.execute(
             text(
                 "INSERT INTO category (name, user_id, is_base, kind) "
-                "VALUES (:name, :user_id, false, :kind)"
+                "VALUES (:name, :user_id, false, :kind) RETURNING id"
             ),
             {"name": name, "user_id": user_id, "kind": kind},
-        )
+        ).scalar_one()
+    return category
+
+
+def _pablo_period(engine: Engine, *, status: str = "confirmed") -> uuid.UUID:
+    """The own period of Pablo, from 10 October to 9 November 2026."""
+    with engine.begin() as connection:
+        period: uuid.UUID = connection.execute(
+            text(
+                "INSERT INTO budget_period (user_id, period_type, period_start, period_end, "
+                "primary_currency, estimated_income, status) "
+                "VALUES (:user_id, 'monthly', '2026-10-10', '2026-11-09', 'ARS', 900000.00, "
+                ":status) RETURNING id"
+            ),
+            {"user_id": _user_id(engine, "Pablo"), "status": status},
+        ).scalar_one()
+    return period
+
+
+def _casa_period(engine: Engine, start: str, end: str, status: str) -> uuid.UUID:
+    with engine.begin() as connection:
+        home = connection.execute(
+            text("SELECT id FROM family_group WHERE name = 'Casa'")
+        ).scalar_one()
+        period: uuid.UUID = connection.execute(
+            text(
+                "INSERT INTO budget_period (family_group_id, period_type, period_start, "
+                "period_end, primary_currency, estimated_income, status) "
+                "VALUES (:home, 'monthly', :start, :end, 'ARS', 2000000.00, :status) "
+                "RETURNING id"
+            ),
+            {"home": home, "start": start, "end": end, "status": status},
+        ).scalar_one()
+    return period
+
+
+def _casa_confirmed(engine: Engine) -> uuid.UUID:
+    return _casa_period(engine, "2026-10-10", "2026-11-09", "confirmed")
+
+
+def _casa_draft(engine: Engine) -> uuid.UUID:
+    return _casa_period(engine, "2026-11-10", "2026-12-09", "draft")
+
+
+def _snapshot(engine: Engine, period_id: object) -> tuple[object, ...]:
+    """The stored period and its limits, to tell that a refused request changed nothing."""
+    with engine.connect() as connection:
+        period = connection.execute(
+            text("SELECT * FROM budget_period WHERE id = :id"), {"id": period_id}
+        ).one()
+        limits = connection.execute(
+            text("SELECT * FROM budget WHERE budget_period_id = :id ORDER BY category_id"),
+            {"id": period_id},
+        ).all()
+    return (tuple(period), *(tuple(limit) for limit in limits))
+
+
+def _period_count(engine: Engine) -> int:
+    with engine.connect() as connection:
+        count: int = connection.execute(text("SELECT count(*) FROM budget_period")).scalar_one()
+    return count
+
+
+def _assert_error(response: Response, status: int, code: str) -> None:
+    assert response.status_code == status, response.text
+    assert response.json()["error"] == code
 
 
 def _lucia_october(engine: Engine) -> uuid.UUID:
@@ -172,6 +239,8 @@ def _content(
     limits: dict[str, str],
     *,
     end: str | None = None,
+    period_type: str = "monthly",
+    currency: str = "ARS",
 ) -> str:
     """A body for POST or PUT, written by hand so that each amount keeps its digits."""
     budgets = ", ".join(
@@ -180,9 +249,27 @@ def _content(
     )
     period_end = f'"{end}"' if end is not None else "null"
     return (
-        f'{{"period_type": "monthly", "period_start": "{start}", "period_end": {period_end}, '
-        f'"primary_currency": "ARS", "estimated_income": {income}, "budgets": [{budgets}]}}'
+        f'{{"period_type": "{period_type}", "period_start": "{start}", '
+        f'"period_end": {period_end}, "primary_currency": "{currency}", '
+        f'"estimated_income": {income}, "budgets": [{budgets}]}}'
     )
+
+
+def _november_content(engine: Engine, *, income: str = "1500000") -> str:
+    """The content of C1-11."""
+    return _content(engine, "2026-11-10", income, {SUPERMARKET: "320000", TRANSPORT: "90000"})
+
+
+def _with_fields(content: str, **fields: object) -> str:
+    body: dict[str, object] = json.loads(content)
+    return json.dumps({**body, **fields})
+
+
+def _with_limit_on(content: str, category_id: object) -> str:
+    """That content, with one more limit, of 10000, on that category."""
+    budgets: list[object] = json.loads(content)["budgets"]
+    limit = {"category_id": str(category_id), "limit_amount": 10000}
+    return _with_fields(content, budgets=[*budgets, limit])
 
 
 def _create_november(client: TestClient, engine: Engine) -> dict[str, object]:
@@ -446,3 +533,354 @@ def test_the_own_categories_of_another_user_do_not_appear(
     categories: list[dict[str, object]] = _body(response)["categories"]  # type: ignore[assignment]
     assert "Kiosco" not in [category["name"] for category in categories]
     assert all(category["is_base"] is True for category in categories)
+
+
+def test_lucia_changes_the_period_of_pablo(client: TestClient, engine: Engine) -> None:
+    # Case C2-02.
+    period = _pablo_period(engine)
+    before = _snapshot(engine, period)
+    _enter_as(client, "Lucía")
+
+    response = client.put(
+        f"/budget-periods/{period}",
+        content=_content(engine, "2026-10-10", "1000000", {}, end="2026-11-09"),
+        headers=SAME_ORIGIN,
+    )
+
+    _assert_error(response, 404, "not_found")
+    assert _snapshot(engine, period) == before
+
+
+def test_lucia_confirms_a_period_of_pablo(client: TestClient, engine: Engine) -> None:
+    # Case C2-03.
+    period = _pablo_period(engine, status="draft")
+    before = _snapshot(engine, period)
+    _enter_as(client, "Lucía")
+
+    response = client.post(f"/budget-periods/{period}/confirm", headers=SAME_ORIGIN)
+
+    _assert_error(response, 404, "not_found")
+    assert _snapshot(engine, period) == before
+
+
+def test_sofia_changes_the_confirmed_period_of_casa(client: TestClient, engine: Engine) -> None:
+    # Case C2-05: the same dates and the same currency, with another income.
+    period = _casa_confirmed(engine)
+    before = _snapshot(engine, period)
+    _enter_as(client, "Sofía")
+
+    response = client.put(
+        f"/budget-periods/{period}",
+        content=_content(engine, "2026-10-10", "2500000", {}, end="2026-11-09"),
+        headers=SAME_ORIGIN,
+    )
+
+    _assert_error(response, 403, "not_the_owner")
+    assert _snapshot(engine, period) == before
+
+
+def test_sofia_confirms_the_draft_of_casa(client: TestClient, engine: Engine) -> None:
+    # Case C2-06.
+    period = _casa_draft(engine)
+    before = _snapshot(engine, period)
+    _enter_as(client, "Sofía")
+
+    response = client.post(f"/budget-periods/{period}/confirm", headers=SAME_ORIGIN)
+
+    _assert_error(response, 403, "not_the_owner")
+    assert _snapshot(engine, period) == before
+
+
+def test_lucia_changes_the_currency_of_her_current_period(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C2-08.
+    october = _lucia_october(engine)
+    before = _snapshot(engine, october)
+    _enter_as(client, "Lucía")
+
+    response = client.put(
+        f"/budget-periods/{october}",
+        content=_content(
+            engine,
+            "2026-10-10",
+            "1450000",
+            {SUPERMARKET: "300000", TRANSPORT: "80000"},
+            end="2026-11-09",
+            currency="USD",
+        ),
+        headers=SAME_ORIGIN,
+    )
+
+    _assert_error(response, 409, "confirmed_period_fixed")
+    assert _snapshot(engine, october) == before
+
+
+def test_lucia_creates_a_period_that_starts_inside_the_current_one(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C2-10.
+    _lucia_october(engine)
+    _enter_as(client, "Lucía")
+
+    response = client.post(
+        "/budget-periods",
+        content=_content(engine, "2026-11-01", "1500000", {}),
+        headers=SAME_ORIGIN,
+    )
+
+    _assert_error(response, 409, "budget_period_overlap")
+    assert _period_count(engine) == 1
+
+
+def test_lucia_moves_a_draft_over_her_current_period(client: TestClient, engine: Engine) -> None:
+    # Case C2-11.
+    _lucia_october(engine)
+    _enter_as(client, "Lucía")
+    draft = _create_november(client, engine)
+    before = _snapshot(engine, draft["id"])
+
+    response = client.put(
+        f"/budget-periods/{draft['id']}",
+        content=_content(
+            engine, "2026-11-01", "1500000", {SUPERMARKET: "320000", TRANSPORT: "90000"}
+        ),
+        headers=SAME_ORIGIN,
+    )
+
+    _assert_error(response, 409, "budget_period_overlap")
+    assert _snapshot(engine, draft["id"]) == before
+
+
+def test_lucia_creates_a_biweekly_period_without_period_end(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C2-13.
+    _lucia_october(engine)
+    _enter_as(client, "Lucía")
+
+    response = client.post(
+        "/budget-periods",
+        content=_content(engine, "2026-11-10", "1500000", {}, period_type="biweekly"),
+        headers=SAME_ORIGIN,
+    )
+
+    _assert_error(response, 422, "period_end_required")
+    assert _period_count(engine) == 1
+
+
+def test_lucia_creates_a_period_with_a_limit_of_zero(client: TestClient, engine: Engine) -> None:
+    # Case C2-15.
+    _lucia_october(engine)
+    _enter_as(client, "Lucía")
+
+    response = client.post(
+        "/budget-periods",
+        content=_content(engine, "2026-11-10", "1500000", {SUPERMARKET: "320000", TRANSPORT: "0"}),
+        headers=SAME_ORIGIN,
+    )
+
+    _assert_error(response, 422, "budget_limit_not_positive")
+    assert _period_count(engine) == 1
+
+
+def test_lucia_puts_a_limit_on_clases_particulares(client: TestClient, engine: Engine) -> None:
+    # Case C2-17.
+    _lucia_october(engine)
+    private_classes = _own_category(
+        engine, _user_id(engine, "Lucía"), "Clases particulares", "income"
+    )
+    _enter_as(client, "Lucía")
+    draft = _create_november(client, engine)
+    before = _snapshot(engine, draft["id"])
+
+    response = client.put(
+        f"/budget-periods/{draft['id']}",
+        content=_with_limit_on(_november_content(engine), private_classes),
+        headers=SAME_ORIGIN,
+    )
+
+    _assert_error(response, 422, "budget_category_not_expense")
+    assert _snapshot(engine, draft["id"]) == before
+
+
+def test_lucia_creates_a_period_with_an_income_of_minus_one(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C2-19.
+    _lucia_october(engine)
+    _enter_as(client, "Lucía")
+
+    response = client.post(
+        "/budget-periods", content=_november_content(engine, income="-1"), headers=SAME_ORIGIN
+    )
+
+    _assert_error(response, 422, "estimated_income_negative")
+    assert _period_count(engine) == 1
+
+
+def test_the_database_rejects_a_negative_estimated_income(engine: Engine) -> None:
+    # Case C2-20: directly, without going through the API.
+    with pytest.raises(IntegrityError) as raised, engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO budget_period (user_id, period_type, period_start, period_end, "
+                "primary_currency, estimated_income, status) "
+                "VALUES (:user_id, 'monthly', '2026-11-10', '2026-12-09', 'ARS', -1, 'draft')"
+            ),
+            {"user_id": _user_id(engine, "Lucía")},
+        )
+
+    assert "ck_budget_period_estimated_income" in str(raised.value.orig)
+
+
+def test_lucia_puts_a_limit_on_kiosco_the_category_of_pablo(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C2-21.
+    _lucia_october(engine)
+    kiosk = _own_category(engine, _user_id(engine, "Pablo"), "Kiosco", "expense")
+    _enter_as(client, "Lucía")
+
+    response = client.post(
+        "/budget-periods",
+        content=_with_limit_on(_november_content(engine), kiosk),
+        headers=SAME_ORIGIN,
+    )
+
+    _assert_error(response, 404, "not_found")
+    assert _period_count(engine) == 1
+
+
+def test_lucia_puts_a_limit_on_a_category_that_does_not_exist(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C2-22.
+    _lucia_october(engine)
+    _enter_as(client, "Lucía")
+
+    response = client.post(
+        "/budget-periods",
+        content=_with_limit_on(_november_content(engine), uuid.uuid4()),
+        headers=SAME_ORIGIN,
+    )
+
+    _assert_error(response, 404, "not_found")
+    assert _period_count(engine) == 1
+
+
+def test_lucia_creates_a_period_with_family_group_id(client: TestClient, engine: Engine) -> None:
+    # Case C2-23.
+    _lucia_october(engine)
+    _enter_as(client, "Lucía")
+
+    response = client.post(
+        "/budget-periods",
+        content=_with_fields(_november_content(engine), family_group_id=str(uuid.uuid4())),
+        headers=SAME_ORIGIN,
+    )
+
+    _assert_error(response, 422, "group_period_not_supported")
+    assert _period_count(engine) == 1
+
+
+def test_without_a_session_building_changing_confirming_and_listing_categories_answer_401(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C2-24.
+    october = _lucia_october(engine)
+    before = _snapshot(engine, october)
+    content = _november_content(engine)
+
+    responses = [
+        client.post("/budget-periods", content=content, headers=SAME_ORIGIN),
+        client.put(f"/budget-periods/{october}", content=content, headers=SAME_ORIGIN),
+        client.post(f"/budget-periods/{october}/confirm", headers=SAME_ORIGIN),
+        client.get("/categories"),
+    ]
+
+    for response in responses:
+        _assert_error(response, 401, "unauthorized")
+    assert _period_count(engine) == 1
+    assert _snapshot(engine, october) == before
+
+
+def test_pablo_the_owner_changes_and_confirms_the_draft_of_casa(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C2-26.
+    period = _casa_draft(engine)
+    _enter_as(client, "Pablo")
+
+    changed = client.put(
+        f"/budget-periods/{period}",
+        content=_content(engine, "2026-11-10", "2500000", {}, end="2026-12-09"),
+        headers=SAME_ORIGIN,
+    )
+    confirmed = client.post(f"/budget-periods/{period}/confirm", headers=SAME_ORIGIN)
+
+    assert changed.status_code == 200, changed.text
+    assert confirmed.status_code == 200, confirmed.text
+    listed = next(item for item in _periods(client) if item["id"] == str(period))
+    assert (listed["estimated_income"], listed["status"]) == (Decimal("2500000.00"), "confirmed")
+
+
+def test_pablo_creates_an_own_period_with_the_dates_of_the_draft_of_casa(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C2-27.
+    _pablo_period(engine)
+    _casa_draft(engine)
+    _enter_as(client, "Pablo")
+
+    response = client.post(
+        "/budget-periods",
+        content=_content(engine, "2026-11-10", "1000000", {}, end="2026-12-09"),
+        headers=SAME_ORIGIN,
+    )
+
+    assert response.status_code == 201, response.text
+    created = _body(response)
+    assert created["family_group_id"] is None
+    assert str(created["id"]) in [str(item["id"]) for item in _periods(client)]
+
+
+def test_a_field_the_api_does_not_know_is_neither_saved_nor_ignored(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C2-28: family_group_id is a field only when creating a period.
+    _lucia_october(engine)
+    _enter_as(client, "Lucía")
+    draft = _create_november(client, engine)
+    before = _snapshot(engine, draft["id"])
+    count = _period_count(engine)
+    unknown = _with_fields(
+        _content(engine, "2026-12-10", "1500000", {SUPERMARKET: "320000"}), nickname="Diciembre"
+    )
+
+    created = client.post("/budget-periods", content=unknown, headers=SAME_ORIGIN)
+    changed = client.put(
+        f"/budget-periods/{draft['id']}",
+        content=_with_fields(_november_content(engine), family_group_id=str(uuid.uuid4())),
+        headers=SAME_ORIGIN,
+    )
+
+    _assert_error(created, 422, "invalid_request")
+    _assert_error(changed, 422, "invalid_request")
+    assert _period_count(engine) == count
+    assert _snapshot(engine, draft["id"]) == before
+
+
+def test_lucia_changes_and_confirms_with_a_period_id_that_is_not_a_uuid(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C2-29.
+    _enter_as(client, "Lucía")
+
+    changed = client.put(
+        "/budget-periods/not-a-uuid", content=_november_content(engine), headers=SAME_ORIGIN
+    )
+    confirmed = client.post("/budget-periods/not-a-uuid/confirm", headers=SAME_ORIGIN)
+
+    _assert_error(changed, 422, "invalid_request")
+    _assert_error(confirmed, 422, "invalid_request")

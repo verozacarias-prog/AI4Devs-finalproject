@@ -1,15 +1,19 @@
 """When a budget period ends (FEAT-005, docs/features/FEAT-005/spec.md).
 
-Cases C1-01 to C1-04 and C1-19, the unit ones about the end of a period: a monthly one without
-an end ends the day before the same day of the next month, taken to the last day of that month
-when it does not have it; one with an end, monthly or biweekly, ends that day (domain rules, § 3).
+Cases C1-01 to C1-04, C1-19 and C2-12, the unit ones about the end of a period: a monthly one
+without an end ends the day before the same day of the next month, taken to the last day of that
+month when it does not have it; one with an end, monthly or biweekly, ends that day; and a
+biweekly one without an end has none (domain rules, § 3).
 """
 
 from __future__ import annotations
 
 from datetime import date
 
+import pytest
+
 from app.domain.entities.budget_period import PeriodType
+from app.domain.errors import DomainError
 from app.domain.services.budgets.period_dates import period_end
 
 
@@ -41,3 +45,11 @@ def test_a_biweekly_one_ends_on_the_day_given() -> None:
     indicated = date(2026, 11, 24)
 
     assert period_end(PeriodType.BIWEEKLY, date(2026, 11, 10), indicated) == indicated
+
+
+def test_a_biweekly_period_without_an_end_has_no_end() -> None:
+    # Case C2-12.
+    with pytest.raises(DomainError) as raised:
+        period_end(PeriodType.BIWEEKLY, date(2026, 11, 10), None)
+
+    assert raised.value.code == "period_end_required"
