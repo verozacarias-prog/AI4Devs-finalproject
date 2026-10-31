@@ -273,10 +273,15 @@ con `CONCURRENTLY`.
 **Roles de la base.** La migración del esquema crea el rol `platita_app`, que no puede eliminar
 movimientos ([ADR 0015](adr/0015-borrado-logico-de-movimientos.md)). Para eso, el usuario que
 corre las migraciones necesita permiso para crear roles; en una base administrada hay que
-comprobarlo en el primer despliegue. El rol no inicia sesión por sí mismo. Cómo se conecta la
-aplicación con él en cada entorno todavía no está decidido, y figura en la
-[hoja de ruta](hoja-de-ruta.md#entrega-2): hasta entonces la API usa el mismo usuario que las
-migraciones, y la prohibición existe en la base pero no protege.
+comprobarlo en el primer despliegue. La API y el worker se conectan con ese rol, en
+`DATABASE_URL`. Las migraciones se conectan con el dueño de las tablas, en
+`MIGRATIONS_DATABASE_URL`, sin usar la otra variable en su lugar. Cada `alembic upgrade head`,
+aunque no haya migraciones pendientes, le da al rol inicio de sesión con la contraseña de
+`APPLICATION_DB_PASSWORD`, que también cambia la contraseña si cambió el valor. Sin alguna de
+las dos variables, las migraciones fallan y dicen cuál falta. La contraseña viaja dentro de un
+comando SQL, así que la base no puede registrar el texto de sus comandos de administración. En
+el primer despliegue de `demo` hay que comprobar si el paso previo al despliegue comparte las
+variables del servicio: si las comparte, la API también puede leer la conexión del dueño.
 
 **Vuelta atrás del código.** Con el botón *Rollback* de Render, que redespliega la imagen
 anterior. Funciona porque la migración ya aplicada es compatible con esa versión. Hay una
@@ -289,7 +294,7 @@ registrado y termina sin error. Hay que confirmar si Render repite el paso previ
 **Vuelta atrás de los datos.** `alembic downgrade` no se corre nunca en producción: se corrige
 hacia adelante, con una migración nueva. Si una migración o un error rompieron datos, se
 restaura la base a un punto en el tiempo, un minuto antes del despliegue, en una instancia
-nueva; se cambia `DATABASE_URL` en el Environment Group y se redespliega. Se pierde lo que entró
+nueva; se cambian `DATABASE_URL` y `MIGRATIONS_DATABASE_URL` en el Environment Group y se redespliega. Se pierde lo que entró
 después de ese minuto, y Meta no vuelve a entregar esos mensajes, así que se avisa por WhatsApp a
 los usuarios afectados.
 
