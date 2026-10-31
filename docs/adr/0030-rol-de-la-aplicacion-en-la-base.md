@@ -21,7 +21,7 @@ cualquier fila. La prohibición existía en la base pero no protegía nada. Lo s
    de las tablas, y nunca usan la otra variable en su lugar.
 2. **Las migraciones habilitan el rol.** Cada `alembic upgrade head`, aunque no haya migraciones
    pendientes, le da inicio de sesión a `platita_app` con la contraseña de
-   `APPLICATION_DB_PASSWORD`. Si el valor cambió, también cambia la contraseña. Vive en
+   `APPLICATION_DB_PASSWORD`. Si el valor cambió, también cambia la contraseña. Lo dispara
    `migrations/env.py`, que corre en cada ejecución. Una migración corre una sola vez y no podría
    cambiar la contraseña. Un comando que solo consulta, como `alembic current`, no pide la
    contraseña ni la cambia.
@@ -46,14 +46,19 @@ cualquier fila. La prohibición existía en la base pero no protegía nada. Lo s
 - Si el `ALTER ROLE` falla, PostgreSQL lo guarda completo en su registro, porque
   `log_min_error_statement` vale `error`. Por eso el comando lleva el hash SCRAM de la contraseña,
   calculado en el cliente, y nunca la contraseña: quien lea el registro no puede entrar con ese
-  valor, pero sí intentar adivinarla sin conexión. Con una contraseña larga y al azar, ese riesgo
-  se acepta.
+  valor, pero sí intentar adivinarla sin conexión. Con `log_statement` activo, ese hash también
+  se registra cuando el comando sale bien, en cada despliegue. Con una contraseña larga y al azar,
+  ese riesgo se acepta.
 - Hay una variable más que cargar en cada entorno.
+- Una tabla nueva sin permisos para el rol no falla en los tests que se conectan como dueño. Por
+  eso un test comprueba que toda tabla le dé permisos a `platita_app`.
 - El rol no frena a quien logre ejecutar código en el servidor. Si el paso previo al despliegue de
   Render comparte las variables del servicio, ese proceso también puede leer la conexión del dueño.
 - Quedan por verificar en el primer despliegue:
   - Que el usuario por defecto de Render Postgres pueda crear el rol y cambiarle la contraseña.
   - Si el paso previo al despliegue comparte las variables del servicio.
+  - Que `DATABASE_URL` use el rol: con la conexión del dueño, todo funcionaría y la prohibición de
+    `DELETE` no protegería nada.
 
 ## Alternativas descartadas
 
