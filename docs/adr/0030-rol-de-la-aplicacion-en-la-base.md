@@ -23,8 +23,9 @@ cualquier fila. La prohibición existía en la base pero no protegía nada. Lo s
    pendientes, le da inicio de sesión a `platita_app` con la contraseña de
    `APPLICATION_DB_PASSWORD`. Si el valor cambió, también cambia la contraseña. Vive en
    `migrations/env.py`, que corre en cada ejecución. Una migración corre una sola vez y no podría
-   cambiar la contraseña.
-3. **Sin alguna de las dos variables, las migraciones fallan** y nombran la que falta. Un
+   cambiar la contraseña. Un comando que solo consulta, como `alembic current`, no pide la
+   contraseña ni la cambia.
+3. **Sin alguna de las dos variables, `alembic upgrade head` falla** y nombra la que falta. Un
    despliegue que las olvide se cancela y no deja a la aplicación sin poder conectarse.
 4. **Vale igual en todos los entornos:** Compose y Render corren el mismo paso, solo cambia de
    dónde salen los valores. Los tests siguen conectándose con el dueño, porque crean y borran bases.
