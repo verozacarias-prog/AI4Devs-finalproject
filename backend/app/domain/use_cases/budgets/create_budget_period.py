@@ -8,9 +8,10 @@ from decimal import Decimal
 from app.domain.entities.budget import Budget
 from app.domain.entities.budget_period import BudgetPeriod, PeriodStatus, PeriodType
 from app.domain.entities.user import User
-from app.domain.errors import ErrorCode, NotFoundError
+from app.domain.errors import ErrorCode, InvalidError, NotFoundError
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
-from app.domain.services.budgets.period_dates import period_end
+from app.domain.services.budgets.period_dates import checked_period_end
+from app.domain.services.budgets.period_rules import check_limits_and_income, check_no_overlap
 from app.domain.services.dates.local_date import local_today
 from app.domain.use_cases.budgets.list_budget_periods import ReadablePeriod, describe_period
 from app.shared.clock import Clock
@@ -42,6 +43,17 @@ def find_user(unit_of_work: UnitOfWorkPort, user_id: uuid.UUID) -> User:
     return user
 
 
+def check_content(unit_of_work: UnitOfWorkPort, user_id: uuid.UUID, content: PeriodContent) -> None:
+    """The limits and the estimated income, the last validations of the API."""
+    limits = [(limit.category_id, limit.limit_amount) for limit in content.limits]
+    check_limits_and_income(
+        user_id,
+        limits,
+        unit_of_work.categories.list_by_ids({category_id for category_id, _ in limits}),
+        content.estimated_income,
+    )
+
+
 class CreateBudgetPeriod:
     """A draft of an individual period of the user, with its limits (FEAT-005, CA-1)."""
 
@@ -49,7 +61,15 @@ class CreateBudgetPeriod:
         self._unit_of_work = unit_of_work
         self._clock = clock
 
-    def execute(self, user_id: uuid.UUID, content: PeriodContent) -> ReadablePeriod:
+    def execute(
+        self,
+        user_id: uuid.UUID,
+        content: PeriodContent,
+        family_group_id: uuid.UUID | None = None,
+    ) -> ReadablePeriod:
+        if family_group_id is not None:
+            # Building a period of a group arrives with the groups, in the second version.
+            raise InvalidError(ErrorCode.GROUP_PERIOD_NOT_SUPPORTED)
         with self._unit_of_work as unit_of_work:
             user = find_user(unit_of_work, user_id)
             period = BudgetPeriod(
@@ -58,13 +78,15 @@ class CreateBudgetPeriod:
                 family_group_id=None,
                 period_type=content.period_type,
                 period_start=content.period_start,
-                period_end=period_end(
+                period_end=checked_period_end(
                     content.period_type, content.period_start, content.period_end
                 ),
                 primary_currency=content.primary_currency,
                 estimated_income=content.estimated_income,
                 status=PeriodStatus.DRAFT,
             )
+            check_no_overlap(period, unit_of_work.budget_periods.list_owned_by(user_id, set()))
+            check_content(unit_of_work, user_id, content)
             unit_of_work.budget_periods.add(period)
             unit_of_work.budgets.replace_for_period(
                 period.id,

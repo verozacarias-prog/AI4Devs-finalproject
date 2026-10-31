@@ -6,6 +6,7 @@ import calendar
 from datetime import date, timedelta
 
 from app.domain.entities.budget_period import PeriodType
+from app.domain.errors import ErrorCode, InvalidError
 
 
 def period_end(period_type: PeriodType, period_start: date, indicated_end: date | None) -> date:
@@ -15,10 +16,20 @@ def period_end(period_type: PeriodType, period_start: date, indicated_end: date 
     if indicated_end is not None:
         return indicated_end
     if period_type is not PeriodType.MONTHLY:
-        # A biweekly end is never computed. Telling the user is the 422 of the second cut.
-        raise ValueError
+        # A biweekly end is never computed: the user has to give it.
+        raise InvalidError(ErrorCode.PERIOD_END_REQUIRED)
     year, month = divmod(period_start.month, 12)
     next_year, next_month = period_start.year + year, month + 1
     last_day = calendar.monthrange(next_year, next_month)[1]
     same_day = date(next_year, next_month, min(period_start.day, last_day))
     return same_day - timedelta(days=1)
+
+
+def checked_period_end(
+    period_type: PeriodType, period_start: date, indicated_end: date | None
+) -> date:
+    """The end of a period that is about to be saved: it does not end before it starts."""
+    end = period_end(period_type, period_start, indicated_end)
+    if end < period_start:
+        raise InvalidError(ErrorCode.PERIOD_DATES_INVERTED)
+    return end

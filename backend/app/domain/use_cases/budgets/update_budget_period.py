@@ -5,20 +5,36 @@ from dataclasses import replace
 
 from app.domain.entities.budget import Budget
 from app.domain.entities.budget_period import BudgetPeriod
+from app.domain.entities.family_group import Membership
+from app.domain.entities.user import User
+from app.domain.errors import ErrorCode, ForbiddenError, NotFoundError
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
-from app.domain.services.budgets.period_dates import period_end
+from app.domain.services.budgets.period_access import can_edit, can_read
+from app.domain.services.budgets.period_dates import checked_period_end
+from app.domain.services.budgets.period_rules import check_confirmed_stays_fixed, check_no_overlap
 from app.domain.services.dates.local_date import local_today
-from app.domain.use_cases.budgets.create_budget_period import PeriodContent, find_user
+from app.domain.use_cases.budgets.create_budget_period import (
+    PeriodContent,
+    check_content,
+    find_user,
+)
 from app.domain.use_cases.budgets.list_budget_periods import ReadablePeriod, describe_period
 from app.shared.clock import Clock
 
 
-def stored_period(unit_of_work: UnitOfWorkPort, period_id: uuid.UUID) -> BudgetPeriod:
-    """The period with that id. Who may change it, and the 404 of one that is not there, are
-    of the second cut (FEAT-005)."""
+def editable_period(
+    unit_of_work: UnitOfWorkPort,
+    user: User,
+    period_id: uuid.UUID,
+    memberships: list[Membership],
+) -> BudgetPeriod:
+    """The period, if the user can change it. One they cannot read answers as one that does not
+    exist; a member who is not the owner can read it, so for them it exists (CA-16)."""
     period = unit_of_work.budget_periods.find_by_id(period_id)
-    if period is None:
-        raise ValueError
+    if period is None or not can_read(period, user.id, memberships, user.time_zone):
+        raise NotFoundError(ErrorCode.NOT_FOUND)
+    if not can_edit(period, user.id, memberships):
+        raise ForbiddenError(ErrorCode.NOT_THE_OWNER)
     return period
 
 
@@ -36,17 +52,21 @@ class UpdateBudgetPeriod:
         with self._unit_of_work as unit_of_work:
             user = find_user(unit_of_work, user_id)
             memberships = unit_of_work.family_groups.list_memberships(user_id)
-            period = stored_period(unit_of_work, period_id)
+            period = editable_period(unit_of_work, user, period_id, memberships)
             changed = replace(
                 period,
                 period_type=content.period_type,
                 period_start=content.period_start,
-                period_end=period_end(
+                period_end=checked_period_end(
                     content.period_type, content.period_start, content.period_end
                 ),
                 primary_currency=content.primary_currency,
                 estimated_income=content.estimated_income,
             )
+            check_confirmed_stays_fixed(period, changed)
+            group_ids = {period.family_group_id} if period.family_group_id is not None else set()
+            check_no_overlap(changed, unit_of_work.budget_periods.list_owned_by(user_id, group_ids))
+            check_content(unit_of_work, user_id, content)
             unit_of_work.budget_periods.update(changed)
             # A limit that stays keeps its id: the dashboard reads its detail by it.
             kept = {

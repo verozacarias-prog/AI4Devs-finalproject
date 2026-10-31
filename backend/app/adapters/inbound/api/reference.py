@@ -195,7 +195,28 @@ CREATE_PERIOD_DESCRIPTION = (
     "amount is accepted as a JSON number or as a decimal text, and kept exact."
 )
 CREATE_PERIOD_CREATED = "The draft, whole, in the same shape as an item of the list."
-PERIOD_CONTENT_INVALID = "A field is missing or has no valid value."
+PERIOD_CONTENT_INVALID = (
+    "A field is missing, unknown or has no valid value, or the content breaks a rule of the "
+    "period: its `error` says which."
+)
+PERIOD_CREATE_GROUP_ID = "Always null or absent: building a period of a group is not available yet."
+PERIOD_CATEGORY_NOT_FOUND = (
+    "A category of the limits does not exist, or it is not of the user. The same answer for both."
+)
+PERIOD_OVERLAP = "It overlaps another period of the same owner (`budget_period_overlap`)."
+PERIOD_EDIT_FORBIDDEN = (
+    "The request did not come from the page of the API itself or it is not JSON, or the period "
+    "is of a group the user is a member of without being its owner (`not_the_owner`)."
+)
+PERIOD_EDIT_NOT_FOUND = (
+    "The period does not exist or the user cannot read it, or a category of the limits is not "
+    "of the user. The same answer for each."
+)
+PERIOD_EDIT_CONFLICT = (
+    "It changes the cadence, the dates or the currency of a confirmed period "
+    "(`confirmed_period_fixed`), or it overlaps another period of the same owner "
+    "(`budget_period_overlap`)."
+)
 UPDATE_PERIOD_SUMMARY = "Change a budget period"
 UPDATE_PERIOD_DESCRIPTION = (
     "Replaces the content of a period: its dates, currency, estimated income and limits. A "

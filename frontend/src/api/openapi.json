@@ -117,6 +117,7 @@
         "type": "object"
       },
       "BudgetLimitRequest": {
+        "additionalProperties": false,
         "properties": {
           "category_id": {
             "description": "The category the limit is for.",
@@ -343,6 +344,7 @@
         "type": "object"
       },
       "BudgetPeriodRequest": {
+        "additionalProperties": false,
         "properties": {
           "budgets": {
             "description": "The limits of the period, one per category.",
@@ -684,6 +686,81 @@
           "text"
         ],
         "title": "ChatMessageRequest",
+        "type": "object"
+      },
+      "CreateBudgetPeriodRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "budgets": {
+            "description": "The limits of the period, one per category.",
+            "items": {
+              "$ref": "#/components/schemas/BudgetLimitRequest"
+            },
+            "title": "Budgets",
+            "type": "array"
+          },
+          "estimated_income": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "What the user expects to receive in the period.",
+            "title": "Estimated Income"
+          },
+          "family_group_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Always null or absent: building a period of a group is not available yet.",
+            "title": "Family Group Id"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The last day of the period, included. Optional in a monthly period, where it is computed.",
+            "title": "Period End"
+          },
+          "period_start": {
+            "description": "The first day of the period.",
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "period_type": {
+            "$ref": "#/components/schemas/PeriodType",
+            "description": "`monthly` or `biweekly`."
+          },
+          "primary_currency": {
+            "description": "The currency of the period, as an ISO 4217 code. What it spent is in it.",
+            "title": "Primary Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period_type",
+          "period_start",
+          "primary_currency",
+          "estimated_income",
+          "budgets"
+        ],
+        "title": "CreateBudgetPeriodRequest",
         "type": "object"
       },
       "DevSessionRequest": {
@@ -1085,7 +1162,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BudgetPeriodRequest"
+                "$ref": "#/components/schemas/CreateBudgetPeriodRequest"
               }
             }
           },
@@ -1122,6 +1199,26 @@
             },
             "description": "The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read."
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "A category of the limits does not exist, or it is not of the user. The same answer for both."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "It overlaps another period of the same owner (`budget_period_overlap`)."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -1130,7 +1227,7 @@
                 }
               }
             },
-            "description": "A field is missing or has no valid value."
+            "description": "A field is missing, unknown or has no valid value, or the content breaks a rule of the period: its `error` says which."
           }
         },
         "security": [
@@ -1201,7 +1298,27 @@
                 }
               }
             },
-            "description": "The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read."
+            "description": "The request did not come from the page of the API itself or it is not JSON, or the period is of a group the user is a member of without being its owner (`not_the_owner`)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The period does not exist or the user cannot read it, or a category of the limits is not of the user. The same answer for each."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "It changes the cadence, the dates or the currency of a confirmed period (`confirmed_period_fixed`), or it overlaps another period of the same owner (`budget_period_overlap`)."
           },
           "422": {
             "content": {
@@ -1211,7 +1328,7 @@
                 }
               }
             },
-            "description": "A field is missing or has no valid value."
+            "description": "A field is missing, unknown or has no valid value, or the content breaks a rule of the period: its `error` says which."
           }
         },
         "security": [
@@ -1272,7 +1389,17 @@
                 }
               }
             },
-            "description": "The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read."
+            "description": "The request did not come from the page of the API itself or it is not JSON, or the period is of a group the user is a member of without being its owner (`not_the_owner`)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The period does not exist, or the user cannot read it. The same answer for both."
           },
           "422": {
             "content": {

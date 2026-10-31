@@ -7,7 +7,7 @@ from app.domain.ports.unit_of_work_port import UnitOfWorkPort
 from app.domain.services.dates.local_date import local_today
 from app.domain.use_cases.budgets.create_budget_period import find_user
 from app.domain.use_cases.budgets.list_budget_periods import ReadablePeriod, describe_period
-from app.domain.use_cases.budgets.update_budget_period import stored_period
+from app.domain.use_cases.budgets.update_budget_period import editable_period
 from app.shared.clock import Clock
 
 
@@ -23,10 +23,10 @@ class ConfirmBudgetPeriod:
         with self._unit_of_work as unit_of_work:
             user = find_user(unit_of_work, user_id)
             memberships = unit_of_work.family_groups.list_memberships(user_id)
-            period = stored_period(unit_of_work, period_id)
+            period = editable_period(unit_of_work, user, period_id, memberships)
             if period.status is PeriodStatus.DRAFT:
                 unit_of_work.budget_periods.confirm(period_id)
                 unit_of_work.commit()
-                period = stored_period(unit_of_work, period_id)
+                period = editable_period(unit_of_work, user, period_id, memberships)
             today = local_today(self._clock.now(), user.time_zone)
             return describe_period(unit_of_work, period, user_id, memberships, today)

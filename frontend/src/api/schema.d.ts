@@ -705,6 +705,42 @@ export interface components {
              */
             text: string;
         };
+        /** CreateBudgetPeriodRequest */
+        CreateBudgetPeriodRequest: {
+            /**
+             * Budgets
+             * @description The limits of the period, one per category.
+             */
+            budgets: components["schemas"]["BudgetLimitRequest"][];
+            /**
+             * Estimated Income
+             * @description What the user expects to receive in the period.
+             */
+            estimated_income: number | string;
+            /**
+             * Family Group Id
+             * @description Always null or absent: building a period of a group is not available yet.
+             */
+            family_group_id?: string | null;
+            /**
+             * Period End
+             * @description The last day of the period, included. Optional in a monthly period, where it is computed.
+             */
+            period_end?: string | null;
+            /**
+             * Period Start
+             * Format: date
+             * @description The first day of the period.
+             */
+            period_start: string;
+            /** @description `monthly` or `biweekly`. */
+            period_type: components["schemas"]["PeriodType"];
+            /**
+             * Primary Currency
+             * @description The currency of the period, as an ISO 4217 code. What it spent is in it.
+             */
+            primary_currency: string;
+        };
         /** DevSessionRequest */
         DevSessionRequest: {
             /**
@@ -970,7 +1006,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["BudgetPeriodRequest"];
+                "application/json": components["schemas"]["CreateBudgetPeriodRequest"];
             };
         };
         responses: {
@@ -1001,7 +1037,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description A field is missing or has no valid value. */
+            /** @description A category of the limits does not exist, or it is not of the user. The same answer for both. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description It overlaps another period of the same owner (`budget_period_overlap`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description A field is missing, unknown or has no valid value, or the content breaks a rule of the period: its `error` says which. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1046,7 +1100,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read. */
+            /** @description The request did not come from the page of the API itself or it is not JSON, or the period is of a group the user is a member of without being its owner (`not_the_owner`). */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1055,7 +1109,25 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description A field is missing or has no valid value. */
+            /** @description The period does not exist or the user cannot read it, or a category of the limits is not of the user. The same answer for each. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description It changes the cadence, the dates or the currency of a confirmed period (`confirmed_period_fixed`), or it overlaps another period of the same owner (`budget_period_overlap`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description A field is missing, unknown or has no valid value, or the content breaks a rule of the period: its `error` says which. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -1096,8 +1168,17 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read. */
+            /** @description The request did not come from the page of the API itself or it is not JSON, or the period is of a group the user is a member of without being its owner (`not_the_owner`). */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description The period does not exist, or the user cannot read it. The same answer for both. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

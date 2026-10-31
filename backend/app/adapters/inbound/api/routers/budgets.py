@@ -8,7 +8,7 @@ from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Path, Request, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.adapters.inbound.api import reference
 from app.adapters.inbound.api.errors import documented_errors
@@ -65,11 +65,15 @@ class BudgetPeriodList(BaseModel):
 
 
 class BudgetLimitRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     category_id: uuid.UUID = Field(description=reference.BUDGET_CATEGORY_ID)
     limit_amount: AmountInput = Field(description=reference.BUDGET_LIMIT)
 
 
 class BudgetPeriodRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     period_type: PeriodType = Field(description=reference.PERIOD_TYPE)
     period_start: date = Field(description=reference.PERIOD_START)
     period_end: date | None = Field(default=None, description=reference.PERIOD_CONTENT_END)
@@ -88,6 +92,12 @@ class BudgetPeriodRequest(BaseModel):
                 LimitContent(limit.category_id, limit.limit_amount) for limit in self.budgets
             ),
         )
+
+
+class CreateBudgetPeriodRequest(BudgetPeriodRequest):
+    family_group_id: uuid.UUID | None = Field(
+        default=None, description=reference.PERIOD_CREATE_GROUP_ID
+    )
 
 
 class CategorySpendingItem(BaseModel):
@@ -196,16 +206,18 @@ def build_budgets_router(
             {
                 status.HTTP_401_UNAUTHORIZED: reference.NO_SESSION,
                 status.HTTP_403_FORBIDDEN: reference.FOREIGN_REQUEST,
+                status.HTTP_404_NOT_FOUND: reference.PERIOD_CATEGORY_NOT_FOUND,
+                status.HTTP_409_CONFLICT: reference.PERIOD_OVERLAP,
                 status.HTTP_422_UNPROCESSABLE_CONTENT: reference.PERIOD_CONTENT_INVALID,
             }
         ),
     )
     def create_period(
-        body: BudgetPeriodRequest, request: Request, token: SessionToken
+        body: CreateBudgetPeriodRequest, request: Request, token: SessionToken
     ) -> ExactJSONResponse:
         user = authenticate_session().execute(token)
         identify_user(request, user.id)
-        created = create_budget_period().execute(user.id, body.content())
+        created = create_budget_period().execute(user.id, body.content(), body.family_group_id)
         return ExactJSONResponse(
             _period_item(created).model_dump(), status_code=status.HTTP_201_CREATED
         )
@@ -220,7 +232,9 @@ def build_budgets_router(
         responses=documented_errors(
             {
                 status.HTTP_401_UNAUTHORIZED: reference.NO_SESSION,
-                status.HTTP_403_FORBIDDEN: reference.FOREIGN_REQUEST,
+                status.HTTP_403_FORBIDDEN: reference.PERIOD_EDIT_FORBIDDEN,
+                status.HTTP_404_NOT_FOUND: reference.PERIOD_EDIT_NOT_FOUND,
+                status.HTTP_409_CONFLICT: reference.PERIOD_EDIT_CONFLICT,
                 status.HTTP_422_UNPROCESSABLE_CONTENT: reference.PERIOD_CONTENT_INVALID,
             }
         ),
@@ -246,7 +260,8 @@ def build_budgets_router(
         responses=documented_errors(
             {
                 status.HTTP_401_UNAUTHORIZED: reference.NO_SESSION,
-                status.HTTP_403_FORBIDDEN: reference.FOREIGN_REQUEST,
+                status.HTTP_403_FORBIDDEN: reference.PERIOD_EDIT_FORBIDDEN,
+                status.HTTP_404_NOT_FOUND: reference.PERIOD_NOT_FOUND,
                 status.HTTP_422_UNPROCESSABLE_CONTENT: reference.PERIOD_ID_INVALID,
             }
         ),
