@@ -14,7 +14,10 @@ export const API_ROUTES = {
   devSession: '/dev/session',
   accounts: '/accounts',
   budgetPeriods: '/budget-periods',
+  budgetPeriod: '/budget-periods/{period_id}',
+  budgetPeriodConfirm: '/budget-periods/{period_id}/confirm',
   budgetPeriodSummary: '/budget-periods/{period_id}/summary',
+  categories: '/categories',
   budget: '/budgets/{budget_id}',
   chatMessages: '/chat/messages',
 } as const satisfies Record<string, keyof paths>

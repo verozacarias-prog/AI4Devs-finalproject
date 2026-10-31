@@ -1,6 +1,6 @@
 /**
- * Cases C1-26 to C1-37, C2-09 to C2-14 and C3-02 to C3-05 of FEAT-004 (docs/features/FEAT-004/spec.md): the
- * four states of the budget screen. The API is simulated at the network level, so the page and its API calls are
+ * Cases C1-26 to C1-37, C2-09 to C2-14 and C3-02 to C3-05 of FEAT-004 (docs/features/FEAT-004/spec.md), and
+ * C1-23, C2-30 and C2-31 of FEAT-005 (docs/features/FEAT-005/spec.md): the four states of the budget screen. The API is simulated at the network level, so the page and its API calls are
  * tested together.
  */
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
@@ -731,4 +731,42 @@ test('case C3-05: without periods the notice is a heading, not a status', async 
 
   await screen.findByRole('heading', { name: 'Todavía no tenés un presupuesto' })
   expect(screen.getByRole('status').textContent).toBe('')
+})
+
+test('case C1-23 of FEAT-005: the summary offers to build and to edit', async () => {
+  apiWith([CURRENT], { [CURRENT.id]: summary(CURRENT.id, LUCIA_CATEGORIES, 104756.04) })
+  api.use(http.get('*/categories', () => HttpResponse.json({ categories: [] })))
+
+  render(<BudgetPage onNoSession={nothing} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Armar un período' }))
+  await screen.findByRole('heading', { name: 'Armar un período' })
+  fireEvent.click(await screen.findByRole('button', { name: 'Volver al resumen' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Editar' }))
+  await screen.findByRole('heading', { name: 'Editar el período' })
+})
+
+test('case C2-30 of FEAT-005: sofia does not see edit on the period of casa', async () => {
+  const home = period('2026-10-10', '2026-11-09', {
+    family_group_id: crypto.randomUUID(),
+    family_group_name: 'Casa',
+    can_edit: false,
+    is_current: true,
+  })
+  apiWith([home], { [home.id]: summary(home.id, LUCIA_CATEGORIES, 104756.04) })
+
+  render(<BudgetPage onNoSession={nothing} />)
+
+  await screen.findByRole('button', { name: 'Armar un período' })
+  expect(screen.queryByRole('button', { name: 'Editar' })).toBeNull()
+})
+
+test('case C2-31 of FEAT-005: without periods the first one can be built', async () => {
+  apiWith([], {})
+
+  render(<BudgetPage onNoSession={nothing} />)
+
+  await screen.findByRole('heading', { name: 'Todavía no tenés un presupuesto' })
+  expect(screen.getByRole('button', { name: 'Armar un período' })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Editar' })).toBeNull()
 })

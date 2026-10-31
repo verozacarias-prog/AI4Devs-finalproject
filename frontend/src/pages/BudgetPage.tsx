@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardTitle } from '@/components/ui/card'
+import { formatAmount, formatDate } from '@/lib/budget-format'
 import { cn } from '@/lib/class-names'
 import {
   loadBudgetPeriods,
@@ -15,17 +16,14 @@ import {
 } from '../api/budget'
 import type { Failure } from '../api/request'
 import {
-  AMOUNT_DECIMALS,
   AMOUNT_LOCALE,
-  DATE_FORMAT,
-  DATE_LOCALE,
-  DATE_TIME_ZONE,
   EXCHANGE_RATE_MAX_DECIMALS,
   NEAR_LIMIT_PERCENTAGE,
   OVER_LIMIT_PERCENTAGE,
   PERCENTAGE_DECIMALS,
 } from '../constants'
 import { MESSAGES } from '../messages'
+import { BudgetPeriodFormPage } from './BudgetPeriodFormPage'
 
 /**
  * The budget of a period: its incomes, what each category spent, and the movements of one
@@ -68,6 +66,10 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
   const [periodsAttempt, setPeriodsAttempt] = useState(0)
   const [viewAttempt, setViewAttempt] = useState(0)
   const statusLine = useRef<HTMLParagraphElement>(null)
+  // The form over the summary: undefined while closed, null to build a new period.
+  const [formPeriodId, setFormPeriodId] = useState<string | null | undefined>(undefined)
+  // The period to show when the list arrives again, after the form saved one.
+  const reopen = useRef<string | null>(null)
 
   useEffect(() => {
     const abandon = new AbortController()
@@ -77,7 +79,10 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
       if (loaded.kind !== 'loaded') return setView({ kind: 'error', cause: loaded.kind })
       setPeriods(loaded.value)
       if (loaded.value.length === 0) return setView({ kind: 'no-periods' })
-      setPeriodId(opening(loaded.value)?.id ?? null)
+      const again = loaded.value.find((candidate) => candidate.id === reopen.current)
+      reopen.current = null
+      setPeriodId((again ?? opening(loaded.value))?.id ?? null)
+      setViewAttempt((current) => current + 1)
     })
     return () => abandon.abort()
   }, [periodsAttempt, timeoutMs, onNoSession])
@@ -121,7 +126,26 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
     statusLine.current?.focus()
   }
 
+  function closeForm(saved: string | null) {
+    setFormPeriodId(undefined)
+    reopen.current = saved ?? periodId
+    setView({ kind: 'loading' })
+    setShowing({ kind: 'summary' })
+    setPeriodsAttempt((current) => current + 1)
+  }
+
   const chosen = periods?.find((candidate) => candidate.id === periodId)
+
+  if (formPeriodId !== undefined) {
+    return (
+      <BudgetPeriodFormPage
+        periodId={formPeriodId}
+        onDone={closeForm}
+        onNoSession={onNoSession}
+        timeoutMs={timeoutMs}
+      />
+    )
+  }
 
   return (
     <Card aria-labelledby="budget-heading">
@@ -143,6 +167,16 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
             ))}
           </select>
         </label>
+      )}
+      {periods !== null && (view.kind === 'summary' || view.kind === 'no-periods') && (
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => setFormPeriodId(null)}>{TEXT.build}</Button>
+          {chosen?.can_edit && (
+            <Button variant="outline" onClick={() => setFormPeriodId(chosen.id)}>
+              {TEXT.edit}
+            </Button>
+          )}
+        </div>
       )}
       <p ref={statusLine} role="status" tabIndex={-1} className="text-sm text-muted-foreground outline-none empty:hidden">
         {view.kind === 'loading' ? TEXT.loading : ''}
@@ -398,16 +432,6 @@ function Tag({ className, children }: { className: string; children: string }) {
   )
 }
 
-/** Writes an amount with its currency, so it is never read as a bare number. */
-function formatAmount(amount: number, currency: string): string {
-  return new Intl.NumberFormat(AMOUNT_LOCALE, {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: AMOUNT_DECIMALS,
-    maximumFractionDigits: AMOUNT_DECIMALS,
-  }).format(amount)
-}
-
 /** The percentage as the API rounded it, with its one decimal. */
 function formatPercentage(percentage: number): string {
   return TEXT.percentage(
@@ -420,14 +444,4 @@ function formatPercentage(percentage: number): string {
 
 function formatRate(rate: number): string {
   return new Intl.NumberFormat(AMOUNT_LOCALE, { maximumFractionDigits: EXCHANGE_RATE_MAX_DECIMALS }).format(rate)
-}
-
-/**
- * An ISO date, as 2026-10-09, written as 9/10/2026. It is a calendar day: it is read and
- * written in UTC, so no time zone moves it to the day before.
- */
-function formatDate(isoDate: string): string {
-  return new Intl.DateTimeFormat(DATE_LOCALE, { ...DATE_FORMAT, timeZone: DATE_TIME_ZONE }).format(
-    new Date(isoDate),
-  )
 }

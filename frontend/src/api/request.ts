@@ -17,7 +17,7 @@ export type Options = {
 }
 
 type Call = Options & {
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'PUT'
   /** Sent as JSON. A POST without it still declares JSON, which the API requires. */
   body?: unknown
   /** Headers the call needs besides the ones every call sends, such as Idempotency-Key. */
@@ -49,14 +49,15 @@ export async function request(
   }
 
   const headers: Record<string, string> = { ...extra, Accept: JSON_CONTENT_TYPE }
-  if (method === 'POST') headers['Content-Type'] = JSON_CONTENT_TYPE
+  const sendsBody = method !== 'GET'
+  if (sendsBody) headers['Content-Type'] = JSON_CONTENT_TYPE
 
   let response: Response
   try {
     response = await fetch(path, {
       method,
       headers,
-      body: method === 'POST' ? JSON.stringify(body ?? {}) : undefined,
+      body: sendsBody ? JSON.stringify(body ?? {}) : undefined,
       signal: stop,
     })
   } catch {
