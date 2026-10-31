@@ -106,6 +106,11 @@ que es el entorno donde un error se escribe con sus datos ([6.3](#63-registros))
 `docker-compose.yml` del repositorio levanta solo el entorno local, y por eso es el único lugar
 que la declara como `local` cuando nadie la definió.
 
+La conexión a la base usa tres variables, sin valor por defecto. La API, el worker y los comandos
+de operación se conectan con `DATABASE_URL`, que usa el rol `platita_app`. Las migraciones usan
+`MIGRATIONS_DATABASE_URL`, que usa el dueño de las tablas, y `APPLICATION_DB_PASSWORD`, la
+contraseña que le dan a ese rol ([roles de la base](#4-despliegue-y-vuelta-atrás)).
+
 La entrada de desarrollo se enciende con `DEV_ENTRY_ENABLED=true`, y el chat web con
 `WEB_CHAT_ENABLED=true`. Sin la variable, cada una queda apagada, y con cualquiera de las dos
 encendida en `production` ningún proceso arranca
