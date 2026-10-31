@@ -1,6 +1,6 @@
 """The API and the worker reach the database with `platita_app`, against PostgreSQL (issue #83).
 
-Cases T-1 to T-8 of the task, from the description of its pull request. Each case runs the
+Cases T-1 to T-9 of the task, from the description of its pull request. Each case runs the
 migrations the way Compose does, as a process with its environment. A role belongs to the whole
 server, so the local stack uses the same one: a fixture leaves it as it found it.
 """
@@ -53,21 +53,25 @@ def role_as_it_was(admin_engine: Engine) -> Iterator[None]:
         connection.exec_driver_sql(restore)
 
 
-def _migrate(**variables: str) -> subprocess.CompletedProcess[str]:
-    """`alembic upgrade head` as Compose runs it, with only the given variables of the task."""
+def _alembic(*command: str, **variables: str) -> subprocess.CompletedProcess[str]:
+    """Alembic as Compose runs it, with only the given variables of the task."""
     environment = {
         name: value
         for name, value in os.environ.items()
         if name not in {"DATABASE_URL", OWNER_URL_VARIABLE, PASSWORD_VARIABLE}
     }
     return subprocess.run(  # noqa: S603
-        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        [sys.executable, "-m", "alembic", *command],
         cwd=BACKEND_DIR,
         env={**environment, **variables},
         capture_output=True,
         text=True,
         check=False,
     )
+
+
+def _migrate(**variables: str) -> subprocess.CompletedProcess[str]:
+    return _alembic("upgrade", "head", **variables)
 
 
 def _migrate_with(owner_url: str, password: str) -> None:
@@ -213,6 +217,26 @@ def test_the_statement_carries_the_hash_and_not_the_password(
     assert len(sent) == 1
     assert password not in sent[0]
     assert "SCRAM-SHA-256$" in sent[0]
+
+
+def test_a_read_only_command_needs_no_password_and_does_not_change_it(
+    fresh_database_url: str,
+) -> None:
+    # Case T-9.
+    password = _password()
+    _migrate_with(fresh_database_url, password)
+
+    done = _alembic("current", **{OWNER_URL_VARIABLE: fresh_database_url})
+    assert done.returncode == 0, done.stderr
+    other = _alembic(
+        "current", **{OWNER_URL_VARIABLE: fresh_database_url, PASSWORD_VARIABLE: _password()}
+    )
+    assert other.returncode == 0, other.stderr
+
+    engine = _as_application(fresh_database_url, password)
+    with engine.connect() as connection:
+        assert connection.execute(text("SELECT 1")).scalar_one() == 1
+    engine.dispose()
 
 
 def _service(name: str) -> str:
