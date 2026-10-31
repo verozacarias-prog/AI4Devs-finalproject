@@ -27,6 +27,9 @@ cualquier fila. La prohibición existía en la base pero no protegía nada. Lo s
    contraseña ni la cambia.
 3. **Sin alguna de las dos variables, `alembic upgrade head` falla** y nombra la que falta. Un
    despliegue que las olvide se cancela y no deja a la aplicación sin poder conectarse.
+   También falla si la contraseña tiene algo que no sea letras, números, `_` o `-`: va dentro de
+   `DATABASE_URL`, y un `@` o un `/` cambiarían lo que esa dirección dice. Las migraciones no leen
+   `DATABASE_URL`, así que no pueden detectar que tenga otra contraseña.
 4. **Vale igual en todos los entornos:** Compose y Render corren el mismo paso, solo cambia de
    dónde salen los valores. Los tests siguen conectándose con el dueño, porque crean y borran bases.
 

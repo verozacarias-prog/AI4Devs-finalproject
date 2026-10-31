@@ -111,8 +111,10 @@ La conexión a la base usa tres variables, sin valor por defecto
 ([ADR 0030](adr/0030-rol-de-la-aplicacion-en-la-base.md)). La API, el worker y los comandos de operación usan `DATABASE_URL`, con el rol `platita_app`, que no
 puede eliminar movimientos ([ADR 0015](adr/0015-borrado-logico-de-movimientos.md)). Las migraciones
 usan `MIGRATIONS_DATABASE_URL`, con el dueño de las tablas, y `APPLICATION_DB_PASSWORD`, la
-contraseña que le dan a ese rol en cada `alembic upgrade head`. Para crear el rol, el dueño
-necesita permiso para crear roles; en una base administrada hay que comprobarlo en el primer
+contraseña que le dan a ese rol en cada `alembic upgrade head`. Esa contraseña solo admite
+letras, números, `_` y `-`, porque va dentro de `DATABASE_URL`; con otro carácter, las migraciones
+fallan. En Render, las dos variables se cargan por separado y tienen que tener el mismo valor.
+Para crear el rol, el dueño necesita permiso para crear roles; en una base administrada hay que comprobarlo en el primer
 despliegue.
 
 La entrada de desarrollo se enciende con `DEV_ENTRY_ENABLED=true`, y el chat web con
