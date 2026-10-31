@@ -32,7 +32,8 @@ services:
     container_name: platita-migrations
     command: ["alembic", "upgrade", "head"]
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      MIGRATIONS_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      APPLICATION_DB_PASSWORD: ${APPLICATION_DB_PASSWORD:?Set it in .env, see .env.example}
     depends_on:
       db:
         condition: service_healthy
@@ -42,7 +43,7 @@ services:
     build: .
     container_name: platita-api-and-dashboard
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql+psycopg://platita_app:${APPLICATION_DB_PASSWORD}@db:5432/${POSTGRES_DB}
       APP_ENV: ${APP_ENV:-local}
       APP_VERSION: ${APP_VERSION:-dev}
       # Off unless .env turns them on (ADR 0016).
@@ -66,7 +67,7 @@ services:
     container_name: platita-worker
     command: ["python", "-m", "app.adapters.inbound.message_worker.main"]
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql+psycopg://platita_app:${APPLICATION_DB_PASSWORD}@db:5432/${POSTGRES_DB}
       APP_ENV: ${APP_ENV:-local}
       APP_VERSION: ${APP_VERSION:-dev}
       # Read here too: with either one on in production, no process starts (ADR 0016).
