@@ -1,6 +1,6 @@
 """The API and the worker reach the database with `platita_app`, against PostgreSQL (issue #83).
 
-Cases T-1 to T-9 of the task, from the description of its pull request. Each case runs the
+Cases T-1 to T-10 of the task, from the description of its pull request. Each case runs the
 migrations the way Compose does, as a process with its environment. A role belongs to the whole
 server, so the local stack uses the same one: a fixture leaves it as it found it.
 """
@@ -245,6 +245,36 @@ def test_a_read_only_command_needs_no_password_and_does_not_change_it(
     with engine.connect() as connection:
         assert connection.execute(text("SELECT 1")).scalar_one() == 1
     engine.dispose()
+
+
+def _tables_the_role_cannot_use(database: Engine) -> set[str]:
+    with database.connect() as connection:
+        return set(
+            connection.execute(
+                text(
+                    "SELECT tables.relname FROM pg_class AS tables "
+                    "JOIN pg_namespace AS schemas ON schemas.oid = tables.relnamespace "
+                    "WHERE schemas.nspname = 'public' AND tables.relkind = 'r' "
+                    "AND tables.relname <> 'alembic_version' "
+                    "AND NOT has_table_privilege(CAST(:role AS name), tables.oid, "
+                    "'SELECT, INSERT, UPDATE')"
+                ),
+                {"role": APPLICATION_ROLE},
+            ).scalars()
+        )
+
+
+def test_every_table_gives_its_rights_to_the_role(fresh_database_url: str) -> None:
+    # Case T-10. The tests log in as the owner, so a table left out would only fail once deployed.
+    database = create_engine(fresh_database_url, isolation_level="AUTOCOMMIT")
+
+    assert _tables_the_role_cannot_use(database) == set()
+
+    # The same check sees a table with no rights: it is not passing because it looks at nothing.
+    with database.connect() as connection:
+        connection.execute(text("CREATE TABLE table_with_no_rights (id integer)"))
+    assert _tables_the_role_cannot_use(database) == {"table_with_no_rights"}
+    database.dispose()
 
 
 def _service(name: str) -> str:
