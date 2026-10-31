@@ -13,7 +13,7 @@ Sigue la forma del [contrato de la pantalla de presupuesto](../FEAT-004/ui_contr
 |---|---|---|
 | `Card` y `CardTitle` de shadcn/ui | Existen, desde el [ADR 0027](../../adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md) | El marco del formulario, como en las otras pantallas |
 | `Button` de shadcn/ui | Existe, desde el ADR 0027 | Guardar el borrador, confirmarlo, sumar y quitar un tope, reintentar y volver |
-| Entrada al formulario | Nuevo, en `BudgetPage` | "Armar un período" en el resumen, y "Editar" en un período en borrador que el usuario puede editar (`can_edit`) |
+| Entrada al formulario | Nuevo, en `BudgetPage` | "Armar un período" en el resumen, y "Editar" en un período que el usuario puede editar (`can_edit`), en borrador o confirmado (CA-10). Decidido por Vero el 31 de octubre de 2026 |
 | Formulario del período | Nuevo, `BudgetPeriodFormPage` | La cadencia, el día de inicio, el fin, la moneda, el ingreso estimado y la lista de topes. Al armar uno nuevo viene con la cadencia, la moneda, el ingreso y los topes del último período del usuario, y el inicio el día después de su fin (CA-13); en uno confirmado, la cadencia, las fechas y la moneda no se editan (CA-10) |
 | Cadencia y categoría de un tope | Nuevos, sobre un `select` nativo | Como el selector de período de la FEAT-004: shadcn/ui no tiene uno instalado |
 | Fecha de inicio y de fin | Nuevos, sobre un `input type="date"` nativo | El fin es optativo en un período mensual: vacío, lo calcula el backend |
@@ -37,6 +37,7 @@ sin tokens nuevos.
 | Vacío | `GET /categories` responde sin ninguna categoría de gasto | En lugar de la lista de topes, que no hay categorías de gasto para ponerles tope. El resto del formulario sigue disponible | Guardar sin topes, o volver al resumen |
 | Confirmado | Se confirmó | Que el período quedó confirmado y desde cuándo recibe movimientos | Volver al resumen, con ese período elegido |
 | Error | La API responde con un error, no responde a tiempo o no se llega a ella | Qué falló y Reintentar, sin perder lo cargado en el formulario | Reintentar repite solo el pedido que falló |
+| Rechazado | La API rechaza el pedido por una regla, como fechas superpuestas o un tope en 0 | El mensaje de esa regla, sin Reintentar, porque el mismo pedido recibiría el mismo rechazo, y el formulario editable con lo cargado. Decidido por Vero el 31 de octubre de 2026 | Corregir y volver a guardar, o volver al resumen |
 
 Un usuario sin períodos anteriores no es el estado vacío: ve el formulario en blanco y las
 categorías para elegir. Decidido por Vero el 31 de octubre de 2026.

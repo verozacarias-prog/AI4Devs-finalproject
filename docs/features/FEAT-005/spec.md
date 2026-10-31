@@ -102,6 +102,8 @@ no es miembro de ningún grupo, y hoy es 29 de octubre de 2026.
   29 de octubre de 2026 por la [pregunta abierta 1](#preguntas-abiertas); C1-19, por la 3; y
   C1-20 y C1-21, por la 4. C1-11, C1-13, C1-14 y C1-15 **cambiaron** por la 8. CA-13 se
   prueba con casos de componente, que se proponen cuando la pantalla esté armada.
+- **C1-22 a C1-32, de componente, sumados para la pantalla:** Veronica Zacarias 31/10/2026
+- **Total con la pantalla:** 32 casos, 12 unitarios, 9 de integración y 11 de componente.
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
@@ -126,6 +128,17 @@ no es miembro de ningún grupo, y hoy es 29 de octubre de 2026.
 | C1-19 | **Nuevo.** Un quincenal termina el día indicado | Unitario | CA-11 |
 | C1-20 | **Nuevo.** Lucía ve sus categorías de gasto, base y propias, por nombre | Integración | CA-12 |
 | C1-21 | **Nuevo.** Las categorías propias de otro usuario no aparecen | Integración | CA-12 |
+| C1-22 | **Pantalla.** Mientras prepara el formulario, lo dice y no muestra campos | Componente | el contrato de UI |
+| C1-23 | **Pantalla.** El resumen ofrece armar y editar | Componente | CA-1 y CA-10 |
+| C1-24 | **Pantalla.** Un período nuevo viene como copia del último | Componente | CA-13 |
+| C1-25 | **Pantalla.** El último es el individual que empieza más tarde, aunque sea un borrador | Componente | CA-13 |
+| C1-26 | **Pantalla.** Sin un período anterior, el formulario viene vacío | Componente | CA-13 |
+| C1-27 | **Pantalla.** Se suma y se quita un tope, entre las categorías de gasto | Componente | CA-4 y CA-12 |
+| C1-28 | **Pantalla.** Guardar manda los montos como texto, con sus centavos | Componente | CA-1, CA-2 y CA-5 |
+| C1-29 | **Pantalla.** Lo guardado muestra el fin calculado, y ofrece editar y confirmar | Componente | CA-2 y CA-6 |
+| C1-30 | **Pantalla.** Cambiar un borrador reemplaza su contenido | Componente | CA-4 |
+| C1-31 | **Pantalla.** Confirmar dice desde cuándo recibe movimientos, y vuelve a ese período | Componente | CA-7 |
+| C1-32 | **Pantalla.** En un confirmado, solo el ingreso y los topes se editan | Componente | CA-10 |
 
 #### C1-01 · Un mensual termina el día anterior al mismo día del mes siguiente
 
@@ -359,9 +372,98 @@ no es miembro de ningún grupo, y hoy es 29 de octubre de 2026.
 - **entonces** la lista no trae "Kiosco": trae solo las del catálogo base.
 - **Test:** `tests/integration/test_budget_planning.py::test_the_own_categories_of_another_user_do_not_appear`
 
+#### C1-22 · Mientras prepara el formulario, lo dice y no muestra campos
+
+- **Sale de:** el contrato de UI · **Tipo:** componente
+- **Dado** Lucía y `GET /categories` sin responder todavía,
+- **cuando** abre "Armar un período",
+- **entonces** se ve "Preparando el formulario…" y ningún campo editable.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::while it prepares the form it says so and shows no fields`
+
+#### C1-23 · El resumen ofrece armar y editar
+
+- **Sale de:** CA-1 y CA-10 · **Tipo:** componente
+- **Dado** Lucía y su período actual, con `can_edit` verdadero,
+- **cuando** se abre la pantalla de presupuesto,
+- **entonces** se ven "Armar un período" y "Editar", y cada uno abre su formulario.
+- **Test:** `frontend/src/pages/BudgetPage.test.tsx::the summary offers to build and to edit`
+
+#### C1-24 · Un período nuevo viene como copia del último
+
+- **Sale de:** CA-13 · **Tipo:** componente
+- **Dado** Lucía y su período actual, mensual, en ARS, con ingreso de 1450000.5 y sus dos topes,
+- **cuando** abre "Armar un período",
+- **entonces** el formulario viene con esa cadencia, esa moneda, ese ingreso y esos topes, con inicio 2026-11-10 y el fin vacío.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::a new period comes as a copy of the last one`
+
+#### C1-25 · El último es el individual que empieza más tarde, aunque sea un borrador
+
+- **Sale de:** CA-13 · **Tipo:** componente
+- **Dado** Lucía con su período actual, un borrador del 10 de noviembre al 9 de diciembre con otro ingreso, y un período de grupo que empieza más tarde,
+- **cuando** abre "Armar un período",
+- **entonces** el formulario copia el borrador, con inicio 2026-12-10, y no el período del grupo.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::the last one is the individual one that starts latest even a draft`
+
+#### C1-26 · Sin un período anterior, el formulario viene vacío
+
+- **Sale de:** CA-13 · **Tipo:** componente
+- **Dado** un usuario sin períodos,
+- **cuando** abre "Armar un período",
+- **entonces** el formulario viene mensual, sin moneda, sin fechas, sin ingreso y sin topes, y se pueden elegir las categorías.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::without a previous period the form comes empty`
+
+#### C1-27 · Se suma y se quita un tope, entre las categorías de gasto
+
+- **Sale de:** CA-4 y CA-12 · **Tipo:** componente
+- **Dado** el formulario de Lucía y las categorías que responde `GET /categories`,
+- **cuando** suma un tope, elige Salud y quita el de Transporte,
+- **entonces** el selector ofrece esas categorías por su nombre, y lo que se guarda lleva Supermercado y Salud, sin Transporte.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::a limit is added and removed among the expense categories`
+
+#### C1-28 · Guardar manda los montos como texto, con sus centavos
+
+- **Sale de:** CA-1, CA-2 y CA-5 · **Tipo:** componente
+- **Dado** el formulario de Lucía, con el fin vacío,
+- **cuando** escribe `1450000,55` de ingreso y `320000.10` en un tope, y aprieta "Guardar borrador",
+- **entonces** se pide `POST /budget-periods` con `"1450000.55"`, `"320000.10"` y `period_end` nulo.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::saving sends the amounts as text with their cents`
+
+#### C1-29 · Lo guardado muestra el fin calculado, y ofrece editar y confirmar
+
+- **Sale de:** CA-2 y CA-6 · **Tipo:** componente
+- **Dado** el borrador recién guardado, que la API devuelve con fin 2026-12-09,
+- **cuando** termina de guardarse,
+- **entonces** se ven "El período quedó guardado.", el fin 9/12/2026, "Editar" y "Confirmar".
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::what was saved shows the computed end and offers to edit and confirm`
+
+#### C1-30 · Cambiar un borrador reemplaza su contenido
+
+- **Sale de:** CA-4 · **Tipo:** componente
+- **Dado** un borrador de Lucía abierto con "Editar",
+- **cuando** le cambia el ingreso y guarda,
+- **entonces** se pide `PUT /budget-periods/{period_id}` con el contenido entero, y no se crea otro período.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::changing a draft replaces its content`
+
+#### C1-31 · Confirmar dice desde cuándo recibe movimientos, y vuelve a ese período
+
+- **Sale de:** CA-7 · **Tipo:** componente
+- **Dado** un borrador guardado, del 10 de noviembre al 9 de diciembre,
+- **cuando** aprieta "Confirmar" y después "Volver al resumen",
+- **entonces** se pide `POST /budget-periods/{period_id}/confirm`, se ve que recibe movimientos desde el 10/11/2026, y el resumen abre ese período.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::confirming says since when it receives movements and goes back to that period`
+
+#### C1-32 · En un confirmado, solo el ingreso y los topes se editan
+
+- **Sale de:** CA-10 · **Tipo:** componente
+- **Dado** el período actual de Lucía abierto con "Editar",
+- **cuando** se ve el formulario y se guarda con otro ingreso,
+- **entonces** la cadencia, las fechas y la moneda no se pueden editar y viajan iguales, y lo guardado no ofrece "Confirmar".
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::in a confirmed period only the income and the limits are edited`
+
 ### Corte 2 — errores y estado vacío
 
 - **Aprobado por:** Veronica Zacarias 30/10/2026
+- **C2-30 a C2-38, de componente, sumados para la pantalla:** Veronica Zacarias 31/10/2026
 
 Entran las validaciones de [la API](../../04-api.md), en su orden: el período de otro usuario,
 `404`; el período de un grupo para un miembro que no es el dueño, `403`
@@ -381,13 +483,12 @@ en el corte 1: entran acá, con sus tests primero (ADR 0024). Hasta entonces, un
 categoría que no existe termina en `500`, porque la base rechaza la referencia, y lo cubre el
 `404` de la categoría ajena. Decidido por Vero el 30 de octubre de 2026.
 
-- **Total:** 29 casos, 9 unitarios y 20 de integración, sin aprobar. Además de los datos de
+- **Total:** 38 casos, 9 unitarios, 20 de integración y 9 de componente. Además de los datos de
   arriba, Pablo es el dueño del grupo "Casa" y Sofía es miembro, sin serlo; el grupo tiene un
   período confirmado del 10 de octubre al 9 de noviembre de 2026 y un borrador del 10 de
   noviembre al 9 de diciembre. Pablo tiene un período propio del 10 de octubre al 9 de noviembre
   y una categoría propia de gasto, "Kiosco". Lucía tiene la categoría propia de ingreso "Clases
-  particulares". En cada error, nada de lo que el pedido trae queda guardado. Los casos de
-  componente de la pantalla (#74) se proponen cuando esté armada: todavía no existe.
+  particulares". En cada error, nada de lo que el pedido trae queda guardado. 
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
@@ -420,6 +521,15 @@ categoría que no existe termina en `500`, porque la base rechaza la referencia,
 | C2-27 | Pablo crea un período propio con las fechas del borrador de "Casa" | Integración | Validación 6 |
 | C2-28 | Un campo que la API no conoce no se guarda ni se ignora | Integración | La API |
 | C2-29 | Lucía cambia y confirma con un `period_id` que no es un UUID | Integración | La API |
+| C2-30 | **Pantalla.** Sofía no ve "Editar" en el período de "Casa" | Componente | CA-16 |
+| C2-31 | **Pantalla.** Sin períodos, se puede armar el primero | Componente | el contrato de UI |
+| C2-32 | **Pantalla.** Sin categorías, lo dice y se guarda sin topes | Componente | estados de pantalla |
+| C2-33 | **Pantalla.** Si falla preparar el formulario, reintentar repite solo lo que falló | Componente | el contrato de UI |
+| C2-34 | **Pantalla.** Si falla guardar, no se pierde lo cargado y reintentar lo repite | Componente | el contrato de UI |
+| C2-35 | **Pantalla.** Un rechazo dice qué corregir, sin reintentar | Componente | el contrato de UI y las validaciones de [la API](../../04-api.md) |
+| C2-36 | **Pantalla.** Si falla confirmar, reintentar repite solo la confirmación | Componente | el contrato de UI |
+| C2-37 | **Pantalla.** Sin sesión, vuelve a la entrada | Componente | el contrato de UI |
+| C2-38 | **Pantalla.** Un período que ya no está dice que no está disponible | Componente | validación 2 de [la API](../../04-api.md) |
 
 #### C2-01 · Cambiar o confirmar un período que no existe responde que no existe
 
@@ -675,6 +785,78 @@ categoría que no existe termina en `500`, porque la base rechaza la referencia,
   con un `period_id` que no es un UUID, cada uno por separado,
 - **entonces** cada uno responde `422` con `invalid_request`.
 - **Test:** `tests/integration/test_budget_planning.py::test_lucia_changes_and_confirms_with_a_period_id_that_is_not_a_uuid`
+
+#### C2-30 · Sofía no ve "Editar" en el período de "Casa"
+
+- **Sale de:** CA-16 · **Tipo:** componente
+- **Dado** Sofía y el período de "Casa", con `can_edit` falso,
+- **cuando** se abre la pantalla de presupuesto,
+- **entonces** no se ve "Editar", y sí "Armar un período".
+- **Test:** `frontend/src/pages/BudgetPage.test.tsx::sofia does not see edit on the period of casa`
+
+#### C2-31 · Sin períodos, se puede armar el primero
+
+- **Sale de:** el contrato de UI · **Tipo:** componente
+- **Dado** un usuario sin ningún período,
+- **cuando** se abre la pantalla de presupuesto,
+- **entonces** se ve el estado sin períodos y "Armar un período", sin "Editar".
+- **Test:** `frontend/src/pages/BudgetPage.test.tsx::without periods the first one can be built`
+
+#### C2-32 · Sin categorías, lo dice y se guarda sin topes
+
+- **Sale de:** estados de pantalla · **Tipo:** componente
+- **Dado** `GET /categories` responde una lista vacía,
+- **cuando** Lucía abre el formulario y lo guarda,
+- **entonces** en lugar de la lista de topes se ve "No hay categorías de gasto para ponerles tope", el resto se puede completar, y se pide guardar con `budgets` vacío.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::without categories it says so and saves without limits`
+
+#### C2-33 · Si falla preparar el formulario, reintentar repite solo lo que falló
+
+- **Sale de:** el contrato de UI · **Tipo:** componente
+- **Dado** `GET /categories` responde bien y `GET /budget-periods` falla,
+- **cuando** se abre el formulario y se aprieta "Reintentar",
+- **entonces** se ve qué falló y "Reintentar", y al apretarlo se pide solo `GET /budget-periods`.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::if preparing the form fails retrying repeats only what failed`
+
+#### C2-34 · Si falla guardar, no se pierde lo cargado y reintentar lo repite
+
+- **Sale de:** el contrato de UI · **Tipo:** componente
+- **Dado** el formulario completo y una API que responde `500` o no responde a tiempo, cada uno por separado,
+- **cuando** aprieta "Guardar borrador" y después "Reintentar",
+- **entonces** se ve qué falló y "Reintentar", lo cargado sigue en el formulario, y se repite el mismo pedido.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::if saving fails what was entered stays and retrying repeats it`
+
+#### C2-35 · Un rechazo dice qué corregir, sin reintentar
+
+- **Sale de:** el contrato de UI y las validaciones de [la API](../../04-api.md) · **Tipo:** componente
+- **Dado** el formulario completo y una API que rechaza con cada código de sus validaciones, y con uno que la pantalla no conoce, cada uno por separado,
+- **cuando** aprieta "Guardar borrador",
+- **entonces** se ve el mensaje de esa regla, o el general con el código desconocido, sin "Reintentar", con el formulario editable y lo cargado.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::a refusal says what to correct without retrying`
+
+#### C2-36 · Si falla confirmar, reintentar repite solo la confirmación
+
+- **Sale de:** el contrato de UI · **Tipo:** componente
+- **Dado** un borrador guardado y `POST /budget-periods/{period_id}/confirm` que no responde a tiempo,
+- **cuando** aprieta "Confirmar" y después "Reintentar",
+- **entonces** se ve qué falló, lo guardado sigue a la vista, y solo se repite la confirmación.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::if confirming fails retrying repeats only the confirmation`
+
+#### C2-37 · Sin sesión, vuelve a la entrada
+
+- **Sale de:** el contrato de UI · **Tipo:** componente
+- **Dado** una API que responde `401` al preparar, al guardar y al confirmar, cada uno por separado,
+- **cuando** ocurre ese pedido,
+- **entonces** se avisa que no hay sesión, y no se muestra un error.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::without a session it goes back to the entry`
+
+#### C2-38 · Un período que ya no está dice que no está disponible
+
+- **Sale de:** validación 2 de [la API](../../04-api.md) · **Tipo:** componente
+- **Dado** un período que no figura en `GET /budget-periods`,
+- **cuando** se abre su formulario,
+- **entonces** se ve "Ese período o una de sus categorías ya no está disponible." y "Volver al resumen", sin campos.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::a period that is no longer there says it is not available`
 
 Se resuelve en la [HU5](../../05-historias-de-usuario.md), porque hoy nada escribe en `sent_alert`:
 un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la referencia de
