@@ -5,22 +5,12 @@ from __future__ import annotations
 import os
 
 from alembic import context
-from psycopg import sql
-from sqlalchemy import Connection, create_engine
+from sqlalchemy import create_engine
 
-from app.constants import APPLICATION_ROLE, EnvVar
+from app.constants import EnvVar
+from migrations.application_role import enable_application_role
 
 config = context.config
-
-
-def enable_application_role(connection: Connection, password: str) -> None:
-    # Through the driver: SQLAlchemy would print the statement, password included, if it failed.
-    statement = sql.SQL("ALTER ROLE {} LOGIN PASSWORD {}").format(
-        sql.Identifier(APPLICATION_ROLE), sql.Literal(password)
-    )
-    driver_connection = connection.connection.driver_connection
-    assert driver_connection is not None
-    driver_connection.execute(statement)
 
 
 def run_migrations() -> None:
@@ -35,7 +25,9 @@ def run_migrations() -> None:
         with context.begin_transaction():
             context.run_migrations()
             if password is not None:
-                enable_application_role(connection, password)
+                driver_connection = connection.connection.driver_connection
+                assert driver_connection is not None
+                enable_application_role(driver_connection, password)
     engine.dispose()
 
 
