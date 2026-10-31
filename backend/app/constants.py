@@ -52,7 +52,7 @@ APP_TITLE = "Platita"
 
 DEFAULT_VERSION = "dev"
 
-# The role the API and the worker log in with. The migrations create it and enable it (ADR 0015).
+# The role the API and the worker log in with. The migrations create it and enable it (ADR 0030).
 APPLICATION_ROLE = "platita_app"
 
 # For code that builds the application without ever touching the database, such as the
