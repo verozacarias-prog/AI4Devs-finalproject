@@ -109,6 +109,7 @@ export const MESSAGES = {
     send: 'Enviar',
     processing: 'Platita está procesando…',
     notSent: 'No enviado',
+    tooLong: 'Tu mensaje es muy largo: el máximo es de 4096 caracteres.',
     failed: 'No se pudo abrir la conversación',
     pollFailed: 'No se pudo buscar mensajes nuevos. Se reintenta en unos segundos.',
     authorUser: 'Vos',

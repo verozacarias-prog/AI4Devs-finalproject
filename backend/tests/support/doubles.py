@@ -352,7 +352,9 @@ class InMemoryChatMessages:
         # The conversation is put together by the queries: the integration tests check it.
         raise NotImplementedError
 
-    def list_by_user(self, user_id: uuid.UUID, after: uuid.UUID | None) -> list[ChatMessage]:
+    def list_by_user(
+        self, user_id: uuid.UUID, after: uuid.UUID | None, latest: int | None
+    ) -> list[ChatMessage]:
         # The conversation is put together by the query: the integration tests check it.
         raise NotImplementedError
 

@@ -18,7 +18,7 @@ la dibuja.
 | `Button` de shadcn/ui | Existe, desde el ADR 0027 | Enviar, Reintentar la consulta y Reintentar un envío |
 | Opción del menú (`NavItem`) | Existe, en `components/AppShell.tsx`, el menú lateral del [ADR 0027](../../adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md) | "Chat", en la sección "Pruebas" |
 | Línea de estado (`role="status"`) | Existe, como en la pantalla de cuentas | Anuncia cargando, vacío y "Platita está procesando…" |
-| Alerta de error (`role="alert"`) | Existe, como en la pantalla de cuentas | El estado de error |
+| Alerta de error (`role="alert"`) | Existe, como en la pantalla de cuentas | El estado de error y el aviso de un mensaje muy largo |
 | Burbuja de mensaje | Nuevo, en `ChatPage` | Un mensaje con su hora, a la derecha si es del usuario y a la izquierda si es de Platita. Ningún componente existente alinea por autor |
 | Campo para escribir | Nuevo, en `ChatPage` | Un `textarea` nativo con su etiqueta, y Enviar. shadcn/ui no está instalado con su `Textarea`, y uno nativo con los tokens alcanza |
 
@@ -47,12 +47,14 @@ Todos salen de `frontend/src/design-tokens.css`. Esta pantalla suma uno, `--chat
 | Vacío | `GET /chat/messages` trae una lista vacía | Una invitación con un ejemplo de gasto, sin alerta, y el campo para escribir | Se envía el primer mensaje |
 | Error | La primera consulta responde con un error, no responde a tiempo o no llega | "No se pudo abrir la conversación", la causa y Reintentar | Reintentar vuelve a Cargando |
 
-Dentro de "Con contenido" hay tres situaciones, que no son estados de la pantalla:
+Dentro de "Con contenido" hay cuatro situaciones, que no son estados de la pantalla:
 
 - **Procesando.** El último mensaje es del usuario y todavía no tiene respuesta: debajo se ve
   "Platita está procesando…".
 - **No enviado.** El `POST` de un mensaje falló: la burbuja queda con "No enviado" y Reintentar,
   y el reintento repite el pedido con la misma `Idempotency-Key`.
+- **Mensaje muy largo.** El texto pasa los 4096 caracteres, donde un emoji simple cuenta como uno y uno compuesto, como una bandera, puede contar más: se ve
+  un aviso, Enviar queda deshabilitado y el texto sigue en el campo para que se pueda acortar.
 - **Consulta periódica caída.** Una consulta de mensajes nuevos falló con la conversación en
   pantalla: la conversación sigue, se ve un aviso, y se sigue preguntando.
 
@@ -110,6 +112,7 @@ Van en `frontend/src/messages.ts`, bajo `chat`, salvo los compartidos, bajo `com
 | `send` | Enviar |
 | `processing` | Platita está procesando… |
 | `notSent` | No enviado |
+| `tooLong` | Tu mensaje es muy largo: el máximo es de 4096 caracteres. |
 | `failed` | No se pudo abrir la conversación |
 | `pollFailed` | No se pudo buscar mensajes nuevos. Se reintenta en unos segundos. |
 | `authorUser` | Vos |

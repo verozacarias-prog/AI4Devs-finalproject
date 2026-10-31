@@ -542,6 +542,7 @@
           },
           "text": {
             "description": "What the user wrote.",
+            "maxLength": 4096,
             "minLength": 1,
             "title": "Text",
             "type": "string"
@@ -896,6 +897,16 @@
               }
             },
             "description": "The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The body is over 64 KiB. What was left of it was not read."
           }
         },
         "security": [
@@ -1090,7 +1101,7 @@
     },
     "/chat/messages": {
       "get": {
-        "description": "The messages of the web chat of the user of the session, what the user wrote and what Platita replied, in the order they happened. With `after`, only the ones that come after that message: it is what the dashboard asks every few seconds. It does not count as activity of the session.",
+        "description": "The messages of the web chat of the user of the session, what the user wrote and what Platita replied, in the order they happened. Without `after`, the latest 200. With `after`, every one that comes after that message: it is what the dashboard asks every few seconds. It does not count as activity of the session.",
         "operationId": "conversation_chat_messages_get",
         "parameters": [
           {
@@ -1243,6 +1254,16 @@
             },
             "description": "The web chat is disabled, or `quoted_message_id` is not a reply of Platita to this user."
           },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The body is over 64 KiB. What was left of it was not read."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -1251,7 +1272,7 @@
                 }
               }
             },
-            "description": "The text is empty or only spaces, or the header `Idempotency-Key` is missing."
+            "description": "The text is empty, only spaces or over 4096 characters, or the header `Idempotency-Key` is missing."
           }
         },
         "security": [
@@ -1302,6 +1323,16 @@
               }
             },
             "description": "The development entry is disabled, the user does not exist or is not a test user, `user_id` was sent outside the local environment, or the personal link is unknown. The same answer for all of them."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The body is over 64 KiB. What was left of it was not read."
           },
           "422": {
             "content": {

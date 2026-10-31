@@ -506,3 +506,45 @@ test('case C3-11: a new reply is announced without moving the focus', async () =
 
   expect(document.activeElement).toBe(input)
 })
+
+test('issue #81, case T-10: a message over the limit is not sent, says why and stays to be edited', async () => {
+  let sends = 0
+  apiWithLuciaIn(
+    http.get(CHAT, () => conversation([], null)),
+    http.post(CHAT, () => {
+      sends += 1
+      return HttpResponse.json({ id: 'im1', status: 'pending' }, { status: 202 })
+    }),
+  )
+  await openChat()
+  const input = await screen.findByLabelText('Tu mensaje')
+  const tooLong = 'x'.repeat(4097)
+
+  fireEvent.change(input, { target: { value: tooLong } })
+  fireEvent.keyDown(input, { key: 'Enter' })
+
+  await screen.findByText('Tu mensaje es muy largo: el máximo es de 4096 caracteres.')
+  expect(sends).toBe(0)
+  expect(input).toHaveProperty('value', tooLong)
+  expect(screen.getByRole('button', { name: 'Enviar' })).toHaveProperty('disabled', true)
+})
+
+test('issue #81, case T-11: a message of exactly the limit is sent, counting each emoji as one', async () => {
+  const sent: string[] = []
+  apiWithLuciaIn(
+    http.get(CHAT, () => conversation([], null)),
+    http.post(CHAT, async ({ request }) => {
+      sent.push(((await request.json()) as { text: string }).text)
+      return HttpResponse.json({ id: 'im1', status: 'pending' }, { status: 202 })
+    }),
+  )
+  await openChat()
+  const input = await screen.findByLabelText('Tu mensaje')
+  const longest = '😀'.repeat(4096)
+
+  fireEvent.change(input, { target: { value: longest } })
+  fireEvent.keyDown(input, { key: 'Enter' })
+
+  await waitFor(() => expect(sent).toEqual([longest]))
+  expect(screen.queryByText('Tu mensaje es muy largo: el máximo es de 4096 caracteres.')).toBeNull()
+})

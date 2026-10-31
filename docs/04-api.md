@@ -4,7 +4,9 @@
 
 **Aislamiento entre usuarios, en todo endpoint autenticado.** El usuario sale siempre de la sesión autenticada, nunca del cuerpo, de la ruta ni de un parámetro. Toda lectura o escritura se limita a los recursos de ese usuario y de los grupos familiares a los que pertenece, según [reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad). Un recurso que existe pero es de otro usuario responde `404`, igual que uno que no existe, para no confirmar su existencia. Cada endpoint lo detalla para sus propios recursos, pero la regla vale aunque no lo diga.
 
-**Cuerpo de un error.** Toda respuesta de error es JSON y tiene la misma forma: un campo `error` con el código del error, una palabra corta en minúsculas que no cambia, como `period_overlaps`. Es el mismo código que queda en los registros. El dashboard elige qué mostrar por ese código, nunca por un texto. Un error suma otros campos, con nombre propio, solo cuando el cliente los necesita para seguir, y cada endpoint los documenta: por ejemplo `missing_fields` en `POST /transactions`. El cuerpo nunca repite lo que el cliente mandó ni describe la falla. Las rutas de salud son la única excepción: su `503` no es un error del pedido sino el estado del servicio, y responde con el mismo cuerpo que su `200`, como dice [su sección](#get-healthz-get-readyz-y-get-queuez). Lo que el servidor responde antes de llegar a un endpoint tiene la misma forma, con el nombre del estado como código: `not_found` para una ruta que no existe y `method_not_allowed`, con `405`, para un método que la ruta no acepta.
+**Cuerpo de un error.** Toda respuesta de error es JSON y tiene la misma forma: un campo `error` con el código del error, una palabra corta en minúsculas que no cambia, como `period_overlaps`. Es el mismo código que queda en los registros. El dashboard elige qué mostrar por ese código, nunca por un texto. Un error suma otros campos, con nombre propio, solo cuando el cliente los necesita para seguir, y cada endpoint los documenta: por ejemplo `missing_fields` en `POST /transactions`. El cuerpo nunca repite lo que el cliente mandó ni describe la falla. Las rutas de salud son la única excepción: su `503` no es un error del pedido sino el estado del servicio, y responde con el mismo cuerpo que su `200`, como dice [su sección](#get-healthz-get-readyz-y-get-queuez). Lo que el servidor responde antes de llegar a un endpoint tiene la misma forma, con el nombre del estado como código: `not_found` para una ruta que no existe, `method_not_allowed`, con `405`, para un método que la ruta no acepta, y `content_too_large`, con `413`, para un cuerpo de más de 64 KiB.
+
+**Tamaño de un pedido.** El cuerpo de un pedido, en cualquier ruta, tiene como máximo 64 KiB. Si el pedido declara un tamaño mayor en `Content-Length`, se rechaza sin leerlo y antes del control de origen. Si no lo declara, se rechaza en cuanto lo leído pasa el máximo.
 
 | Estado | Cuándo |
 |---|---|
@@ -12,6 +14,7 @@
 | `403` | El recurso existe para el usuario, que lo puede leer, pero no puede hacer eso |
 | `404` | El recurso no existe, es de otro usuario, o la funcionalidad está apagada |
 | `409` | El pedido choca con el estado actual |
+| `413` | El cuerpo del pedido pasa el máximo. Responde `content_too_large` |
 | `422` | Falta un dato o viola una regla. También el pedido que no tiene la forma del contrato, que responde `invalid_request` |
 | `429` | Se alcanzó un límite de intentos |
 | `500` | Un error que nadie previó. Responde `internal_error` y nada más |
@@ -70,11 +73,11 @@ El chat web de desarrollo y demostración ([ADR 0002](adr/0002-whatsapp-como-can
 `POST /chat/messages` guarda el mensaje y responde enseguida, **sin procesarlo**. La respuesta de Platita no viene acá: aparece después en `GET /chat/messages`.
 
 - El usuario sale de la sesión. El mensaje se guarda con `provider = 'web'`, su `user_id` y su teléfono.
-- El texto no puede estar vacío ni ser solo espacios.
+- El texto no puede estar vacío ni ser solo espacios, y tiene como máximo 4096 caracteres, donde un emoji simple cuenta como uno y uno compuesto, como una bandera, puede contar más. Si no cumple, `422` y no se guarda nada.
 - El header `Idempotency-Key` es obligatorio: un UUID que el navegador genera una vez por mensaje y reenvía igual si repite el pedido. El servidor lo guarda en `provider_message_id` con el usuario de la sesión adelante. Si ese usuario ya mandó esa clave, no guarda nada y responde `200` con el mensaje original. Sin el header, `422`.
 - `quoted_message_id` es opcional: el mensaje de Platita que el usuario cita con el botón de responder. Tiene que ser un mensaje de salida de ese usuario; si no, `404`.
 
-`GET /chat/messages` devuelve los mensajes web del usuario, entrantes y salientes, en orden. Con `after`, solo los posteriores a ese cursor: es lo que el dashboard consulta cada pocos segundos. Un `after` que no es un mensaje de la conversación del usuario, sea de otro o de ninguno, responde `404`. No trae los mensajes cuyo contenido ya se purgó. **No cuenta como actividad de la sesión**: no renueva el plazo de inactividad ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
+`GET /chat/messages` devuelve los mensajes web del usuario, entrantes y salientes, en orden. Sin `after`, trae los últimos 200, y el dashboard no pide los anteriores. Con `after`, trae todos los posteriores a ese cursor, sin tope: es lo que el dashboard consulta cada pocos segundos, y un tope haría saltear mensajes. Un `after` que no es un mensaje de la conversación del usuario, sea de otro o de ninguno, responde `404`. No trae los mensajes cuyo contenido ya se purgó. **No cuenta como actividad de la sesión**: no renueva el plazo de inactividad ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 
 ```yaml
 # POST /chat/messages
@@ -104,8 +107,10 @@ responses:
     description: The request did not come from the page of the API itself, or it is not JSON
   404:
     description: The web chat is disabled, or quoted_message_id is not an outbound message of this user
+  413:
+    description: The body is over 64 KiB
   422:
-    description: Empty text or missing Idempotency-Key
+    description: Empty text, a text over 4096 characters, or missing Idempotency-Key
 
 # GET /chat/messages?after=<cursor>
 responses:
@@ -556,6 +561,8 @@ responses:
     description: No valid session
   403:
     description: The request did not come from the page of the API itself, or it is not JSON
+  413:
+    description: The body is over 64 KiB
 ```
 
 ### `GET /dev/users` y `POST /dev/session`
@@ -618,6 +625,8 @@ responses:
           notice_version: "demo-1"
   403:
     description: The request did not come from the page of the API itself, or it is not JSON
+  413:
+    description: The body is over 64 KiB
   404:
     description: The development entry is disabled, the link is unknown or was regenerated, user_id was sent outside local, or user_id is not a test user
   422:

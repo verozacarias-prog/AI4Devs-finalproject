@@ -94,6 +94,7 @@ def build_session_router(
             {
                 status.HTTP_401_UNAUTHORIZED: reference.NO_SESSION,
                 status.HTTP_403_FORBIDDEN: reference.FOREIGN_REQUEST,
+                status.HTTP_413_CONTENT_TOO_LARGE: reference.BODY_TOO_LARGE,
             }
         ),
     )

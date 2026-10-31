@@ -11,9 +11,12 @@ class ChatMessageRepositoryPort(Protocol):
         """Whether that message is in the web chat of the user, and not purged."""
         ...
 
-    def list_by_user(self, user_id: uuid.UUID, after: uuid.UUID | None) -> list[ChatMessage]:
+    def list_by_user(
+        self, user_id: uuid.UUID, after: uuid.UUID | None, latest: int | None
+    ) -> list[ChatMessage]:
         """The web chat of the user, in order: what the user wrote and what Platita replied.
 
-        With `after`, only the messages that come after that one. Without the purged ones.
+        With `after`, only the messages that come after that one. With `latest`, only that
+        many, the last ones, still in order. Without the purged ones.
         """
         ...

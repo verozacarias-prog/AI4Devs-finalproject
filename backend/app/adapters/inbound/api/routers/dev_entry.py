@@ -75,6 +75,7 @@ def build_dev_entry_router(
         responses=documented_errors(
             {
                 status.HTTP_403_FORBIDDEN: reference.FOREIGN_REQUEST,
+                status.HTTP_413_CONTENT_TOO_LARGE: reference.BODY_TOO_LARGE,
                 status.HTTP_404_NOT_FOUND: reference.DEV_SESSION_NOT_FOUND,
                 status.HTTP_422_UNPROCESSABLE_CONTENT: reference.DEV_SESSION_INVALID,
             }

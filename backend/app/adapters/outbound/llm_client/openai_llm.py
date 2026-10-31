@@ -27,6 +27,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 from app.adapters.outbound.llm_client import prompts
 from app.constants import (
     DEFAULT_LLM_TIMEOUT_SECONDS,
+    LLM_MAX_OUTPUT_TOKENS,
     LLM_MODEL,
     LLM_PROVIDER,
     LLM_REASONING_EFFORT,
@@ -150,6 +151,7 @@ class OpenAILLM:
                     EasyInputMessageParam(role="user", content=_delimited(request)),
                 ],
                 reasoning=Reasoning(effort=LLM_REASONING_EFFORT),
+                max_output_tokens=LLM_MAX_OUTPUT_TOKENS,
                 text=ResponseTextConfigParam(format=output_format),
                 # Nothing chains answers: the provider keeps only its abuse logs (ADR 0025).
                 store=False,

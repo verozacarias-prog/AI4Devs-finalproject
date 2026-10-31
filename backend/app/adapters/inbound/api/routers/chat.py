@@ -20,6 +20,7 @@ from app.adapters.inbound.api.errors import documented_errors
 from app.adapters.inbound.api.request_logging import identify_user
 from app.adapters.inbound.api.routers.session import SessionToken
 from app.adapters.inbound.api.routes import CHAT_MESSAGES, CHAT_TAG, IDEMPOTENCY_KEY_HEADER
+from app.constants import MAX_CHAT_TEXT_LENGTH
 from app.domain.entities.chat_message import Direction
 from app.domain.entities.inbound_message import InboundStatus
 from app.domain.entities.outbound_message import ResponseKind
@@ -29,7 +30,9 @@ from app.domain.use_cases.sessions.authenticate_session import AuthenticateSessi
 
 
 class ChatMessageRequest(BaseModel):
-    text: str = Field(min_length=1, description=reference.CHAT_TEXT)
+    text: str = Field(
+        min_length=1, max_length=MAX_CHAT_TEXT_LENGTH, description=reference.CHAT_TEXT
+    )
     quoted_message_id: uuid.UUID | None = Field(
         default=None, description=reference.CHAT_QUOTED_MESSAGE_ID
     )
@@ -85,6 +88,7 @@ def build_chat_router(
                 {
                     status.HTTP_401_UNAUTHORIZED: reference.NO_SESSION,
                     status.HTTP_403_FORBIDDEN: reference.FOREIGN_REQUEST,
+                    status.HTTP_413_CONTENT_TOO_LARGE: reference.BODY_TOO_LARGE,
                     status.HTTP_404_NOT_FOUND: reference.SEND_CHAT_MESSAGE_NOT_FOUND,
                     status.HTTP_422_UNPROCESSABLE_CONTENT: reference.SEND_CHAT_MESSAGE_INVALID,
                 }

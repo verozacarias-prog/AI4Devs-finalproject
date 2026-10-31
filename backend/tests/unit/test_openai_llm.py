@@ -178,6 +178,16 @@ def test_the_adapter_asks_the_provider_not_to_store_the_answer() -> None:
     assert sent.get("store") is False
 
 
+def test_the_adapter_limits_what_the_model_may_write() -> None:
+    # Issue #81, case T-9. The reasoning of the model counts against this limit too.
+    transport = FakeTransport(_expense("3500"))
+
+    _adapter(transport).classify(REQUEST)
+
+    [sent] = transport.received
+    assert sent.get("max_output_tokens") == 2000
+
+
 def test_the_adapter_returns_the_amount_as_a_decimal() -> None:
     # Case C1-15.
     transport = FakeTransport(_expense("3500.50"))

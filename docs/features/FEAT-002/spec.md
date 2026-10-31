@@ -57,7 +57,7 @@ Lo que el usuario escribe queda guardado enseguida, y la respuesta llega despué
 - **CA-1.** Quien entró al dashboard escribe en el chat y su mensaje queda guardado como pendiente, sin esperar la respuesta de Platita.
 - **CA-2.** El mensaje se guarda a nombre del usuario de la sesión, con su teléfono, y con la hora en que lo recibió el servidor, no la del navegador.
 - **CA-3.** El mismo mensaje enviado dos veces con la misma clave queda guardado una sola vez, y la segunda vez se responde con el que se guardó la primera.
-- **CA-4.** Un mensaje sin texto, o sin clave, no se guarda.
+- **CA-4.** Un mensaje sin texto, sin clave o de más de 4096 caracteres, donde un emoji simple cuenta como uno y uno compuesto, como una bandera, puede contar más, no se guarda.
 
 ### Platita responde
 
@@ -73,7 +73,7 @@ Cada mensaje recibe su respuesta, de a uno por usuario y en orden.
 
 La pantalla se parece a un chat de WhatsApp.
 
-- **CA-10.** El chat muestra los mensajes del usuario y las respuestas de Platita en el orden en que ocurrieron: los del usuario a la derecha y los de Platita a la izquierda, cada uno con su hora.
+- **CA-10.** El chat muestra los mensajes del usuario y las respuestas de Platita en el orden en que ocurrieron: los del usuario a la derecha y los de Platita a la izquierda, cada uno con su hora. Al abrirlo trae los últimos 200 mensajes, y la pantalla no pide los anteriores.
 - **CA-11.** Mientras el último mensaje del usuario no tiene respuesta, se ve "Platita está procesando…".
 - **CA-12.** Con el chat abierto, la pantalla pregunta cada pocos segundos si hay mensajes nuevos, y trae solo los posteriores al último que ya tiene. Con otra pantalla abierta, no pregunta.
 - **CA-13.** Lo que escribió el usuario y lo que responde Platita se muestran como texto, nunca como HTML.
