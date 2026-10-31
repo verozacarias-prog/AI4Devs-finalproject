@@ -35,7 +35,8 @@ TABLES_WITHOUT_DELETE = ("transaction", "transfer", "recurring_rule")
 
 
 @pytest.fixture(autouse=True)
-def role_as_it_was(admin_engine: Engine) -> Iterator[None]:
+def role_as_it_was(admin_engine: Engine, migrated_template: str) -> Iterator[None]:
+    # The template is there for the role: on a new server, the migrations create it.
     with admin_engine.connect() as connection:
         can_login, password = connection.execute(
             text("SELECT rolcanlogin, rolpassword FROM pg_authid WHERE rolname = :role"),
@@ -200,6 +201,7 @@ def test_a_failed_step_does_not_print_the_password(
     assert done.returncode != 0
     # A missing variable would fail too, before the step ever ran.
     assert "KeyError" not in done.stderr
+    assert "permission denied" in done.stderr
     assert password not in done.stdout
     assert password not in done.stderr
 
