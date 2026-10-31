@@ -10,6 +10,7 @@ decidida y el resto sigue como propuesta, escrita para que esté a mano cuando s
 | Una imagen y Docker Compose en local | [2](#2-entornos) | [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) | Entrega 2 |
 | Qué rama despliega cada entorno: la de la entrega, `demo`; `main`, `production` | [2](#2-entornos) | [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) | El primer despliegue |
 | Dónde se aloja `demo`: Render, en sus planes pagos más chicos, sin copia externa, cron ni dominio propio | [2](#2-entornos) | [ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md) | La entrega final |
+| Con qué rol se conecta cada proceso a la base | [2](#2-entornos) | [ADR 0030](adr/0030-rol-de-la-aplicacion-en-la-base.md) | La #83 |
 | Los seis controles del pipeline | [3](#3-pipeline-de-la-aplicación) | [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) | El primer commit de código. El control de secretos y las acciones fijadas, desde ahora |
 | Métricas de las llamadas al modelo | [6.2](#62-métricas) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | Entrega 2 |
 | Registros en JSON, filtro de datos personales y eventos de seguridad | [6.3](#63-registros) | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) | Los registros y el filtro, el primer commit de código. Cada evento, la funcionalidad que lo produce |
@@ -105,6 +106,19 @@ qué variable falta. Un despliegue que la olvidara no puede quedar funcionando c
 que es el entorno donde un error se escribe con sus datos ([6.3](#63-registros)). El
 `docker-compose.yml` del repositorio levanta solo el entorno local, y por eso es el único lugar
 que la declara como `local` cuando nadie la definió.
+
+La conexión a la base usa tres variables, sin valor por defecto
+([ADR 0030](adr/0030-rol-de-la-aplicacion-en-la-base.md)). La API, el worker y los comandos de
+operación usan `DATABASE_URL`, con el rol `platita_app`, que no puede eliminar movimientos
+([ADR 0015](adr/0015-borrado-logico-de-movimientos.md)). Las migraciones usan
+`MIGRATIONS_DATABASE_URL`, con el dueño de las tablas, y `APPLICATION_DB_PASSWORD`, la contraseña
+que le dan a ese rol en cada `alembic upgrade head`. Esa contraseña solo admite letras, números,
+`_` y `-`, porque va dentro de `DATABASE_URL`; con otro carácter, las migraciones fallan. Fuera
+del entorno local tiene que ser larga y generada al azar. En Render, `DATABASE_URL` y
+`APPLICATION_DB_PASSWORD` se cargan por separado, y la contraseña dentro de la dirección tiene que
+ser la misma. El dueño necesita permiso para crear el rol y cambiarle la contraseña; en una base
+administrada hay que comprobarlo en el primer despliegue. Una migración que crea una tabla le da
+sus permisos a `platita_app`.
 
 La entrada de desarrollo se enciende con `DEV_ENTRY_ENABLED=true`, y el chat web con
 `WEB_CHAT_ENABLED=true`. Sin la variable, cada una queda apagada, y con cualquiera de las dos
@@ -270,14 +284,6 @@ los datos en lotes con un script que se puede repetir, el código pasa a leer so
 viejo se borra cuando la versión anterior lleva al menos 24 horas estable. Los índices se crean
 con `CONCURRENTLY`.
 
-**Roles de la base.** La migración del esquema crea el rol `platita_app`, que no puede eliminar
-movimientos ([ADR 0015](adr/0015-borrado-logico-de-movimientos.md)). Para eso, el usuario que
-corre las migraciones necesita permiso para crear roles; en una base administrada hay que
-comprobarlo en el primer despliegue. El rol no inicia sesión por sí mismo. Cómo se conecta la
-aplicación con él en cada entorno todavía no está decidido, y figura en la
-[hoja de ruta](hoja-de-ruta.md#entrega-2): hasta entonces la API usa el mismo usuario que las
-migraciones, y la prohibición existe en la base pero no protege.
-
 **Vuelta atrás del código.** Con el botón *Rollback* de Render, que redespliega la imagen
 anterior. Funciona porque la migración ya aplicada es compatible con esa versión. Hay una
 trampa: la versión anterior no conoce la revisión nueva de Alembic, así que si el paso previo
@@ -289,8 +295,8 @@ registrado y termina sin error. Hay que confirmar si Render repite el paso previ
 **Vuelta atrás de los datos.** `alembic downgrade` no se corre nunca en producción: se corrige
 hacia adelante, con una migración nueva. Si una migración o un error rompieron datos, se
 restaura la base a un punto en el tiempo, un minuto antes del despliegue, en una instancia
-nueva; se cambia `DATABASE_URL` en el Environment Group y se redespliega. Se pierde lo que entró
-después de ese minuto, y Meta no vuelve a entregar esos mensajes, así que se avisa por WhatsApp a
+nueva; se cambian `DATABASE_URL` y `MIGRATIONS_DATABASE_URL` en el Environment Group y se
+redespliega. Se pierde lo que entró después de ese minuto, y Meta no vuelve a entregar esos mensajes, así que se avisa por WhatsApp a
 los usuarios afectados.
 
 ## 5. Copias de respaldo y recuperación

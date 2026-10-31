@@ -18,6 +18,8 @@ class EnvVar(StrEnum):
     """The environment variables the process reads. `.env.example` lists the same names."""
 
     DATABASE_URL = "DATABASE_URL"
+    MIGRATIONS_DATABASE_URL = "MIGRATIONS_DATABASE_URL"
+    APPLICATION_DB_PASSWORD = "APPLICATION_DB_PASSWORD"  # noqa: S105
     APP_ENV = "APP_ENV"
     APP_VERSION = "APP_VERSION"
     DASHBOARD_DIR = "DASHBOARD_DIR"
@@ -49,6 +51,9 @@ DISABLED = "false"
 APP_TITLE = "Platita"
 
 DEFAULT_VERSION = "dev"
+
+# The role the API and the worker log in with. The migrations create it and enable it (ADR 0030).
+APPLICATION_ROLE = "platita_app"
 
 # For code that builds the application without ever touching the database, such as the
 # command that exports the API contract.
