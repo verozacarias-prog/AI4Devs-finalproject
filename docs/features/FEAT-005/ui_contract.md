@@ -14,7 +14,7 @@ Sigue la forma del [contrato de la pantalla de presupuesto](../FEAT-004/ui_contr
 | `Card` y `CardTitle` de shadcn/ui | Existen, desde el [ADR 0027](../../adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md) | El marco del formulario, como en las otras pantallas |
 | `Button` de shadcn/ui | Existe, desde el ADR 0027 | Guardar el borrador, confirmarlo, sumar y quitar un tope, reintentar y volver |
 | Entrada al formulario | Nuevo, en `BudgetPage` | "Armar un período" en el resumen, y "Editar" en un período en borrador que el usuario puede editar (`can_edit`) |
-| Formulario del período | Nuevo, `BudgetPeriodFormPage` | La cadencia, el día de inicio, el fin, la moneda, el ingreso estimado y la lista de topes. Al armar uno nuevo viene con la cadencia, la moneda, el ingreso y los topes del último período del usuario, y el inicio el día después de su fin (CA-13); en uno confirmado, las fechas y la moneda no se editan (CA-10) |
+| Formulario del período | Nuevo, `BudgetPeriodFormPage` | La cadencia, el día de inicio, el fin, la moneda, el ingreso estimado y la lista de topes. Al armar uno nuevo viene con la cadencia, la moneda, el ingreso y los topes del último período del usuario, y el inicio el día después de su fin (CA-13); en uno confirmado, la cadencia, las fechas y la moneda no se editan (CA-10) |
 | Cadencia y categoría de un tope | Nuevos, sobre un `select` nativo | Como el selector de período de la FEAT-004: shadcn/ui no tiene uno instalado |
 | Fecha de inicio y de fin | Nuevos, sobre un `input type="date"` nativo | El fin es optativo en un período mensual: vacío, lo calcula el backend |
 | Montos | Nuevos, sobre un `input` de texto con `inputMode="decimal"` | El ingreso y cada tope viajan como texto decimal, nunca como `number` de JavaScript |
@@ -34,11 +34,12 @@ sin tokens nuevos.
 | Con contenido: armando | Llegó lo necesario | El formulario y "Guardar borrador". Al crear, con la cadencia, la moneda, el ingreso y los topes del último período del usuario y el inicio sugerido el día después de su fin, que se puede cambiar, con el fin vacío, o todo vacío si no tiene ninguno; al editar, con el período | Guardar, o volver al resumen |
 | Guardando | Se aprieta "Guardar borrador" o "Confirmar" | El formulario sin poder editarse y la línea de estado | Llega la respuesta, o falla |
 | Con contenido: guardado | El borrador quedó guardado | Lo guardado, con el fin calculado, "Editar" y "Confirmar" | Confirmar, editar o volver |
+| Vacío | `GET /categories` responde sin ninguna categoría de gasto | En lugar de la lista de topes, que no hay categorías de gasto para ponerles tope. El resto del formulario sigue disponible | Guardar sin topes, o volver al resumen |
 | Confirmado | Se confirmó | Que el período quedó confirmado y desde cuándo recibe movimientos | Volver al resumen, con ese período elegido |
 | Error | La API responde con un error, no responde a tiempo o no se llega a ella | Qué falló y Reintentar, sin perder lo cargado en el formulario | Reintentar repite solo el pedido que falló |
 
-Vacío no aplica: el catálogo base de categorías nunca está vacío
-([convenciones de desarrollo](../../convenciones-de-desarrollo.md#2-los-cuatro-estados-de-una-pantalla)).
+Un usuario sin períodos anteriores no es el estado vacío: ve el formulario en blanco y las
+categorías para elegir. Decidido por Vero el 31 de octubre de 2026.
 Sin sesión no es un estado de esta pantalla: un `401` vuelve a la entrada.
 
 ## Datos que consume

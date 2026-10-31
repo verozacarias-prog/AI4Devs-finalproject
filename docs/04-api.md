@@ -271,7 +271,9 @@ está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual
   ninguno si ningún período cubre hoy. Es el que la pantalla de presupuesto abre primero.
 - `POST /budget-periods` crea un borrador y responde `201` con el período completo, con la misma
   forma que cada elemento de `GET /budget-periods`, para que la pantalla lo sume a su lista sin
-  otra llamada. Sin `family_group_id` es individual. En un período
+  otra llamada. El período es individual, del usuario de la sesión. Crear uno de grupo llega con
+  los grupos, en la segunda versión: mientras tanto, un pedido con `family_group_id` responde
+  `422` con `group_period_not_supported`. Decidido por Vero el 30 de octubre de 2026. En un período
   mensual, `period_end` es opcional y se calcula desde `period_start`. En uno quincenal es
   obligatorio, porque su fin no se calcula: sin él responde `422` con `period_end_required`.
   Decidido por Vero el 29 de octubre de 2026.
@@ -279,7 +281,7 @@ está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual
   ingreso estimado y topes. En un borrador cambia todo. En uno confirmado cambian solo el
   ingreso estimado y los topes, como en el primer período, que nace confirmado y sin topes
   ([reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)):
-  el pedido repite sus fechas y su moneda, y si las cambia responde `409` con
+  el pedido repite su cadencia, sus fechas y su moneda, y si las cambia responde `409` con
   `confirmed_period_fixed`. Responde `200` con el período completo, con la misma forma que el
   `POST`, para que la pantalla lo reemplace en su lista. Decidido por Vero el 29 de octubre de
   2026.
@@ -297,18 +299,32 @@ está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual
   `GET /budget-periods` devuelve esas reglas con el último monto confirmado, para que la pantalla
   las muestre.
 
-Validaciones, en este orden:
+Un pedido que no tiene la forma del contrato responde `422` con `invalid_request`, antes de las
+validaciones que siguen: un `period_id` que no es un UUID y, en `POST` y `PUT`, un campo que la API
+no conoce, que no se ignora. `family_group_id` es un campo conocido solo al crear, así que en un
+`PUT` también responde `invalid_request`. Decidido por Vero el 31 de octubre de 2026.
 
-1. Un período de otro usuario, o de un grupo al que no pertenece, responde `404`.
-2. Crear, cambiar o confirmar un período familiar exige ser el dueño vigente del grupo. Un
+Validaciones, en este orden. Las fechas van antes que lo que las compara, porque sin un fin válido
+no se puede saber si un período cambia sus fechas o se superpone con otro. Decidido por Vero el 31
+de octubre de 2026.
+
+1. Crear un período con `family_group_id` responde `422`, con `group_period_not_supported`.
+2. Un período de otro usuario, o de un grupo al que no pertenece, responde `404`.
+3. Cambiar o confirmar un período familiar exige ser el dueño vigente del grupo. Un
    miembro que no lo es recibe `403`, porque el período existe para él: lo puede leer.
-3. Cambiar las fechas o la moneda de un período confirmado responde `409`, con
-   `confirmed_period_fixed`.
-4. Un período que se superpone con otro del mismo dueño responde `409`, antes de que la
-   restricción de exclusión de la base lo rechace igual.
-5. Fechas invertidas, un período quincenal sin `period_end`, un tope menor o igual a cero, o una
-   categoría repetida responden `422`. Un tope sobre una categoría de ingreso también, con
-   `budget_category_not_expense`: un tope va sobre lo que se gasta
+4. Responden `422`, cada uno con su código: un período quincenal sin `period_end`, con
+   `period_end_required`, y fechas invertidas, con `period_dates_inverted`. Decidido por Vero el 30
+   de octubre de 2026.
+5. Cambiar la cadencia, las fechas o la moneda de un período confirmado responde `409`, con
+   `confirmed_period_fixed`. Decidido por Vero el 31 de octubre de 2026.
+6. Un período que se superpone con otro del mismo dueño responde `409`, con
+   `budget_period_overlap`, antes de que la restricción de exclusión de la base lo rechace
+   igual. Decidido por Vero el 30 de octubre de 2026.
+7. Los topes y el ingreso. Una categoría que no es del usuario responde `404`. Responden `422`,
+   cada uno con su código: un tope menor o igual a cero, con `budget_limit_not_positive`, y una
+   categoría repetida, con `budget_category_repeated`. Decidido por Vero el 30 de octubre de 2026.
+   Un tope sobre una categoría de ingreso también, con `budget_category_not_expense`: un tope va
+   sobre lo que se gasta
    ([reglas de dominio § 4](reglas-de-dominio.md#4-categorías-catálogo-base-categorías-propias-y-creación-con-confirmación)).
    Y un ingreso estimado negativo, con `estimated_income_negative`: acepta 0 o más, y 0 es el del
    primer período, que nace sin ingreso. Decidido por Vero el 29 de octubre de 2026.
@@ -347,7 +363,6 @@ requestBody:
   content:
     application/json:
       example:
-        family_group_id: null          # null: individual; a group id: family, owner only
         period_type: "monthly"
         period_start: "2026-10-10"
         period_end: null               # monthly: derived, 2026-11-09
@@ -383,19 +398,19 @@ responses:
   401:
     description: No valid session
   403:
-    description: The user is a member but not the owner of the family group
+    description: The request does not come from the page of the API, or it is not JSON
   404:
-    description: The family group or a category does not belong to the authenticated user
+    description: A category does not belong to the authenticated user
   409:
-    description: Overlaps another period of the same owner, or (PUT) changes the dates or the currency of a confirmed period
+    description: Overlaps another period of the same owner (budget_period_overlap)
   422:
-    description: Invalid dates, a biweekly period without period_end, non-positive limit, repeated category, a category that is not an expense one or a negative estimated income
+    description: Invalid dates, a biweekly period without period_end, non-positive limit, repeated category, a category that is not an expense one, a negative estimated income, a family_group_id (group_period_not_supported), or a field the API does not know (invalid_request)
 
 # PUT /budget-periods/{period_id}
 requestBody:
   content:
     application/json:
-      example:                         # the same body as POST, without family_group_id
+      example:                         # the same body as POST
         period_type: "monthly"
         period_start: "2026-10-10"
         period_end: null
@@ -433,9 +448,9 @@ responses:
   404:
     description: The period belongs to another user or to a group the user is not in, or a category does not belong to the authenticated user
   409:
-    description: Changes the dates or the currency of a confirmed period, or overlaps another period of the same owner
+    description: Changes the cadence, the dates or the currency of a confirmed period (confirmed_period_fixed), or overlaps another period of the same owner (budget_period_overlap)
   422:
-    description: Invalid dates, a biweekly period without period_end, non-positive limit, repeated category, a category that is not an expense one, a negative estimated income, or a period_id that is not a UUID
+    description: Invalid dates, a biweekly period without period_end, non-positive limit, repeated category, a category that is not an expense one, a negative estimated income, a field the API does not know, or a period_id that is not a UUID (invalid_request)
 
 # POST /budget-periods/{period_id}/confirm
 requestBody:

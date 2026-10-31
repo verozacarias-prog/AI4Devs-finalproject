@@ -72,7 +72,7 @@ El usuario arma el presupuesto de un período, que queda en borrador hasta que l
 
 ### Cambiar un período confirmado
 
-- **CA-10.** En un período confirmado, el usuario cambia el ingreso estimado y los topes, con las mismas reglas que en un borrador. Sus fechas y su moneda no cambian, y el período sigue confirmado.
+- **CA-10.** En un período confirmado, el usuario cambia el ingreso estimado y los topes, con las mismas reglas que en un borrador. Su cadencia, sus fechas y su moneda no cambian, y el período sigue confirmado.
 
 ### Quién lo cambia
 
@@ -361,28 +361,324 @@ no es miembro de ningún grupo, y hoy es 29 de octubre de 2026.
 
 ### Corte 2 — errores y estado vacío
 
-- **Aprobado por:** pendiente
+- **Aprobado por:** Veronica Zacarias 30/10/2026
 
 Entran las validaciones de [la API](../../04-api.md), en su orden: el período de otro usuario,
 `404`; el período de un grupo para un miembro que no es el dueño, `403`
 (CA-16); la superposición con otro período del mismo dueño,
-`409`; cambiar las fechas o la moneda de un período confirmado, `409` con
-`confirmed_period_fixed` (CA-10); un período quincenal sin fin, `422` con `period_end_required`
+`409` con `budget_period_overlap`; cambiar la cadencia, las fechas o la moneda de un período
+confirmado, `409` con `confirmed_period_fixed` (CA-10); un período quincenal sin fin, `422` con `period_end_required`
 (CA-11); un tope sobre una categoría de ingreso, `422` con `budget_category_not_expense`
 (CA-14); un ingreso estimado negativo, `422` con `estimated_income_negative` (CA-15), y el `CHECK` que
-lo impide en la base, en una migración nueva (AGENTS.md § 8); y fechas
-invertidas, un tope menor o igual a cero o
-una categoría repetida, `422`. También la categoría de otro usuario, `404`; un campo que la API
-no conoce, como `family_group_id` mientras crear un período de grupo no entra, `422` en vez de
-ignorarlo; y los estados vacío y de error de la pantalla. El `404` del período de otro usuario, en
+lo impide en la base, en una migración nueva (AGENTS.md § 8); y los tres `422` de fechas
+invertidas, tope de cero o menos y categoría repetida, con su código cada uno (pregunta abierta 11).
+También la categoría de otro usuario, `404`; un campo que la API
+no conoce, `422` en vez de ignorarlo, y `family_group_id`, `422` con
+`group_period_not_supported`; y los estados vacío y de error de la pantalla. El `404` del período de otro usuario, en
 `PUT` y en la confirmación, el `403`, los dos `409` de arriba, el `422` con
 `period_end_required`, el `404` de la categoría ajena y el `422` del campo desconocido no están
 en el corte 1: entran acá, con sus tests primero (ADR 0024). Hasta entonces, un tope sobre una
 categoría que no existe termina en `500`, porque la base rechaza la referencia, y lo cubre el
 `404` de la categoría ajena. Decidido por Vero el 30 de octubre de 2026.
 
-Queda por resolver, en el corte que corresponda: un tope que un `PUT` deja afuera se borra, y si
-ya tiene alertas enviadas la referencia de `sent_alert` a `budget` impide borrarlo.
+- **Total:** 29 casos, 9 unitarios y 20 de integración, sin aprobar. Además de los datos de
+  arriba, Pablo es el dueño del grupo "Casa" y Sofía es miembro, sin serlo; el grupo tiene un
+  período confirmado del 10 de octubre al 9 de noviembre de 2026 y un borrador del 10 de
+  noviembre al 9 de diciembre. Pablo tiene un período propio del 10 de octubre al 9 de noviembre
+  y una categoría propia de gasto, "Kiosco". Lucía tiene la categoría propia de ingreso "Clases
+  particulares". En cada error, nada de lo que el pedido trae queda guardado. Los casos de
+  componente de la pantalla (#74) se proponen cuando esté armada: todavía no existe.
+
+| Caso | Qué prueba | Tipo | Sale de |
+|---|---|---|---|
+| C2-01 | Cambiar o confirmar un período que no existe responde que no existe | Unitario | Validación 2 |
+| C2-02 | Lucía cambia el período de Pablo | Integración | Validación 2 |
+| C2-03 | Lucía confirma un período de Pablo | Integración | Validación 2 |
+| C2-04 | Un miembro que no es el dueño no cambia ni confirma el período del grupo | Unitario | CA-16 |
+| C2-05 | Sofía cambia el período confirmado de "Casa" | Integración | CA-16 |
+| C2-06 | Sofía confirma el borrador de "Casa" | Integración | CA-16 |
+| C2-07 | En un confirmado, cambiar la cadencia, el inicio, el fin o la moneda no se guarda | Unitario | CA-10 |
+| C2-08 | Lucía le cambia la moneda a su período actual | Integración | CA-10 |
+| C2-09 | Un período que se superpone con otro del mismo dueño no se guarda | Unitario | Validación 6 |
+| C2-10 | Lucía crea un período que empieza dentro del actual | Integración | Validación 6 |
+| C2-11 | Lucía mueve un borrador sobre su período actual | Integración | Validación 6 |
+| C2-12 | Un quincenal sin fin no tiene fin | Unitario | CA-11 |
+| C2-13 | Lucía crea un quincenal sin `period_end` | Integración | CA-11 |
+| C2-14 | Fechas invertidas, un tope de cero o menos y una categoría repetida no se guardan | Unitario | Validaciones 4 y 7 |
+| C2-15 | Lucía crea un período con un tope de 0 | Integración | Validación 7 |
+| C2-16 | Un tope sobre una categoría de ingreso no se guarda | Unitario | CA-14 |
+| C2-17 | Lucía le pone un tope a "Clases particulares" | Integración | CA-14 |
+| C2-18 | Un ingreso estimado negativo no se guarda, y uno de 0 sí | Unitario | CA-15 |
+| C2-19 | Lucía crea un período con un ingreso de -1 | Integración | CA-15 |
+| C2-20 | La base rechaza un ingreso estimado negativo | Integración | CA-15 |
+| C2-21 | Lucía le pone un tope a "Kiosco", la categoría de Pablo | Integración | CA-12 |
+| C2-22 | Lucía le pone un tope a una categoría que no existe | Integración | CA-12 |
+| C2-23 | Lucía crea un período con `family_group_id` | Integración | Pregunta abierta 7 |
+| C2-24 | Sin sesión, armar, cambiar, confirmar y ver las categorías responden `401` | Integración | La API |
+| C2-25 | Con dos errores a la vez, responde el primero del orden | Unitario | Validaciones, en orden |
+| C2-26 | Pablo, el dueño, cambia y confirma el borrador de "Casa" | Integración | CA-16 |
+| C2-27 | Pablo crea un período propio con las fechas del borrador de "Casa" | Integración | Validación 6 |
+| C2-28 | Un campo que la API no conoce no se guarda ni se ignora | Integración | La API |
+| C2-29 | Lucía cambia y confirma con un `period_id` que no es un UUID | Integración | La API |
+
+#### C2-01 · Cambiar o confirmar un período que no existe responde que no existe
+
+- **Sale de:** validación 2 de [la API](../../04-api.md) · **Tipo:** unitario
+- **Dado** un identificador que no es de ningún período,
+- **cuando** se cambia o se confirma ese período,
+- **entonces** el caso de uso dice que no existe, con `not_found`, y no escribe nada.
+- **Test:** `tests/unit/test_budget_planning.py::test_changing_or_confirming_a_period_that_does_not_exist_says_it_does_not_exist`
+
+#### C2-02 · Lucía cambia el período de Pablo
+
+- **Sale de:** validación 2 · **Tipo:** integración
+- **Dado** Lucía con su sesión abierta y el período propio de Pablo guardado,
+- **cuando** pide `PUT /budget-periods/{period_id}` sobre él, con otro ingreso,
+- **entonces** responde `404` con `not_found`, y el período de Pablo sigue igual.
+- **Test:** `tests/integration/test_budget_planning.py::test_lucia_changes_the_period_of_pablo`
+
+#### C2-03 · Lucía confirma un período de Pablo
+
+- **Sale de:** validación 2 · **Tipo:** integración
+- **Dado** Lucía con su sesión abierta y un borrador propio de Pablo guardado,
+- **cuando** pide `POST /budget-periods/{period_id}/confirm` sobre él,
+- **entonces** responde `404` con `not_found`, y el período sigue en borrador.
+- **Test:** `tests/integration/test_budget_planning.py::test_lucia_confirms_a_period_of_pablo`
+
+#### C2-04 · Un miembro que no es el dueño no cambia ni confirma el período del grupo
+
+- **Sale de:** CA-16 · **Tipo:** unitario
+- **Dado** Sofía, miembro de "Casa" sin ser su dueña, y el borrador del grupo,
+- **cuando** lo cambia o lo confirma,
+- **entonces** el caso de uso lo rechaza con `not_the_owner`, y no escribe nada.
+- **Test:** `tests/unit/test_budget_planning.py::test_a_member_who_is_not_the_owner_neither_changes_nor_confirms_the_period_of_the_group`
+
+#### C2-05 · Sofía cambia el período confirmado de "Casa"
+
+- **Sale de:** CA-16 · **Tipo:** integración
+- **Dado** Sofía con su sesión abierta,
+- **cuando** pide `PUT /budget-periods/{period_id}` sobre el período confirmado de "Casa", con
+  sus mismas fechas y moneda y otro ingreso,
+- **entonces** responde `403` con `not_the_owner`, y el período sigue igual.
+- **Test:** `tests/integration/test_budget_planning.py::test_sofia_changes_the_confirmed_period_of_casa`
+
+#### C2-06 · Sofía confirma el borrador de "Casa"
+
+- **Sale de:** CA-16 · **Tipo:** integración
+- **Dado** Sofía con su sesión abierta,
+- **cuando** pide `POST /budget-periods/{period_id}/confirm` sobre el borrador de "Casa",
+- **entonces** responde `403` con `not_the_owner`, y el período sigue en borrador.
+- **Test:** `tests/integration/test_budget_planning.py::test_sofia_confirms_the_draft_of_casa`
+
+#### C2-07 · En un confirmado, cambiar la cadencia, el inicio, el fin o la moneda no se guarda
+
+- **Sale de:** CA-10 · **Tipo:** unitario
+- **Dado** el período actual de Lucía, confirmado y mensual,
+- **cuando** se cambia a quincenal con sus mismas fechas, con otro `period_start`, con otro
+  `period_end` o con otra moneda, cada uno por separado,
+- **entonces** el caso de uso lo rechaza con `confirmed_period_fixed`, y no escribe nada.
+- **Test:** `tests/unit/test_budget_planning.py::test_in_a_confirmed_period_changing_the_cadence_the_start_the_end_or_the_currency_is_not_saved`
+
+#### C2-08 · Lucía le cambia la moneda a su período actual
+
+- **Sale de:** CA-10 · **Tipo:** integración
+- **Dado** Lucía con su sesión abierta,
+- **cuando** pide `PUT /budget-periods/{period_id}` sobre su período actual con sus mismas
+  fechas y `primary_currency` USD,
+- **entonces** responde `409` con `confirmed_period_fixed`, y el período sigue en ARS, con su
+  ingreso y sus topes.
+- **Test:** `tests/integration/test_budget_planning.py::test_lucia_changes_the_currency_of_her_current_period`
+
+#### C2-09 · Un período que se superpone con otro del mismo dueño no se guarda
+
+- **Sale de:** validación 6 · **Tipo:** unitario
+- **Dado** el período actual de Lucía, del 10 de octubre al 9 de noviembre de 2026,
+- **cuando** se crea un mensual que empieza el 1 de noviembre,
+- **entonces** el caso de uso lo rechaza con `budget_period_overlap`, y no escribe nada. Uno que
+  empieza el 10 de noviembre, el día después, sí se guarda.
+- **Test:** `tests/unit/test_budget_planning.py::test_a_period_that_overlaps_another_of_the_same_owner_is_not_saved`
+
+#### C2-10 · Lucía crea un período que empieza dentro del actual
+
+- **Sale de:** validación 6 · **Tipo:** integración
+- **Dado** Lucía con su sesión abierta,
+- **cuando** pide `POST /budget-periods` con un mensual que empieza el 1 de noviembre de 2026,
+- **entonces** responde `409` con `budget_period_overlap`, y no se guarda ningún período nuevo.
+- **Test:** `tests/integration/test_budget_planning.py::test_lucia_creates_a_period_that_starts_inside_the_current_one`
+
+#### C2-11 · Lucía mueve un borrador sobre su período actual
+
+- **Sale de:** validación 6 · **Tipo:** integración
+- **Dado** Lucía con el borrador de C1-11 guardado,
+- **cuando** pide `PUT /budget-periods/{period_id}` sobre él con `period_start` 2026-11-01,
+- **entonces** responde `409` con `budget_period_overlap`, y el borrador sigue del 10 de
+  noviembre al 9 de diciembre.
+- **Test:** `tests/integration/test_budget_planning.py::test_lucia_moves_a_draft_over_her_current_period`
+
+#### C2-12 · Un quincenal sin fin no tiene fin
+
+- **Sale de:** CA-11 · **Tipo:** unitario
+- **Dado** un período quincenal que empieza el 10 de noviembre de 2026, sin fin indicado,
+- **cuando** se calcula su fin,
+- **entonces** no se calcula: falla con `period_end_required`.
+- **Test:** `tests/unit/test_budget_period_end.py::test_a_biweekly_period_without_an_end_has_no_end`
+
+#### C2-13 · Lucía crea un quincenal sin `period_end`
+
+- **Sale de:** CA-11 · **Tipo:** integración
+- **Dado** Lucía con su sesión abierta,
+- **cuando** pide `POST /budget-periods` con `period_type` quincenal, `period_start` 2026-11-10 y
+  sin `period_end`,
+- **entonces** responde `422` con `period_end_required`, y no se guarda ningún período.
+- **Test:** `tests/integration/test_budget_planning.py::test_lucia_creates_a_biweekly_period_without_period_end`
+
+#### C2-14 · Fechas invertidas, un tope de cero o menos y una categoría repetida no se guardan
+
+- **Sale de:** validaciones 4 y 7 · **Tipo:** unitario
+- **Dado** Lucía,
+- **cuando** se crea un período con el fin antes del inicio, con un tope de 0, con uno de -1, o
+  con dos topes sobre Supermercado, cada uno por separado,
+- **entonces** el caso de uso lo rechaza con `period_dates_inverted`, `budget_limit_not_positive`
+  o `budget_category_repeated`, y no escribe nada.
+- **Test:** `tests/unit/test_budget_planning.py::test_inverted_dates_a_limit_of_zero_or_less_and_a_repeated_category_are_not_saved`
+
+#### C2-15 · Lucía crea un período con un tope de 0
+
+- **Sale de:** validación 7 · **Tipo:** integración
+- **Dado** Lucía con su sesión abierta,
+- **cuando** pide `POST /budget-periods` con el contenido de C1-11 y el tope de Transporte en 0,
+- **entonces** responde `422` con `budget_limit_not_positive`, y no se guarda ningún período.
+- **Test:** `tests/integration/test_budget_planning.py::test_lucia_creates_a_period_with_a_limit_of_zero`
+
+#### C2-16 · Un tope sobre una categoría de ingreso no se guarda
+
+- **Sale de:** CA-14 · **Tipo:** unitario
+- **Dado** Lucía, con su categoría de ingreso "Clases particulares",
+- **cuando** se crea o se cambia un período con un tope sobre ella,
+- **entonces** el caso de uso lo rechaza con `budget_category_not_expense`, y no escribe nada.
+- **Test:** `tests/unit/test_budget_planning.py::test_a_limit_on_an_income_category_is_not_saved`
+
+#### C2-17 · Lucía le pone un tope a "Clases particulares"
+
+- **Sale de:** CA-14 · **Tipo:** integración
+- **Dado** Lucía con el borrador de C1-11 guardado,
+- **cuando** pide `PUT /budget-periods/{period_id}` con un tope de 10000 sobre "Clases
+  particulares",
+- **entonces** responde `422` con `budget_category_not_expense`, y el borrador sigue con sus
+  topes.
+- **Test:** `tests/integration/test_budget_planning.py::test_lucia_puts_a_limit_on_clases_particulares`
+
+#### C2-18 · Un ingreso estimado negativo no se guarda, y uno de 0 sí
+
+- **Sale de:** CA-15 · **Tipo:** unitario
+- **Dado** Lucía,
+- **cuando** se crea un período con `estimated_income` -0.01, y otro con 0,
+- **entonces** el primero se rechaza con `estimated_income_negative` sin escribir nada, y el
+  segundo queda guardado con ingreso 0.
+- **Test:** `tests/unit/test_budget_planning.py::test_a_negative_estimated_income_is_not_saved_and_one_of_zero_is`
+
+#### C2-19 · Lucía crea un período con un ingreso de -1
+
+- **Sale de:** CA-15 · **Tipo:** integración
+- **Dado** Lucía con su sesión abierta,
+- **cuando** pide `POST /budget-periods` con el contenido de C1-11 y `estimated_income` -1,
+- **entonces** responde `422` con `estimated_income_negative`, y no se guarda ningún período.
+- **Test:** `tests/integration/test_budget_planning.py::test_lucia_creates_a_period_with_an_income_of_minus_one`
+
+#### C2-20 · La base rechaza un ingreso estimado negativo
+
+- **Sale de:** CA-15 y [AGENTS.md § 8](../../../AGENTS.md#8-base-de-datos) · **Tipo:** integración
+- **Dado** la base con la migración nueva aplicada,
+- **cuando** se inserta directo un período con `estimated_income` -1, sin pasar por la API,
+- **entonces** la base lo rechaza por su `CHECK`.
+- **Test:** `tests/integration/test_budget_planning.py::test_the_database_rejects_a_negative_estimated_income`
+
+#### C2-21 · Lucía le pone un tope a "Kiosco", la categoría de Pablo
+
+- **Sale de:** CA-12 y [AGENTS.md § 7](../../../AGENTS.md#7-seguridad) · **Tipo:** integración
+- **Dado** Lucía con su sesión abierta,
+- **cuando** pide `POST /budget-periods` con el contenido de C1-11 y un tope sobre "Kiosco",
+- **entonces** responde `404` con `not_found`, y no se guarda ningún período.
+- **Test:** `tests/integration/test_budget_planning.py::test_lucia_puts_a_limit_on_kiosco_the_category_of_pablo`
+
+#### C2-22 · Lucía le pone un tope a una categoría que no existe
+
+- **Sale de:** CA-12 · **Tipo:** integración
+- **Dado** Lucía con su sesión abierta,
+- **cuando** pide `POST /budget-periods` con el contenido de C1-11 y un tope sobre un
+  identificador que no es de ninguna categoría,
+- **entonces** responde `404` con `not_found`, y no `500`, y no se guarda ningún período.
+- **Test:** `tests/integration/test_budget_planning.py::test_lucia_puts_a_limit_on_a_category_that_does_not_exist`
+
+#### C2-23 · Lucía crea un período con `family_group_id`
+
+- **Sale de:** [pregunta abierta 7](#preguntas-abiertas) · **Tipo:** integración
+- **Dado** Lucía con su sesión abierta,
+- **cuando** pide `POST /budget-periods` con el contenido de C1-11 y un `family_group_id`,
+- **entonces** responde `422` con `group_period_not_supported`, y no se guarda ningún período:
+  crear uno de grupo llega con los grupos, en la segunda versión.
+- **Test:** `tests/integration/test_budget_planning.py::test_lucia_creates_a_period_with_family_group_id`
+
+#### C2-24 · Sin sesión, armar, cambiar, confirmar y ver las categorías responden `401`
+
+- **Sale de:** [la API](../../04-api.md) · **Tipo:** integración
+- **Dado** un pedido sin sesión, desde la página de la API,
+- **cuando** pide `POST /budget-periods`, `PUT /budget-periods/{period_id}`,
+  `POST /budget-periods/{period_id}/confirm` o `GET /categories`, cada uno por separado,
+- **entonces** cada uno responde `401` con `unauthorized`, y no se guarda nada.
+- **Test:** `tests/integration/test_budget_planning.py::test_without_a_session_building_changing_confirming_and_listing_categories_answer_401`
+
+#### C2-25 · Con dos errores a la vez, responde el primero del orden
+
+- **Sale de:** "Validaciones, en este orden" de [la API](../../04-api.md) · **Tipo:** unitario
+- **Dado** Sofía y el período confirmado de "Casa",
+- **cuando** lo cambia con otra moneda, y Lucía crea un período que se superpone con el actual
+  y tiene un tope de 0,
+- **entonces** a Sofía se le responde `not_the_owner` y no `confirmed_period_fixed`, y a Lucía
+  `budget_period_overlap` y no `budget_limit_not_positive`.
+- **Test:** `tests/unit/test_budget_planning.py::test_with_two_errors_at_once_the_first_of_the_order_answers`
+
+#### C2-26 · Pablo, el dueño, cambia y confirma el borrador de "Casa"
+
+- **Sale de:** [CA-16](#criterios-de-aceptación) · **Tipo:** integración
+- **Dado** Pablo, dueño de "Casa", con su sesión abierta, y el borrador del grupo,
+- **cuando** pide `PUT /budget-periods/{period_id}` con otro ingreso estimado y después
+  `POST /budget-periods/{period_id}/confirm`,
+- **entonces** los dos responden `200`, y el período queda con el ingreso nuevo y `confirmed`.
+- **Test:** `tests/integration/test_budget_planning.py::test_pablo_the_owner_changes_and_confirms_the_draft_of_casa`
+
+#### C2-27 · Pablo crea un período propio con las fechas del borrador de "Casa"
+
+- **Sale de:** validación 6 de [la API](../../04-api.md) · **Tipo:** integración
+- **Dado** Pablo con su sesión abierta, y el borrador de "Casa" del 10 de noviembre al 9 de
+  diciembre de 2026,
+- **cuando** pide `POST /budget-periods` con un período propio de esas mismas fechas,
+- **entonces** responde `201` y el período queda guardado: los períodos no se solapan por dueño, y
+  el del grupo tiene otro dueño que el suyo individual.
+- **Test:** `tests/integration/test_budget_planning.py::test_pablo_creates_an_own_period_with_the_dates_of_the_draft_of_casa`
+
+#### C2-28 · Un campo que la API no conoce no se guarda ni se ignora
+
+- **Sale de:** [la API](../../04-api.md) · **Tipo:** integración
+- **Dado** Lucía con su sesión abierta y su borrador de C1-11,
+- **cuando** pide `POST /budget-periods` con un campo que la API no conoce, o
+  `PUT /budget-periods/{period_id}` con un `family_group_id`, cada uno por separado,
+- **entonces** cada uno responde `422` con `invalid_request`, no se crea ningún período y el
+  borrador no cambia.
+- **Test:** `tests/integration/test_budget_planning.py::test_a_field_the_api_does_not_know_is_neither_saved_nor_ignored`
+
+#### C2-29 · Lucía cambia y confirma con un `period_id` que no es un UUID
+
+- **Sale de:** [la API](../../04-api.md) · **Tipo:** integración
+- **Dado** Lucía con su sesión abierta,
+- **cuando** pide `PUT /budget-periods/{period_id}` y `POST /budget-periods/{period_id}/confirm`
+  con un `period_id` que no es un UUID, cada uno por separado,
+- **entonces** cada uno responde `422` con `invalid_request`.
+- **Test:** `tests/integration/test_budget_planning.py::test_lucia_changes_and_confirms_with_a_period_id_that_is_not_a_uuid`
+
+Se resuelve en la [HU5](../../05-historias-de-usuario.md), porque hoy nada escribe en `sent_alert`:
+un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la referencia de
+`sent_alert` a `budget` impide borrarlo. Decidido por Vero el 31 de octubre de 2026.
 
 ### Corte 3 — observabilidad y accesibilidad
 
@@ -396,7 +692,7 @@ Los detalla el [contrato de UI](ui_contract.md).
 |---|---|---|
 | Cargando | Se abre el formulario, o se guarda o se confirma | Lo dice, sin el formulario editable |
 | Con contenido | Llegaron las categorías y, al editar, el borrador | El formulario, con el botón de guardar y, en un borrador guardado, el de confirmar |
-| Vacío | No aplica: el formulario siempre tiene algo que mostrar, porque el catálogo base de categorías nunca está vacío | — |
+| Vacío | `GET /categories` responde sin ninguna categoría de gasto | En lugar de la lista de topes, que no hay categorías de gasto para ponerles tope. El resto del formulario sigue disponible, y el período se puede guardar sin topes. Decidido por Vero el 31 de octubre de 2026 |
 | Error | La API responde con un error, no responde a tiempo o no se llega a ella | Qué falló, sin perder lo que el usuario cargó, y reintentar |
 
 ## Mensajes al usuario
@@ -456,8 +752,10 @@ en `frontend/src/messages.ts`.
 7. ~~¿Entran los períodos de grupo?~~ Resuelta el 29 de octubre de 2026: cambiar y confirmar
    un período lo hace solo su dueño, con `period_access.can_edit`, y un miembro que no lo es
    recibe `403` (CA-16), que es del corte 2. Crear un período de grupo desde el dashboard sigue
-   afuera. El contrato de `POST /budget-periods` ya admite `family_group_id`, con el `403` del
-   miembro: no se amplió ni se recortó, y queda sin implementar en esta funcionalidad.
+   afuera. Resuelto el 30 de octubre de 2026: un `POST /budget-periods` con `family_group_id`
+   responde `422` con `group_period_not_supported` (C2-23), y [la API](../../04-api.md) se
+   corrigió para decir lo mismo. Crear un período de grupo llega con los grupos, en la segunda
+   versión.
 8. ~~Qué responden `POST` y `PUT /budget-periods/{period_id}`.~~ Resuelta el 29 de octubre de
    2026: `201` y `200`, los dos con el período completo, con la misma forma que cada elemento de
    `GET /budget-periods`, porque la pantalla suma o reemplaza ese período en su lista sin otra
@@ -467,3 +765,19 @@ en `frontend/src/messages.ts`.
    [la API](../../04-api.md). Las restricciones de exclusión de `budget_period` comparan las
    fechas de todo período del mismo dueño, sin mirar su estado, así que un borrador nunca se
    superpone con otro período y confirmarlo no puede chocar.
+10. ~~El código del `409` por superposición.~~ Resuelta el 30 de octubre de 2026: un período que
+    se superpone con otro del mismo dueño, al crearlo o al cambiarlo, responde `409` con
+    `budget_period_overlap` (C2-09 a C2-11), y quedó en [la API](../../04-api.md).
+11. ~~Los códigos de los `422` de fechas invertidas, tope de cero o menos y categoría repetida.~~
+    Resuelta el 30 de octubre de 2026: cada uno lleva el suyo, `period_dates_inverted`,
+    `budget_limit_not_positive` y `budget_category_repeated` (C2-14 y C2-15), para que la
+    pantalla marque el campo que falló, y quedaron en [la API](../../04-api.md).
+12. ~~El orden de las validaciones de fechas.~~ Resuelta el 31 de octubre de 2026: el fin que falta
+    y las fechas invertidas van antes de comparar las fechas de un confirmado y de la
+    superposición, porque sin un fin válido no se pueden comparar. `family_group_id` va primero, y
+    la categoría ajena, junto a los demás errores de los topes. Quedó en [la API](../../04-api.md).
+13. ~~¿Se puede cambiar la cadencia de un período confirmado?~~ Resuelta el 31 de octubre de 2026:
+    no, responde `409` con `confirmed_period_fixed`, porque
+    [§ 3](../../reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)
+    dice que un confirmado cambia solo el ingreso estimado y los topes (CA-10 y C2-07). Quedó en
+    [la API](../../04-api.md).

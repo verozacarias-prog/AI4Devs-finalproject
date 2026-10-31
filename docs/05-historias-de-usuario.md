@@ -111,6 +111,8 @@
 - No se envía más de una alerta por umbral, categoría y período para evitar spam: como mucho dos por categoría.
 - Si el presupuesto es familiar, la alerta me llega a mí y a los demás miembros, a cada uno que aceptó recibir avisos.
 
+*Pendiente de decidir:* qué pasa al quitar de un período un tope que ya tuvo alertas, y con el historial de esas alertas. La referencia de `sent_alert` a `budget` hoy impide borrarlo ([FEAT-005](features/FEAT-005/spec.md)).
+
 *Prioridad:* Media
 *Estimación:* 8 puntos
 
