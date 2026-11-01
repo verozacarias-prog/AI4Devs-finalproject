@@ -300,8 +300,8 @@ DEV_SESSION_SUMMARY = "Enter as a test user"
 DEV_SESSION_DESCRIPTION = (
     "Opens a real session without a login code and returns it in the session cookie. In the "
     "local environment the user is chosen from the list, with `user_id`. A personal link, "
-    "with `access_token`, is the way in of the demo environment and is not built yet: it "
-    "answers `404`. One of the two is required."
+    "with `access_token`, is the way in of the demo environment. The first time, it asks to "
+    "accept the test notice, and accepting it creates the test user. One of the two is required."
 )
 DEV_SESSION_OK = "The session was opened. Its token is in the cookie, and the body is empty."
 DEV_SESSION_NOT_FOUND = (
@@ -312,4 +312,10 @@ DEV_SESSION_NOT_FOUND = (
 DEV_SESSION_INVALID = "Neither `user_id` nor `access_token` was sent, or `user_id` is not a UUID."
 DEV_SESSION_USER_ID = "The test user to enter as, from the list. Only in the local environment."
 # Not a secret: the description of the field that carries the value of a link.
-DEV_SESSION_ACCESS_TOKEN = "The value of a personal link. Not built yet: it answers `404`."  # noqa: S105
+DEV_SESSION_ACCESS_TOKEN = "The value of a personal link."  # noqa: S105
+DEV_SESSION_ACCEPT_TEST_NOTICE = "The version of the test notice the person accepted."
+DEV_SESSION_NOTICE_REQUIRED = (
+    "The link has no user yet and the test notice was not accepted, or the accepted version is "
+    "not the current one."
+)
+DEV_SESSION_NOTICE_VERSION = "The version of the test notice to show and accept."

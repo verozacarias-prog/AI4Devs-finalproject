@@ -48,9 +48,14 @@ TEMPLATE_MAIN_GOAL = MainGoal.SAVE
 # No country has a calling code that starts with 0, so a phone that starts like this is
 # nobody's number. It is what tells a test user apart (ADR 0016).
 TEST_PHONE_PREFIX = "+000"
+# How many digits follow the prefix, the same as the phones of the local test users.
+TEST_PHONE_DIGITS = 9
 
 # What the script records as consent: nobody accepted anything, and the version says so.
 LOCAL_TERMS_VERSION = "local-seed-1"
+# The version of the test notice a person accepts in demo. The dashboard has its text: a change
+# in that text comes with a new version here (ADR 0016).
+TEST_NOTICE_VERSION = "demo-1"
 
 
 @dataclass(frozen=True)

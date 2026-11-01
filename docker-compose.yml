@@ -49,6 +49,7 @@ services:
       # Off unless .env turns them on (ADR 0016).
       DEV_ENTRY_ENABLED: ${DEV_ENTRY_ENABLED:-false}
       WEB_CHAT_ENABLED: ${WEB_CHAT_ENABLED:-false}
+      SERVER_SECRET_KEY: ${SERVER_SECRET_KEY:-}
       # Empty means the default of the code (docs/operacion.md).
       QUEUE_MAX_WAIT_MINUTES: ${QUEUE_MAX_WAIT_MINUTES:-}
       # Checked here too: with a lock not longer than the call, no process starts (ADR 0010).

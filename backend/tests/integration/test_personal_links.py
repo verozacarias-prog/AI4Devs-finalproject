@@ -13,16 +13,16 @@ from collections.abc import Iterator
 
 import httpx2
 import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import Engine, create_engine, text
+
+from app.adapters.inbound.api.app import create_app
 from app.adapters.inbound.operator_commands.create_personal_link import (
     main as create_personal_link,
 )
 from app.adapters.inbound.operator_commands.regenerate_personal_link import (
     main as regenerate_personal_link,
 )
-from fastapi.testclient import TestClient
-from sqlalchemy import Engine, create_engine, text
-
-from app.adapters.inbound.api.app import create_app
 from app.settings import load_settings
 from tests.support.log_lines import events_of
 
@@ -434,7 +434,7 @@ def test_each_link_sees_only_its_own_data(
 
 
 def test_the_value_of_a_link_never_reaches_the_logs(
-    fresh_database_url: str, client: TestClient, stream: io.StringIO
+    fresh_database_url: str, stream: io.StringIO
 ) -> None:
     # Case 17.
     command_output = io.StringIO()
@@ -442,6 +442,8 @@ def test_the_value_of_a_link_never_reaches_the_logs(
     code = create_personal_link(["Ana"], _environ(fresh_database_url), command_output, command_logs)
     assert code == OK
     value = _value_in(command_output.getvalue())
+    # After the command, which configures the logging of its own process.
+    client = _client(fresh_database_url, stream)
 
     assert _post(client, access_token=value).status_code == 409
     assert _accept(client, value).status_code == 204
@@ -449,17 +451,20 @@ def test_the_value_of_a_link_never_reaches_the_logs(
     assert _post(client, access_token=invented).status_code == 404
     assert _post(client, access_token=value, user_id="not-a-uuid").status_code == 422
 
+    assert stream.getvalue(), "the logs of the API were not captured"
     logged = stream.getvalue() + command_logs.getvalue()
-    assert logged
     assert value not in logged
     assert invented not in logged
 
 
 def test_the_log_of_the_session_says_it_was_opened_by_a_personal_link(
-    fresh_database_url: str, client: TestClient, stream: io.StringIO
+    fresh_database_url: str, stream: io.StringIO
 ) -> None:
     # Case 18.
-    assert _accept(client, _create(fresh_database_url)).status_code == 204
+    value = _create(fresh_database_url)
+    # After the command, which configures the logging of its own process.
+    client = _client(fresh_database_url, stream)
+    assert _accept(client, value).status_code == 204
 
     [line] = events_of(stream, "auth.session_created")
     assert line["method"] == "dev_personal_link"

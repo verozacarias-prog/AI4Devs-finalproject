@@ -41,3 +41,8 @@ class PostgresSessionRepository:
         execute_write(
             self._connection, queries.REVOKE_SESSION, {"session_id": session_id, "at": at}
         )
+
+    def revoke_all_of_user(self, user_id: uuid.UUID, at: datetime) -> None:
+        execute_write(
+            self._connection, queries.REVOKE_SESSIONS_OF_USER, {"user_id": user_id, "at": at}
+        )

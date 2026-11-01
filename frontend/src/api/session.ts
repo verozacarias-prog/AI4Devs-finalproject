@@ -1,4 +1,4 @@
-import { HTTP_NOT_FOUND, HTTP_UNAUTHORIZED } from '../constants'
+import { HTTP_CONFLICT, HTTP_NOT_FOUND, HTTP_UNAUTHORIZED } from '../constants'
 import { request, type Failure, type Options } from './request'
 import { API_ROUTES } from './routes'
 import type { components } from './schema'
@@ -7,6 +7,16 @@ export type SessionUser = components['schemas']['Me']
 export type DevUser = components['schemas']['DevUser']
 type DevUsers = components['schemas']['DevUsers']
 type DevSessionRequest = components['schemas']['DevSessionRequest']
+type TestNoticeRequired = components['schemas']['TestNoticeRequired']
+
+/** What entering with a personal link can end in, besides a failure. */
+export type LinkEntry =
+  | { kind: 'entered' }
+  /** The link has no user yet: the person has to accept this version of the test notice. */
+  | { kind: 'notice-required'; version: string }
+  /** The link does not exist or was regenerated. */
+  | { kind: 'link-rejected' }
+  | Failure
 
 /** Where a person stands when the entry screen opens. */
 export type Entry =
@@ -42,6 +52,27 @@ export async function enterAs(
   const answer = await request(API_ROUTES.devSession, { ...options, method: 'POST', body })
   if (answer.kind !== 'answered') return answer
   return answer.ok ? { kind: 'entered' } : { kind: 'api-error' }
+}
+
+/**
+ * Opens the session of a personal link (POST /dev/session, ADR 0016). The value travels in the
+ * body, never in the address the server sees.
+ */
+export async function enterWithLink(
+  value: string,
+  acceptedNotice: string | null,
+  options: Options = {},
+): Promise<LinkEntry> {
+  const body: DevSessionRequest = { access_token: value }
+  if (acceptedNotice !== null) body.accept_test_notice = acceptedNotice
+  const answer = await request(API_ROUTES.devSession, { ...options, method: 'POST', body })
+  if (answer.kind !== 'answered') return answer
+  if (answer.ok) return { kind: 'entered' }
+  if (answer.status === HTTP_NOT_FOUND) return { kind: 'link-rejected' }
+  if (answer.status === HTTP_CONFLICT) {
+    return { kind: 'notice-required', version: (answer.body as TestNoticeRequired).notice_version }
+  }
+  return { kind: 'api-error' }
 }
 
 /** Closes the session of this browser (POST /auth/logout). */

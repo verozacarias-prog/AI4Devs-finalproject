@@ -1,0 +1,58 @@
+# The demo environment in Render (ADR 0029). The variables with `sync: false` are secrets: Render
+# asks for them when the Blueprint is created, and their values never come to this repository.
+services:
+  - type: web
+    name: platita-demo-web
+    runtime: docker
+    region: virginia
+    plan: 0.5c-512mb
+    branch: final-project-VNZ
+    autoDeployTrigger: checksPass
+    healthCheckPath: /readyz
+    # It runs before the version changes: if a migration fails, the previous version stays.
+    preDeployCommand: alembic upgrade head
+    envVars:
+      - key: APP_ENV
+        value: demo
+      - key: PORT
+        value: "8000"
+      - key: DEV_ENTRY_ENABLED
+        value: "true"
+      - key: WEB_CHAT_ENABLED
+        value: "true"
+      # With the role platita_app, not with the owner of the tables (ADR 0030).
+      - key: DATABASE_URL
+        sync: false
+      - key: MIGRATIONS_DATABASE_URL
+        sync: false
+      - key: APPLICATION_DB_PASSWORD
+        sync: false
+      - key: SERVER_SECRET_KEY
+        sync: false
+  - type: worker
+    name: platita-demo-worker
+    runtime: docker
+    region: virginia
+    plan: 0.5c-512mb
+    branch: final-project-VNZ
+    autoDeployTrigger: checksPass
+    dockerCommand: python -m app.adapters.inbound.message_worker.main
+    envVars:
+      - key: APP_ENV
+        value: demo
+      - key: DEV_ENTRY_ENABLED
+        value: "true"
+      - key: WEB_CHAT_ENABLED
+        value: "true"
+      - key: SERVER_SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+
+databases:
+  - name: platita-demo-db
+    region: virginia
+    plan: 0.1c-256mb
+    postgresMajorVersion: "16"

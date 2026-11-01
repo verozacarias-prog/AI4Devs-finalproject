@@ -39,6 +39,8 @@ class Settings:
     dashboard_dir: Path | None = None
     # The development entry, which opens a session without a login code (ADR 0016).
     dev_entry_enabled: bool = False
+    # What the personal links are signed with (ADR 0016). Never logged.
+    server_secret_key: str | None = field(default=None, repr=False)
     # The chat of the dashboard, for development and demonstration (ADR 0002, ADR 0016).
     web_chat_enabled: bool = False
     # How long a pending message may wait before GET /queuez fails.
@@ -111,6 +113,10 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
         ) from None
     dev_entry_enabled = _read_scaffold_switch(environ, EnvVar.DEV_ENTRY_ENABLED, environment)
     web_chat_enabled = _read_scaffold_switch(environ, EnvVar.WEB_CHAT_ENABLED, environment)
+    server_secret_key = _read(environ, EnvVar.SERVER_SECRET_KEY) or None
+    # In demo a personal link is the only way in: without the key nobody could ever enter.
+    if dev_entry_enabled and environment is Environment.DEMO and server_secret_key is None:
+        raise SettingsError(messages.MISSING_ENV_VAR.format(name=EnvVar.SERVER_SECRET_KEY))
     dashboard_dir = _read(environ, EnvVar.DASHBOARD_DIR)
     worker_lock_seconds = _read_positive_integer(
         environ, EnvVar.WORKER_LOCK_SECONDS, DEFAULT_WORKER_LOCK_SECONDS
@@ -131,6 +137,7 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
         version=_read(environ, EnvVar.APP_VERSION) or DEFAULT_VERSION,
         dashboard_dir=Path(dashboard_dir) if dashboard_dir else None,
         dev_entry_enabled=dev_entry_enabled,
+        server_secret_key=server_secret_key,
         web_chat_enabled=web_chat_enabled,
         queue_max_wait_minutes=_read_positive_integer(
             environ, EnvVar.QUEUE_MAX_WAIT_MINUTES, DEFAULT_QUEUE_MAX_WAIT_MINUTES

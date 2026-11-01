@@ -139,7 +139,7 @@ export interface paths {
         put?: never;
         /**
          * Enter as a test user
-         * @description Opens a real session without a login code and returns it in the session cookie. In the local environment the user is chosen from the list, with `user_id`. A personal link, with `access_token`, is the way in of the demo environment and is not built yet: it answers `404`. One of the two is required.
+         * @description Opens a real session without a login code and returns it in the session cookie. In the local environment the user is chosen from the list, with `user_id`. A personal link, with `access_token`, is the way in of the demo environment. The first time, it asks to accept the test notice, and accepting it creates the test user. One of the two is required.
          */
         post: operations["enter_dev_session_post"];
         delete?: never;
@@ -572,8 +572,13 @@ export interface components {
         /** DevSessionRequest */
         DevSessionRequest: {
             /**
+             * Accept Test Notice
+             * @description The version of the test notice the person accepted.
+             */
+            accept_test_notice?: string | null;
+            /**
              * Access Token
-             * @description The value of a personal link. Not built yet: it answers `404`.
+             * @description The value of a personal link.
              */
             access_token?: string | null;
             /**
@@ -711,6 +716,19 @@ export interface components {
             id: string;
             /** @description `pending` until the worker takes it. */
             status: components["schemas"]["InboundStatus"];
+        };
+        /** TestNoticeRequired */
+        TestNoticeRequired: {
+            /**
+             * Error
+             * @description The code of the error: a short lowercase word that never changes.
+             */
+            error: string;
+            /**
+             * Notice Version
+             * @description The version of the test notice to show and accept.
+             */
+            notice_version: string;
         };
         /**
          * TransactionSource
@@ -1101,6 +1119,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description The link has no user yet and the test notice was not accepted, or the accepted version is not the current one. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestNoticeRequired"];
                 };
             };
             /** @description The body is over 64 KiB. What was left of it was not read. */

@@ -67,6 +67,34 @@ TOUCH_SESSION = "UPDATE session SET last_seen_at = :at WHERE id = :session_id"
 
 REVOKE_SESSION = "UPDATE session SET revoked_at = :at WHERE id = :session_id"
 
+REVOKE_SESSIONS_OF_USER = """
+    UPDATE session SET revoked_at = :at WHERE user_id = :user_id AND revoked_at IS NULL
+"""
+
+INSERT_DEV_ACCESS_LINK = """
+    INSERT INTO dev_access_link (id, label, user_id, token_hash)
+    VALUES (:id, :label, :user_id, :token_hash)
+"""
+
+SELECT_DEV_ACCESS_LINK_BY_LABEL = """
+    SELECT id, label, user_id, token_hash FROM dev_access_link WHERE label = :label
+"""
+
+# The lock makes two acceptances of one link wait for each other, so only one creates the user.
+# Not a secret: the name of this query has the word "token" in it.
+LOCK_DEV_ACCESS_LINK_BY_TOKEN_HASH = """
+    SELECT id, label, user_id, token_hash
+      FROM dev_access_link
+     WHERE token_hash = :token_hash
+       FOR UPDATE
+"""  # noqa: S105
+
+UPDATE_DEV_ACCESS_LINK_TOKEN_HASH = """
+    UPDATE dev_access_link SET token_hash = :token_hash WHERE id = :link_id
+"""  # noqa: S105
+
+ASSIGN_DEV_ACCESS_LINK_USER = "UPDATE dev_access_link SET user_id = :user_id WHERE id = :link_id"
+
 INSERT_ACCOUNT = """
     INSERT INTO account (id, user_id, name, type, currency, initial_balance, created_at)
     VALUES (:id, :user_id, :name, :type, :currency, :initial_balance, :opened_at)

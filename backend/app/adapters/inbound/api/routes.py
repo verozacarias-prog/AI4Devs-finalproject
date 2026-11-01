@@ -5,6 +5,8 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Literal
 
+from app.constants import DASHBOARD_PREFIX as DASHBOARD_PREFIX
+
 HEALTHZ = "/healthz"
 READYZ = "/readyz"
 QUEUEZ = "/queuez"
@@ -69,6 +71,4 @@ class ApiErrorCode(StrEnum):
     INTERNAL_ERROR = "internal_error"
 
 
-# The compiled dashboard is served under this prefix (ADR 0016).
-DASHBOARD_PREFIX = "/app"
 DASHBOARD_MOUNT_NAME = "dashboard"

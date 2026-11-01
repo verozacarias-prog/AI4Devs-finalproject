@@ -24,7 +24,7 @@ from app.adapters.inbound.api.routers.chat import build_chat_router
 from app.adapters.inbound.api.routers.dev_entry import build_dev_entry_router
 from app.adapters.inbound.api.routers.health import build_health_router
 from app.adapters.inbound.api.routers.session import build_session_router
-from app.adapters.inbound.api.security_headers import add_security_headers
+from app.adapters.inbound.api.security_headers import build_security_headers_middleware
 from app.adapters.observability.events import Event, LoggerName
 from app.adapters.observability.logs import configure_logging
 from app.adapters.outbound.postgres.connection import create_db_engine
@@ -76,7 +76,7 @@ def create_app(
     app.add_middleware(CountedBody)
     app.middleware("http")(refuse_requests_from_elsewhere)
     app.middleware("http")(refuse_declared_bodies_over_the_limit)
-    app.middleware("http")(add_security_headers)
+    app.middleware("http")(build_security_headers_middleware(settings.environment))
     install_error_handlers(app, settings.environment)
     app.middleware("http")(log_request)
     queue_wait = timedelta(minutes=settings.queue_max_wait_minutes)
@@ -122,7 +122,12 @@ def create_app(
         in_local = settings.environment is Environment.LOCAL
         app.include_router(
             build_dev_entry_router(
-                lambda: OpenDevSession(unit_of_work(), clock, settings.environment),
+                lambda: OpenDevSession(
+                    unit_of_work(),
+                    clock,
+                    settings.environment,
+                    server_key=settings.server_secret_key,
+                ),
                 (lambda: ListTestUsers(unit_of_work())) if in_local else None,
             )
         )

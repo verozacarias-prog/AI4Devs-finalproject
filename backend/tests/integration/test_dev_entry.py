@@ -66,7 +66,12 @@ def _client(
     dev_entry: str | None = "true",
     stream: io.StringIO | None = None,
 ) -> TestClient:
-    environ = {"DATABASE_URL": database_url, "APP_ENV": environment, "APP_VERSION": "test"}
+    environ = {
+        "DATABASE_URL": database_url,
+        "APP_ENV": environment,
+        "APP_VERSION": "test",
+        "SERVER_SECRET_KEY": "only-for-the-tests-of-the-development-entry",
+    }
     if dev_entry is not None:
         environ["DEV_ENTRY_ENABLED"] = dev_entry
     app = create_app(load_settings(environ), log_stream=stream or io.StringIO())

@@ -95,7 +95,7 @@ def install_error_handlers(app: FastAPI, environment: Environment) -> None:
     async def unexpected(request: Request, error: Exception) -> Response:
         """It never passes through the middlewares, so it carries their headers itself."""
         _log(error, request, in_full=in_full)
-        headers = security_headers_for(request.url.path)
+        headers = security_headers_for(request.url.path, environment)
         request_id = request_id_var.get()
         if request_id is not None:
             headers = headers | {REQUEST_ID_HEADER: request_id}
