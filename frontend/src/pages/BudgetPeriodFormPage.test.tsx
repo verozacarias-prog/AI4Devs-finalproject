@@ -1,5 +1,5 @@
 /**
- * Cases C1-22, C1-24 to C1-32, C2-32 to C2-38, C2-43, C2-45, C2-46 and C2-48 of FEAT-005 (docs/features/FEAT-005/spec.md): the states of the
+ * Cases C1-22, C1-24 to C1-32, C2-32 to C2-38, C2-43, C2-45, C2-46, C2-48 and C2-49 of FEAT-005 (docs/features/FEAT-005/spec.md): the states of the
  * form of a budget period. The API is simulated at the network level, so the page and its API calls are tested
  * together.
  */
@@ -641,3 +641,25 @@ test('case C2-48: the limits are loaded with a single dropdown and go into a tab
     { category_id: SALUD, limit_amount: '40000' },
   ])
 })
+
+test.each(['Ingreso estimado', 'Monto del tope nuevo', 'Monto del tope 1'])(
+  'case C2-49: the amount fields take only digits and one decimal separator (%s)',
+  async (label) => {
+    apiWith([OCTOBER])
+
+    renderForm()
+
+    await ready()
+    for (const [written, kept] of [
+      ['12a', '12'],
+      ['-500', '500'],
+      ['1e30', '130'],
+      ['1450000,55', '1450000,55'],
+      ['1.450.000', '1.450000'],
+    ]) {
+      type(label, written)
+      expect(field(label).value).toBe(kept)
+    }
+    expect(screen.getAllByText('Sin puntos de miles. Para los centavos usá coma: 1450000,55')).toHaveLength(2)
+  },
+)
