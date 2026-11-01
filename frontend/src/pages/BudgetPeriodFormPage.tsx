@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardTitle } from '@/components/ui/card'
 import { formatAmount, formatDate } from '@/lib/budget-format'
+import { lastIndividualPeriod, nextPeriodStart } from '@/lib/next-period'
 import {
   confirmPeriod,
   loadBudgetPeriods,
@@ -16,7 +17,7 @@ import {
   type Saved,
 } from '../api/budget'
 import type { Failure } from '../api/request'
-import { API_ERROR_NOT_FOUND, ISO_DATE_LENGTH } from '../constants'
+import { API_ERROR_NOT_FOUND, API_ERROR_PERIOD_OVERLAP } from '../constants'
 import { MESSAGES } from '../messages'
 
 /**
@@ -224,16 +225,22 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
                   </span>
                 )}
               </div>
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                {TEXT.income}
-                <input
-                  inputMode="decimal"
-                  value={fields.income}
-                  required
-                  onChange={(event) => setFields({ ...fields, income: event.target.value })}
-                  className={CONTROL}
-                />
-              </label>
+              <div className="flex flex-col gap-1">
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  {TEXT.income}
+                  <input
+                    inputMode="decimal"
+                    value={fields.income}
+                    required
+                    aria-describedby="period-income-hint"
+                    onChange={(event) => setFields({ ...fields, income: amountText(event.target.value) })}
+                    className={CONTROL}
+                  />
+                </label>
+                <span id="period-income-hint" className="text-xs text-muted-foreground">
+                  {TEXT.amountHint}
+                </span>
+              </div>
             </div>
             <Limits
               limits={fields.limits}
@@ -241,7 +248,7 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
               onChange={(limits) => setFields({ ...fields, limits })}
             />
           </fieldset>
-          {problem && <ProblemAlert problem={problem} onRetry={retry} />}
+          {problem && <ProblemAlert problem={problem} others={otherPeriods(periods ?? [], period)} onRetry={retry} />}
           <div className="flex flex-wrap gap-2">
             <Button type="submit" disabled={busy}>
               {TEXT.save}
@@ -300,6 +307,9 @@ function Limits({
   options: { id: string; name: string }[]
   onChange: (limits: Limit[]) => void
 }) {
+  const [chosenCategory, setChosenCategory] = useState('')
+  const [newAmount, setNewAmount] = useState('')
+  const [amountMissing, setAmountMissing] = useState(false)
   if (options.length === 0) {
     // The query worked and there is nothing to choose: empty, not a failure.
     return (
@@ -309,55 +319,115 @@ function Limits({
       </div>
     )
   }
-  const change = (key: string, changes: Partial<Limit>) =>
-    onChange(limits.map((limit) => (limit.key === key ? { ...limit, ...changes } : limit)))
+  const taken = new Set(limits.map((limit) => limit.categoryId))
+  const free = options.filter((option) => !taken.has(option.id))
+  const newCategory = free.some((option) => option.id === chosenCategory) ? chosenCategory : free[0]?.id
+  const nameOf = (categoryId: string) => options.find((option) => option.id === categoryId)?.name
   const add = () => {
-    const taken = new Set(limits.map((limit) => limit.categoryId))
-    const free = options.find((option) => !taken.has(option.id)) ?? options[0]
-    onChange([...limits, { key: crypto.randomUUID(), categoryId: free.id, amount: '' }])
+    if (newAmount.trim() === '') return setAmountMissing(true)
+    setAmountMissing(false)
+    setNewAmount('')
+    onChange([...limits, { key: crypto.randomUUID(), categoryId: newCategory, amount: newAmount }])
   }
   return (
     <fieldset className="flex flex-col gap-3">
       <legend className="text-sm font-medium">{TEXT.limits}</legend>
-      {limits.map((limit, index) => (
-        <div key={limit.key} className="flex flex-wrap items-end gap-2">
-          <label className="flex grow flex-col gap-1 text-sm">
-            {TEXT.limitCategory(index + 1)}
-            <select
-              value={limit.categoryId}
-              onChange={(event) => change(limit.key, { categoryId: event.target.value })}
-              className={CONTROL}
-            >
-              {options.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            {TEXT.limitAmount(index + 1)}
-            <input
-              inputMode="decimal"
-              value={limit.amount}
-              required
-              onChange={(event) => change(limit.key, { amount: event.target.value })}
-              className={CONTROL}
-            />
-          </label>
-          <Button
-            type="button"
-            variant="outline"
-            aria-label={TEXT.removeLimitLabel(index + 1)}
-            onClick={() => onChange(limits.filter((candidate) => candidate.key !== limit.key))}
-          >
-            {TEXT.removeLimit}
-          </Button>
+      <p className="text-xs text-muted-foreground">{TEXT.amountHint}</p>
+      {free.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{TEXT.allLimited}</p>
+      ) : (
+        <div className="flex flex-col gap-1">
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="flex min-w-0 grow flex-col gap-1 text-sm">
+              {TEXT.newLimitCategory}
+              <select value={newCategory} onChange={(event) => setChosenCategory(event.target.value)} className={CONTROL}>
+                {free.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              {TEXT.newLimitAmount}
+              <input
+                inputMode="decimal"
+                value={newAmount}
+                aria-describedby={amountMissing ? 'new-limit-missing' : undefined}
+                onChange={(event) => setNewAmount(amountText(event.target.value))}
+                onKeyDown={(event) => {
+                  // Enter adds the limit: it does not save the whole form by accident.
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    add()
+                  }
+                }}
+                className={CONTROL}
+              />
+            </label>
+            <Button type="button" variant="outline" onClick={add}>
+              {TEXT.addLimit}
+            </Button>
+          </div>
+          {amountMissing && (
+            <p id="new-limit-missing" className="text-sm text-destructive">
+              {TEXT.missingAmount}
+            </p>
+          )}
         </div>
-      ))}
-      <Button type="button" variant="outline" className="self-start" onClick={add}>
-        {TEXT.addLimit}
-      </Button>
+      )}
+      {limits.length > 0 && (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left text-muted-foreground">
+              <th scope="col" className="py-2 font-medium">
+                {TEXT.limitCategoryColumn}
+              </th>
+              <th scope="col" className="py-2 font-medium">
+                {TEXT.limitAmountColumn}
+              </th>
+              <th scope="col" className="py-2">
+                <span className="sr-only">{TEXT.limitActionsColumn}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {limits.map((limit, index) => (
+              <tr key={limit.key} className="border-b">
+                <th scope="row" className="py-2 pr-2 text-left font-medium">
+                  {nameOf(limit.categoryId)}
+                </th>
+                <td className="py-2 pr-2">
+                  <input
+                    inputMode="decimal"
+                    value={limit.amount}
+                    required
+                    aria-label={TEXT.limitAmount(index + 1)}
+                    onChange={(event) =>
+                      onChange(
+                        limits.map((candidate) =>
+                          candidate.key === limit.key ? { ...candidate, amount: amountText(event.target.value) } : candidate,
+                        ),
+                      )
+                    }
+                    className={`${CONTROL} w-full min-w-24`}
+                  />
+                </td>
+                <td className="py-2 text-right">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    aria-label={TEXT.removeLimitLabel(index + 1)}
+                    onClick={() => onChange(limits.filter((candidate) => candidate.key !== limit.key))}
+                  >
+                    {TEXT.removeLimit}
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </fieldset>
   )
 }
@@ -385,7 +455,19 @@ function Row({ label, value }: { label: string; value: string }) {
   )
 }
 
-function ProblemAlert({ problem, onRetry, onBack }: { problem: Problem; onRetry: () => void; onBack?: () => void }) {
+function ProblemAlert({
+  problem,
+  others = [],
+  onRetry,
+  onBack,
+}: {
+  problem: Problem
+  /** The other periods of the owner, shown when the dates overlap one of them. */
+  others?: BudgetPeriod[]
+  onRetry: () => void
+  onBack?: () => void
+}) {
+  const showOthers = problem.kind === 'refused' && problem.code === API_ERROR_PERIOD_OVERLAP && others.length > 0
   return (
     <div role="alert" className="flex flex-col items-start gap-2">
       {problem.kind === 'refused' ? (
@@ -398,6 +480,16 @@ function ProblemAlert({ problem, onRetry, onBack }: { problem: Problem; onRetry:
             {MESSAGES.common.retry}
           </Button>
         </>
+      )}
+      {showOthers && (
+        <div className="text-sm">
+          <p className="font-medium">{TEXT.yourPeriods}</p>
+          <ul>
+            {others.map((other) => (
+              <li key={other.id}>{MESSAGES.budget.periodRange(formatDate(other.period_start), formatDate(other.period_end))}</li>
+            ))}
+          </ul>
+        </div>
       )}
       {onBack && (
         <Button type="button" variant="outline" onClick={onBack}>
@@ -461,18 +553,22 @@ function limitsOf(period: BudgetPeriod): Limit[] {
  * it is a draft, from the day after it ends, with its end empty (CA-13).
  */
 function copyOfLast(periods: BudgetPeriod[]): Fields {
-  const individual = periods.filter((candidate) => candidate.family_group_id === null)
-  if (individual.length === 0) return EMPTY_FIELDS
-  const last = individual.reduce((latest, candidate) =>
-    candidate.period_start > latest.period_start ? candidate : latest,
-  )
-  return { ...fieldsOf(last), start: dayAfter(last.period_end), end: '' }
+  const last = lastIndividualPeriod(periods)
+  return last ? { ...fieldsOf(last), start: nextPeriodStart(last), end: '' } : EMPTY_FIELDS
 }
 
-function dayAfter(isoDate: string): string {
-  const day = new Date(isoDate)
-  day.setUTCDate(day.getUTCDate() + 1)
-  return day.toISOString().slice(0, ISO_DATE_LENGTH)
+/** The other periods of the same owner: the ones the dates of this one can overlap. */
+function otherPeriods(periods: BudgetPeriod[], period: BudgetPeriod | null): BudgetPeriod[] {
+  const owner = period?.family_group_id ?? null
+  return periods.filter((candidate) => candidate.family_group_id === owner && candidate.id !== period?.id)
+}
+
+/** What an amount field keeps of what is typed: digits and the first decimal separator. */
+function amountText(written: string): string {
+  const kept = written.replace(/[^\d.,]/g, '')
+  const separator = kept.search(/[.,]/)
+  if (separator < 0) return kept
+  return kept.slice(0, separator + 1) + kept.slice(separator + 1).replace(/[.,]/g, '')
 }
 
 /** Each amount goes as the text the user wrote, with the decimal comma they may have used. */

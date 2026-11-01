@@ -24,6 +24,7 @@ export const HTTP_SERVER_ERROR = 500
 export const HTTP_SERVICE_UNAVAILABLE = 503
 /** What the API answers for something that is not there, or that is of someone else. */
 export const API_ERROR_NOT_FOUND = 'not_found'
+export const API_ERROR_PERIOD_OVERLAP = 'budget_period_overlap'
 /** How long an ISO date is, such as 2026-10-15. */
 export const ISO_DATE_LENGTH = 10
 

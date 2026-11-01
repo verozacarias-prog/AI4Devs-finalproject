@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardTitle } from '@/components/ui/card'
 import { formatAmount, formatDate } from '@/lib/budget-format'
 import { cn } from '@/lib/class-names'
+import { lastIndividualPeriod, nextPeriodStart } from '@/lib/next-period'
 import {
   loadBudgetPeriods,
   loadBudgetStatus,
@@ -147,31 +148,40 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
     )
   }
 
+  const canBuild = view.kind === 'summary' || view.kind === 'no-periods'
+  const lastPeriod = lastIndividualPeriod(periods ?? [])
+
   return (
     <Card aria-labelledby="budget-heading">
       <CardTitle id="budget-heading" className="text-xl">
         {TEXT.heading}
       </CardTitle>
-      {periods && periods.length > 0 && (
-        <label className="flex flex-col gap-1 text-sm font-medium">
-          {TEXT.period}
-          <select
-            value={periodId ?? ''}
-            onChange={(event) => choosePeriod(event.target.value)}
-            className="rounded-md border bg-card px-3 py-2 outline-none focus-visible:ring-(length:--focus-ring-width) focus-visible:ring-ring"
-          >
-            {periods.map((candidate) => (
-              <option key={candidate.id} value={candidate.id}>
-                {periodLabel(candidate)}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      {periods !== null && (view.kind === 'summary' || view.kind === 'no-periods') && (
-        <div className="flex flex-wrap gap-2">
+      {periods !== null && canBuild && (
+        <section aria-labelledby="budget-create-heading" className="flex flex-col items-start gap-2 rounded-lg border p-4">
+          <h3 id="budget-create-heading" className="text-sm font-medium">
+            {TEXT.create}
+          </h3>
+          {lastPeriod && <CardDescription>{TEXT.nextStart(formatDate(nextPeriodStart(lastPeriod)))}</CardDescription>}
           <Button onClick={() => setFormPeriodId(null)}>{TEXT.build}</Button>
-          {chosen?.can_edit && (
+        </section>
+      )}
+      {periods && periods.length > 0 && (
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="flex min-w-0 grow flex-col gap-1 text-sm font-medium">
+            {TEXT.period}
+            <select
+              value={periodId ?? ''}
+              onChange={(event) => choosePeriod(event.target.value)}
+              className="rounded-md border bg-card px-3 py-2 outline-none focus-visible:ring-(length:--focus-ring-width) focus-visible:ring-ring"
+            >
+              {periods.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {periodLabel(candidate)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {canBuild && chosen?.can_edit && (
             <Button variant="outline" onClick={() => setFormPeriodId(chosen.id)}>
               {TEXT.edit}
             </Button>
