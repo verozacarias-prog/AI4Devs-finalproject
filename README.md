@@ -116,9 +116,9 @@ Qué trae cada usuario de prueba está en [operación](docs/operacion.md#2-entor
 
 ### Probar el presupuesto
 
-Armar los topes de un período todavía no se puede desde la aplicación, así que un script le
-carga a Lucía un ingreso estimado, tres topes y algunos movimientos, en su período actual. Se
-corre una sola vez, después de los datos de prueba:
+Los topes se arman desde Presupuesto. Para ver la pantalla con datos sin cargarlos a mano, un
+script le carga a Lucía un ingreso estimado, tres topes y algunos movimientos, en su período
+actual. Se corre una sola vez, después de los datos de prueba:
 
 ```sh
 docker compose exec -T db psql -U platita -d platita < scripts/budget_test_data.sql

@@ -467,6 +467,8 @@ no es miembro de ningún grupo, y hoy es 29 de octubre de 2026.
 - **Aprobado por:** Veronica Zacarias 30/10/2026
 - **C2-30 a C2-38, de componente, sumados para la pantalla:** Veronica Zacarias 31/10/2026
 - **C2-39 a C2-45, sumados al cerrar el corte:** Veronica Zacarias 01/11/2026
+- **C2-46 a C2-48, sumados al probar a mano:** Veronica Zacarias 01/11/2026
+- **C2-49, sumado al probar a mano:** Veronica Zacarias 01/11/2026
 
 Entran las validaciones de [la API](../../04-api.md), en su orden: el período de otro usuario,
 `404`; el período de un grupo para un miembro que no es el dueño, `403`
@@ -486,7 +488,7 @@ en el corte 1: entran acá, con sus tests primero (ADR 0024). Hasta entonces, un
 categoría que no existe termina en `500`, porque la base rechaza la referencia, y lo cubre el
 `404` de la categoría ajena. Decidido por Vero el 30 de octubre de 2026.
 
-- **Total:** 45 casos, 10 unitarios, 24 de integración y 11 de componente. Además de los datos de
+- **Total:** 49 casos, 10 unitarios, 24 de integración y 15 de componente. Además de los datos de
   arriba, Pablo es el dueño del grupo "Casa" y Sofía es miembro, sin serlo; el grupo tiene un
   período confirmado del 10 de octubre al 9 de noviembre de 2026 y un borrador del 10 de
   noviembre al 9 de diciembre. Pablo tiene un período propio del 10 de octubre al 9 de noviembre
@@ -540,6 +542,10 @@ categoría que no existe termina en `500`, porque la base rechaza la referencia,
 | C2-43 | **Pantalla.** La moneda se elige de la lista del catálogo | Componente | CA-13 y CA-17 |
 | C2-44 | Lucía crea un período con un ingreso de `1e30` | Integración | Validación 7 |
 | C2-45 | **Pantalla.** La línea de estado dice qué está haciendo y anuncia cómo terminó | Componente | el contrato de UI |
+| C2-46 | **Pantalla.** Si las fechas se superponen, el aviso muestra los otros períodos | Componente | el contrato de UI |
+| C2-47 | **Pantalla.** El resumen separa crear un período de ver los existentes | Componente | el contrato de UI |
+| C2-48 | **Pantalla.** Los topes se cargan con un solo dropdown y se agregan a una tabla | Componente | el contrato de UI |
+| C2-49 | **Pantalla.** Los campos de monto aceptan solo cifras y un separador decimal | Componente | el contrato de UI |
 
 #### C2-01 · Cambiar o confirmar un período que no existe responde que no existe
 
@@ -935,6 +941,42 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 - **entonces** la línea de estado (`role="status"`) dice "Guardando…" y después que el período quedó guardado; dice "Confirmando…" y después que quedó confirmado. Decidido por Vero el 1 de noviembre de 2026.
 - **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::the status line says what it is doing and announces how it ended`
 
+#### C2-46 · Si las fechas se superponen, el aviso muestra los otros períodos
+
+- **Sale de:** el contrato de UI · **Tipo:** componente
+- **Estado:** nuevo, aprobado
+- **Dado** Lucía con su período del 10 de octubre al 9 de noviembre de 2026 y su borrador del 10 de noviembre al 9 de diciembre, y un período de un grupo del que es miembro,
+- **cuando** arma un período, la API responde `409` con `budget_period_overlap`,
+- **entonces** debajo del mensaje se ven "Tus períodos" con las fechas de esos dos, sin los de un grupo, sin "Reintentar" y sin perder lo cargado. Al cambiar un período, no aparece el mismo período que se está cambiando. Decidido por Vero el 1 de noviembre de 2026.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::if the dates overlap the notice shows the other periods`
+
+#### C2-47 · El resumen separa crear un período de ver los existentes
+
+- **Sale de:** el contrato de UI · **Tipo:** componente
+- **Estado:** nuevo, aprobado
+- **Dado** Lucía con un período individual del 10 de octubre al 9 de noviembre de 2026 y un período de un grupo que termina después,
+- **cuando** abre Presupuesto,
+- **entonces** se ve "Tu próximo período puede empezar el 10/11/2026" y "Armar un período" en su propio bloque, y el selector "Tus períodos existentes" con "Editar" al lado. Sin períodos, se ve "Armar un período", sin la fecha y sin el selector. Decidido por Vero el 1 de noviembre de 2026.
+- **Test:** `frontend/src/pages/BudgetPage.test.tsx::the summary separates building a period from seeing the existing ones`
+
+#### C2-48 · Los topes se cargan con un solo dropdown y se agregan a una tabla
+
+- **Sale de:** el contrato de UI · **Tipo:** componente
+- **Estado:** nuevo, aprobado
+- **Dado** el último período de Lucía con topes en Supermercado y Transporte, y sus categorías Salud, Supermercado y Transporte,
+- **cuando** abre el formulario, intenta sumar Salud sin monto, la suma con un monto, cambia el monto de Supermercado en su fila, quita Transporte y guarda,
+- **entonces** los topes copiados vienen como filas de una tabla, con el monto editable y "Quitar" en cada una; hay un solo dropdown, que ofrece solo las categorías sin tope; sin monto no se suma y lo dice; al quitar Transporte vuelve al dropdown; al sumar Salud, "Ya tienen tope todas tus categorías" aparece solo si no queda ninguna; y se pide guardar con los topes de la tabla. Decidido por Vero el 1 de noviembre de 2026.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::the limits are loaded with a single dropdown and go into a table`
+
+#### C2-49 · Los campos de monto aceptan solo cifras y un separador decimal
+
+- **Sale de:** el contrato de UI · **Tipo:** componente
+- **Estado:** nuevo, aprobado
+- **Dado** Lucía con el formulario abierto,
+- **cuando** escribe en el ingreso estimado, en el monto del tope nuevo y en el monto de una fila `12a`, `-500`, `1e30`, `1450000,55` y `1.450.000`,
+- **entonces** quedan `12`, `500`, `130`, `1450000,55` y `1.450000`: letras, signos y un segundo separador no se escriben, y debajo del ingreso y de los topes se ve "Sin puntos de miles. Para los centavos usá coma: 1450000,55". Decidido por Vero el 1 de noviembre de 2026.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::the amount fields take only digits and one decimal separator`
+
 ### Corte 3 — observabilidad y accesibilidad
 
 - **Aprobado por:** pendiente
@@ -974,6 +1016,9 @@ en `frontend/src/messages.ts`.
 - El borrador que se arma solo, el recordatorio antes del inicio y los montos de las reglas
   recurrentes al confirmar: son de una segunda versión.
 - Confirmar por WhatsApp.
+- Crear una categoría desde el formulario: queda en la
+  [hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final), si entra en la entrega final.
+  Decidido por Vero el 1 de noviembre de 2026.
 
 ## Preguntas abiertas
 

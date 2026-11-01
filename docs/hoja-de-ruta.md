@@ -89,6 +89,11 @@ configuración de Meta, que no suma a lo que se evalúa.
 los propios datos van al final. De la HU2 quedan afuera el borrador que se arma solo y el
 recordatorio antes del inicio, que son procesos programados, y los montos recurrentes.
 
+**Crear una categoría desde el dashboard entra si queda tiempo.** Una categoría se va a poder crear
+de dos formas: conversando con Platita, como hoy, y desde el dashboard, al armar un período. Lo
+segundo necesita un endpoint nuevo y va después de terminar la HU2. Decidido por Vero el 1 de
+noviembre de 2026.
+
 Pasa a una segunda versión, con su diseño ya escrito en `docs/`: el adaptador de WhatsApp, el
 login por código, los números habilitados y el alta conversacional; los consejos con RAG y la
 base de conocimiento; los grupos familiares y la elección entre el presupuesto individual y el

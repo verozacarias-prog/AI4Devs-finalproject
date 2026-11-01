@@ -170,8 +170,10 @@ responses:
 Lista las categorías de gasto que el usuario autenticado puede usar, para elegir a cuáles ponerles
 tope al armar un período en el dashboard: las del catálogo base y las propias
 ([reglas de dominio § 4](reglas-de-dominio.md#4-categorías-catálogo-base-categorías-propias-y-creación-con-confirmación)).
-Crear una categoría no tiene endpoint: se hace conversando, con confirmación. Decidido por Vero el
-29 de octubre de 2026.
+Crear una categoría todavía no tiene endpoint: hoy se hace conversando, con confirmación. Decidido
+por Vero el 29 de octubre de 2026. También se va a poder crear desde el dashboard, si entra en la
+[entrega final](hoja-de-ruta.md#alcance-de-la-entrega-final). Decidido por Vero el 1 de noviembre
+de 2026.
 
 - Devuelve solo las de gasto: un tope va sobre lo que se gasta.
 - De las propias, devuelve solo las del usuario de la sesión. Las de otro usuario no aparecen.
