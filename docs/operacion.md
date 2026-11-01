@@ -122,7 +122,9 @@ sus permisos a `platita_app`.
 
 La entrada de desarrollo se enciende con `DEV_ENTRY_ENABLED=true`, y el chat web con
 `WEB_CHAT_ENABLED=true`. Sin la variable, cada una queda apagada, y con cualquiera de las dos
-encendida en `production` ningún proceso arranca
+encendida en `production` ningún proceso arranca. En `demo`, los enlaces personales se firman con
+`SERVER_SECRET_KEY`, larga y generada al azar: con la entrada encendida y sin esa variable, la API
+no arranca
 ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 
 Dos esperas son configuración, y cada una tiene su variable, que es opcional:
