@@ -40,6 +40,10 @@ export const AMOUNT_SEPARATORS = { thousands: '.', decimal: ',' }
 export const API_DECIMAL_POINT = '.'
 export const THOUSANDS_GROUP_SIZE = 3
 export const THOUSANDS_GROUP_BOUNDARY = /\B(?=(\d{3})+$)/g
+export const TRAILING_ZEROS = /0+$/
+// The amounts of a budget period in the text of an answer. A quote inside a JSON text is always
+// escaped, so these keys cannot match inside a value written by a person.
+export const PERIOD_AMOUNT_NUMBERS = /"(estimated_income|limit_amount)"\s*:\s*(-?\d+(?:\.\d+)?)/g
 export const AMOUNT_DECIMALS = 2
 /** How the dashboard writes a calendar day, such as 9/10/2026. */
 export const DATE_LOCALE = 'es-AR'

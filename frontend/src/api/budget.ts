@@ -1,9 +1,16 @@
+import { periodAmountsAsText, type AmountDigits } from '../lib/amount-text'
 import { HTTP_SERVER_ERROR, HTTP_UNAUTHORIZED } from '../constants'
 import { request, type Failure, type Options } from './request'
 import { API_ROUTES, fillRoute } from './routes'
 import type { components } from './schema'
 
-export type BudgetPeriod = components['schemas']['BudgetPeriodItem']
+type AnsweredPeriod = components['schemas']['BudgetPeriodItem']
+type AnsweredLimit = AnsweredPeriod['budgets'][number]
+/** A period as the API wrote it, with the exact digits of its amounts (FEAT-005, C3-13). */
+export type BudgetPeriod = Omit<AnsweredPeriod, 'estimated_income' | 'budgets'> & {
+  estimated_income: AmountDigits
+  budgets: (Omit<AnsweredLimit, 'limit_amount'> & { limit_amount: AmountDigits })[]
+}
 export type PeriodSummary = components['schemas']['PeriodSummaryBody']
 export type CategorySpending = components['schemas']['CategorySpendingItem']
 export type BudgetStatus = components['schemas']['BudgetStatusBody']
@@ -11,7 +18,7 @@ export type BudgetMovement = components['schemas']['BudgetMovementItem']
 export type Category = components['schemas']['CategoryItem']
 export type Currency = components['schemas']['CurrencyItem']
 export type PeriodContent = components['schemas']['BudgetPeriodRequest']
-type BudgetPeriodList = components['schemas']['BudgetPeriodList']
+type PeriodList = { budget_periods: BudgetPeriod[] }
 type CategoryList = components['schemas']['CategoryList']
 type CurrencyList = components['schemas']['CurrencyList']
 type ErrorBody = components['schemas']['ErrorBody']
@@ -25,8 +32,10 @@ export type Saved =
   | { kind: 'no-session' }
   | Failure
 
+type Reading = Options & { beforeParsing?: (text: string) => string }
+
 /** One read of the budget: what the API computed, or why there is nothing. */
-async function load<T>(path: string, options: Options): Promise<Loaded<T>> {
+async function load<T>(path: string, options: Reading): Promise<Loaded<T>> {
   const answer = await request(path, options)
   if (answer.kind !== 'answered') return answer
   if (answer.status === HTTP_UNAUTHORIZED) return { kind: 'no-session' }
@@ -36,7 +45,7 @@ async function load<T>(path: string, options: Options): Promise<Loaded<T>> {
 
 /** The periods the user can read, in the order the screen shows them (GET /budget-periods). */
 export async function loadBudgetPeriods(options: Options = {}): Promise<Loaded<BudgetPeriod[]>> {
-  const loaded = await load<BudgetPeriodList>(API_ROUTES.budgetPeriods, options)
+  const loaded = await load<PeriodList>(API_ROUTES.budgetPeriods, { ...options, beforeParsing: periodAmountsAsText })
   return loaded.kind === 'loaded' ? { kind: 'loaded', value: loaded.value.budget_periods } : loaded
 }
 
@@ -75,7 +84,7 @@ export function confirmPeriod(periodId: string, options: Options = {}): Promise<
 }
 
 async function write(path: string, call: Options & { method: 'POST' | 'PUT'; body?: PeriodContent }): Promise<Saved> {
-  const answer = await request(path, call)
+  const answer = await request(path, { ...call, beforeParsing: periodAmountsAsText })
   if (answer.kind !== 'answered') return answer
   if (answer.status === HTTP_UNAUTHORIZED) return { kind: 'no-session' }
   if (answer.ok) return { kind: 'saved', value: answer.body as BudgetPeriod }

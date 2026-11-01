@@ -1,6 +1,16 @@
-import { AMOUNT_SEPARATORS, API_DECIMAL_POINT, THOUSANDS_GROUP_BOUNDARY, THOUSANDS_GROUP_SIZE } from '../constants'
+import {
+  AMOUNT_SEPARATORS,
+  API_DECIMAL_POINT,
+  PERIOD_AMOUNT_NUMBERS,
+  THOUSANDS_GROUP_BOUNDARY,
+  THOUSANDS_GROUP_SIZE,
+  TRAILING_ZEROS,
+} from '../constants'
 
 type Separators = typeof AMOUNT_SEPARATORS
+
+/** An amount with the exact digits the API wrote. */
+export type AmountDigits = `${number}`
 
 /** What an amount field keeps of what is typed: digits, thousands separators and one decimal separator. */
 export function amountText(written: string, separators: Separators = AMOUNT_SEPARATORS): string {
@@ -25,10 +35,19 @@ export function amountForApi(written: string, separators: Separators = AMOUNT_SE
 }
 
 /** An amount that came from the API, the way a person writes it. */
-export function amountFromApi(amount: number, separators: Separators = AMOUNT_SEPARATORS): string {
-  const [whole, decimals] = String(amount).split(API_DECIMAL_POINT)
+export function amountFromApi(amount: AmountDigits, separators: Separators = AMOUNT_SEPARATORS): string {
+  const [whole, decimals = ''] = amount.split(API_DECIMAL_POINT)
   const grouped = whole.replace(THOUSANDS_GROUP_BOUNDARY, separators.thousands)
-  return decimals === undefined ? grouped : grouped + separators.decimal + decimals
+  const kept = decimals.replace(TRAILING_ZEROS, '')
+  return kept === '' ? grouped : grouped + separators.decimal + kept
+}
+
+/**
+ * The text of an answer with the amounts of its periods turned into JSON texts. The API writes
+ * them as numbers with their exact digits, and a number of JavaScript cannot hold them all.
+ */
+export function periodAmountsAsText(answer: string): string {
+  return answer.replace(PERIOD_AMOUNT_NUMBERS, '"$1":"$2"')
 }
 
 function onlyDigits(text: string): string {

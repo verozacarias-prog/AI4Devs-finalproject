@@ -1,7 +1,7 @@
 import { AMOUNT_DECIMALS, AMOUNT_LOCALE, DATE_FORMAT, DATE_LOCALE, DATE_TIME_ZONE } from '../constants'
 
 /** Writes an amount with its currency, so it is never read as a bare number. */
-export function formatAmount(amount: number, currency: string): string {
+export function formatAmount(amount: number | `${number}`, currency: string): string {
   return new Intl.NumberFormat(AMOUNT_LOCALE, {
     style: 'currency',
     currency,

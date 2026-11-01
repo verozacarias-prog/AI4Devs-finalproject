@@ -7,7 +7,7 @@ from app.domain.entities.budget import Budget
 from app.domain.entities.budget_period import BudgetPeriod
 from app.domain.entities.family_group import Membership
 from app.domain.entities.user import User
-from app.domain.errors import ErrorCode, ForbiddenError, NotFoundError
+from app.domain.errors import ContextField, ErrorCode, ForbiddenError, NotFoundError
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
 from app.domain.services.budgets.period_access import can_edit, can_read
 from app.domain.services.budgets.period_dates import checked_period_end
@@ -33,9 +33,11 @@ def editable_period(
     exist; a member who is not the owner can read it, so for them it exists (CA-16)."""
     period = unit_of_work.budget_periods.find_by_id(period_id)
     if period is None or not can_read(period, user.id, memberships, user.time_zone):
-        raise NotFoundError(ErrorCode.NOT_FOUND)
+        raise NotFoundError(ErrorCode.NOT_FOUND, context={ContextField.BUDGET_PERIOD_ID: period_id})
     if not can_edit(period, user.id, memberships):
-        raise ForbiddenError(ErrorCode.NOT_THE_OWNER)
+        raise ForbiddenError(
+            ErrorCode.NOT_THE_OWNER, context={ContextField.BUDGET_PERIOD_ID: period_id}
+        )
     return period
 
 
@@ -72,7 +74,11 @@ class UpdateBudgetPeriod:
                 estimated_income=content.estimated_income,
             )
             group_ids = {period.family_group_id} if period.family_group_id is not None else set()
-            check_no_overlap(changed, unit_of_work.budget_periods.list_owned_by(user_id, group_ids))
+            check_no_overlap(
+                changed,
+                unit_of_work.budget_periods.list_owned_by(user_id, group_ids),
+                stored_id=period_id,
+            )
             check_content(unit_of_work, user_id, content)
             changed = replace(changed, estimated_income=rounded(content.estimated_income))
             unit_of_work.budget_periods.update(changed)

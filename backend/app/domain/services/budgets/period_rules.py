@@ -10,7 +10,7 @@ from decimal import Decimal
 from app.domain.entities.budget_period import BudgetPeriod, PeriodStatus, PeriodType
 from app.domain.entities.category import Category
 from app.domain.entities.transaction import TransactionType
-from app.domain.errors import ConflictError, ErrorCode, InvalidError, NotFoundError
+from app.domain.errors import ConflictError, ContextField, ErrorCode, InvalidError, NotFoundError
 
 # Amounts are stored rounded to cents, half up, in NUMERIC(20,2): what rounds to 0 is not a limit,
 # and what rounds to 10^18 does not fit (docs/03-modelo-de-datos.md).
@@ -33,11 +33,16 @@ def check_confirmed_stays_fixed(
         != (stored.period_type, stored.period_start, stored.primary_currency)
         or indicated_end not in (None, stored.period_end)
     ):
-        raise ConflictError(ErrorCode.CONFIRMED_PERIOD_FIXED)
+        raise ConflictError(
+            ErrorCode.CONFIRMED_PERIOD_FIXED, context={ContextField.BUDGET_PERIOD_ID: stored.id}
+        )
 
 
-def check_no_overlap(period: BudgetPeriod, others: Iterable[BudgetPeriod]) -> None:
-    """The periods of one owner do not overlap: a user and a group are different owners."""
+def check_no_overlap(
+    period: BudgetPeriod, others: Iterable[BudgetPeriod], *, stored_id: uuid.UUID | None = None
+) -> None:
+    """The periods of one owner do not overlap: a user and a group are different owners. A period
+    being created has no stored id yet, so its error names none."""
     for other in others:
         if (
             other.id != period.id
@@ -45,7 +50,10 @@ def check_no_overlap(period: BudgetPeriod, others: Iterable[BudgetPeriod]) -> No
             and other.period_start <= period.period_end
             and period.period_start <= other.period_end
         ):
-            raise ConflictError(ErrorCode.BUDGET_PERIOD_OVERLAP)
+            raise ConflictError(
+                ErrorCode.BUDGET_PERIOD_OVERLAP,
+                context={ContextField.BUDGET_PERIOD_ID: stored_id} if stored_id else None,
+            )
 
 
 def check_limits_and_income(
@@ -60,15 +68,19 @@ def check_limits_and_income(
     for category_id, _ in limits:
         category = categories.get(category_id)
         if category is None or category.user_id not in (None, user_id):
-            raise NotFoundError(ErrorCode.NOT_FOUND)
+            raise NotFoundError(
+                ErrorCode.NOT_FOUND, context={ContextField.CATEGORY_ID: category_id}
+            )
     if any(amount < _SMALLEST_LIMIT for _, amount in limits):
         raise InvalidError(ErrorCode.BUDGET_LIMIT_NOT_POSITIVE)
     if len({category_id for category_id, _ in limits}) != len(limits):
         raise InvalidError(ErrorCode.BUDGET_CATEGORY_REPEATED)
-    if any(
-        categories[category_id].kind is not TransactionType.EXPENSE for category_id, _ in limits
-    ):
-        raise InvalidError(ErrorCode.BUDGET_CATEGORY_NOT_EXPENSE)
+    for category_id, _ in limits:
+        if categories[category_id].kind is not TransactionType.EXPENSE:
+            raise InvalidError(
+                ErrorCode.BUDGET_CATEGORY_NOT_EXPENSE,
+                context={ContextField.CATEGORY_ID: category_id},
+            )
     if estimated_income < 0:
         raise InvalidError(ErrorCode.ESTIMATED_INCOME_NEGATIVE)
     if estimated_income >= _TOO_LARGE or any(amount >= _TOO_LARGE for _, amount in limits):

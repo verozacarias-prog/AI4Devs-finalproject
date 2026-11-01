@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type ComponentProps, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardTitle } from '@/components/ui/card'
 import { amountForApi, amountFromApi, amountText, thousandsAreWellPlaced } from '@/lib/amount-text'
 import { formatAmount, formatDate } from '@/lib/budget-format'
+import { cn } from '@/lib/class-names'
 import { lastIndividualPeriod, nextPeriodStart } from '@/lib/next-period'
 import {
   confirmPeriod,
@@ -53,7 +54,7 @@ type Problem =
 
 const TEXT = MESSAGES.budgetForm
 const CONTROL =
-  'rounded-md border bg-card px-3 py-2 outline-none focus-visible:ring-(length:--focus-ring-width) focus-visible:ring-ring disabled:opacity-60'
+  'rounded-md border border-input bg-card px-3 py-2 outline-none focus-visible:ring-(length:--focus-ring-width) focus-visible:ring-ring disabled:opacity-60'
 
 const EMPTY_FIELDS: Fields = { periodType: 'monthly', start: '', end: '', currency: '', income: '', limits: [] }
 
@@ -80,6 +81,11 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
   // Retrying the first load repeats only the query that failed.
   const [attempt, setAttempt] = useState(0)
   const statusLine = useRef<HTMLParagraphElement>(null)
+  const heading = useRef<HTMLHeadingElement>(null)
+
+  useEffect(() => {
+    heading.current?.focus()
+  }, [])
 
   useEffect(() => {
     const stop = new AbortController()
@@ -120,6 +126,8 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
     setPeriod(saved.value)
     setFields(fieldsOf(saved.value))
     setView(next)
+    // The button just pressed goes away: the focus stays on the line that says how it ended.
+    statusLine.current?.focus()
   }
 
   function send() {
@@ -159,7 +167,7 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
 
   return (
     <Card aria-labelledby="period-form-heading">
-      <CardTitle id="period-form-heading" className="text-xl">
+      <CardTitle ref={heading} id="period-form-heading" tabIndex={-1} className="text-xl outline-none">
         {period ? TEXT.headingEdit : TEXT.headingNew}
       </CardTitle>
       <p ref={statusLine} role="status" tabIndex={-1} className="text-sm text-muted-foreground outline-none empty:hidden">
@@ -226,17 +234,15 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
                 </label>
               )}
               <div className="flex flex-col gap-1">
-                <label className="flex flex-col gap-1 text-sm font-medium">
-                  {TEXT.income}
-                  <input
-                    inputMode="decimal"
-                    value={fields.income}
-                    required
-                    aria-describedby="period-income-hint"
-                    onChange={(event) => setFields({ ...fields, income: amountText(event.target.value) })}
-                    className={CONTROL}
-                  />
-                </label>
+                <AmountInput
+                  label={TEXT.income}
+                  labelClassName="font-medium"
+                  currency={fields.currency}
+                  describedBy="period-income-hint"
+                  value={fields.income}
+                  required
+                  onChange={(event) => setFields({ ...fields, income: amountText(event.target.value) })}
+                />
                 <span id="period-income-hint" className="text-xs text-muted-foreground">
                   {TEXT.amountHint}
                 </span>
@@ -245,6 +251,7 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
             <Limits
               limits={fields.limits}
               options={options}
+              currency={fields.currency}
               onChange={(limits) => {
                 setFields({ ...fields, limits })
                 if (problem?.kind === 'amount') setProblem(null)
@@ -305,17 +312,26 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
 function Limits({
   limits,
   options,
+  currency,
   onChange,
   onAmountNotReadable,
 }: {
   limits: Limit[]
   options: { id: string; name: string }[]
+  currency: string
   onChange: (limits: Limit[]) => void
   onAmountNotReadable: () => void
 }) {
   const [chosenCategory, setChosenCategory] = useState('')
   const [newAmount, setNewAmount] = useState('')
   const [amountMissing, setAmountMissing] = useState(false)
+  const newCategorySelect = useRef<HTMLSelectElement>(null)
+  const justRemoved = useRef(false)
+  // The button pressed goes away with its row: the focus goes to where that category is offered.
+  useEffect(() => {
+    if (justRemoved.current) newCategorySelect.current?.focus()
+    justRemoved.current = false
+  }, [limits])
   if (options.length === 0) {
     // The query worked and there is nothing to choose: empty, not a failure.
     return (
@@ -328,7 +344,7 @@ function Limits({
   const taken = new Set(limits.map((limit) => limit.categoryId))
   const free = options.filter((option) => !taken.has(option.id))
   const newCategory = free.some((option) => option.id === chosenCategory) ? chosenCategory : free[0]?.id
-  const nameOf = (categoryId: string) => options.find((option) => option.id === categoryId)?.name
+  const nameOf = (categoryId: string) => options.find((option) => option.id === categoryId)?.name ?? ''
   const add = () => {
     if (newAmount.trim() === '') return setAmountMissing(true)
     setAmountMissing(false)
@@ -347,7 +363,12 @@ function Limits({
           <div className="flex flex-wrap items-end gap-2">
             <label className="flex min-w-0 grow flex-col gap-1 text-sm">
               {TEXT.newLimitCategory}
-              <select value={newCategory} onChange={(event) => setChosenCategory(event.target.value)} className={CONTROL}>
+              <select
+                ref={newCategorySelect}
+                value={newCategory}
+                onChange={(event) => setChosenCategory(event.target.value)}
+                className={CONTROL}
+              >
                 {free.map((option) => (
                   <option key={option.id} value={option.id}>
                     {option.name}
@@ -355,29 +376,27 @@ function Limits({
                 ))}
               </select>
             </label>
-            <label className="flex flex-col gap-1 text-sm">
-              {TEXT.newLimitAmount}
-              <input
-                inputMode="decimal"
-                value={newAmount}
-                aria-describedby={amountMissing ? 'new-limit-missing' : undefined}
-                onChange={(event) => setNewAmount(amountText(event.target.value))}
-                onKeyDown={(event) => {
-                  // Enter adds the limit: it does not save the whole form by accident.
-                  if (event.key === 'Enter') {
-                    event.preventDefault()
-                    add()
-                  }
-                }}
-                className={CONTROL}
-              />
-            </label>
+            <AmountInput
+              label={TEXT.newLimitAmount}
+              currency={currency}
+              describedBy={amountMissing ? 'new-limit-missing' : undefined}
+              value={newAmount}
+              aria-invalid={amountMissing || undefined}
+              onChange={(event) => setNewAmount(amountText(event.target.value))}
+              onKeyDown={(event) => {
+                // Enter adds the limit: it does not save the whole form by accident.
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  add()
+                }
+              }}
+            />
             <Button type="button" variant="outline" onClick={add}>
               {TEXT.addLimit}
             </Button>
           </div>
           {amountMissing && (
-            <p id="new-limit-missing" className="text-sm text-destructive">
+            <p id="new-limit-missing" role="alert" className="text-sm text-destructive">
               {TEXT.missingAmount}
             </p>
           )}
@@ -399,17 +418,17 @@ function Limits({
             </tr>
           </thead>
           <tbody>
-            {limits.map((limit, index) => (
+            {limits.map((limit) => (
               <tr key={limit.key} className="border-b">
                 <th scope="row" className="py-2 pr-2 text-left font-medium">
                   {nameOf(limit.categoryId)}
                 </th>
                 <td className="py-2 pr-2">
-                  <input
-                    inputMode="decimal"
+                  <AmountInput
+                    currency={currency}
                     value={limit.amount}
                     required
-                    aria-label={TEXT.limitAmount(index + 1)}
+                    aria-label={TEXT.limitAmount(nameOf(limit.categoryId))}
                     onChange={(event) =>
                       onChange(
                         limits.map((candidate) =>
@@ -417,15 +436,17 @@ function Limits({
                         ),
                       )
                     }
-                    className={`${CONTROL} w-full min-w-24`}
                   />
                 </td>
                 <td className="py-2 text-right">
                   <Button
                     type="button"
                     variant="outline"
-                    aria-label={TEXT.removeLimitLabel(index + 1)}
-                    onClick={() => onChange(limits.filter((candidate) => candidate.key !== limit.key))}
+                    aria-label={TEXT.removeLimitLabel(nameOf(limit.categoryId))}
+                    onClick={() => {
+                      justRemoved.current = true
+                      onChange(limits.filter((candidate) => candidate.key !== limit.key))
+                    }}
                   >
                     {TEXT.removeLimit}
                   </Button>
@@ -436,6 +457,42 @@ function Limits({
         </table>
       )}
     </fieldset>
+  )
+}
+
+/** An amount field, with its currency next to it and in what is read aloud (AGENTS.md § 5). */
+function AmountInput({
+  label,
+  labelClassName,
+  currency,
+  describedBy,
+  ...input
+}: ComponentProps<'input'> & { label?: string; labelClassName?: string; currency: string; describedBy?: string }) {
+  const inputId = useId()
+  const currencyId = useId()
+  const descriptions = [currency === '' ? null : currencyId, describedBy].filter(Boolean).join(' ')
+  const field = (
+    <div className="flex items-center gap-2">
+      <input
+        id={inputId}
+        inputMode="decimal"
+        aria-describedby={descriptions === '' ? undefined : descriptions}
+        className={`${CONTROL} w-full min-w-24`}
+        {...input}
+      />
+      {currency !== '' && (
+        <span id={currencyId} className="text-sm text-muted-foreground">
+          {currency}
+        </span>
+      )}
+    </div>
+  )
+  if (label === undefined) return field
+  return (
+    <div className={cn('flex flex-col gap-1 text-sm', labelClassName)}>
+      <label htmlFor={inputId}>{label}</label>
+      {field}
+    </div>
   )
 }
 
