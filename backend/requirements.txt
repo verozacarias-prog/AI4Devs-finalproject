@@ -450,9 +450,9 @@ markupsafe==3.0.4 \
     --hash=sha256:fd9f8797427910198f95bced71ddfed61130d7e349213bfb8466c9c99e2c46a8 \
     --hash=sha256:fdb4ca07ab75ffadab4a8b135ad59cdbb3156b99310f3d565370da74a15d6bd3
     # via mako
-openai==3.32.0 \
-    --hash=sha256:6feb4a50aa653df6d2cd5e9118d5f079a51cb653d652746d344164a3e8419c89 \
-    --hash=sha256:dac6033390174ee85a3115e312a3a4fabc71824711ded5b3a79d5b670dd6b562
+openai==3.41.0 \
+    --hash=sha256:7060a74b239609b21f2919eb98807a8aad463b4f510b8b3b388b15559360b0a8 \
+    --hash=sha256:d065fc59d3d7d8537a77b3ceb527732952c6ff610158e8a2a95b246be637e86f
     # via -r requirements.in
 opentelemetry-api==1.45.2 \
     --hash=sha256:2cbd737377e710ee740d261c94e93fa0f08e6d037c18f17513cc0a2d94479a34 \
