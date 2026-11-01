@@ -333,6 +333,42 @@ def test_in_a_confirmed_period_changing_the_cadence_the_start_the_end_or_the_cur
     )
 
 
+@pytest.mark.parametrize(
+    ("amount", "code"),
+    [("0.004", "budget_limit_not_positive"), ("999999999999999999.995", "amount_too_large")],
+)
+def test_a_limit_that_rounds_to_zero_and_the_exact_limit_of_an_amount_are_refused(
+    amount: str, code: str
+) -> None:
+    # Case C2-62.
+    budget = lucia_budget()
+
+    _assert_refused(
+        budget,
+        code,
+        lambda: CreateBudgetPeriod(budget.unit_of_work, _clock()).execute(
+            budget.user.id,
+            _content(budget, NOVEMBER_10, "1500000.00", {SUPERMARKET: amount}),
+        ),
+    )
+
+
+@pytest.mark.parametrize(
+    ("amount", "kept"),
+    [("0.005", "0.01"), ("999999999999999999.99", "999999999999999999.99")],
+)
+def test_the_smallest_limit_and_the_largest_amount_are_saved(amount: str, kept: str) -> None:
+    # Case C2-62.
+    budget = lucia_budget()
+
+    created = CreateBudgetPeriod(budget.unit_of_work, _clock()).execute(
+        budget.user.id,
+        _content(budget, NOVEMBER_10, "1500000.00", {SUPERMARKET: amount}),
+    )
+
+    assert _limits(budget, created.period.id) == {(SUPERMARKET, Decimal(kept))}
+
+
 def test_a_monthly_period_with_another_end_is_not_saved() -> None:
     # Case C2-53.
     budget = lucia_budget()

@@ -705,6 +705,50 @@ def test_lucia_creates_periods_that_do_not_match_their_cadence_and_a_custom_one(
     assert custom.json()["period_end"] == "2026-11-30"
 
 
+def test_an_amount_sent_as_a_json_number_is_kept_exact(client: TestClient, engine: Engine) -> None:
+    # Case C2-60.
+    _lucia_october(engine)
+    _enter_as(client, "Lucía")
+
+    response = client.post(
+        "/budget-periods",
+        content=_content(engine, "2026-11-10", "1500000", {SUPERMARKET: "1234567890123456.78"}),
+        headers=SAME_ORIGIN,
+    )
+
+    assert response.status_code == 201, response.text
+    body = json.loads(response.text, parse_float=Decimal)
+    assert body["budgets"][0]["limit_amount"] == Decimal("1234567890123456.78")
+    with engine.connect() as connection:
+        stored = connection.execute(
+            text("SELECT limit_amount FROM budget WHERE budget_period_id = :id"),
+            {"id": body["id"]},
+        ).scalar_one()
+    assert stored == Decimal("1234567890123456.78")
+
+
+def test_two_requests_at_once_with_overlapping_dates_answer_409(
+    client: TestClient, engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Case C2-61: the control of the use case passes, as it does when the first request has not
+    # been committed yet, and it is the database that refuses.
+    _lucia_october(engine)
+    _enter_as(client, "Lucía")
+    monkeypatch.setattr(
+        "app.domain.use_cases.budgets.create_budget_period.check_no_overlap",
+        lambda *_: None,
+    )
+
+    response = client.post(
+        "/budget-periods",
+        content=_content(engine, "2026-11-01", "1500000", {}),
+        headers=SAME_ORIGIN,
+    )
+
+    _assert_error(response, 409, "budget_period_overlap")
+    assert _period_count(engine) == 1
+
+
 def test_lucia_creates_a_period_with_a_limit_of_zero(client: TestClient, engine: Engine) -> None:
     # Case C2-15.
     _lucia_october(engine)
