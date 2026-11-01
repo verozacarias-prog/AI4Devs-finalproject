@@ -1,9 +1,9 @@
 """When a budget period ends (FEAT-005, docs/features/FEAT-005/spec.md).
 
 Cases C1-01 to C1-04, C1-19 and C2-12, the unit ones about the end of a period: a monthly one
-without an end ends the day before the same day of the next month, taken to the last day of that
-month when it does not have it; one with an end, monthly or biweekly, ends that day; and a
-biweekly one without an end has none (domain rules, § 3).
+ends the day before the same day of the next month, taken to the last day of that month when it
+does not have it; a biweekly one ends on the 15th or on the last day of the month; a custom one
+ends on the day given, and without it has no end (domain rules, § 3).
 """
 
 from __future__ import annotations
@@ -33,23 +33,22 @@ def test_a_monthly_one_that_starts_on_a_day_the_next_month_does_not_have() -> No
     assert period_end(PeriodType.MONTHLY, date(2027, 1, 31), None) == date(2027, 2, 27)
 
 
-def test_a_monthly_one_with_its_end_given_ends_that_day() -> None:
+def test_a_custom_one_ends_on_the_day_given() -> None:
     # Case C1-04: it lasts 21 days, the transition period.
     indicated = date(2026, 11, 30)
 
-    assert period_end(PeriodType.MONTHLY, date(2026, 11, 10), indicated) == indicated
+    assert period_end(PeriodType.CUSTOM, date(2026, 11, 10), indicated) == indicated
 
 
-def test_a_biweekly_one_ends_on_the_day_given() -> None:
+def test_a_biweekly_one_ends_on_the_15th_or_on_the_last_day_of_the_month() -> None:
     # Case C1-19.
-    indicated = date(2026, 11, 24)
+    assert period_end(PeriodType.BIWEEKLY, date(2026, 11, 1), None) == date(2026, 11, 15)
+    assert period_end(PeriodType.BIWEEKLY, date(2027, 2, 16), None) == date(2027, 2, 28)
 
-    assert period_end(PeriodType.BIWEEKLY, date(2026, 11, 10), indicated) == indicated
 
-
-def test_a_biweekly_period_without_an_end_has_no_end() -> None:
+def test_a_custom_period_without_an_end_has_no_end() -> None:
     # Case C2-12.
     with pytest.raises(DomainError) as raised:
-        period_end(PeriodType.BIWEEKLY, date(2026, 11, 10), None)
+        period_end(PeriodType.CUSTOM, date(2026, 11, 10), None)
 
     assert raised.value.code == "period_end_required"

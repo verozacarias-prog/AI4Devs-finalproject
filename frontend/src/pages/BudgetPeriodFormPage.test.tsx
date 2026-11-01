@@ -1,5 +1,5 @@
 /**
- * Cases C1-22, C1-24 to C1-32, C2-32 to C2-38, C2-43, C2-45, C2-46, C2-48 and C2-49 of FEAT-005 (docs/features/FEAT-005/spec.md): the states of the
+ * Cases C1-22, C1-24 to C1-32, C2-32 to C2-38, C2-43, C2-45, C2-46, C2-48 to C2-52 and C2-59 of FEAT-005 (docs/features/FEAT-005/spec.md): the states of the
  * form of a budget period. The API is simulated at the network level, so the page and its API calls are tested
  * together.
  */
@@ -148,7 +148,7 @@ test('case C1-24: a new period comes as a copy of the last one', async () => {
   expect(field('Moneda').value).toBe('ARS')
   expect(field('Ingreso estimado').value).toBe('1.450.000,5')
   expect(field('Inicio').value).toBe('2026-11-10')
-  expect(field('Fin').value).toBe('')
+  expect(screen.queryByLabelText('Fin')).toBeNull()
   expect(within(limitRows()[0]).getByRole('rowheader').textContent).toBe('Supermercado')
   expect(field('Monto del tope 1').value).toBe('300.000')
   expect(within(limitRows()[1]).getByRole('rowheader').textContent).toBe('Transporte')
@@ -173,7 +173,8 @@ test('case C1-26: without a previous period the form comes empty', async () => {
 
   await ready()
   expect(field('Cadencia').value).toBe('monthly')
-  for (const label of ['Moneda', 'Inicio', 'Fin', 'Ingreso estimado']) expect(field(label).value).toBe('')
+  for (const label of ['Moneda', 'Inicio', 'Ingreso estimado']) expect(field(label).value).toBe('')
+  expect(screen.queryByLabelText('Fin')).toBeNull()
   expect(screen.queryByRole('table')).toBeNull()
   expect(offered()).toEqual(['Salud', 'Supermercado', 'Transporte'])
 })
@@ -324,7 +325,8 @@ test('case C1-32: in a confirmed period only the income and the limits are edite
   renderForm(OCTOBER.id)
 
   await ready()
-  for (const label of ['Cadencia', 'Moneda', 'Inicio', 'Fin']) expect(field(label).disabled).toBe(true)
+  for (const label of ['Cadencia', 'Moneda', 'Inicio']) expect(field(label).disabled).toBe(true)
+  expect(screen.queryByLabelText('Fin')).toBeNull()
   expect(field('Ingreso estimado').disabled).toBe(false)
   expect(field('Monto del tope 1').disabled).toBe(false)
   type('Ingreso estimado', '1520000')
@@ -688,4 +690,161 @@ test('case C2-49: an amount is sent without points and with a decimal point', as
       { category_id: SALUD, limit_amount: '40000.10' },
     ],
   })
+})
+
+test.each(['1.5', '320000.10'])('case C2-50: an amount whose point does not separate thousands is not saved (%s)', async (written) => {
+  apiWith([OCTOBER])
+  const bodies = saving(NOVEMBER)
+
+  renderForm()
+
+  await ready()
+  for (const label of ['Ingreso estimado', 'Monto del tope 1']) {
+    const before = field(label).value
+    type(label, written)
+    save()
+
+    await screen.findByText('Revisá el monto: el punto separa los miles. Para los centavos usá coma')
+    expect(field(label).value).toBe(written)
+    expect(bodies).toHaveLength(0)
+    type(label, before)
+  }
+
+  type('Monto del tope nuevo', written)
+  addLimit()
+
+  await screen.findByText('Revisá el monto: el punto separa los miles. Para los centavos usá coma')
+  expect(field('Monto del tope nuevo').value).toBe(written)
+  expect(limitRows()).toHaveLength(2)
+})
+
+test('case C2-51: if the list fails when coming back from the form retrying asks for it again', async () => {
+  const saved = period('2026-11-10', '2026-12-09', { status: 'draft' })
+  let answer: Period[] | null = [OCTOBER]
+  api.use(
+    http.get(PERIODS, () =>
+      answer === null
+        ? HttpResponse.json({ error: 'internal_error' }, { status: 500 })
+        : HttpResponse.json({ budget_periods: answer }),
+    ),
+    http.get(CATEGORIES, () => HttpResponse.json({ categories: CATEGORY_LIST })),
+    http.post(PERIODS, () => HttpResponse.json(saved, { status: 201 })),
+    http.get(SUMMARY, ({ params }) =>
+      HttpResponse.json({
+        budget_period_id: params.periodId,
+        primary_currency: 'ARS',
+        estimated_income: 1500000,
+        actual_income: 0,
+        total_spent: 0,
+        categories: [],
+      }),
+    ),
+  )
+
+  render(<BudgetPage onNoSession={nothing} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Armar un período' }))
+  await ready()
+  save()
+  await screen.findByText('El período quedó guardado.')
+  answer = null
+  fireEvent.click(screen.getByRole('button', { name: 'Volver al resumen' }))
+  const retry = await screen.findByRole('button', { name: 'Reintentar' })
+  answer = [saved, OCTOBER]
+  fireEvent.click(retry)
+
+  await screen.findByText('Tu próximo período puede empezar el 10/12/2026')
+  const selector = screen.getByLabelText('Tus períodos existentes') as HTMLSelectElement
+  expect(selector.value).toBe(saved.id)
+})
+
+test('case C2-51: with the first period retrying does not stay loading', async () => {
+  const saved = period('2026-11-10', '2026-12-09', { status: 'draft' })
+  let answer: Period[] | null = []
+  api.use(
+    http.get(PERIODS, () =>
+      answer === null
+        ? HttpResponse.json({ error: 'internal_error' }, { status: 500 })
+        : HttpResponse.json({ budget_periods: answer }),
+    ),
+    http.get(CATEGORIES, () => HttpResponse.json({ categories: CATEGORY_LIST })),
+    http.post(PERIODS, () => HttpResponse.json(saved, { status: 201 })),
+    http.get(SUMMARY, ({ params }) =>
+      HttpResponse.json({
+        budget_period_id: params.periodId,
+        primary_currency: 'ARS',
+        estimated_income: 1500000,
+        actual_income: 0,
+        total_spent: 0,
+        categories: [],
+      }),
+    ),
+  )
+
+  render(<BudgetPage onNoSession={nothing} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Armar un período' }))
+  await ready()
+  type('Moneda', 'ARS')
+  type('Inicio', '2026-11-10')
+  type('Ingreso estimado', '1.500.000')
+  save()
+  await screen.findByText('El período quedó guardado.')
+  answer = null
+  fireEvent.click(screen.getByRole('button', { name: 'Volver al resumen' }))
+  const retry = await screen.findByRole('button', { name: 'Reintentar' })
+  answer = [saved]
+  fireEvent.click(retry)
+
+  await screen.findByText('Tu próximo período puede empezar el 10/12/2026')
+})
+
+test.each([
+  ['monthly', 'Mensual', '2026-11-10'],
+  ['biweekly', 'Quincenal', '2026-12-01'],
+])('case C2-52: a %s period has no end to write', async (value, name, start) => {
+  apiWith([OCTOBER])
+  const bodies = saving(NOVEMBER)
+
+  renderForm()
+
+  await ready()
+  within(field('Cadencia')).getByRole('option', { name })
+  type('Cadencia', value)
+  type('Inicio', start)
+  expect(screen.queryByLabelText('Fin')).toBeNull()
+  save()
+
+  await screen.findByText('El período quedó guardado.')
+  expect(bodies[0]).toMatchObject({ period_type: value, period_start: start, period_end: null })
+})
+
+test('case C2-52: a custom period writes its end and needs it', async () => {
+  apiWith([OCTOBER])
+  const bodies = saving(NOVEMBER)
+
+  renderForm()
+
+  await ready()
+  within(field('Cadencia')).getByRole('option', { name: 'Personalizado' })
+  type('Cadencia', 'custom')
+  expect(field('Fin').required).toBe(true)
+  type('Fin', '2026-11-30')
+  save()
+
+  await screen.findByText('El período quedó guardado.')
+  expect(bodies[0]).toMatchObject({ period_type: 'custom', period_start: '2026-11-10', period_end: '2026-11-30' })
+})
+
+test('case C2-59: after a custom period it suggests a monthly one', async () => {
+  apiWith([period('2026-11-15', '2026-11-30', { period_type: 'custom' })])
+
+  renderForm()
+
+  await ready()
+  expect(field('Cadencia').value).toBe('monthly')
+  expect(field('Inicio').value).toBe('2026-12-01')
+  expect(field('Moneda').value).toBe('ARS')
+  expect(field('Ingreso estimado').value).toBe('1.450.000,5')
+  expect(limitRows()).toHaveLength(2)
 })

@@ -653,7 +653,7 @@ def test_lucia_moves_a_draft_over_her_current_period(client: TestClient, engine:
     assert _snapshot(engine, draft["id"]) == before
 
 
-def test_lucia_creates_a_biweekly_period_without_period_end(
+def test_lucia_creates_a_custom_period_without_period_end(
     client: TestClient, engine: Engine
 ) -> None:
     # Case C2-13.
@@ -662,12 +662,47 @@ def test_lucia_creates_a_biweekly_period_without_period_end(
 
     response = client.post(
         "/budget-periods",
-        content=_content(engine, "2026-11-10", "1500000", {}, period_type="biweekly"),
+        content=_content(engine, "2026-11-10", "1500000", {}, period_type="custom"),
         headers=SAME_ORIGIN,
     )
 
     _assert_error(response, 422, "period_end_required")
     assert _period_count(engine) == 1
+
+
+def test_lucia_creates_periods_that_do_not_match_their_cadence_and_a_custom_one(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C2-55.
+    _lucia_october(engine)
+    _enter_as(client, "Lucía")
+
+    monthly = client.post(
+        "/budget-periods",
+        content=_content(engine, "2026-11-10", "1500000", {}, end="2026-11-30"),
+        headers=SAME_ORIGIN,
+    )
+    biweekly = client.post(
+        "/budget-periods",
+        content=_content(engine, "2026-11-10", "1500000", {}, period_type="biweekly"),
+        headers=SAME_ORIGIN,
+    )
+
+    _assert_error(monthly, 422, "period_end_not_matching")
+    _assert_error(biweekly, 422, "biweekly_start_invalid")
+    assert _period_count(engine) == 1
+
+    custom = client.post(
+        "/budget-periods",
+        content=_content(
+            engine, "2026-11-10", "1500000", {}, end="2026-11-30", period_type="custom"
+        ),
+        headers=SAME_ORIGIN,
+    )
+
+    assert custom.status_code == 201, custom.text
+    assert custom.json()["period_type"] == "custom"
+    assert custom.json()["period_end"] == "2026-11-30"
 
 
 def test_lucia_creates_a_period_with_a_limit_of_zero(client: TestClient, engine: Engine) -> None:

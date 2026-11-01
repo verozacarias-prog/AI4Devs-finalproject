@@ -77,9 +77,10 @@ def _content(
     limits: dict[str, str],
     *,
     end: date | None = None,
+    period_type: PeriodType = PeriodType.MONTHLY,
 ) -> PeriodContent:
     return PeriodContent(
-        period_type=PeriodType.MONTHLY,
+        period_type=period_type,
         period_start=start,
         period_end=end,
         primary_currency=PESOS,
@@ -309,7 +310,7 @@ def test_a_member_who_is_not_the_owner_neither_changes_nor_confirms_the_period_o
 @pytest.mark.parametrize(
     "changed",
     [
-        lambda same: replace(same, period_type=PeriodType.BIWEEKLY),
+        lambda same: replace(same, period_type=PeriodType.CUSTOM),
         lambda same: replace(same, period_start=date(2026, 10, 11)),
         lambda same: replace(same, period_end=date(2026, 11, 8)),
         lambda same: replace(same, primary_currency=DOLLARS),
@@ -328,6 +329,56 @@ def test_in_a_confirmed_period_changing_the_cadence_the_start_the_end_or_the_cur
         "confirmed_period_fixed",
         lambda: UpdateBudgetPeriod(budget.unit_of_work, _clock()).execute(
             budget.user.id, budget.period.id, changed(same)
+        ),
+    )
+
+
+def test_a_monthly_period_with_another_end_is_not_saved() -> None:
+    # Case C2-53.
+    budget = lucia_budget()
+    create = CreateBudgetPeriod(budget.unit_of_work, _clock())
+
+    _assert_refused(
+        budget,
+        "period_end_not_matching",
+        lambda: create.execute(
+            budget.user.id,
+            _content(budget, NOVEMBER_10, "1500000.00", {}, end=date(2026, 11, 30)),
+        ),
+    )
+
+    created = create.execute(
+        budget.user.id, _content(budget, NOVEMBER_10, "1500000.00", {}, end=DECEMBER_9)
+    )
+    assert _stored(budget, created.period.id).period_end == DECEMBER_9
+
+
+def test_a_biweekly_period_with_another_start_or_another_end_is_not_saved() -> None:
+    # Case C2-54.
+    budget = lucia_budget()
+    create = CreateBudgetPeriod(budget.unit_of_work, _clock())
+
+    _assert_refused(
+        budget,
+        "biweekly_start_invalid",
+        lambda: create.execute(
+            budget.user.id,
+            _content(budget, NOVEMBER_10, "1500000.00", {}, period_type=PeriodType.BIWEEKLY),
+        ),
+    )
+    _assert_refused(
+        budget,
+        "period_end_not_matching",
+        lambda: create.execute(
+            budget.user.id,
+            _content(
+                budget,
+                date(2026, 11, 1),
+                "1500000.00",
+                {},
+                end=date(2026, 11, 20),
+                period_type=PeriodType.BIWEEKLY,
+            ),
         ),
     )
 
