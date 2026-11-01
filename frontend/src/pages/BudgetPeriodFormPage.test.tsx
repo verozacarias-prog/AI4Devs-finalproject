@@ -1,5 +1,5 @@
 /**
- * Cases C1-22, C1-24 to C1-32, C2-32 to C2-38 of FEAT-005 (docs/features/FEAT-005/spec.md): the states of the
+ * Cases C1-22, C1-24 to C1-32, C2-32 to C2-38, C2-43 and C2-45 of FEAT-005 (docs/features/FEAT-005/spec.md): the states of the
  * form of a budget period. The API is simulated at the network level, so the page and its API calls are tested
  * together.
  */
@@ -15,6 +15,7 @@ const PERIOD = '*/budget-periods/:periodId'
 const CONFIRM = '*/budget-periods/:periodId/confirm'
 const SUMMARY = '*/budget-periods/:periodId/summary'
 const CATEGORIES = '*/categories'
+const CURRENCIES = '*/currencies'
 const SHORT_TIMEOUT_MS = 200
 
 const SUPERMERCADO = crypto.randomUUID()
@@ -66,7 +67,16 @@ const OCTOBER = period('2026-10-10', '2026-11-09', { is_current: true })
 const NOVEMBER = period('2026-11-10', '2026-12-09', { status: 'draft', estimated_income: 1500000 })
 
 const nothing = () => {}
-const api = setupServer()
+const api = setupServer(
+  http.get(CURRENCIES, () =>
+    HttpResponse.json({
+      currencies: [
+        { code: 'ARS', name: 'Peso argentino' },
+        { code: 'USD', name: 'Dólar estadounidense' },
+      ],
+    }),
+  ),
+)
 
 beforeAll(() => api.listen({ onUnhandledFrame: 'error' }))
 afterEach(() => {
@@ -336,7 +346,7 @@ test('case C2-32: without categories it says so and saves without limits', async
   await screen.findByText('No hay categorías de gasto para ponerles tope')
   expect(screen.queryByRole('button', { name: 'Sumar un tope' })).toBeNull()
   type('Inicio', '2026-11-10')
-  type('Moneda', 'ars')
+  type('Moneda', 'ARS')
   type('Ingreso estimado', '0')
   save()
 
@@ -414,6 +424,8 @@ test.each([
   ['budget_category_repeated', 422, 'Elegiste la misma categoría en dos topes.'],
   ['budget_category_not_expense', 422, 'Un tope solo puede ir sobre una categoría de gasto.'],
   ['estimated_income_negative', 422, 'El ingreso estimado no puede ser negativo.'],
+  ['currency_not_found', 422, 'Esa moneda no está disponible: elegí otra de la lista.'],
+  ['amount_too_large', 422, 'Ese monto es demasiado grande.'],
   ['invalid_request', 422, 'Revisá los datos: falta alguno o tiene un valor que no es válido.'],
   ['a_code_it_does_not_know', 422, 'La API respondió con un error.'],
 ])('case C2-35: a refusal says what to correct without retrying (%s)', async (code, status, message) => {
@@ -514,4 +526,42 @@ test('case C2-38: a period that is no longer there says it is not available', as
   expect(within(alert).getByText('Ese período o una de sus categorías ya no está disponible.')).toBeTruthy()
   expect(within(alert).getByRole('button', { name: 'Volver al resumen' })).toBeTruthy()
   expect(screen.queryByLabelText('Inicio')).toBeNull()
+})
+
+test('case C2-43: the currency is chosen from the list of the catalog', async () => {
+  apiWith([OCTOBER])
+  const bodies = saving(NOVEMBER)
+
+  renderForm()
+
+  await ready()
+  expect(field('Moneda').tagName).toBe('SELECT')
+  expect(field('Moneda').value).toBe('ARS')
+  const options = within(field('Moneda')).getAllByRole('option')
+  expect(options.map((option) => option.textContent)).toEqual(['ARS — Peso argentino', 'USD — Dólar estadounidense'])
+  type('Moneda', 'USD')
+  save()
+
+  await screen.findByText('El período quedó guardado.')
+  expect(bodies[0]).toMatchObject({ primary_currency: 'USD' })
+})
+
+test('case C2-45: the status line says what it is doing and announces how it ended', async () => {
+  apiWith([OCTOBER])
+  saving(NOVEMBER)
+  api.use(http.post(CONFIRM, () => HttpResponse.json({ ...NOVEMBER, status: 'confirmed' })))
+
+  renderForm()
+
+  await ready()
+  save()
+  expect(screen.getByRole('status').textContent).toBe('Guardando…')
+  await waitFor(() => expect(screen.getByRole('status').textContent).toBe('El período quedó guardado.'))
+  fireEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
+  expect(screen.getByRole('status').textContent).toBe('Confirmando…')
+  await waitFor(() =>
+    expect(screen.getByRole('status').textContent).toBe(
+      'El período quedó confirmado: recibe movimientos desde el 10/11/2026.',
+    ),
+  )
 })

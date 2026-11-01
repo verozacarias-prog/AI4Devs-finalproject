@@ -1,8 +1,9 @@
 """Building and confirming a budget period over HTTP, against PostgreSQL (FEAT-005).
 
-Cases C1-11 to C1-16, C1-18, C1-20, C1-21 and the integration ones of C2-01 to C2-29 of
+Cases C1-11 to C1-16, C1-18, C1-20, C1-21 and the integration ones of C2-01 to C2-44 of
 docs/features/FEAT-005/spec.md: POST /budget-periods, PUT /budget-periods/{period_id},
-POST /budget-periods/{period_id}/confirm, GET /budget-periods and GET /categories. Each test has a
+POST /budget-periods/{period_id}/confirm, GET /budget-periods, GET /categories and
+GET /currencies. Each test has a
 database of its own, with the test data of the script, and talks to the API the way the
 dashboard does: it enters through the development entry and asks with the session cookie.
 
@@ -884,3 +885,76 @@ def test_lucia_changes_and_confirms_with_a_period_id_that_is_not_a_uuid(
 
     _assert_error(changed, 422, "invalid_request")
     _assert_error(confirmed, 422, "invalid_request")
+
+
+def test_an_income_or_a_limit_with_more_than_two_decimals_is_saved_rounded_to_two(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C2-39.
+    _enter_as(client, "Lucía")
+
+    response = client.post(
+        "/budget-periods",
+        content=_content(engine, "2026-11-10", '"100.555"', {SUPERMARKET: '"200.554"'}),
+        headers=SAME_ORIGIN,
+    )
+
+    assert response.status_code == 201, response.text
+    created = _body(response)
+    assert created["estimated_income"] == Decimal("100.56")
+    assert _limits(created) == [(SUPERMARKET, Decimal("200.55"))]
+    read = _periods(client)[0]
+    assert read["estimated_income"] == Decimal("100.56")
+    assert _limits(read) == [(SUPERMARKET, Decimal("200.55"))]
+
+
+def test_lucia_asks_for_the_currencies_of_the_catalog_and_without_a_session_it_answers_401(
+    client: TestClient,
+) -> None:
+    # Case C2-40.
+    assert client.get("/currencies").status_code == 401
+    _enter_as(client, "Lucía")
+
+    response = client.get("/currencies")
+
+    assert response.status_code == 200, response.text
+    currencies: list[dict[str, str]] = response.json()["currencies"]
+    codes = [currency["code"] for currency in currencies]
+    assert codes == sorted(codes)
+    assert {"code": "ARS", "name": "Peso argentino"} in currencies
+    assert "USD" in codes
+    assert all(set(currency) == {"code", "name"} for currency in currencies)
+
+
+def test_lucia_creates_a_period_with_the_currency_zzz(client: TestClient, engine: Engine) -> None:
+    # Case C2-42.
+    _lucia_october(engine)
+    _enter_as(client, "Lucía")
+
+    response = client.post(
+        "/budget-periods",
+        content=_with_fields(_november_content(engine), primary_currency="ZZZ"),
+        headers=SAME_ORIGIN,
+    )
+
+    _assert_error(response, 422, "currency_not_found")
+    assert _period_count(engine) == 1
+
+
+def test_lucia_creates_a_period_with_an_income_of_1e30(client: TestClient, engine: Engine) -> None:
+    # Case C2-44: the income, and then a limit.
+    _lucia_october(engine)
+    _enter_as(client, "Lucía")
+
+    income = client.post(
+        "/budget-periods", content=_november_content(engine, income='"1e30"'), headers=SAME_ORIGIN
+    )
+    limit = client.post(
+        "/budget-periods",
+        content=_content(engine, "2026-11-10", "1500000", {SUPERMARKET: '"1e30"'}),
+        headers=SAME_ORIGIN,
+    )
+
+    _assert_error(income, 422, "amount_too_large")
+    _assert_error(limit, 422, "amount_too_large")
+    assert _period_count(engine) == 1

@@ -131,6 +131,16 @@ class InMemoryBudgets:
         return next((budget for budget in self.added if budget.id == budget_id), None)
 
 
+class InMemoryCurrencies:
+    """A catalog with the two currencies the cases use."""
+
+    def __init__(self) -> None:
+        self.codes = {"ARS", "USD"}
+
+    def exists(self, code: str) -> bool:
+        return code in self.codes
+
+
 class InMemoryCategories:
     def __init__(self) -> None:
         self.added: list[Category] = []
@@ -403,6 +413,7 @@ class InMemoryUnitOfWork:
         self.budget_periods = InMemoryBudgetPeriods()
         self.budgets = InMemoryBudgets()
         self.categories = InMemoryCategories()
+        self.currencies = InMemoryCurrencies()
         self.pendings = InMemoryPendings()
         self.financial_profiles = InMemoryFinancialProfiles()
         self.family_groups = InMemoryFamilyGroups()

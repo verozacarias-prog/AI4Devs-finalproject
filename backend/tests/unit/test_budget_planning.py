@@ -1,6 +1,6 @@
 """Building and confirming a budget period (FEAT-005, docs/features/FEAT-005/spec.md).
 
-Cases C1-05 to C1-08, C1-17 and the unit ones of C2-01 to C2-25, about the use cases: the budget
+Cases C1-05 to C1-08, C1-17 and the unit ones of C2-01 to C2-41, about the use cases: the budget
 of Lucía is built in memory and the action is to create, change or confirm a period, as
 POST /budget-periods, PUT /budget-periods/{period_id} and
 POST /budget-periods/{period_id}/confirm do. Today is 29 October 2026.
@@ -448,5 +448,26 @@ def test_with_two_errors_at_once_the_first_of_the_order_answers() -> None:
         "budget_period_overlap",
         lambda: CreateBudgetPeriod(budget.unit_of_work, _clock()).execute(
             budget.user.id, overlap_with_a_limit_of_zero
+        ),
+    )
+
+
+def test_a_currency_that_is_not_in_the_catalog_is_not_saved() -> None:
+    # Case C2-41.
+    budget = lucia_budget()
+    draft = _november_draft(budget)
+    unknown = replace(_content(budget, DECEMBER_10, "1500000.00", {}), primary_currency="ZZZ")
+    changed = replace(_content(budget, NOVEMBER_10, "1500000.00", {}), primary_currency="ZZZ")
+
+    _assert_refused(
+        budget,
+        "currency_not_found",
+        lambda: CreateBudgetPeriod(budget.unit_of_work, _clock()).execute(budget.user.id, unknown),
+    )
+    _assert_refused(
+        budget,
+        "currency_not_found",
+        lambda: UpdateBudgetPeriod(budget.unit_of_work, _clock()).execute(
+            budget.user.id, draft.id, changed
         ),
     )
