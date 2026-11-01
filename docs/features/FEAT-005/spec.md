@@ -496,7 +496,7 @@ categoría que no existe termina en `500`, porque la base rechaza la referencia,
   período confirmado del 10 de octubre al 9 de noviembre de 2026 y un borrador del 10 de
   noviembre al 9 de diciembre. Pablo tiene un período propio del 10 de octubre al 9 de noviembre
   y una categoría propia de gasto, "Kiosco". Lucía tiene la categoría propia de ingreso "Clases
-  particulares". En cada error, nada de lo que el pedido trae queda guardado. 
+  particulares". En cada error, nada de lo que el pedido trae queda guardado.
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
