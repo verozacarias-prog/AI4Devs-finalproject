@@ -1,7 +1,7 @@
 #!/bin/sh
 # Regenerates backend/requirements.txt and requirements-dev.txt, the whole dependency tree with
 # its hashes (issue #82). Versions already in those files are kept unless a .in file asks for
-# another one.
+# another one. To raise an indirect dependency, pass --upgrade-package <name>.
 #
 # It runs in the Python image of the Dockerfile, on Linux, because the tree is resolved for the
 # system that compiles it and that is where it gets installed.
@@ -18,5 +18,6 @@ docker run --rm \
     --workdir /backend \
     "$python_image" \
     sh -c "pip install --quiet '$pip_tools' \
-        && $compile --output-file=requirements.txt requirements.in \
-        && $compile --output-file=requirements-dev.txt requirements-dev.in"
+        && $compile --output-file=requirements.txt \"\$@\" requirements.in \
+        && $compile --output-file=requirements-dev.txt \"\$@\" requirements-dev.in" \
+    lock "$@"

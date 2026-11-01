@@ -24,6 +24,9 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    # También las dependencias indirectas: con el árbol fijado por hashes, nada más las sube.
+    allow:
+      - dependency-type: all
   # La imagen base del Dockerfile.
   - package-ecosystem: docker
     directory: /
@@ -39,6 +42,11 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    ignore:
+      # La versión de PostgreSQL se decide a mano (ADR 0021): el volumen de una versión mayor
+      # anterior no arranca sin migrarlo.
+      - dependency-name: pgvector/pgvector
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: npm
     directory: /frontend
     schedule:

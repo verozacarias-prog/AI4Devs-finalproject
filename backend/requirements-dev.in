@@ -3,7 +3,8 @@
 # scripts/lock_backend_dependencies.sh.
 -c requirements.txt
 -r requirements.in
-httpx2==2.16.0
+# No version here: the application tree already fixes it, through requirements.txt.
+httpx2
 mypy==2.4.0
 pip-audit==2.10.1
 pip-tools==7.6.2
