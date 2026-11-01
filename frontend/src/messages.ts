@@ -49,6 +49,7 @@ export const MESSAGES = {
     linkRejected: 'Este enlace ya no sirve',
     linkRejectedDetail: 'Pedile uno nuevo a quien te lo mandó.',
     noticeHeading: 'Antes de entrar',
+    noticeAnnounced: 'Antes de entrar, leé este aviso',
     // A change in this text comes with a new TEST_NOTICE_VERSION in the backend (ADR 0016).
     noticePoints: [
       'Este es un entorno de prueba.',

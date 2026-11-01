@@ -230,10 +230,11 @@ function statusText(state: Exclude<State, { kind: 'unavailable' }>): string {
       return TEXT.signedInAs(state.user.name)
     case 'empty':
       return TEXT.empty
+    case 'notice':
+      return TEXT.noticeAnnounced
     case 'error':
     case 'link-rejected':
-    case 'notice':
-      // The alert or the notice below says it, not the status line.
+      // The error is announced by the alert below, not by the status line.
       return ''
   }
 }

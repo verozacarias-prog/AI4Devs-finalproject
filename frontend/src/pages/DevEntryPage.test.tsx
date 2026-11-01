@@ -398,6 +398,17 @@ test('case 27: with the session of someone else open, the link enters its own ac
   closeLink()
 })
 
+test('case 29: when the notice shows up, the status line announces it', async () => {
+  openLink()
+  api.use(http.post(SESSION, () => HttpResponse.json(NOTICE_REQUIRED, { status: 409 })))
+
+  render(<DevEntryPage />)
+
+  await screen.findByRole('button', { name: 'Acepto' })
+  expect(screen.getByRole('status').textContent).toBe('Antes de entrar, leé este aviso')
+  closeLink()
+})
+
 test('case 28: without a link or a session in demo, the card is never drawn', async () => {
   closeLink()
   let answer: () => void = () => {}

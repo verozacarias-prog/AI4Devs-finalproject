@@ -37,15 +37,13 @@ services:
     branch: final-project-VNZ
     autoDeployTrigger: checksPass
     dockerCommand: python -m app.adapters.inbound.message_worker.main
+    # Without the development entry: only the web service opens sessions, so the worker does not
+    # need the key of the personal links.
     envVars:
       - key: APP_ENV
         value: demo
-      - key: DEV_ENTRY_ENABLED
-        value: "true"
       - key: WEB_CHAT_ENABLED
         value: "true"
-      - key: SERVER_SECRET_KEY
-        sync: false
       - key: DATABASE_URL
         sync: false
       - key: OPENAI_API_KEY
