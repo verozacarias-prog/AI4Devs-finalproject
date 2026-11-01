@@ -1,5 +1,5 @@
 /**
- * Cases C1-22, C1-24 to C1-32, C2-32 to C2-38, C2-43 and C2-45 of FEAT-005 (docs/features/FEAT-005/spec.md): the states of the
+ * Cases C1-22, C1-24 to C1-32, C2-32 to C2-38, C2-43, C2-45, C2-46 and C2-48 of FEAT-005 (docs/features/FEAT-005/spec.md): the states of the
  * form of a budget period. The API is simulated at the network level, so the page and its API calls are tested
  * together.
  */
@@ -112,6 +112,12 @@ const field = (label: string) => screen.getByLabelText(label) as HTMLInputElemen
 const type = (label: string, value: string) => fireEvent.change(field(label), { target: { value } })
 const save = () => fireEvent.click(screen.getByRole('button', { name: 'Guardar borrador' }))
 const ready = () => screen.findByLabelText('Inicio')
+const limitRows = () => within(screen.getByRole('table')).getAllByRole('row').slice(1)
+const offered = () =>
+  within(field('Categoría del tope nuevo'))
+    .getAllByRole('option')
+    .map((option) => option.textContent)
+const addLimit = () => fireEvent.click(screen.getByRole('button', { name: 'Sumar un tope' }))
 
 test('case C1-22: while it prepares the form it says so and shows no fields', async () => {
   api.use(
@@ -143,9 +149,9 @@ test('case C1-24: a new period comes as a copy of the last one', async () => {
   expect(field('Ingreso estimado').value).toBe('1450000.5')
   expect(field('Inicio').value).toBe('2026-11-10')
   expect(field('Fin').value).toBe('')
-  expect(field('Categoría del tope 1').value).toBe(SUPERMERCADO)
+  expect(within(limitRows()[0]).getByRole('rowheader').textContent).toBe('Supermercado')
   expect(field('Monto del tope 1').value).toBe('300000')
-  expect(field('Categoría del tope 2').value).toBe(TRANSPORTE)
+  expect(within(limitRows()[1]).getByRole('rowheader').textContent).toBe('Transporte')
   expect(field('Monto del tope 2').value).toBe('80000')
 })
 
@@ -168,10 +174,8 @@ test('case C1-26: without a previous period the form comes empty', async () => {
   await ready()
   expect(field('Cadencia').value).toBe('monthly')
   for (const label of ['Moneda', 'Inicio', 'Fin', 'Ingreso estimado']) expect(field(label).value).toBe('')
-  expect(screen.queryByLabelText('Categoría del tope 1')).toBeNull()
-  fireEvent.click(screen.getByRole('button', { name: 'Sumar un tope' }))
-  const options = within(field('Categoría del tope 1')).getAllByRole('option')
-  expect(options.map((option) => option.textContent)).toEqual(['Salud', 'Supermercado', 'Transporte'])
+  expect(screen.queryByRole('table')).toBeNull()
+  expect(offered()).toEqual(['Salud', 'Supermercado', 'Transporte'])
 })
 
 test('case C1-27: a limit is added and removed among the expense categories', async () => {
@@ -181,9 +185,9 @@ test('case C1-27: a limit is added and removed among the expense categories', as
   renderForm()
 
   await ready()
-  fireEvent.click(screen.getByRole('button', { name: 'Sumar un tope' }))
-  type('Categoría del tope 3', SALUD)
-  type('Monto del tope 3', '40000')
+  type('Categoría del tope nuevo', SALUD)
+  type('Monto del tope nuevo', '40000')
+  addLimit()
   fireEvent.click(screen.getByRole('button', { name: 'Quitar el tope 2' }))
   save()
 
@@ -295,7 +299,7 @@ test('case C1-31: confirming says since when it receives movements and goes back
   render(<BudgetPage onNoSession={nothing} />)
 
   // The summary opens the current period: the draft is chosen through the list.
-  fireEvent.change(await screen.findByLabelText('Período'), { target: { value: NOVEMBER.id } })
+  fireEvent.change(await screen.findByLabelText('Tus períodos existentes'), { target: { value: NOVEMBER.id } })
   fireEvent.click(await screen.findByRole('button', { name: 'Editar' }))
   await ready()
   save()
@@ -304,7 +308,7 @@ test('case C1-31: confirming says since when it receives movements and goes back
   await screen.findByText('El período quedó confirmado: recibe movimientos desde el 10/11/2026.')
   expect(confirmedIds).toEqual([NOVEMBER.id])
   fireEvent.click(screen.getByRole('button', { name: 'Volver al resumen' }))
-  await waitFor(() => expect((screen.getByLabelText('Período') as HTMLSelectElement).value).toBe(NOVEMBER.id))
+  await waitFor(() => expect((screen.getByLabelText('Tus períodos existentes') as HTMLSelectElement).value).toBe(NOVEMBER.id))
 })
 
 test('case C1-32: in a confirmed period only the income and the limits are edited', async () => {
@@ -564,4 +568,76 @@ test('case C2-45: the status line says what it is doing and announces how it end
       'El período quedó confirmado: recibe movimientos desde el 10/11/2026.',
     ),
   )
+})
+
+test('case C2-46: if the dates overlap the notice shows the other periods', async () => {
+  const home = period('2027-01-10', '2027-02-09', { family_group_id: crypto.randomUUID(), family_group_name: 'Casa' })
+  apiWith([home, NOVEMBER, OCTOBER])
+  api.use(http.post(PERIODS, () => HttpResponse.json({ error: 'budget_period_overlap' }, { status: 409 })))
+
+  renderForm()
+
+  await ready()
+  type('Ingreso estimado', '1700000')
+  save()
+
+  const alert = await screen.findByRole('alert')
+  expect(within(alert).getByText('Tus períodos')).toBeTruthy()
+  expect(within(alert).getByText('del 10/10/2026 al 9/11/2026')).toBeTruthy()
+  expect(within(alert).getByText('del 10/11/2026 al 9/12/2026')).toBeTruthy()
+  expect(within(alert).queryByText('del 10/1/2027 al 9/2/2027')).toBeNull()
+  expect(within(alert).queryByRole('button', { name: 'Reintentar' })).toBeNull()
+  expect(field('Ingreso estimado').value).toBe('1700000')
+})
+
+test('case C2-46: when changing a period the notice does not show that same period', async () => {
+  apiWith([NOVEMBER, OCTOBER])
+  api.use(http.put(PERIOD, () => HttpResponse.json({ error: 'budget_period_overlap' }, { status: 409 })))
+
+  renderForm(NOVEMBER.id)
+
+  await ready()
+  save()
+
+  const alert = await screen.findByRole('alert')
+  expect(within(alert).getByText('del 10/10/2026 al 9/11/2026')).toBeTruthy()
+  expect(within(alert).queryByText('del 10/11/2026 al 9/12/2026')).toBeNull()
+})
+
+test('case C2-48: the limits are loaded with a single dropdown and go into a table', async () => {
+  apiWith([OCTOBER])
+  const bodies = saving(NOVEMBER)
+
+  renderForm()
+
+  await ready()
+  expect(limitRows().map((row) => within(row).getByRole('rowheader').textContent)).toEqual([
+    'Supermercado',
+    'Transporte',
+  ])
+  expect(within(limitRows()[0]).getByRole('button', { name: 'Quitar el tope 1' })).toBeTruthy()
+  expect(offered()).toEqual(['Salud'])
+
+  addLimit()
+  expect(screen.getByText('Poné un monto para sumar el tope.')).toBeTruthy()
+  expect(limitRows()).toHaveLength(2)
+
+  type('Monto del tope nuevo', '40000')
+  addLimit()
+  expect(limitRows()).toHaveLength(3)
+  expect(screen.queryByText('Poné un monto para sumar el tope.')).toBeNull()
+  expect(screen.getByText('Ya tienen tope todas tus categorías')).toBeTruthy()
+  expect(screen.queryByLabelText('Categoría del tope nuevo')).toBeNull()
+
+  type('Monto del tope 1', '320000')
+  fireEvent.click(screen.getByRole('button', { name: 'Quitar el tope 2' }))
+  expect(offered()).toEqual(['Transporte'])
+  expect(screen.queryByText('Ya tienen tope todas tus categorías')).toBeNull()
+  save()
+
+  await screen.findByText('El período quedó guardado.')
+  expect(bodies[0].budgets).toEqual([
+    { category_id: SUPERMERCADO, limit_amount: '320000' },
+    { category_id: SALUD, limit_amount: '40000' },
+  ])
 })
