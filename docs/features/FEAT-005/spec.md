@@ -169,7 +169,7 @@ no es miembro de ningún grupo, y hoy es 29 de octubre de 2026.
 
 #### C1-04 · Un personalizado termina el día indicado
 
-- **Estado:** cambiado, sin aprobar: un mensual ya no acepta otro fin
+- **Estado:** aprobado, cambiado: un mensual ya no acepta otro fin
 - **Sale de:** CA-3 · **Tipo:** unitario
 - **Dado** un período personalizado que empieza el 10 de noviembre de 2026, con el fin indicado el 30
   de noviembre de 2026,
@@ -343,7 +343,7 @@ no es miembro de ningún grupo, y hoy es 29 de octubre de 2026.
 
 #### C1-19 · Un quincenal termina el 15 o el último día del mes
 
-- **Estado:** cambiado, sin aprobar: el fin ya no se indica
+- **Estado:** aprobado, cambiado: el fin ya no se indica
 - **Sale de:** CA-11 · **Tipo:** unitario
 - **Dado** un período quincenal que empieza el 1 de noviembre de 2026, y otro el 16 de febrero de 2027,
 - **cuando** se calcula su fin,
@@ -659,7 +659,7 @@ categoría que no existe termina en `500`, porque la base rechaza la referencia,
 
 #### C2-12 · Un personalizado sin fin no tiene fin
 
-- **Estado:** cambiado, sin aprobar
+- **Estado:** aprobado, cambiado
 - **Sale de:** CA-11 · **Tipo:** unitario
 - **Dado** un período personalizado que empieza el 10 de noviembre de 2026, sin fin indicado,
 - **cuando** se calcula su fin,
@@ -668,7 +668,7 @@ categoría que no existe termina en `500`, porque la base rechaza la referencia,
 
 #### C2-13 · Lucía crea un personalizado sin `period_end`
 
-- **Estado:** cambiado, sin aprobar
+- **Estado:** aprobado, cambiado
 - **Sale de:** CA-11 · **Tipo:** integración
 - **Dado** Lucía con su sesión abierta,
 - **cuando** pide `POST /budget-periods` con `period_type` personalizado, `period_start` 2026-11-10 y
@@ -998,7 +998,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-50 · Un monto cuyo punto no separa miles no se guarda
 
 - **Sale de:** el contrato de UI · **Tipo:** componente
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** Lucía con el formulario abierto,
 - **cuando** escribe `1.5` o `320000.10` en el ingreso, en el monto del tope nuevo o en el de una fila, y guarda o suma el tope,
 - **entonces** no se pide nada a la API ni se suma la fila, se ve "Revisá el monto: el punto separa los miles. Para los centavos usá coma", y lo escrito no se pierde. `11.000` y `1.450.000,55` se aceptan: después de cada punto tiene que haber exactamente 3 cifras. Decidido por Vero el 1 de noviembre de 2026.
@@ -1007,7 +1007,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-51 · Si al volver del formulario falla la lista, reintentar la vuelve a pedir
 
 - **Sale de:** el contrato de UI · **Tipo:** componente
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** Lucía guardó un período nuevo y `GET /budget-periods` falla al volver al resumen,
 - **cuando** aprieta "Reintentar",
 - **entonces** se vuelve a pedir la lista, aparece el período guardado, elegido, y la fecha del próximo período está actualizada. Si era su primer período, la pantalla tampoco queda cargando. Decidido por Vero el 1 de noviembre de 2026.
@@ -1016,7 +1016,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-52 · El fin se escribe solo en un personalizado
 
 - **Sale de:** CA-3 y CA-11 · **Tipo:** componente
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** Lucía con el formulario abierto, con la cadencia "Mensual", "Quincenal" y "Personalizado" para elegir,
 - **cuando** elige cada una y guarda,
 - **entonces** en mensual y en quincenal no aparece "Fin" y se pide guardar con `period_end` nulo; en personalizado aparece "Fin", obligatorio, y se pide con esa fecha. Decidido por Vero el 1 de noviembre de 2026.
@@ -1025,7 +1025,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-53 · Un mensual con otro fin no se guarda
 
 - **Sale de:** CA-3 · **Tipo:** unitario
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** un período mensual que empieza el 10 de noviembre de 2026,
 - **cuando** se crea con fin el 30 de noviembre, y con fin el 9 de diciembre,
 - **entonces** el primero se rechaza con `period_end_not_matching` y sin escribir nada, y el segundo se guarda.
@@ -1034,7 +1034,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-54 · Un quincenal con otro inicio o con otro fin no se guarda
 
 - **Sale de:** CA-11 · **Tipo:** unitario
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** un período quincenal,
 - **cuando** se crea desde el 10 de noviembre de 2026, y desde el 1 de noviembre con fin el 20,
 - **entonces** el primero se rechaza con `biweekly_start_invalid`, el segundo con `period_end_not_matching`, y no se escribe nada.
@@ -1043,7 +1043,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-55 · Lucía crea un mensual y un quincenal que no coinciden con su cadencia, y un personalizado
 
 - **Sale de:** CA-3 y CA-11 · **Tipo:** integración
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** Lucía con su sesión abierta,
 - **cuando** pide `POST /budget-periods` con un mensual del 10 al 30 de noviembre de 2026, con un quincenal desde el 10, y con un `custom` del 10 al 30,
 - **entonces** los dos primeros responden `422` con `period_end_not_matching` y `biweekly_start_invalid`, sin guardar nada, y el tercero responde `201` con `period_type` en `custom`.
@@ -1052,7 +1052,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-56 · La base rechaza fechas que no coinciden con la cadencia
 
 - **Sale de:** reglas de dominio § 3 · **Tipo:** integración
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** la base,
 - **cuando** se inserta directamente un mensual del 10 al 30 de noviembre, y un quincenal del 10 al 24,
 - **entonces** los dos se rechazan por su `CHECK`, y el mismo período como `custom` se acepta; también un mensual del 31 de enero al 27 de febrero de 2027 y un quincenal del 16 al 28 de febrero.
@@ -1061,7 +1061,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-57 · La migración deja como personalizados los períodos que no coinciden
 
 - **Sale de:** reglas de dominio § 3 · **Tipo:** integración
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** una base con la migración anterior y un período mensual del 15 al 30 de noviembre, confirmado, un quincenal del 10 al 24, y un mensual del 10 de octubre al 9 de noviembre,
 - **cuando** se aplica la migración nueva,
 - **entonces** los dos primeros quedan como `custom`, con sus mismas fechas, y el tercero sigue mensual.
@@ -1070,7 +1070,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-58 · El primer período es mensual si el alta es el día 1, y si no personalizado
 
 - **Sale de:** reglas de dominio § 3 · **Tipo:** unitario
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** un usuario que se da de alta el 1 de noviembre de 2026, y otro el 15,
 - **cuando** se crea su primer período,
 - **entonces** el primero es mensual, del 1 al 30, y el segundo es personalizado, del 15 al 30.
@@ -1079,7 +1079,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-59 · Después de un personalizado se sugiere mensual
 
 - **Sale de:** CA-13 · **Tipo:** componente
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** el último período de Lucía es personalizado, del 15 al 30 de noviembre de 2026,
 - **cuando** abre el formulario para armar uno nuevo,
 - **entonces** la cadencia viene en "Mensual", con inicio el 1 de diciembre, y se copian la moneda, el ingreso y los topes.
@@ -1088,7 +1088,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-60 · Un monto enviado como número JSON se guarda exacto
 
 - **Sale de:** [la API](../../04-api.md) · **Tipo:** integración
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** Lucía con su sesión abierta,
 - **cuando** pide `POST /budget-periods` con un tope de `1234567890123456.78`, escrito como número JSON,
 - **entonces** responde `201`, y se guarda y se responde exactamente ese monto. Decidido por Vero el 1 de noviembre de 2026.
@@ -1097,7 +1097,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-61 · Dos pedidos simultáneos con fechas superpuestas responden `409`
 
 - **Sale de:** [la API](../../04-api.md) · **Tipo:** integración
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** dos pedidos de Lucía con fechas superpuestas, que pasan los dos el control del caso de uso,
 - **cuando** la base rechaza el segundo por su restricción de superposición,
 - **entonces** responde `409` con `budget_period_overlap`, no `500`, y queda guardado solo el primero.
@@ -1106,7 +1106,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-62 · Un tope que redondea a 0 y el límite exacto de un monto
 
 - **Sale de:** [la API](../../04-api.md) · **Tipo:** unitario
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** un período con un tope de `0.004`, otro de `0.005`, y otros de `999999999999999999.99` y `999999999999999999.995`,
 - **cuando** se crea,
 - **entonces** `0.004` se rechaza con `budget_limit_not_positive`, `0.005` se acepta, `999999999999999999.99` se acepta, y `999999999999999999.995` se rechaza con `amount_too_large`.
@@ -1292,7 +1292,11 @@ en `frontend/src/messages.ts`.
 
 ## Sin cubrir
 
-Nada: los pedidos simultáneos con fechas superpuestas quedaron cubiertos por C2-61.
+Los pedidos simultáneos con fechas superpuestas quedaron cubiertos por C2-61.
+
+Queda sin resolver una cosa, que no cambia ningún dato: una cifra muy grande que la pantalla de
+presupuesto solo muestra se redondea, porque el resumen y el detalle leen los montos como números
+de JavaScript. El formulario y lo guardado leen las cifras exactas (C3-13).
 
 ## Fuera de alcance
 
