@@ -28,7 +28,9 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
 1. **Una sola imagen para la API y el worker.** El Dockerfile tiene dos etapas: la primera
    compila el dashboard, y la final lleva el backend con ese build, que la API sirve bajo
    `/app`. La imagen corre con un usuario sin privilegios y declara un chequeo de salud contra
-   `GET /healthz`.
+   `GET /healthz`. Las imágenes base van fijadas por digest, y las dependencias del backend se
+   instalan con `--require-hashes` desde un archivo con todo su árbol, que genera pip-tools, para
+   que dos builds instalen lo mismo.
 2. **Docker Compose con cuatro servicios.** La base, con la imagen `pgvector/pgvector:pg16`;
    las migraciones, que corren `alembic upgrade head` una vez y terminan; la API; y el worker.
    La API y el worker esperan a que las migraciones terminen bien, y ninguno de los dos migra al

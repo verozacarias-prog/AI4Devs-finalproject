@@ -231,7 +231,8 @@ obligatorios.
 | Contrato de la API | Regenera el contrato y los tipos del dashboard, y falla si cambian | El merge | Decidido, control 3. Ya corre |
 | Secretos en el código | gitleaks | El merge | Decidido, control 4. Ya corre |
 | Vulnerabilidades en dependencias | pip-audit y `npm audit` | El merge. En Python, ante cualquiera que tenga arreglo; en el dashboard, desde severidad alta | Decidido, control 5. Ya corre |
-| Actualización de dependencias | Dependabot, una vez por semana | No: abre un pull request | Decidido, control 5. Ya corre para las acciones, el portal, el backend, el dashboard y la imagen |
+| Actualización de dependencias | Dependabot, una vez por semana | No: abre un pull request | Decidido, control 5. Ya corre para las acciones, el portal, el backend, el dashboard y las imágenes |
+| Dependencias e imágenes fijadas | Todo el árbol del backend con sus hashes, generado con pip-tools por `scripts/lock_backend_dependencies.sh` e instalado con `--require-hashes`, y las imágenes por digest. La imagen de pgvector se repite en `app-quality.yml` y un test falla si difiere de la de Compose | El build, si lo que baja no coincide | Decidido, [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md). Ya corre |
 | Análisis de seguridad del código | CodeQL, sobre el backend, el dashboard y los flujos de GitHub Actions. También corre una vez por semana | El merge, ante una alerta nueva de severidad alta o crítica | Decidido, control 6. Ya corre |
 | Migraciones desde el esquema de la versión anterior | `alembic upgrade head` sobre el esquema anterior, más `alembic check` | El merge | Entrega final |
 | Imagen | build de Docker, escaneo e inventario de componentes | El merge, si hay críticas con arreglo | Entrega final |
@@ -261,7 +262,8 @@ services:
 Las herramientas nuevas se justifican porque hoy no hay ninguna herramienta de código: ruff,
 mypy y pytest son las de base para Python, y gitleaks y pip-audit cubren lo que ningún
 verificador del repositorio mira. Sentry entra porque nada de lo instalado agrupa errores ni
-avisa cuando aparece uno nuevo. Con qué herramienta se escanea la imagen se elige en la entrega
+avisa cuando aparece uno nuevo. pip-tools entra porque pip no genera un archivo de requisitos con todo
+el árbol y sus hashes, y queda solo en desarrollo: no entra en la imagen. Con qué herramienta se escanea la imagen se elige en la entrega
 final.
 
 ## 4. Despliegue y vuelta atrás

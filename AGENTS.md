@@ -253,6 +253,8 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   y desde `frontend/`, `npm run api:generate`. El pipeline y un test del backend fallan si
   quedaron desactualizados. Una ruta nueva lleva sus textos en `reference.py`: sin ellos el
   verificador del contrato falla.
+- Si cambia una dependencia del backend, se edita su archivo `.in` en `backend/` y se corre
+  `scripts/lock_backend_dependencies.sh`, que regenera los `.txt` con sus hashes.
 - Antes de pedir el merge de un pull request se corre a mano el agente `pr-reviewer`, y su
   veredicto se resume en el pull request
   ([ADR 0022](docs/adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md)).
