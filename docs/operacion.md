@@ -123,8 +123,8 @@ sus permisos a `platita_app`.
 La entrada de desarrollo se enciende con `DEV_ENTRY_ENABLED=true`, y el chat web con
 `WEB_CHAT_ENABLED=true`. Sin la variable, cada una queda apagada, y con cualquiera de las dos
 encendida en `production` ningún proceso arranca. En `demo`, los enlaces personales se firman con
-`SERVER_SECRET_KEY`, larga y generada al azar: con la entrada encendida y sin esa variable, la API
-no arranca
+`SERVER_SECRET_KEY`, larga y generada al azar: con la entrada encendida y sin esa variable, ningún
+proceso arranca. Por eso el worker de `demo` no enciende la entrada: no abre sesiones ni necesita esa clave
 ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 
 Dos esperas son configuración, y cada una tiene su variable, que es opcional:
@@ -204,7 +204,8 @@ para probar. Para empezar de cero se reinicia la base. Se niega a correr con
 el entorno en `demo` o en `production`.
 
 El entorno `demo` no figura en los costos de [1](#1-qué-se-suma-a-la-arquitectura): es una
-segunda instancia con su base, y cuánto cuesta depende del proveedor que se elija.
+segunda instancia con su base, y cuesta US$20 por mes en Render
+([ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md)).
 
 Un staging igual a producción no está al lanzamiento: duplicaría el costo, y el riesgo principal que cubriría, una
 migración que rompe, lo cubre la CI probando la migración desde el esquema de la versión
@@ -460,7 +461,7 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   |---|---|---|
   | `auth.code_requested` | Se pidió un código de acceso | El login por código |
   | `auth.code_failed` | Un canje de código falló | El login por código |
-  | `auth.session_created` | Se abrió una sesión, por código, por la lista de `local` o por un enlace personal. Lleva el usuario, la sesión y la forma en el campo `method`: hoy solo `dev_user_list` | La entrada de desarrollo |
+  | `auth.session_created` | Se abrió una sesión, por código, por la lista de `local` o por un enlace personal. Lleva el usuario, la sesión y la forma en el campo `method`: `dev_user_list` o `dev_personal_link` | La entrada de desarrollo |
   | `auth.throttled` | Se alcanzó un límite de intentos | El login por código |
   | `usage.quota_exceeded` | Un usuario superó una cuota o el tope diario total. Lleva el usuario, el mensaje y cuál superó en el campo `quota`: `classification` o `registration` | Las cuotas, con el registro de gastos |
   | `llm.output_blocked` | La validación de salida frenó una respuesta | Las consultas y los consejos |
