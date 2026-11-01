@@ -1114,7 +1114,143 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 
 ### Corte 3 — observabilidad y accesibilidad
 
-- **Aprobado por:** pendiente
+- **Aprobado por:** Veronica Zacarias 01/11/2026
+- **Total:** 12 casos, 5 de integración y 7 de componente.
+
+Cubre lo que cada pedido deja en los registros, la moneda de cada monto y la accesibilidad del
+formulario. El contraste se anota en la lista de accesibilidad del
+[contrato de UI](ui_contract.md), sin caso propio, igual que en las otras pantallas.
+
+Los nombres de los montos y de "Quitar" de la tabla de topes pasan de la posición a la categoría.
+Eso cambia el nombre que usan los tests de C1-24, C1-27, C1-28, C1-32, C2-48, C2-49 y C2-50, sin
+cambiar lo que comprueban.
+
+| Caso | Qué prueba | Tipo | Sale de |
+|---|---|---|---|
+| C3-01 | Los registros no llevan montos ni nombres | Integración | AGENTS.md § 7 |
+| C3-02 | Un error al cambiar o confirmar un período dice cuál período | Integración | Operación 6.3 |
+| C3-03 | Un error por la categoría de un tope dice cuál categoría | Integración | Operación 6.3 |
+| C3-04 | Un rechazo de la base deja el nombre de su restricción | Integración | Operación 6.3 |
+| C3-05 | Un borrador pasa a otra moneda con su ingreso y sus topes | Integración | CA-4 y reglas de dominio § 6 |
+| C3-06 | **Pantalla.** Los controles tienen nombre, y el de cada tope dice su categoría | Componente | Accesibilidad |
+| C3-07 | **Pantalla.** Cada monto del formulario dice su moneda | Componente | AGENTS.md § 5 y accesibilidad |
+| C3-08 | **Pantalla.** Todo monto de lo guardado se escribe con su moneda | Componente | AGENTS.md § 5 y accesibilidad |
+| C3-09 | **Pantalla.** Al guardar y al confirmar, el foco va a la línea de estado | Componente | Accesibilidad |
+| C3-10 | **Pantalla.** Al abrir el formulario y al volver al resumen, el foco va al título | Componente | Accesibilidad |
+| C3-11 | **Pantalla.** Al quitar un tope, el foco va al selector del tope nuevo | Componente | Accesibilidad |
+| C3-12 | **Pantalla.** Un tope nuevo sin monto se anuncia y marca el campo | Componente | Accesibilidad |
+
+#### C3-01 · Los registros no llevan montos ni nombres
+
+- **Sale de:** AGENTS.md § 7 · **Tipo:** integración
+- **Dado** Lucía con su sesión abierta,
+- **cuando** pide `GET /categories`, `GET /currencies`, crea el borrador de C1-11, lo cambia como en
+  C1-13 y lo confirma,
+- **entonces** la línea de cada pedido lleva su endpoint, y ninguna línea escrita durante los cinco
+  contiene un monto, "Supermercado", "Transporte", "Salud", "Galicia" ni "Lucía".
+- **Test:** `tests/integration/test_budget_planning.py::test_the_logs_carry_no_amounts_or_names`
+
+#### C3-02 · Un error al cambiar o confirmar un período dice cuál período
+
+- **Sale de:** [Operación 6.3](../../operacion.md#63-registros) · **Tipo:** integración
+- **Dado** los datos del corte 2,
+- **cuando** Sofía cambia y confirma el borrador de "Casa", Lucía cambia y confirma el de Pablo,
+  Lucía le cambia la moneda a su período actual, y Lucía mueve un borrador sobre su período actual,
+- **entonces** cada pedido deja una línea `error.expected` con su `error_code`, `not_the_owner`,
+  `not_found`, `confirmed_period_fixed` o `budget_period_overlap`, el `user_id` de quien pidió y el
+  `budget_period_id` del período pedido.
+- **Test:** `tests/integration/test_budget_planning.py::test_an_error_changing_or_confirming_a_period_says_which_period`
+
+#### C3-03 · Un error por la categoría de un tope dice cuál categoría
+
+- **Sale de:** [Operación 6.3](../../operacion.md#63-registros) · **Tipo:** integración
+- **Dado** los datos del corte 2,
+- **cuando** Lucía crea un período con un tope sobre "Kiosco", la categoría de Pablo, y otro con un
+  tope sobre "Clases particulares", su categoría de ingreso,
+- **entonces** cada pedido deja una línea `error.expected` con su `error_code` y el `category_id` de
+  esa categoría, sin su nombre.
+- **Test:** `tests/integration/test_budget_planning.py::test_an_error_on_the_category_of_a_limit_says_which_category`
+
+#### C3-04 · Un rechazo de la base deja el nombre de su restricción
+
+- **Sale de:** [Operación 6.3](../../operacion.md#63-registros) · **Tipo:** integración
+- **Dado** los dos pedidos simultáneos de C2-61,
+- **cuando** la base rechaza el segundo por su restricción de superposición,
+- **entonces** su línea `error.expected` lleva `budget_period_overlap` como `error_code` y el nombre
+  de la restricción en `constraint`, sin ninguna fecha ni monto.
+- **Test:** `tests/integration/test_budget_planning.py::test_a_rejection_of_the_database_leaves_the_name_of_its_constraint`
+
+#### C3-05 · Un borrador pasa a otra moneda con su ingreso y sus topes
+
+- **Sale de:** CA-4 y [reglas de dominio § 6](../../reglas-de-dominio.md#6-multimoneda-y-cotización) · **Tipo:** integración
+- **Dado** Lucía con el borrador de C1-11 guardado, en ARS,
+- **cuando** pide `PUT /budget-periods/{period_id}` con `primary_currency` USD, `estimated_income`
+  1500.50 y un tope de Supermercado de 320.25,
+- **entonces** responde `200` con `primary_currency` USD y esos montos, sin convertirlos, y
+  `GET /budget-periods/{period_id}/summary` responde con esa moneda y esos montos.
+- **Test:** `tests/integration/test_budget_planning.py::test_a_draft_moves_to_another_currency_with_its_income_and_its_limits`
+
+#### C3-06 · Los controles tienen nombre, y el de cada tope dice su categoría
+
+- **Sale de:** Accesibilidad · **Tipo:** componente
+- **Dado** el formulario de Lucía, con sus topes de Supermercado y Transporte,
+- **cuando** se abre,
+- **entonces** la cadencia, la moneda, las fechas, el ingreso, los campos del tope nuevo, "Sumar un tope",
+  "Guardar borrador" y "Volver al resumen" son controles nativos, habilitados y sin nada que los saque del orden de Tab; y
+  cada fila ofrece "Monto del tope de Supermercado" y "Quitar el tope de Supermercado".
+- **Test:** `src/pages/BudgetPeriodFormPage.test.tsx` › "case C3-06: the controls have a name and each limit says its category"
+
+#### C3-07 · Cada monto del formulario dice su moneda
+
+- **Sale de:** AGENTS.md § 5 y accesibilidad · **Tipo:** componente
+- **Dado** el formulario de Lucía, en ARS,
+- **cuando** se abre, y después elige USD,
+- **entonces** el ingreso, el tope nuevo y cada tope se ven con "ARS" y lo tienen en su descripción
+  accesible, y después con "USD". En un formulario sin moneda elegida, ningún monto dice una.
+- **Test:** `src/pages/BudgetPeriodFormPage.test.tsx` › "case C3-07: each amount of the form says its currency"
+
+#### C3-08 · Todo monto de lo guardado se escribe con su moneda
+
+- **Sale de:** AGENTS.md § 5 y accesibilidad · **Tipo:** componente
+- **Dado** un borrador en USD que la API devuelve guardado, y después confirmado,
+- **cuando** se ve lo guardado y lo confirmado,
+- **entonces** el ingreso y cada tope empiezan con "US$": ninguno es un número suelto.
+- **Test:** `src/pages/BudgetPeriodFormPage.test.tsx` › "case C3-08: every saved amount is written with its currency"
+
+#### C3-09 · Al guardar y al confirmar, el foco va a la línea de estado
+
+- **Sale de:** Accesibilidad · **Tipo:** componente
+- **Dado** el formulario de Lucía,
+- **cuando** aprieta "Guardar borrador" y termina de guardarse, y después "Confirmar" y termina de
+  confirmarse,
+- **entonces** cada vez el foco queda en la línea de estado, que dice cómo terminó, y no se pierde
+  con el botón que desapareció.
+- **Test:** `src/pages/BudgetPeriodFormPage.test.tsx` › "case C3-09: saving and confirming move the focus to the status line"
+
+#### C3-10 · Al abrir el formulario y al volver al resumen, el foco va al título
+
+- **Sale de:** Accesibilidad · **Tipo:** componente
+- **Dado** el resumen de Lucía,
+- **cuando** aprieta "Armar un período", y después "Volver al resumen",
+- **entonces** el foco queda en el título "Armar un período", y después en "Tu presupuesto".
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C3-10: opening the form and coming back move the focus to the heading"
+
+#### C3-11 · Al quitar un tope, el foco va al selector del tope nuevo
+
+- **Sale de:** Accesibilidad · **Tipo:** componente
+- **Dado** el formulario de Lucía, con sus dos topes,
+- **cuando** aprieta "Quitar el tope de Transporte",
+- **entonces** el foco queda en "Categoría del tope nuevo", que ofrece Transporte.
+- **Test:** `src/pages/BudgetPeriodFormPage.test.tsx` › "case C3-11: removing a limit moves the focus to the new limit selector"
+
+#### C3-12 · Un tope nuevo sin monto se anuncia y marca el campo
+
+- **Sale de:** Accesibilidad · **Tipo:** componente
+- **Dado** el formulario de Lucía, con "Monto del tope nuevo" vacío,
+- **cuando** aprieta "Sumar un tope",
+- **entonces** el aviso de que falta el monto es una alerta, y el campo queda inválido y descripto
+  por ese aviso. Al escribir un monto y sumarlo, deja de estar inválido.
+- **Test:** `src/pages/BudgetPeriodFormPage.test.tsx` › "case C3-12: a new limit without an amount is announced and marks the field"
 
 ## Estados de pantalla
 

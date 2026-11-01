@@ -1,9 +1,9 @@
 """Building and confirming a budget period over HTTP, against PostgreSQL (FEAT-005).
 
-Cases C1-11 to C1-16, C1-18, C1-20, C1-21 and the integration ones of C2-01 to C2-44 of
-docs/features/FEAT-005/spec.md: POST /budget-periods, PUT /budget-periods/{period_id},
-POST /budget-periods/{period_id}/confirm, GET /budget-periods, GET /categories and
-GET /currencies. Each test has a
+Cases C1-11 to C1-16, C1-18, C1-20, C1-21 and the integration ones of C2-01 to C2-44 and
+C3-01 to C3-05 of docs/features/FEAT-005/spec.md: POST /budget-periods,
+PUT /budget-periods/{period_id}, POST /budget-periods/{period_id}/confirm, GET /budget-periods,
+GET /categories and GET /currencies. Each test has a
 database of its own, with the test data of the script, and talks to the API the way the
 dashboard does: it enters through the development entry and asks with the session cookie.
 
@@ -18,7 +18,7 @@ from __future__ import annotations
 import io
 import json
 import uuid
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -1037,3 +1037,235 @@ def test_lucia_creates_a_period_with_an_income_of_1e30(client: TestClient, engin
     _assert_error(income, 422, "amount_too_large")
     _assert_error(limit, 422, "amount_too_large")
     assert _period_count(engine) == 1
+
+
+def _client_with_logs(database_url: str) -> tuple[TestClient, io.StringIO]:
+    """A client of an API that writes its lines where the test reads them."""
+    stream = io.StringIO()
+    environ = {
+        "DATABASE_URL": database_url,
+        "APP_ENV": "local",
+        "APP_VERSION": "test",
+        "DEV_ENTRY_ENABLED": "true",
+    }
+    app = create_app(load_settings(environ), log_stream=stream, clock=FixedClock(TODAY_AT_NOON))
+    return TestClient(app, base_url=BASE_URL), stream
+
+
+def _lines_since(stream: io.StringIO, written_before: int) -> list[dict[str, str]]:
+    return [json.loads(line) for line in stream.getvalue().splitlines()[written_before:]]
+
+
+def _written(stream: io.StringIO) -> int:
+    return len(stream.getvalue().splitlines())
+
+
+def _free_text(lines: list[dict[str, str]]) -> str:
+    """Every value of every line, except the moment and the identifiers, which have a fixed shape
+    and may hold a digit by chance."""
+    return "\n".join(
+        str(value)
+        for line in lines
+        for key, value in line.items()
+        if key != "ts" and not key.endswith("_id")
+    )
+
+
+def _expected_error(stream: io.StringIO, written_before: int) -> dict[str, str]:
+    """The only `error.expected` line written since that point."""
+    lines = _lines_since(stream, written_before)
+    errors = [line for line in lines if line["event"] == "error.expected"]
+    assert len(errors) == 1, lines
+    return errors[0]
+
+
+def test_the_logs_carry_no_amounts_or_names(seeded_database_url: str, engine: Engine) -> None:
+    # Case C3-01.
+    _lucia_october(engine)
+    client, stream = _client_with_logs(seeded_database_url)
+    _enter_as(client, "Lucía")
+    written_before = _written(stream)
+
+    assert client.get("/categories").status_code == 200
+    assert client.get("/currencies").status_code == 200
+    draft = _create_november(client, engine)
+    changed = client.put(
+        f"/budget-periods/{draft['id']}",
+        content=_content(engine, "2026-11-15", "1600000", {SUPERMARKET: "350000", HEALTH: "50000"}),
+        headers=SAME_ORIGIN,
+    )
+    assert changed.status_code == 200, changed.text
+    confirmed = client.post(f"/budget-periods/{draft['id']}/confirm", headers=SAME_ORIGIN)
+    assert confirmed.status_code == 200, confirmed.text
+
+    lines = _lines_since(stream, written_before)
+    assert [line["endpoint"] for line in lines if line["event"] == "http.request"] == [
+        "GET /categories",
+        "GET /currencies",
+        "POST /budget-periods",
+        "PUT /budget-periods/{period_id}",
+        "POST /budget-periods/{period_id}/confirm",
+    ]
+    free_text = _free_text(lines)
+    for data in (
+        "1500000",
+        "320000",
+        "90000",
+        "1600000",
+        "350000",
+        "50000",
+        SUPERMARKET,
+        TRANSPORT,
+        HEALTH,
+        "Galicia",
+        "Lucía",
+    ):
+        assert data not in free_text, data
+
+
+def test_an_error_changing_or_confirming_a_period_says_which_period(
+    seeded_database_url: str, engine: Engine
+) -> None:
+    # Case C3-02.
+    october = _lucia_october(engine)
+    of_pablo = _pablo_period(engine, status="draft")
+    casa_draft = _casa_draft(engine)
+    november = _november_content(engine)
+    # One API: its lines go to a single place. Each person has a client, with their own cookie.
+    lucia_client, stream = _client_with_logs(seeded_database_url)
+    sofia_client = TestClient(lucia_client.app, base_url=BASE_URL)
+    _enter_as(sofia_client, "Sofía")
+    _enter_as(lucia_client, "Lucía")
+    draft = _create_november(lucia_client, engine)
+
+    def change(client: TestClient, period_id: object, content: str) -> Response:
+        return client.put(f"/budget-periods/{period_id}", content=content, headers=SAME_ORIGIN)
+
+    def confirm(client: TestClient, period_id: object) -> Response:
+        return client.post(f"/budget-periods/{period_id}/confirm", headers=SAME_ORIGIN)
+
+    moved = _content(engine, "2026-11-01", "1500000", {SUPERMARKET: "320000", TRANSPORT: "90000"})
+    in_dollars = _content(
+        engine,
+        "2026-10-10",
+        "1450000",
+        {SUPERMARKET: "300000", TRANSPORT: "80000"},
+        end="2026-11-09",
+        currency="USD",
+    )
+    requests: list[tuple[str, Callable[[], Response], str, object]] = [
+        ("Sofía", lambda: change(sofia_client, casa_draft, november), "not_the_owner", casa_draft),
+        ("Sofía", lambda: confirm(sofia_client, casa_draft), "not_the_owner", casa_draft),
+        ("Lucía", lambda: change(lucia_client, of_pablo, november), "not_found", of_pablo),
+        ("Lucía", lambda: confirm(lucia_client, of_pablo), "not_found", of_pablo),
+        (
+            "Lucía",
+            lambda: change(lucia_client, october, in_dollars),
+            "confirmed_period_fixed",
+            october,
+        ),
+        (
+            "Lucía",
+            lambda: change(lucia_client, draft["id"], moved),
+            "budget_period_overlap",
+            draft["id"],
+        ),
+    ]
+    for name, ask, code, period_id in requests:
+        written_before = _written(stream)
+
+        assert ask().json()["error"] == code
+
+        line = _expected_error(stream, written_before)
+        assert line["error_code"] == code
+        assert line["user_id"] == str(_user_id(engine, name))
+        assert line["budget_period_id"] == str(period_id), code
+
+
+def test_an_error_on_the_category_of_a_limit_says_which_category(
+    seeded_database_url: str, engine: Engine
+) -> None:
+    # Case C3-03.
+    _lucia_october(engine)
+    kiosk = _own_category(engine, _user_id(engine, "Pablo"), "Kiosco", "expense")
+    private_classes = _own_category(
+        engine, _user_id(engine, "Lucía"), "Clases particulares", "income"
+    )
+    client, stream = _client_with_logs(seeded_database_url)
+    _enter_as(client, "Lucía")
+
+    for category_id, name, code in (
+        (kiosk, "Kiosco", "not_found"),
+        (private_classes, "Clases particulares", "budget_category_not_expense"),
+    ):
+        written_before = _written(stream)
+
+        response = client.post(
+            "/budget-periods",
+            content=_with_limit_on(_november_content(engine), category_id),
+            headers=SAME_ORIGIN,
+        )
+
+        assert response.json()["error"] == code
+        line = _expected_error(stream, written_before)
+        assert line["error_code"] == code
+        assert line["category_id"] == str(category_id)
+        assert name not in _free_text(_lines_since(stream, written_before))
+
+
+def test_a_rejection_of_the_database_leaves_the_name_of_its_constraint(
+    seeded_database_url: str, engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Case C3-04: the same two requests at once of C2-61.
+    _lucia_october(engine)
+    client, stream = _client_with_logs(seeded_database_url)
+    _enter_as(client, "Lucía")
+    monkeypatch.setattr(
+        "app.domain.use_cases.budgets.create_budget_period.check_no_overlap",
+        lambda *_: None,
+    )
+    written_before = _written(stream)
+
+    response = client.post(
+        "/budget-periods",
+        content=_content(engine, "2026-11-01", "1500000", {}),
+        headers=SAME_ORIGIN,
+    )
+
+    _assert_error(response, 409, "budget_period_overlap")
+    line = _expected_error(stream, written_before)
+    assert line["error_code"] == "budget_period_overlap"
+    assert line["constraint"] == "ex_budget_period_user_overlap"
+    free_text = _free_text(_lines_since(stream, written_before))
+    for data in ("2026-11-01", "2026-11-30", "1500000"):
+        assert data not in free_text, data
+
+
+def test_a_draft_moves_to_another_currency_with_its_income_and_its_limits(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C3-05: the amounts are the ones sent, not a conversion of the ones it had.
+    _lucia_october(engine)
+    _enter_as(client, "Lucía")
+    draft = _create_november(client, engine)
+
+    response = client.put(
+        f"/budget-periods/{draft['id']}",
+        content=_content(engine, "2026-11-10", "1500.50", {SUPERMARKET: "320.25"}, currency="USD"),
+        headers=SAME_ORIGIN,
+    )
+
+    assert response.status_code == 200, response.text
+    changed = _body(response)
+    assert changed["primary_currency"] == "USD"
+    assert changed["estimated_income"] == Decimal("1500.50")
+    assert _limits(changed) == [(SUPERMARKET, Decimal("320.25"))]
+    summary = client.get(f"/budget-periods/{draft['id']}/summary")
+    assert summary.status_code == 200, summary.text
+    read = _body(summary)
+    assert read["primary_currency"] == "USD"
+    assert read["estimated_income"] == Decimal("1500.50")
+    categories: list[dict[str, object]] = read["categories"]  # type: ignore[assignment]
+    assert [(item["category"], item["limit_amount"]) for item in categories] == [
+        (SUPERMARKET, Decimal("320.25"))
+    ]

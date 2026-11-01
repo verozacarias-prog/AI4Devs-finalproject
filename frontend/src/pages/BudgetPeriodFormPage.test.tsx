@@ -1,5 +1,5 @@
 /**
- * Cases C1-22, C1-24 to C1-32, C2-32 to C2-38, C2-43, C2-45, C2-46, C2-48 to C2-52 and C2-59 of FEAT-005 (docs/features/FEAT-005/spec.md): the states of the
+ * Cases C1-22, C1-24 to C1-32, C2-32 to C2-38, C2-43, C2-45, C2-46, C2-48 to C2-52, C2-59, C3-06 to C3-09, C3-11 and C3-12 of FEAT-005 (docs/features/FEAT-005/spec.md): the states of the
  * form of a budget period. The API is simulated at the network level, so the page and its API calls are tested
  * together.
  */
@@ -150,9 +150,9 @@ test('case C1-24: a new period comes as a copy of the last one', async () => {
   expect(field('Inicio').value).toBe('2026-11-10')
   expect(screen.queryByLabelText('Fin')).toBeNull()
   expect(within(limitRows()[0]).getByRole('rowheader').textContent).toBe('Supermercado')
-  expect(field('Monto del tope 1').value).toBe('300.000')
+  expect(field('Monto del tope de Supermercado').value).toBe('300.000')
   expect(within(limitRows()[1]).getByRole('rowheader').textContent).toBe('Transporte')
-  expect(field('Monto del tope 2').value).toBe('80.000')
+  expect(field('Monto del tope de Transporte').value).toBe('80.000')
 })
 
 test('case C1-25: the last one is the individual one that starts latest even a draft', async () => {
@@ -189,7 +189,7 @@ test('case C1-27: a limit is added and removed among the expense categories', as
   type('Categoría del tope nuevo', SALUD)
   type('Monto del tope nuevo', '40000')
   addLimit()
-  fireEvent.click(screen.getByRole('button', { name: 'Quitar el tope 2' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Quitar el tope de Transporte' }))
   save()
 
   await screen.findByText('El período quedó guardado.')
@@ -207,7 +207,7 @@ test('case C1-28: saving sends the amounts as text with their cents', async () =
 
   await ready()
   type('Ingreso estimado', '1450000,55')
-  type('Monto del tope 1', '320.000,10')
+  type('Monto del tope de Supermercado', '320.000,10')
   save()
 
   await screen.findByText('El período quedó guardado.')
@@ -328,7 +328,7 @@ test('case C1-32: in a confirmed period only the income and the limits are edite
   for (const label of ['Cadencia', 'Moneda', 'Inicio']) expect(field(label).disabled).toBe(true)
   expect(screen.queryByLabelText('Fin')).toBeNull()
   expect(field('Ingreso estimado').disabled).toBe(false)
-  expect(field('Monto del tope 1').disabled).toBe(false)
+  expect(field('Monto del tope de Supermercado').disabled).toBe(false)
   type('Ingreso estimado', '1520000')
   save()
 
@@ -619,7 +619,7 @@ test('case C2-48: the limits are loaded with a single dropdown and go into a tab
     'Supermercado',
     'Transporte',
   ])
-  expect(within(limitRows()[0]).getByRole('button', { name: 'Quitar el tope 1' })).toBeTruthy()
+  expect(within(limitRows()[0]).getByRole('button', { name: 'Quitar el tope de Supermercado' })).toBeTruthy()
   expect(offered()).toEqual(['Salud'])
 
   addLimit()
@@ -633,8 +633,8 @@ test('case C2-48: the limits are loaded with a single dropdown and go into a tab
   expect(screen.getByText('Ya tienen tope todas tus categorías')).toBeTruthy()
   expect(screen.queryByLabelText('Categoría del tope nuevo')).toBeNull()
 
-  type('Monto del tope 1', '320000')
-  fireEvent.click(screen.getByRole('button', { name: 'Quitar el tope 2' }))
+  type('Monto del tope de Supermercado', '320000')
+  fireEvent.click(screen.getByRole('button', { name: 'Quitar el tope de Transporte' }))
   expect(offered()).toEqual(['Transporte'])
   expect(screen.queryByText('Ya tienen tope todas tus categorías')).toBeNull()
   save()
@@ -646,7 +646,7 @@ test('case C2-48: the limits are loaded with a single dropdown and go into a tab
   ])
 })
 
-test.each(['Ingreso estimado', 'Monto del tope nuevo', 'Monto del tope 1'])(
+test.each(['Ingreso estimado', 'Monto del tope nuevo', 'Monto del tope de Supermercado'])(
   'case C2-49: the amount fields take digits thousands points and one decimal comma (%s)',
   async (label) => {
     apiWith([OCTOBER])
@@ -678,7 +678,7 @@ test('case C2-49: an amount is sent without points and with a decimal point', as
   await ready()
   expect(field('Ingreso estimado').value).toBe('1.450.000,5')
   type('Ingreso estimado', '1.450.000,55')
-  type('Monto del tope 1', '11.000')
+  type('Monto del tope de Supermercado', '11.000')
   type('Monto del tope nuevo', '40.000,10')
   addLimit()
   save()
@@ -701,7 +701,7 @@ test.each(['1.5', '320000.10'])('case C2-50: an amount whose point does not sepa
   renderForm()
 
   await ready()
-  for (const label of ['Ingreso estimado', 'Monto del tope 1']) {
+  for (const label of ['Ingreso estimado', 'Monto del tope de Supermercado']) {
     const before = field(label).value
     type(label, written)
     save()
@@ -849,4 +849,142 @@ test('case C2-59: after a custom period it suggests a monthly one', async () => 
   expect(field('Moneda').value).toBe('ARS')
   expect(field('Ingreso estimado').value).toBe('1.450.000,5')
   expect(limitRows()).toHaveLength(2)
+})
+
+const described = (control: HTMLElement) =>
+  (control.getAttribute('aria-describedby') ?? '')
+    .split(' ')
+    .map((id) => document.getElementById(id)?.textContent ?? '')
+    .join(' ')
+
+function expectReachable(control: HTMLElement, tagName: string) {
+  expect(control.tagName).toBe(tagName)
+  expect((control as HTMLInputElement).disabled).toBe(false)
+  expect(control.tabIndex).toBeGreaterThanOrEqual(0)
+}
+
+test('case C3-06: the controls have a name and each limit says its category', async () => {
+  apiWith([OCTOBER])
+
+  renderForm()
+
+  await ready()
+  for (const label of ['Cadencia', 'Moneda', 'Categoría del tope nuevo']) expectReachable(field(label), 'SELECT')
+  for (const label of ['Inicio', 'Ingreso estimado', 'Monto del tope nuevo']) expectReachable(field(label), 'INPUT')
+  for (const name of ['Sumar un tope', 'Guardar borrador', 'Volver al resumen']) {
+    expectReachable(screen.getByRole('button', { name }), 'BUTTON')
+  }
+  for (const category of ['Supermercado', 'Transporte']) {
+    expectReachable(field(`Monto del tope de ${category}`), 'INPUT')
+    expectReachable(screen.getByRole('button', { name: `Quitar el tope de ${category}` }), 'BUTTON')
+  }
+  type('Cadencia', 'custom')
+  expectReachable(field('Fin'), 'INPUT')
+})
+
+test('case C3-07: each amount of the form says its currency', async () => {
+  apiWith([OCTOBER])
+
+  renderForm()
+
+  await ready()
+  const amounts = ['Ingreso estimado', 'Monto del tope nuevo', 'Monto del tope de Supermercado', 'Monto del tope de Transporte']
+  expect(screen.getAllByText('ARS')).toHaveLength(amounts.length)
+  for (const label of amounts) expect(described(field(label))).toContain('ARS')
+
+  type('Moneda', 'USD')
+
+  expect(screen.queryByText('ARS')).toBeNull()
+  expect(screen.getAllByText('USD')).toHaveLength(amounts.length)
+  for (const label of amounts) {
+    expect(described(field(label))).toContain('USD')
+    expect(described(field(label))).not.toContain('ARS')
+  }
+})
+
+test('case C3-07: without a chosen currency no amount says one', async () => {
+  apiWith([])
+
+  renderForm()
+
+  await ready()
+  expect(field('Moneda').value).toBe('')
+  for (const label of ['Ingreso estimado', 'Monto del tope nuevo']) {
+    expect(described(field(label))).not.toMatch(/ARS|USD/)
+  }
+  expect(screen.queryByText('ARS')).toBeNull()
+  expect(screen.queryByText('USD')).toBeNull()
+})
+
+test('case C3-08: every saved amount is written with its currency', async () => {
+  const draft = period('2026-11-10', '2026-12-09', { status: 'draft', primary_currency: 'USD' })
+  apiWith([OCTOBER])
+  saving(draft)
+  api.use(http.post(CONFIRM, () => HttpResponse.json({ ...draft, status: 'confirmed' })))
+  const shown = (label: string) => screen.getByText(label).nextElementSibling?.textContent ?? ''
+  const expectInDollars = () => {
+    for (const label of ['Ingreso estimado', 'Supermercado', 'Transporte']) expect(shown(label)).toMatch(/^US\$/)
+  }
+
+  renderForm()
+
+  await ready()
+  save()
+  await screen.findByText('El período quedó guardado.')
+  expectInDollars()
+
+  fireEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
+  await screen.findByText('El período quedó confirmado: recibe movimientos desde el 10/11/2026.')
+  expectInDollars()
+})
+
+test('case C3-09: saving and confirming move the focus to the status line', async () => {
+  apiWith([OCTOBER])
+  saving(NOVEMBER)
+  api.use(http.post(CONFIRM, () => HttpResponse.json({ ...NOVEMBER, status: 'confirmed' })))
+
+  renderForm()
+
+  await ready()
+  save()
+  const saved = await screen.findByText('El período quedó guardado.')
+  expect(saved.getAttribute('role')).toBe('status')
+  expect(document.activeElement).toBe(saved)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
+  const confirmed = await screen.findByText('El período quedó confirmado: recibe movimientos desde el 10/11/2026.')
+  expect(confirmed.getAttribute('role')).toBe('status')
+  expect(document.activeElement).toBe(confirmed)
+})
+
+test('case C3-11: removing a limit moves the focus to the new limit selector', async () => {
+  apiWith([OCTOBER])
+
+  renderForm()
+
+  await ready()
+  fireEvent.click(screen.getByRole('button', { name: 'Quitar el tope de Transporte' }))
+
+  expect(document.activeElement).toBe(field('Categoría del tope nuevo'))
+  expect(offered()).toContain('Transporte')
+})
+
+test('case C3-12: a new limit without an amount is announced and marks the field', async () => {
+  apiWith([OCTOBER], [...CATEGORY_LIST, { id: crypto.randomUUID(), name: 'Hogar', is_base: true }])
+
+  renderForm()
+
+  await ready()
+  addLimit()
+
+  const notice = screen.getByRole('alert')
+  expect(notice.textContent).toBe('Poné un monto para sumar el tope.')
+  expect(field('Monto del tope nuevo').getAttribute('aria-invalid')).toBe('true')
+  expect(described(field('Monto del tope nuevo'))).toContain('Poné un monto para sumar el tope.')
+
+  type('Monto del tope nuevo', '40000')
+  addLimit()
+
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(field('Monto del tope nuevo').getAttribute('aria-invalid')).not.toBe('true')
 })
