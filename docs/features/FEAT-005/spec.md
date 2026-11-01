@@ -471,6 +471,7 @@ no es miembro de ningún grupo, y hoy es 29 de octubre de 2026.
 - **C2-49, sumado al probar a mano:** Veronica Zacarias 01/11/2026
 - **C2-49, cambiado al probar a mano:** Veronica Zacarias 01/11/2026
 - **C2-50 a C2-59, sumados en la revisión, y C1-04, C1-19, C2-07, C2-12 y C2-13, cambiados:** Veronica Zacarias 01/11/2026
+- **C2-60 a C2-62, sumados en la revisión:** Veronica Zacarias 01/11/2026
 
 Entran las validaciones de [la API](../../04-api.md), en su orden: el período de otro usuario,
 `404`; el período de un grupo para un miembro que no es el dueño, `403`
@@ -490,7 +491,7 @@ en el corte 1: entran acá, con sus tests primero (ADR 0024). Hasta entonces, un
 categoría que no existe termina en `500`, porque la base rechaza la referencia, y lo cubre el
 `404` de la categoría ajena. Decidido por Vero el 30 de octubre de 2026.
 
-- **Total:** 59 casos, 13 unitarios, 27 de integración y 19 de componente. Además de los datos de
+- **Total:** 62 casos, 14 unitarios, 29 de integración y 19 de componente. Además de los datos de
   arriba, Pablo es el dueño del grupo "Casa" y Sofía es miembro, sin serlo; el grupo tiene un
   período confirmado del 10 de octubre al 9 de noviembre de 2026 y un borrador del 10 de
   noviembre al 9 de diciembre. Pablo tiene un período propio del 10 de octubre al 9 de noviembre
@@ -558,6 +559,9 @@ categoría que no existe termina en `500`, porque la base rechaza la referencia,
 | C2-57 | La migración deja como personalizados los períodos que no coinciden | Integración | Reglas de dominio § 3 |
 | C2-58 | El primer período es mensual si el alta es el día 1, y si no personalizado | Unitario | Reglas de dominio § 3 |
 | C2-59 | **Pantalla.** Después de un personalizado se sugiere mensual | Componente | CA-13 |
+| C2-60 | Un monto enviado como número JSON se guarda exacto | Integración | La API |
+| C2-61 | Dos pedidos simultáneos con fechas superpuestas responden `409` | Integración | La API |
+| C2-62 | Un tope que redondea a 0 y el límite exacto de un monto | Unitario | La API |
 
 #### C2-01 · Cambiar o confirmar un período que no existe responde que no existe
 
@@ -1081,6 +1085,33 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 - **entonces** la cadencia viene en "Mensual", con inicio el 1 de diciembre, y se copian la moneda, el ingreso y los topes.
 - **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::after a custom period it suggests a monthly one`
 
+#### C2-60 · Un monto enviado como número JSON se guarda exacto
+
+- **Sale de:** [la API](../../04-api.md) · **Tipo:** integración
+- **Estado:** nuevo, sin aprobar
+- **Dado** Lucía con su sesión abierta,
+- **cuando** pide `POST /budget-periods` con un tope de `1234567890123456.78`, escrito como número JSON,
+- **entonces** responde `201`, y se guarda y se responde exactamente ese monto. Decidido por Vero el 1 de noviembre de 2026.
+- **Test:** `tests/integration/test_budget_planning.py::test_an_amount_sent_as_a_json_number_is_kept_exact`
+
+#### C2-61 · Dos pedidos simultáneos con fechas superpuestas responden `409`
+
+- **Sale de:** [la API](../../04-api.md) · **Tipo:** integración
+- **Estado:** nuevo, sin aprobar
+- **Dado** dos pedidos de Lucía con fechas superpuestas, que pasan los dos el control del caso de uso,
+- **cuando** la base rechaza el segundo por su restricción de superposición,
+- **entonces** responde `409` con `budget_period_overlap`, no `500`, y queda guardado solo el primero.
+- **Test:** `tests/integration/test_budget_planning.py::test_two_requests_at_once_with_overlapping_dates_answer_409`
+
+#### C2-62 · Un tope que redondea a 0 y el límite exacto de un monto
+
+- **Sale de:** [la API](../../04-api.md) · **Tipo:** unitario
+- **Estado:** nuevo, sin aprobar
+- **Dado** un período con un tope de `0.004`, otro de `0.005`, y otros de `999999999999999999.99` y `999999999999999999.995`,
+- **cuando** se crea,
+- **entonces** `0.004` se rechaza con `budget_limit_not_positive`, `0.005` se acepta, `999999999999999999.99` se acepta, y `999999999999999999.995` se rechaza con `amount_too_large`.
+- **Test:** `tests/unit/test_budget_planning.py::test_a_limit_that_rounds_to_zero_and_the_exact_limit_of_an_amount_are_refused` y `tests/unit/test_budget_planning.py::test_the_smallest_limit_and_the_largest_amount_are_saved`
+
 ### Corte 3 — observabilidad y accesibilidad
 
 - **Aprobado por:** pendiente
@@ -1112,8 +1143,7 @@ en `frontend/src/messages.ts`.
 
 ## Sin cubrir
 
-- Dos pedidos simultáneos con fechas superpuestas: la base rechaza el segundo, que responde `500`
-  en vez de `409`. Ningún test lo cubre.
+Nada: los pedidos simultáneos con fechas superpuestas quedaron cubiertos por C2-61.
 
 ## Fuera de alcance
 

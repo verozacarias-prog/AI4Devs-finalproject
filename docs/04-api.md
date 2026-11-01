@@ -317,8 +317,9 @@ está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual
 - `POST /budget-periods/{period_id}/confirm` lo pasa a `confirmed` y responde `200` con el
   período completo, con la misma forma que el `POST` y el `PUT`, para que la pantalla reemplace
   su fila. Confirmar uno ya confirmado responde lo mismo, sin cambios. Decidido por Vero el 29 de
-  octubre de 2026. El cuerpo lleva, opcionalmente, los montos de las reglas
-  recurrentes de monto variable que vencen en el período. Las que no van en la lista quedan sin
+  octubre de 2026. Todavía no lee un cuerpo: lo que sigue llega con las reglas recurrentes, y hoy
+  una lista enviada se ignora. Decidido por Vero el 1 de noviembre de 2026. El cuerpo llevará,
+  opcionalmente, los montos de las reglas recurrentes de monto variable que vencen en el período. Las que no van en la lista quedan sin
   confirmar y se preguntan al vencer
   ([reglas de dominio § 8](reglas-de-dominio.md#8-movimientos-recurrentes-la-excepción-a-la-confirmación)).
   `GET /budget-periods` devuelve esas reglas con el último monto confirmado, para que la pantalla
@@ -489,7 +490,7 @@ requestBody:
   content:
     application/json:
       example:
-        recurring_amounts:             # optional; variable rules due in the period
+        recurring_amounts:             # not read yet, it comes with the recurring rules; optional; variable rules due in the period
           - recurring_rule_id: "rr-rent"
             amount: 850356
 responses:
