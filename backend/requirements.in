@@ -2,7 +2,7 @@
 # requirements.txt is generated from this file: after changing it, run
 # scripts/lock_backend_dependencies.sh.
 alembic==1.20.1
-fastapi==0.161.1
+fastapi==0.162.0
 # The provider SDK, with no orchestration framework (ADR 0020, ADR 0025).
 openai==3.32.0
 psycopg[binary]==3.3.6
