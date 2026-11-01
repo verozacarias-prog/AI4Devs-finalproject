@@ -261,7 +261,7 @@ test('case C1-30: changing a draft replaces its content', async () => {
     {
       period_type: 'monthly',
       period_start: '2026-11-10',
-      period_end: '2026-12-09',
+      period_end: null,
       primary_currency: 'ARS',
       estimated_income: '1600000',
       budgets: [
@@ -336,7 +336,7 @@ test('case C1-32: in a confirmed period only the income and the limits are edite
   expect(bodies[0]).toMatchObject({
     period_type: 'monthly',
     period_start: '2026-10-10',
-    period_end: '2026-11-09',
+    period_end: null,
     primary_currency: 'ARS',
     estimated_income: '1520000',
   })
@@ -422,7 +422,9 @@ test.each([
 test.each([
   ['not_found', 404, 'Ese período o una de sus categorías ya no está disponible.'],
   ['not_the_owner', 403, 'Solo el dueño del grupo puede cambiar este período.'],
-  ['period_end_required', 422, 'Un período quincenal necesita una fecha de fin.'],
+  ['period_end_required', 422, 'Un período personalizado necesita una fecha de fin.'],
+  ['period_end_not_matching', 422, 'La fecha de fin no coincide con la cadencia del período.'],
+  ['biweekly_start_invalid', 422, 'Una quincena empieza el día 1 o el día 16: elegí otro inicio o la cadencia personalizada.'],
   ['period_dates_inverted', 422, 'La fecha de fin no puede ser anterior a la de inicio.'],
   ['confirmed_period_fixed', 409, 'Un período confirmado no cambia su cadencia, sus fechas ni su moneda.'],
   ['budget_period_overlap', 409, 'Estas fechas se superponen con otro de tus períodos: elegí otras.'],
