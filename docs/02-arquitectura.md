@@ -177,7 +177,7 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
       /ports             # interfaces the domain depends on but does not implement
         - unit_of_work_port.py
         - one <name>_repository_port.py per repository: user, session, account, transaction, transfer,
-          category, budget_period, budget, family_group, financial_profile, pending, inbound_message,
+          category, currency, budget_period, budget, family_group, financial_profile, pending, inbound_message,
           outbound_message, chat_message and llm_usage
         - llm_port.py
         - llm_call_log_port.py

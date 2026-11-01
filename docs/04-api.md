@@ -195,6 +195,26 @@ responses:
     description: No valid session
 ```
 
+### `GET /currencies`
+
+Lista las monedas del catálogo, para elegir la de un período en el dashboard en vez de escribir su
+código. Vienen ordenadas por código. Decidido por Vero el 31 de octubre de 2026.
+
+```yaml
+responses:
+  200:
+    content:
+      application/json:
+        example:
+          currencies:
+            - code: "ARS"
+              name: "Peso argentino"
+            - code: "USD"
+              name: "Dólar estadounidense"
+  401:
+    description: No valid session
+```
+
 ### `GET /budgets/{budget_id}`
 
 Devuelve el estado actual del límite de **una categoría** dentro de un período de presupuesto: límite, gastado hasta el momento (convertido a la moneda primaria del período, y neto de los reintegros vinculados que llegaron en ese período, según [reglas de dominio § 16](reglas-de-dominio.md#16-reintegros-devoluciones-y-plata-que-te-deben)) y movimientos asociados. La vista completa del período, con todas las categorías, sale de `GET /budget-periods/{period_id}/summary`.
@@ -287,8 +307,9 @@ está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual
   2026.
 - En `POST` y `PUT`, cada monto, `estimated_income` y cada `limit_amount`, se acepta como número
   JSON o como texto decimal, como `"1450000.55"`, y se guarda exacto, sin pasar por punto
-  flotante. El dashboard lo manda como texto. Las respuestas lo devuelven como número. Decidido
-  por Vero el 29 de octubre de 2026.
+  flotante. Con más de dos decimales se redondea a dos, con la mitad hacia arriba, y no se rechaza
+  ([modelo de datos](03-modelo-de-datos.md)). El dashboard lo manda como texto. Las respuestas lo
+  devuelven como número. Decidido por Vero el 29 y el 31 de octubre de 2026.
 - `POST /budget-periods/{period_id}/confirm` lo pasa a `confirmed` y responde `200` con el
   período completo, con la misma forma que el `POST` y el `PUT`, para que la pantalla reemplace
   su fila. Confirmar uno ya confirmado responde lo mismo, sin cambios. Decidido por Vero el 29 de
@@ -328,6 +349,11 @@ de octubre de 2026.
    ([reglas de dominio § 4](reglas-de-dominio.md#4-categorías-catálogo-base-categorías-propias-y-creación-con-confirmación)).
    Y un ingreso estimado negativo, con `estimated_income_negative`: acepta 0 o más, y 0 es el del
    primer período, que nace sin ingreso. Decidido por Vero el 29 de octubre de 2026.
+   Un ingreso o un tope que no entra en `NUMERIC(20,2)`, de más de 18 cifras enteras, con
+   `amount_too_large`. Decidido por Vero el 1 de noviembre de 2026.
+8. Una moneda que no está en el catálogo responde `422`, con `currency_not_found`. La pantalla no
+   la deja elegir, pero la API también recibe pedidos que no salen de ella. Decidido por Vero el 31
+   de octubre de 2026.
 
 ```yaml
 # GET /budget-periods

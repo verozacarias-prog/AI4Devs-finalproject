@@ -240,11 +240,16 @@ Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-princip
 
 La regla de negocio es que, para un período mensual, tiene que estar en `confirmed` antes de que arranque el mes (`period_start`); el mismo criterio aplica a quincenal con su propio `period_start`. El sistema genera el borrador del próximo período con anticipación y manda un recordatorio proactivo por WhatsApp si sigue en `draft` cerca de la fecha límite — mismo mecanismo que ya dispara las alertas de [HU3](05-historias-de-usuario.md), aplicado a un caso distinto.
 
+**Un período que ya arrancó se puede armar y confirmar igual.** Confirmar antes del inicio es lo
+que el sistema busca con el recordatorio, no un bloqueo: si el usuario se olvidó, un borrador
+no recibe movimientos, y rechazar la confirmación lo dejaría sin dónde imputar los gastos de esas
+semanas. Decidido por Vero el 31 de octubre de 2026.
+
 **El primer período nace en el alta.** Al completar la parte obligatoria del alta (§ 11), el
 sistema crea el primer período individual del usuario, ya confirmado: mensual, en su moneda
 primaria, con ingreso estimado 0 y sin topes, desde el día del alta hasta el último día de ese
-mes. Es una de las dos excepciones a que un período se confirme antes de arrancar, porque ya
-arrancó; la otra es el primer período de un grupo, que nace igual al crearlo (§ 10). Así el
+mes. Es uno de los dos períodos que nacen confirmados, porque ya arrancó; el otro es el primer
+período de un grupo, que nace igual al crearlo (§ 10). Así el
 primer gasto, incluido el que el usuario escribió antes de darse de alta, tiene dónde imputarse. Un período sin topes registra el gastado igual, pero no dispara alertas. El mensaje
 que cierra el alta le avisa que ese primer período existe y que puede ponerle ingreso y topes
 desde el dashboard.

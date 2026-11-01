@@ -15,7 +15,7 @@ Sigue la forma del [contrato de la pantalla de presupuesto](../FEAT-004/ui_contr
 | `Button` de shadcn/ui | Existe, desde el ADR 0027 | Guardar el borrador, confirmarlo, sumar y quitar un tope, reintentar y volver |
 | Entrada al formulario | Nuevo, en `BudgetPage` | "Armar un período" en el resumen, y "Editar" en un período que el usuario puede editar (`can_edit`), en borrador o confirmado (CA-10). Decidido por Vero el 31 de octubre de 2026 |
 | Formulario del período | Nuevo, `BudgetPeriodFormPage` | La cadencia, el día de inicio, el fin, la moneda, el ingreso estimado y la lista de topes. Al armar uno nuevo viene con la cadencia, la moneda, el ingreso y los topes del último período del usuario, y el inicio el día después de su fin (CA-13); en uno confirmado, la cadencia, las fechas y la moneda no se editan (CA-10) |
-| Cadencia y categoría de un tope | Nuevos, sobre un `select` nativo | Como el selector de período de la FEAT-004: shadcn/ui no tiene uno instalado |
+| Cadencia, moneda y categoría de un tope | Nuevos, sobre un `select` nativo | Como el selector de período de la FEAT-004: shadcn/ui no tiene uno instalado. La moneda se elige del catálogo, con su código y su nombre, y no se escribe (CA-17). Decidido por Vero el 31 de octubre de 2026 |
 | Fecha de inicio y de fin | Nuevos, sobre un `input type="date"` nativo | El fin es optativo en un período mensual: vacío, lo calcula el backend |
 | Montos | Nuevos, sobre un `input` de texto con `inputMode="decimal"` | El ingreso y cada tope viajan como texto decimal, nunca como `number` de JavaScript |
 | Línea de estado (`role="status"`) | Existe, como en las otras pantallas | Anuncia la carga, el guardado y la confirmación |
@@ -30,9 +30,9 @@ sin tokens nuevos.
 
 | Estado | Qué lo dispara | Qué muestra | Cómo se sale |
 |---|---|---|---|
-| Cargando | Se abre el formulario | "Preparando el formulario…", sin campos editables | Llegan las categorías y, al editar, el borrador, o falla |
+| Cargando | Se abre el formulario | "Preparando el formulario…", sin campos editables | Llegan las categorías, las monedas y, al editar, el borrador, o falla |
 | Con contenido: armando | Llegó lo necesario | El formulario y "Guardar borrador". Al crear, con la cadencia, la moneda, el ingreso y los topes del último período del usuario y el inicio sugerido el día después de su fin, que se puede cambiar, con el fin vacío, o todo vacío si no tiene ninguno; al editar, con el período | Guardar, o volver al resumen |
-| Guardando | Se aprieta "Guardar borrador" o "Confirmar" | El formulario sin poder editarse y la línea de estado | Llega la respuesta, o falla |
+| Guardando | Se aprieta "Guardar borrador" o "Confirmar" | El formulario sin poder editarse y la línea de estado, con "Guardando…" o "Confirmando…". Al terminar, la línea anuncia que quedó guardado o confirmado. Decidido por Vero el 1 de noviembre de 2026 | Llega la respuesta, o falla |
 | Con contenido: guardado | El borrador quedó guardado | Lo guardado, con el fin calculado, "Editar" y "Confirmar" | Confirmar, editar o volver |
 | Vacío | `GET /categories` responde sin ninguna categoría de gasto | En lugar de la lista de topes, que no hay categorías de gasto para ponerles tope. El resto del formulario sigue disponible | Guardar sin topes, o volver al resumen |
 | Confirmado | Se confirmó | Que el período quedó confirmado y desde cuándo recibe movimientos | Volver al resumen, con ese período elegido |
@@ -50,6 +50,7 @@ Sin sesión no es un estado de esta pantalla: un `401` vuelve a la entrada.
 - La lista de períodos, para abrir un período al editarlo y para precargar uno nuevo con el
   último del usuario (CA-13).
 - `GET /categories`, las categorías de gasto del usuario, para elegir a cuáles ponerles tope.
+- `GET /currencies`, las monedas del catálogo, para elegir la del período.
 
 El último período es el individual que empieza más tarde, aunque sea un borrador (CA-13).
 

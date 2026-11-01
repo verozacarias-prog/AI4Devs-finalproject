@@ -17,6 +17,7 @@ presupuesto de un período individual
 - `POST /budget-periods/{period_id}/confirm`: confirmarlo (issue #73).
 - `GET /categories`: las categorías de gasto del usuario, para elegir a cuáles ponerles tope
   (issue #73).
+- `GET /currencies`: las monedas del catálogo, para elegir la del período (issue #73).
 - La pantalla del dashboard que arma el borrador y lo confirma (issue #74), con sus cuatro
   estados y su [contrato de UI](ui_contract.md).
 
@@ -63,6 +64,7 @@ El usuario arma el presupuesto de un período, que queda en borrador hasta que l
 - **CA-12.** Para elegir a qué categorías ponerles tope, el usuario ve sus categorías de gasto, las del catálogo base y las propias, por nombre y sin distinguir mayúsculas. No ve las de ingreso ni las propias de otro usuario.
 - **CA-13.** Un período nuevo arranca como copia del último del usuario, que puede cambiar antes de guardar ([reglas de dominio § 3](../../reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)), con el inicio sugerido el día después del fin de ese período. El último es el período individual que empieza más tarde, aunque sea un borrador, decidido por Vero el 29 de octubre de 2026. En un mensual el fin lo calcula la API; en un quincenal queda vacío, porque se indica siempre. Sin un período anterior, el formulario viene vacío. Lo hace la pantalla con `GET /budget-periods`, sin regla nueva en el backend.
 - **CA-14.** Un tope va solo sobre una categoría de gasto: sobre una de ingreso, el período no se guarda.
+- **CA-17.** La moneda del período se elige de una lista con las monedas del catálogo, no se escribe. Una moneda que no está en el catálogo no se guarda. Decidido por Vero el 31 de octubre de 2026.
 
 ### Confirmar
 
@@ -464,6 +466,7 @@ no es miembro de ningún grupo, y hoy es 29 de octubre de 2026.
 
 - **Aprobado por:** Veronica Zacarias 30/10/2026
 - **C2-30 a C2-38, de componente, sumados para la pantalla:** Veronica Zacarias 31/10/2026
+- **C2-39 a C2-45, sumados al cerrar el corte:** Veronica Zacarias 01/11/2026
 
 Entran las validaciones de [la API](../../04-api.md), en su orden: el período de otro usuario,
 `404`; el período de un grupo para un miembro que no es el dueño, `403`
@@ -483,7 +486,7 @@ en el corte 1: entran acá, con sus tests primero (ADR 0024). Hasta entonces, un
 categoría que no existe termina en `500`, porque la base rechaza la referencia, y lo cubre el
 `404` de la categoría ajena. Decidido por Vero el 30 de octubre de 2026.
 
-- **Total:** 38 casos, 9 unitarios, 20 de integración y 9 de componente. Además de los datos de
+- **Total:** 45 casos, 10 unitarios, 24 de integración y 11 de componente. Además de los datos de
   arriba, Pablo es el dueño del grupo "Casa" y Sofía es miembro, sin serlo; el grupo tiene un
   período confirmado del 10 de octubre al 9 de noviembre de 2026 y un borrador del 10 de
   noviembre al 9 de diciembre. Pablo tiene un período propio del 10 de octubre al 9 de noviembre
@@ -530,6 +533,13 @@ categoría que no existe termina en `500`, porque la base rechaza la referencia,
 | C2-36 | **Pantalla.** Si falla confirmar, reintentar repite solo la confirmación | Componente | el contrato de UI |
 | C2-37 | **Pantalla.** Sin sesión, vuelve a la entrada | Componente | el contrato de UI |
 | C2-38 | **Pantalla.** Un período que ya no está dice que no está disponible | Componente | validación 2 de [la API](../../04-api.md) |
+| C2-39 | Un ingreso o un tope con más de dos decimales se guarda redondeado a dos | Integración | [El modelo de datos](../../03-modelo-de-datos.md) |
+| C2-40 | Lucía pide las monedas del catálogo, y sin sesión responde `401` | Integración | CA-17 |
+| C2-41 | Una moneda que no está en el catálogo no se guarda | Unitario | CA-17 |
+| C2-42 | Lucía crea un período con la moneda `ZZZ` | Integración | CA-17 |
+| C2-43 | **Pantalla.** La moneda se elige de la lista del catálogo | Componente | CA-13 y CA-17 |
+| C2-44 | Lucía crea un período con un ingreso de `1e30` | Integración | Validación 7 |
+| C2-45 | **Pantalla.** La línea de estado dice qué está haciendo y anuncia cómo terminó | Componente | el contrato de UI |
 
 #### C2-01 · Cambiar o confirmar un período que no existe responde que no existe
 
@@ -862,6 +872,69 @@ Se resuelve en la [HU5](../../05-historias-de-usuario.md), porque hoy nada escri
 un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la referencia de
 `sent_alert` a `budget` impide borrarlo. Decidido por Vero el 31 de octubre de 2026.
 
+#### C2-39 · Un ingreso o un tope con más de dos decimales se guarda redondeado a dos
+
+- **Sale de:** los tipos de [el modelo de datos](../../03-modelo-de-datos.md) · **Tipo:** integración
+- **Estado:** nuevo, aprobado
+- **Dado** Lucía con su sesión abierta,
+- **cuando** crea un período con un ingreso de `"100.555"` y un tope de `"200.554"`, y lo vuelve a leer,
+- **entonces** la respuesta y la lectura dan un ingreso de `100.56` y un tope de `200.55`: se redondea con la mitad hacia arriba, sin pedirle que lo cargue de nuevo. Decidido por Vero el 31 de octubre de 2026.
+- **Test:** `backend/tests/integration/test_budget_planning.py::test_an_income_or_a_limit_with_more_than_two_decimals_is_saved_rounded_to_two`
+
+#### C2-40 · Lucía pide las monedas del catálogo, y sin sesión responde `401`
+
+- **Sale de:** CA-17 · **Tipo:** integración
+- **Estado:** nuevo, aprobado
+- **Dado** el catálogo de monedas de la base,
+- **cuando** Lucía, con su sesión abierta, pide `GET /currencies`, y después se pide sin sesión,
+- **entonces** con sesión responde `200` con cada moneda, su `code` y su `name`, ordenadas por código, incluidas `ARS` y `USD`; sin sesión responde `401`.
+- **Test:** `backend/tests/integration/test_budget_planning.py::test_lucia_asks_for_the_currencies_of_the_catalog_and_without_a_session_it_answers_401`
+
+#### C2-41 · Una moneda que no está en el catálogo no se guarda
+
+- **Sale de:** CA-17 · **Tipo:** unitario
+- **Estado:** nuevo, aprobado
+- **Dado** un catálogo con `ARS` y `USD`,
+- **cuando** se crea o se cambia un borrador con la moneda `ZZZ`,
+- **entonces** el caso de uso lo rechaza con `currency_not_found` y no escribe nada.
+- **Test:** `backend/tests/unit/test_budget_planning.py::test_a_currency_that_is_not_in_the_catalog_is_not_saved`
+
+#### C2-42 · Lucía crea un período con la moneda `ZZZ`
+
+- **Sale de:** CA-17 · **Tipo:** integración
+- **Estado:** nuevo, aprobado
+- **Dado** Lucía con su sesión abierta,
+- **cuando** pide `POST /budget-periods` con `primary_currency` en `ZZZ`,
+- **entonces** responde `422` con `currency_not_found`, no `500`, y no queda ningún período nuevo.
+- **Test:** `backend/tests/integration/test_budget_planning.py::test_lucia_creates_a_period_with_the_currency_zzz`
+
+#### C2-43 · La moneda se elige de la lista del catálogo
+
+- **Sale de:** CA-13 y CA-17 · **Tipo:** componente
+- **Estado:** nuevo, aprobado
+- **Dado** `GET /currencies` responde `ARS` y `USD`, y el último período de Lucía es en `ARS`,
+- **cuando** abre el formulario, elige `USD` en "Moneda" y guarda,
+- **entonces** "Moneda" es una lista con `ARS` y `USD` que viene en `ARS`, no se puede escribir un código a mano, y se pide guardar con `primary_currency` en `USD`.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::the currency is chosen from the list of the catalog`
+
+#### C2-44 · Lucía crea un período con un ingreso de `1e30`
+
+- **Sale de:** validación 7 de [la API](../../04-api.md) · **Tipo:** integración
+- **Estado:** nuevo, aprobado
+- **Dado** Lucía con su sesión abierta,
+- **cuando** pide `POST /budget-periods` con `estimated_income` en `"1e30"`, y después con un tope en `"1e30"`,
+- **entonces** las dos veces responde `422` con `amount_too_large`, no `500`, y no queda ningún período nuevo. Decidido por Vero el 1 de noviembre de 2026.
+- **Test:** `backend/tests/integration/test_budget_planning.py::test_lucia_creates_a_period_with_an_income_of_1e30`
+
+#### C2-45 · La línea de estado dice qué está haciendo y anuncia cómo terminó
+
+- **Sale de:** el contrato de UI · **Tipo:** componente
+- **Estado:** nuevo, aprobado
+- **Dado** Lucía con un borrador en el formulario,
+- **cuando** lo guarda y después lo confirma,
+- **entonces** la línea de estado (`role="status"`) dice "Guardando…" y después que el período quedó guardado; dice "Confirmando…" y después que quedó confirmado. Decidido por Vero el 1 de noviembre de 2026.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::the status line says what it is doing and announces how it ended`
+
 ### Corte 3 — observabilidad y accesibilidad
 
 - **Aprobado por:** pendiente
@@ -872,10 +945,10 @@ Los detalla el [contrato de UI](ui_contract.md).
 
 | Estado | Cuándo ocurre en esta pantalla | Qué muestra |
 |---|---|---|
-| Cargando | Se abre el formulario, o se guarda o se confirma | Lo dice, sin el formulario editable |
-| Con contenido | Llegaron las categorías y, al editar, el borrador | El formulario, con el botón de guardar y, en un borrador guardado, el de confirmar |
+| Cargando | Se abre el formulario, o se guarda o se confirma | Lo dice en la línea de estado: al abrirse, sin campos, y al guardar o confirmar, con el formulario sin poder editarse |
+| Con contenido | Llegaron las categorías, las monedas y, al editar, el período, en borrador o confirmado | El formulario, con el botón de guardar y, en un borrador guardado, el de confirmar |
 | Vacío | `GET /categories` responde sin ninguna categoría de gasto | En lugar de la lista de topes, que no hay categorías de gasto para ponerles tope. El resto del formulario sigue disponible, y el período se puede guardar sin topes. Decidido por Vero el 31 de octubre de 2026 |
-| Error | La API responde con un error, no responde a tiempo o no se llega a ella | Qué falló, sin perder lo que el usuario cargó, y reintentar |
+| Error | La API responde con un error, no responde a tiempo o no se llega a ella | Qué falló, sin perder lo que el usuario cargó, y reintentar. Un rechazo por una regla dice qué corregir, sin reintentar, porque el mismo pedido recibiría el mismo rechazo |
 
 ## Mensajes al usuario
 
@@ -893,9 +966,8 @@ en `frontend/src/messages.ts`.
 
 ## Sin cubrir
 
-- Que la moneda de un período confirmado no cambie lo impone además un trigger de la base desde
-  la migración del esquema. El caso de la API que lo rechaza, con `confirmed_period_fixed`, es
-  del corte 2.
+- Dos pedidos simultáneos con fechas superpuestas: la base rechaza el segundo, que responde `500`
+  en vez de `409`. Ningún test lo cubre.
 
 ## Fuera de alcance
 
@@ -930,7 +1002,7 @@ en `frontend/src/messages.ts`.
 6. ~~¿Un ingreso estimado negativo?~~ Resuelta el 29 de octubre de 2026: no, el ingreso es 0 o
    más y uno negativo responde `422` con `estimated_income_negative` (CA-15), en `POST` y en
    `PUT`. Su caso es del corte 2. El primer período nace con 0, no vacío: la columna es
-   `NOT NULL DEFAULT 0`. La base no tiene un `CHECK` que impida un ingreso negativo.
+   `NOT NULL DEFAULT 0`. La migración `0006` agrega el `CHECK` que impide un ingreso negativo.
 7. ~~¿Entran los períodos de grupo?~~ Resuelta el 29 de octubre de 2026: cambiar y confirmar
    un período lo hace solo su dueño, con `period_access.can_edit`, y un miembro que no lo es
    recibe `403` (CA-16), que es del corte 2. Crear un período de grupo desde el dashboard sigue
