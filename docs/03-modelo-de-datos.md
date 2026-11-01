@@ -248,11 +248,11 @@ erDiagram
         uuid id PK
         uuid user_id FK "NULLABLE"
         uuid family_group_id FK "NULLABLE"
-        string period_type "NOT NULL, CHECK IN ('monthly','biweekly')"
+        string period_type "NOT NULL, CHECK IN ('monthly','biweekly','custom'), y sus fechas tienen que coincidir con la cadencia"
         date period_start "NOT NULL"
         date period_end "NOT NULL, CHECK (period_end >= period_start)"
         string primary_currency "NOT NULL, FK to CURRENCY — fixed once confirmed"
-        decimal estimated_income "NUMERIC(20,2), NOT NULL, DEFAULT 0"
+        decimal estimated_income "NUMERIC(20,2), NOT NULL, DEFAULT 0, >= 0"
         string status "NOT NULL, CHECK IN ('draft','confirmed'), DEFAULT 'draft'"
         timestamptz created_at "NOT NULL, DEFAULT now()"
     }
@@ -674,13 +674,14 @@ Ver también, en otra tabla: [la categoría del mismo tipo que el movimiento, en
 
 ##### BUDGET_PERIOD
 
-El "presupuesto del mes" (o de la quincena) como concepto completo — puede pertenecer a un usuario individual o a un grupo familiar (nunca ambos, ver sus restricciones). `period_type` define la cadencia (mensual o quincenal) y determina cómo se calculan `period_start`/`period_end` del siguiente período al generarlo. `estimated_income` guarda el ingreso proyectado para el período completo, para que armar el presupuesto sea contrastar gastos planeados contra ingreso esperado, no solo poner topes por categoría sueltos. `status` distingue un período todavía en armado (`draft`, generado copiando el período anterior del mismo dueño o creado a mano en el dashboard) de uno ya confirmado por el usuario. El primer período individual se crea ya confirmado al completar el alta. `period_start` puede ser cualquier día, y el siguiente período empieza el día después de `period_end`, así que el día de inicio del ciclo no necesita una columna propia — cuándo debe estar en `confirmed` y qué recordatorio se dispara si sigue en `draft` está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio).
+El "presupuesto del mes" (o de la quincena) como concepto completo — puede pertenecer a un usuario individual o a un grupo familiar (nunca ambos, ver sus restricciones). `period_type` define la cadencia (mensual, quincenal o personalizada) y determina cómo se calculan `period_start`/`period_end` del siguiente período al generarlo. `estimated_income` guarda el ingreso proyectado para el período completo, para que armar el presupuesto sea contrastar gastos planeados contra ingreso esperado, no solo poner topes por categoría sueltos. `status` distingue un período todavía en armado (`draft`, generado copiando el período anterior del mismo dueño o creado a mano en el dashboard) de uno ya confirmado por el usuario. El primer período individual se crea ya confirmado al completar el alta. `period_start` puede ser cualquier día, y el siguiente período empieza el día después de `period_end`, así que el día de inicio del ciclo no necesita una columna propia — cuándo debe estar en `confirmed` y qué recordatorio se dispara si sigue en `draft` está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio).
 
 **Restricciones:**
 
 - En `BUDGET_PERIOD`, exactamente uno de `user_id` / `family_group_id` debe ser no nulo (`CHECK` a nivel de base de datos) — un período de presupuesto es individual o familiar, nunca ambos ni ninguno.
 - En `BUDGET_PERIOD`, los períodos de un mismo dueño no se solapan: dos restricciones de exclusión (`EXCLUDE USING gist`), una sobre `user_id` y otra sobre `family_group_id`, cada una con el rango `[period_start, period_end]` y el operador de superposición. Requieren la extensión `btree_gist`. La regla está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio).
 - Crear, cambiar o confirmar un `BUDGET_PERIOD` familiar es solo del dueño vigente del grupo. No se puede expresar con una clave foránea: lo valida la aplicación dentro de la misma transacción, igual que la pertenencia al grupo ([reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)).
+- En `BUDGET_PERIOD`, `estimated_income` es 0 o más (`CHECK` a nivel de base de datos): 0 es el de un período sin ingreso, como el primero. Decidido por Vero el 29 de octubre de 2026.
 - En `BUDGET_PERIOD`, `primary_currency` no cambia una vez confirmado el período: un trigger `BEFORE UPDATE` rechaza el cambio si `status` ya era `confirmed`. Un presupuesto en otra moneda es otro período. Mientras está en `draft` se puede cambiar, porque todavía no tiene movimientos.
 
 Ver también, en otra tabla: [la imputación solo a un período confirmado y la cotización del movimiento, en TRANSACTION](#transaction).

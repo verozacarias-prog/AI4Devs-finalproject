@@ -53,6 +53,21 @@ class ErrorCode(StrEnum):
     TEST_DATA_NOT_ALLOWED = "test_data_not_allowed"
     # The call to the model gave no answer to use: the message is tried again later.
     MODEL_CALL_FAILED = "model_call_failed"
+    # The content of a budget period (docs/04-api.md).
+    GROUP_PERIOD_NOT_SUPPORTED = "group_period_not_supported"
+    NOT_THE_OWNER = "not_the_owner"
+    PERIOD_END_REQUIRED = "period_end_required"
+    PERIOD_DATES_INVERTED = "period_dates_inverted"
+    PERIOD_END_NOT_MATCHING = "period_end_not_matching"
+    BIWEEKLY_START_INVALID = "biweekly_start_invalid"
+    CONFIRMED_PERIOD_FIXED = "confirmed_period_fixed"
+    BUDGET_PERIOD_OVERLAP = "budget_period_overlap"
+    BUDGET_LIMIT_NOT_POSITIVE = "budget_limit_not_positive"
+    BUDGET_CATEGORY_REPEATED = "budget_category_repeated"
+    BUDGET_CATEGORY_NOT_EXPENSE = "budget_category_not_expense"
+    ESTIMATED_INCOME_NEGATIVE = "estimated_income_negative"
+    AMOUNT_TOO_LARGE = "amount_too_large"
+    CURRENCY_NOT_FOUND = "currency_not_found"
 
 
 class DomainError(Exception):

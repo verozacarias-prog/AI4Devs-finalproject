@@ -1,6 +1,6 @@
 -- Manual test data for the budget screen (FEAT-004): an estimated income, three limits and
--- some movements for Lucía, in her period that covers today. Setting limits belongs to HU2,
--- which the application does not have yet, so they come from here.
+-- some movements for Lucía, in her period that covers today, to see the screen with data
+-- without loading it by hand.
 --
 -- Local environment only, after seed_test_data, and once: a second run fails on the limits.
 --   docker compose exec -T db psql -U platita -d platita < scripts/budget_test_data.sql

@@ -1,0 +1,593 @@
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardDescription, CardTitle } from '@/components/ui/card'
+import { amountForApi, amountFromApi, amountText, thousandsAreWellPlaced } from '@/lib/amount-text'
+import { formatAmount, formatDate } from '@/lib/budget-format'
+import { lastIndividualPeriod, nextPeriodStart } from '@/lib/next-period'
+import {
+  confirmPeriod,
+  loadBudgetPeriods,
+  loadCategories,
+  loadCurrencies,
+  savePeriod,
+  type BudgetPeriod,
+  type Category,
+  type Currency,
+  type Loaded,
+  type PeriodContent,
+  type Saved,
+} from '../api/budget'
+import type { Failure } from '../api/request'
+import { API_ERROR_NOT_FOUND, API_ERROR_PERIOD_OVERLAP } from '../constants'
+import { MESSAGES } from '../messages'
+
+/**
+ * Builds a budget period, or changes one, and confirms it (FEAT-005). The screen does no sums:
+ * each amount travels as the text the user wrote, and the API decides what is valid. What it
+ * decides by itself is what a new period starts with: a copy of the last one (CA-13).
+ */
+type ErrorCause = Exclude<Failure['kind'], 'cancelled'>
+
+type Working = 'save' | 'confirm'
+
+type Limit = { key: string; categoryId: string; amount: string }
+
+type Fields = {
+  periodType: BudgetPeriod['period_type']
+  start: string
+  end: string
+  currency: string
+  income: string
+  limits: Limit[]
+}
+
+type View = { kind: 'loading' } | { kind: 'editing' } | { kind: 'saved' } | { kind: 'confirmed' }
+
+/** Why a request failed: what can be repeated as it was, or what the API refused. */
+type Problem =
+  | { kind: 'load'; cause: ErrorCause }
+  | { kind: 'save'; cause: ErrorCause }
+  | { kind: 'confirm'; cause: ErrorCause }
+  | { kind: 'refused'; code: string }
+  | { kind: 'amount' }
+
+const TEXT = MESSAGES.budgetForm
+const CONTROL =
+  'rounded-md border bg-card px-3 py-2 outline-none focus-visible:ring-(length:--focus-ring-width) focus-visible:ring-ring disabled:opacity-60'
+
+const EMPTY_FIELDS: Fields = { periodType: 'monthly', start: '', end: '', currency: '', income: '', limits: [] }
+
+type Props = {
+  /** The period to change, or null to build a new one. */
+  periodId: string | null
+  /** Back to the summary, with the period to show if one was saved. */
+  onDone: (periodId: string | null) => void
+  /** Called when the API says there is no session: the entry is shown again. */
+  onNoSession: () => void
+  /** How long to wait for the API. Tests pass a short one. */
+  timeoutMs?: number
+}
+
+export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs }: Props) {
+  const [categories, setCategories] = useState<Category[] | null>(null)
+  const [currencies, setCurrencies] = useState<Currency[] | null>(null)
+  const [periods, setPeriods] = useState<BudgetPeriod[] | null>(null)
+  const [period, setPeriod] = useState<BudgetPeriod | null>(null)
+  const [fields, setFields] = useState<Fields>(EMPTY_FIELDS)
+  const [view, setView] = useState<View>({ kind: 'loading' })
+  const [working, setWorking] = useState<Working | null>(null)
+  const [problem, setProblem] = useState<Problem | null>(null)
+  // Retrying the first load repeats only the query that failed.
+  const [attempt, setAttempt] = useState(0)
+  const statusLine = useRef<HTMLParagraphElement>(null)
+
+  useEffect(() => {
+    const stop = new AbortController()
+    const options = { timeoutMs, signal: stop.signal }
+    void Promise.all([
+      categories ? already(categories) : loadCategories(options),
+      periods ? already(periods) : loadBudgetPeriods(options),
+      currencies ? already(currencies) : loadCurrencies(options),
+    ]).then(([categoriesLoaded, periodsLoaded, currenciesLoaded]) => {
+      const loads = [categoriesLoaded, periodsLoaded, currenciesLoaded]
+      if (stop.signal.aborted || loads.some((load) => load.kind === 'cancelled')) return
+      if (loads.some((load) => load.kind === 'no-session')) return onNoSession()
+      if (categoriesLoaded.kind === 'loaded') setCategories(categoriesLoaded.value)
+      if (currenciesLoaded.kind === 'loaded') setCurrencies(currenciesLoaded.value)
+      if (periodsLoaded.kind === 'loaded') setPeriods(periodsLoaded.value)
+      if (categoriesLoaded.kind !== 'loaded' || periodsLoaded.kind !== 'loaded' || currenciesLoaded.kind !== 'loaded') {
+        const failed = loads.find((load) => load.kind !== 'loaded')
+        return setProblem({ kind: 'load', cause: failed?.kind as ErrorCause })
+      }
+      const stored = periodsLoaded.value.find((candidate) => candidate.id === periodId) ?? null
+      if (periodId !== null && stored === null) return setProblem({ kind: 'refused', code: API_ERROR_NOT_FOUND })
+      setPeriod(stored)
+      setFields(stored ? fieldsOf(stored) : copyOfLast(periodsLoaded.value))
+      setProblem(null)
+      setView({ kind: 'editing' })
+    })
+    return () => stop.abort()
+    // The lists are read only to skip what already arrived: they do not start a new load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attempt, periodId, timeoutMs, onNoSession])
+
+  function settle(saved: Saved, next: View, failedKind: Working) {
+    setWorking(null)
+    if (saved.kind === 'cancelled') return
+    if (saved.kind === 'no-session') return onNoSession()
+    if (saved.kind === 'refused') return setProblem({ kind: 'refused', code: saved.code })
+    if (saved.kind !== 'saved') return setProblem({ kind: failedKind, cause: saved.kind })
+    setPeriod(saved.value)
+    setFields(fieldsOf(saved.value))
+    setView(next)
+  }
+
+  function send() {
+    const amounts = [fields.income, ...fields.limits.map((limit) => limit.amount)]
+    if (!amounts.every((amount) => thousandsAreWellPlaced(amount))) return setProblem({ kind: 'amount' })
+    setWorking('save')
+    setProblem(null)
+    void savePeriod(contentOf(fields), period?.id ?? null, { timeoutMs }).then((saved) =>
+      settle(saved, { kind: 'saved' }, 'save'),
+    )
+  }
+
+  function confirm() {
+    if (period === null) return
+    setWorking('confirm')
+    setProblem(null)
+    void confirmPeriod(period.id, { timeoutMs }).then((saved) => settle(saved, { kind: 'confirmed' }, 'confirm'))
+  }
+
+  function retry() {
+    const failed = problem
+    setProblem(null)
+    statusLine.current?.focus()
+    if (failed?.kind === 'save') send()
+    else if (failed?.kind === 'confirm') confirm()
+    else setAttempt((current) => current + 1)
+  }
+
+  function submit(event: FormEvent) {
+    event.preventDefault()
+    send()
+  }
+
+  const busy = working !== null
+  const fixed = period?.status === 'confirmed'
+  const options = categoryOptions(categories ?? [], period)
+
+  return (
+    <Card aria-labelledby="period-form-heading">
+      <CardTitle id="period-form-heading" className="text-xl">
+        {period ? TEXT.headingEdit : TEXT.headingNew}
+      </CardTitle>
+      <p ref={statusLine} role="status" tabIndex={-1} className="text-sm text-muted-foreground outline-none empty:hidden">
+        {statusText(view, working, problem, period)}
+      </p>
+      {view.kind === 'editing' && (
+        <form onSubmit={submit} className="flex flex-col gap-4">
+          <fieldset disabled={busy} className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                {TEXT.cadence}
+                <select
+                  value={fields.periodType}
+                  disabled={fixed}
+                  onChange={(event) =>
+                    setFields({ ...fields, periodType: event.target.value as Fields['periodType'] })
+                  }
+                  className={CONTROL}
+                >
+                  <option value="monthly">{TEXT.cadences.monthly}</option>
+                  <option value="biweekly">{TEXT.cadences.biweekly}</option>
+                  <option value="custom">{TEXT.cadences.custom}</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                {TEXT.currency}
+                <select
+                  value={fields.currency}
+                  required
+                  disabled={fixed}
+                  onChange={(event) => setFields({ ...fields, currency: event.target.value })}
+                  className={CONTROL}
+                >
+                  {fields.currency === '' && <option value="">{TEXT.chooseCurrency}</option>}
+                  {(currencies ?? []).map((currency) => (
+                    <option key={currency.code} value={currency.code}>
+                      {TEXT.currencyOption(currency.code, currency.name)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                {TEXT.start}
+                <input
+                  type="date"
+                  value={fields.start}
+                  required
+                  disabled={fixed}
+                  onChange={(event) => setFields({ ...fields, start: event.target.value })}
+                  className={CONTROL}
+                />
+              </label>
+              {fields.periodType === 'custom' && (
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  {TEXT.end}
+                  <input
+                    type="date"
+                    value={fields.end}
+                    required
+                    disabled={fixed}
+                    onChange={(event) => setFields({ ...fields, end: event.target.value })}
+                    className={CONTROL}
+                  />
+                </label>
+              )}
+              <div className="flex flex-col gap-1">
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  {TEXT.income}
+                  <input
+                    inputMode="decimal"
+                    value={fields.income}
+                    required
+                    aria-describedby="period-income-hint"
+                    onChange={(event) => setFields({ ...fields, income: amountText(event.target.value) })}
+                    className={CONTROL}
+                  />
+                </label>
+                <span id="period-income-hint" className="text-xs text-muted-foreground">
+                  {TEXT.amountHint}
+                </span>
+              </div>
+            </div>
+            <Limits
+              limits={fields.limits}
+              options={options}
+              onChange={(limits) => {
+                setFields({ ...fields, limits })
+                if (problem?.kind === 'amount') setProblem(null)
+              }}
+              onAmountNotReadable={() => setProblem({ kind: 'amount' })}
+            />
+          </fieldset>
+          {problem && <ProblemAlert problem={problem} others={otherPeriods(periods ?? [], period)} onRetry={retry} />}
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" disabled={busy}>
+              {TEXT.save}
+            </Button>
+            <Button type="button" variant="outline" disabled={busy} onClick={() => onDone(period?.id ?? null)}>
+              {TEXT.back}
+            </Button>
+          </div>
+        </form>
+      )}
+      {view.kind === 'saved' && period && (
+        <section className="flex flex-col gap-4">
+          <PeriodContentList period={period} />
+          {problem && <ProblemAlert problem={problem} onRetry={retry} />}
+          <div className="flex flex-wrap gap-2">
+            {period.status === 'draft' && (
+              <Button disabled={busy} onClick={confirm}>
+                {TEXT.confirm}
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={() => {
+                setProblem(null)
+                setView({ kind: 'editing' })
+              }}
+            >
+              {TEXT.edit}
+            </Button>
+            <Button variant="outline" disabled={busy} onClick={() => onDone(period.id)}>
+              {TEXT.back}
+            </Button>
+          </div>
+        </section>
+      )}
+      {view.kind === 'confirmed' && period && (
+        <section className="flex flex-col gap-4">
+          <PeriodContentList period={period} />
+          <Button className="self-start" onClick={() => onDone(period.id)}>
+            {TEXT.back}
+          </Button>
+        </section>
+      )}
+      {view.kind === 'loading' && problem && <ProblemAlert problem={problem} onRetry={retry} onBack={() => onDone(null)} />}
+    </Card>
+  )
+}
+
+function Limits({
+  limits,
+  options,
+  onChange,
+  onAmountNotReadable,
+}: {
+  limits: Limit[]
+  options: { id: string; name: string }[]
+  onChange: (limits: Limit[]) => void
+  onAmountNotReadable: () => void
+}) {
+  const [chosenCategory, setChosenCategory] = useState('')
+  const [newAmount, setNewAmount] = useState('')
+  const [amountMissing, setAmountMissing] = useState(false)
+  if (options.length === 0) {
+    // The query worked and there is nothing to choose: empty, not a failure.
+    return (
+      <div className="flex flex-col gap-1">
+        <p className="text-sm font-medium">{TEXT.noCategories}</p>
+        <CardDescription>{TEXT.noCategoriesDetail}</CardDescription>
+      </div>
+    )
+  }
+  const taken = new Set(limits.map((limit) => limit.categoryId))
+  const free = options.filter((option) => !taken.has(option.id))
+  const newCategory = free.some((option) => option.id === chosenCategory) ? chosenCategory : free[0]?.id
+  const nameOf = (categoryId: string) => options.find((option) => option.id === categoryId)?.name
+  const add = () => {
+    if (newAmount.trim() === '') return setAmountMissing(true)
+    setAmountMissing(false)
+    if (!thousandsAreWellPlaced(newAmount)) return onAmountNotReadable()
+    setNewAmount('')
+    onChange([...limits, { key: crypto.randomUUID(), categoryId: newCategory, amount: newAmount }])
+  }
+  return (
+    <fieldset className="flex flex-col gap-3">
+      <legend className="text-sm font-medium">{TEXT.limits}</legend>
+      <p className="text-xs text-muted-foreground">{TEXT.amountHint}</p>
+      {free.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{TEXT.allLimited}</p>
+      ) : (
+        <div className="flex flex-col gap-1">
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="flex min-w-0 grow flex-col gap-1 text-sm">
+              {TEXT.newLimitCategory}
+              <select value={newCategory} onChange={(event) => setChosenCategory(event.target.value)} className={CONTROL}>
+                {free.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              {TEXT.newLimitAmount}
+              <input
+                inputMode="decimal"
+                value={newAmount}
+                aria-describedby={amountMissing ? 'new-limit-missing' : undefined}
+                onChange={(event) => setNewAmount(amountText(event.target.value))}
+                onKeyDown={(event) => {
+                  // Enter adds the limit: it does not save the whole form by accident.
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    add()
+                  }
+                }}
+                className={CONTROL}
+              />
+            </label>
+            <Button type="button" variant="outline" onClick={add}>
+              {TEXT.addLimit}
+            </Button>
+          </div>
+          {amountMissing && (
+            <p id="new-limit-missing" className="text-sm text-destructive">
+              {TEXT.missingAmount}
+            </p>
+          )}
+        </div>
+      )}
+      {limits.length > 0 && (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left text-muted-foreground">
+              <th scope="col" className="py-2 font-medium">
+                {TEXT.limitCategoryColumn}
+              </th>
+              <th scope="col" className="py-2 font-medium">
+                {TEXT.limitAmountColumn}
+              </th>
+              <th scope="col" className="py-2">
+                <span className="sr-only">{TEXT.limitActionsColumn}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {limits.map((limit, index) => (
+              <tr key={limit.key} className="border-b">
+                <th scope="row" className="py-2 pr-2 text-left font-medium">
+                  {nameOf(limit.categoryId)}
+                </th>
+                <td className="py-2 pr-2">
+                  <input
+                    inputMode="decimal"
+                    value={limit.amount}
+                    required
+                    aria-label={TEXT.limitAmount(index + 1)}
+                    onChange={(event) =>
+                      onChange(
+                        limits.map((candidate) =>
+                          candidate.key === limit.key ? { ...candidate, amount: amountText(event.target.value) } : candidate,
+                        ),
+                      )
+                    }
+                    className={`${CONTROL} w-full min-w-24`}
+                  />
+                </td>
+                <td className="py-2 text-right">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    aria-label={TEXT.removeLimitLabel(index + 1)}
+                    onClick={() => onChange(limits.filter((candidate) => candidate.key !== limit.key))}
+                  >
+                    {TEXT.removeLimit}
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </fieldset>
+  )
+}
+
+function PeriodContentList({ period }: { period: BudgetPeriod }) {
+  const currency = period.primary_currency
+  return (
+    <dl className="flex flex-col gap-2 text-sm">
+      <Row label={TEXT.cadence} value={TEXT.cadences[period.period_type]} />
+      <Row label={TEXT.dates} value={MESSAGES.budget.periodRange(formatDate(period.period_start), formatDate(period.period_end))} />
+      <Row label={TEXT.income} value={formatAmount(period.estimated_income, currency)} />
+      {period.budgets.map((budget) => (
+        <Row key={budget.id} label={budget.category} value={formatAmount(budget.limit_amount, currency)} />
+      ))}
+    </dl>
+  )
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-wrap justify-between gap-x-3">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="font-medium tabular-nums">{value}</dd>
+    </div>
+  )
+}
+
+function ProblemAlert({
+  problem,
+  others = [],
+  onRetry,
+  onBack,
+}: {
+  problem: Problem
+  /** The other periods of the owner, shown when the dates overlap one of them. */
+  others?: BudgetPeriod[]
+  onRetry: () => void
+  onBack?: () => void
+}) {
+  const showOthers = problem.kind === 'refused' && problem.code === API_ERROR_PERIOD_OVERLAP && others.length > 0
+  return (
+    <div role="alert" className="flex flex-col items-start gap-2">
+      {problem.kind === 'refused' || problem.kind === 'amount' ? (
+        <p className="font-semibold text-destructive">
+          {problem.kind === 'refused' ? refusalText(problem.code) : TEXT.amountNotReadable}
+        </p>
+      ) : (
+        <>
+          <p className="font-semibold text-destructive">{problem.kind === 'load' ? TEXT.loadFailed : TEXT.saveFailed}</p>
+          <p className="text-sm text-muted-foreground">{MESSAGES.common.apiFailures[problem.cause]}</p>
+          <Button type="button" onClick={onRetry}>
+            {MESSAGES.common.retry}
+          </Button>
+        </>
+      )}
+      {showOthers && (
+        <div className="text-sm">
+          <p className="font-medium">{TEXT.yourPeriods}</p>
+          <ul>
+            {others.map((other) => (
+              <li key={other.id}>{MESSAGES.budget.periodRange(formatDate(other.period_start), formatDate(other.period_end))}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {onBack && (
+        <Button type="button" variant="outline" onClick={onBack}>
+          {TEXT.back}
+        </Button>
+      )}
+    </div>
+  )
+}
+
+function statusText(view: View, working: Working | null, problem: Problem | null, period: BudgetPeriod | null): string {
+  if (working === 'save') return TEXT.saving
+  if (working === 'confirm') return TEXT.confirming
+  if (problem !== null) return ''
+  if (view.kind === 'loading') return TEXT.loading
+  if (view.kind === 'saved') return TEXT.savedNotice
+  if (view.kind === 'confirmed' && period) return TEXT.confirmedNotice(formatDate(period.period_start))
+  return ''
+}
+
+/** A list that arrived in an earlier attempt, so that a retry does not ask for it again. */
+function already<T>(value: T): Loaded<T> {
+  return { kind: 'loaded', value }
+}
+
+function refusalText(code: string): string {
+  const known: Record<string, string> = TEXT.refusals
+  return known[code] ?? MESSAGES.common.apiFailures['api-error']
+}
+
+/** The categories to choose from, and those the period already has, whoever they belong to. */
+function categoryOptions(categories: Category[], period: BudgetPeriod | null): { id: string; name: string }[] {
+  const known = new Set(categories.map((category) => category.id))
+  const others = (period?.budgets ?? [])
+    .filter((budget) => !known.has(budget.category_id))
+    .map((budget) => ({ id: budget.category_id, name: budget.category }))
+  return [...categories.map((category) => ({ id: category.id, name: category.name })), ...others]
+}
+
+function fieldsOf(period: BudgetPeriod): Fields {
+  return {
+    periodType: period.period_type,
+    start: period.period_start,
+    end: period.period_end,
+    currency: period.primary_currency,
+    income: amountFromApi(period.estimated_income),
+    limits: limitsOf(period),
+  }
+}
+
+function limitsOf(period: BudgetPeriod): Limit[] {
+  return period.budgets.map((budget) => ({
+    key: budget.id,
+    categoryId: budget.category_id,
+    amount: amountFromApi(budget.limit_amount),
+  }))
+}
+
+/**
+ * A new period starts as a copy of the last individual one, the one that starts latest even if
+ * it is a draft, from the day after it ends, with its end empty. A custom one is a one-off, so
+ * after it a monthly one is suggested (CA-13).
+ */
+function copyOfLast(periods: BudgetPeriod[]): Fields {
+  const last = lastIndividualPeriod(periods)
+  if (last === null) return EMPTY_FIELDS
+  const periodType = last.period_type === 'custom' ? 'monthly' : last.period_type
+  return { ...fieldsOf(last), periodType, start: nextPeriodStart(last), end: '' }
+}
+
+/** The other periods of the same owner: the ones the dates of this one can overlap. */
+function otherPeriods(periods: BudgetPeriod[], period: BudgetPeriod | null): BudgetPeriod[] {
+  const owner = period?.family_group_id ?? null
+  return periods.filter((candidate) => candidate.family_group_id === owner && candidate.id !== period?.id)
+}
+
+/** Each amount goes as the text the user wrote, with the decimal comma they may have used. */
+function contentOf(fields: Fields): PeriodContent {
+  return {
+    period_type: fields.periodType,
+    period_start: fields.start,
+    // Only a custom period says when it ends: the API computes the others.
+    period_end: fields.periodType === 'custom' && fields.end !== '' ? fields.end : null,
+    primary_currency: fields.currency.trim(),
+    estimated_income: amountForApi(fields.income),
+    budgets: fields.limits.map((limit) => ({
+      category_id: limit.categoryId,
+      limit_amount: amountForApi(limit.amount),
+    })),
+  }
+}
+

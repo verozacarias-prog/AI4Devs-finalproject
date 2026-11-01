@@ -5,6 +5,9 @@ from __future__ import annotations
 # How the schema names its primary keys (docs/03-modelo-de-datos.md, 3.2). PostgreSQL reports
 # a repeated primary key and a repeated unique key with the same error, and only the name
 # tells them apart.
+PERIOD_OVERLAP_CONSTRAINTS = frozenset(
+    {"ex_budget_period_user_overlap", "ex_budget_period_group_overlap"}
+)
 PRIMARY_KEY_PREFIX = "pk_"
 
 # The cheapest query that proves the database answers.
@@ -141,6 +144,26 @@ CONFIRM_BUDGET_PERIOD = """
     UPDATE budget_period SET status = 'confirmed' WHERE id = :period_id AND status = 'draft'
 """
 
+# The owner and the status never change here: confirming has its own query.
+UPDATE_BUDGET_PERIOD = """
+    UPDATE budget_period
+       SET period_type = :period_type, period_start = :period_start, period_end = :period_end,
+           primary_currency = :primary_currency, estimated_income = :estimated_income
+     WHERE id = :id
+"""
+
+# The limits of a period that are not given any more.
+DELETE_BUDGETS_NOT_IN = """
+    DELETE FROM budget WHERE budget_period_id = :period_id AND NOT (id = ANY(:ids))
+"""
+
+# A limit that is already there keeps its id and takes its new amount.
+UPSERT_BUDGET = """
+    INSERT INTO budget (id, budget_period_id, category_id, limit_amount)
+    VALUES (:id, :budget_period_id, :category_id, :limit_amount)
+    ON CONFLICT (id) DO UPDATE SET limit_amount = EXCLUDED.limit_amount
+"""
+
 SELECT_BUDGETS_BY_PERIOD = """
     SELECT id, budget_period_id, category_id, limit_amount
       FROM budget
@@ -170,6 +193,18 @@ SELECT_CATEGORIES_AVAILABLE = """
     SELECT id, name, kind, user_id
       FROM category
      WHERE user_id IS NULL OR user_id = :user_id
+"""
+
+SELECT_CURRENCIES = """
+    SELECT code, name
+      FROM currency
+     ORDER BY code
+"""
+
+SELECT_CURRENCY = """
+    SELECT code
+      FROM currency
+     WHERE code = :code
 """
 
 SELECT_CATEGORIES_BY_IDS = """

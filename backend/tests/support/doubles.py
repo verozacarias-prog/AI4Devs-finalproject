@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from app.domain.entities.budget import Budget
     from app.domain.entities.category import Category
     from app.domain.entities.chat_message import ChatMessage
+    from app.domain.entities.currency import Currency
     from app.domain.entities.inbound_message import InboundMessage
     from app.domain.entities.llm_call import LlmCall
     from app.domain.entities.llm_usage import UsageCounter
@@ -72,9 +73,16 @@ class InMemoryAccounts:
 class InMemoryBudgetPeriods:
     def __init__(self) -> None:
         self.added: list[BudgetPeriod] = []
+        # Every write the port is asked for, so that a case can tell nothing was written.
+        self.writes = 0
 
     def add(self, period: BudgetPeriod) -> None:
+        self.writes += 1
         self.added.append(period)
+
+    def update(self, period: BudgetPeriod) -> None:
+        self.writes += 1
+        self.added = [period if kept.id == period.id else kept for kept in self.added]
 
     def list_covering(self, user_id: uuid.UUID, day: date) -> list[BudgetPeriod]:
         # The periods of the groups of the user are a rule of the query: the integration tests
@@ -96,6 +104,7 @@ class InMemoryBudgetPeriods:
         ]
 
     def confirm(self, period_id: uuid.UUID) -> None:
+        self.writes += 1
         self.added = [
             replace(period, status=PeriodStatus.CONFIRMED) if period.id == period_id else period
             for period in self.added
@@ -105,15 +114,36 @@ class InMemoryBudgetPeriods:
 class InMemoryBudgets:
     def __init__(self) -> None:
         self.added: list[Budget] = []
+        self.writes = 0
 
     def add(self, budget: Budget) -> None:
+        self.writes += 1
         self.added.append(budget)
+
+    def replace_for_period(self, period_id: uuid.UUID, budgets: list[Budget]) -> None:
+        self.writes += 1
+        kept = [budget for budget in self.added if budget.budget_period_id != period_id]
+        self.added = kept + budgets
 
     def list_by_period(self, period_id: uuid.UUID) -> list[Budget]:
         return [budget for budget in self.added if budget.budget_period_id == period_id]
 
     def find_by_id(self, budget_id: uuid.UUID) -> Budget | None:
         return next((budget for budget in self.added if budget.id == budget_id), None)
+
+
+class InMemoryCurrencies:
+    """A catalog with the two currencies the cases use."""
+
+    def __init__(self) -> None:
+        self.codes = {"ARS", "USD"}
+
+    def list_all(self) -> list[Currency]:
+        # No unit case reads the list: GET /currencies is covered against the database.
+        return []
+
+    def exists(self, code: str) -> bool:
+        return code in self.codes
 
 
 class InMemoryCategories:
@@ -390,6 +420,7 @@ class InMemoryUnitOfWork:
         self.budget_periods = InMemoryBudgetPeriods()
         self.budgets = InMemoryBudgets()
         self.categories = InMemoryCategories()
+        self.currencies = InMemoryCurrencies()
         self.pendings = InMemoryPendings()
         self.financial_profiles = InMemoryFinancialProfiles()
         self.family_groups = InMemoryFamilyGroups()

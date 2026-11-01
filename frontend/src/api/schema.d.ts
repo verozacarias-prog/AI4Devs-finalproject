@@ -57,7 +57,51 @@ export interface paths {
          */
         get: operations["budget_periods_budget_periods_get"];
         put?: never;
+        /**
+         * Build a budget period
+         * @description A draft of an individual period of the user of the session, with its limits. A monthly period ends the day before the same day of the next month, and a biweekly one starts on the 1st or the 16th and ends on the 15th or the last day of the month. Each amount is accepted as a JSON number or as a decimal text, and kept exact.
+         */
+        post: operations["create_period_budget_periods_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/budget-periods/{period_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change a budget period
+         * @description Replaces the content of a period: its dates, currency, estimated income and limits. A limit that stays keeps its id.
+         */
+        put: operations["update_period_budget_periods__period_id__put"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/budget-periods/{period_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm a budget period
+         * @description A draft becomes confirmed, and from then on receives movements. Confirming one already confirmed answers the same, and changes nothing.
+         */
+        post: operations["confirm_period_budget_periods__period_id__confirm_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -104,6 +148,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the categories of expenses
+         * @description The categories of expenses the user of the session can put a limit on: those of the base catalog and their own, by name, without telling capitals apart.
+         */
+        get: operations["categories_categories_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/chat/messages": {
         parameters: {
             query?: never;
@@ -122,6 +186,26 @@ export interface paths {
          * @description Stores the message as written by the user of the session, and answers at once without processing it. The reply of Platita is not here: it shows up later in `GET /chat/messages`. The time of the message is the one the server received it at.
          */
         post: operations["send_chat_messages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/currencies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the currencies
+         * @description The currencies of the catalog a budget period can be in, by code.
+         */
+        get: operations["currencies_currencies_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -324,6 +408,20 @@ export interface components {
              */
             limit_amount: number;
         };
+        /** BudgetLimitRequest */
+        BudgetLimitRequest: {
+            /**
+             * Category Id
+             * Format: uuid
+             * @description The category the limit is for.
+             */
+            category_id: string;
+            /**
+             * Limit Amount
+             * @description The limit, in the currency of the period.
+             */
+            limit_amount: number | string;
+        };
         /** BudgetMovementItem */
         BudgetMovementItem: {
             /**
@@ -423,7 +521,7 @@ export interface components {
              * @description The first day of the period.
              */
             period_start: string;
-            /** @description `monthly` or `biweekly`. */
+            /** @description `monthly`, which lasts a month; `biweekly`, the fortnight of the calendar; or `custom`, which ends on the day given. */
             period_type: components["schemas"]["PeriodType"];
             /**
              * Primary Currency
@@ -440,6 +538,37 @@ export interface components {
              * @description The periods, in the order the dashboard shows them.
              */
             budget_periods: components["schemas"]["BudgetPeriodItem"][];
+        };
+        /** BudgetPeriodRequest */
+        BudgetPeriodRequest: {
+            /**
+             * Budgets
+             * @description The limits of the period, one per category.
+             */
+            budgets: components["schemas"]["BudgetLimitRequest"][];
+            /**
+             * Estimated Income
+             * @description What the user expects to receive in the period.
+             */
+            estimated_income: number | string;
+            /**
+             * Period End
+             * @description The last day of the period, included. Required in a custom period. In a monthly or a biweekly one it is computed, and if it comes it has to be that day.
+             */
+            period_end?: string | null;
+            /**
+             * Period Start
+             * Format: date
+             * @description The first day of the period.
+             */
+            period_start: string;
+            /** @description `monthly`, which lasts a month; `biweekly`, the fortnight of the calendar; or `custom`, which ends on the day given. */
+            period_type: components["schemas"]["PeriodType"];
+            /**
+             * Primary Currency
+             * @description The currency of the period, as an ISO 4217 code. What it spent is in it.
+             */
+            primary_currency: string;
         };
         /** BudgetStatusBody */
         BudgetStatusBody: {
@@ -485,6 +614,33 @@ export interface components {
              * @description What is spent over the limit, times a hundred, with one decimal and the half up. Null without a limit.
              */
             used_percentage: number;
+        };
+        /** CategoryItem */
+        CategoryItem: {
+            /**
+             * Id
+             * Format: uuid
+             * @description The identifier of the category.
+             */
+            id: string;
+            /**
+             * Is Base
+             * @description Whether it is of the base catalog, which every user has.
+             */
+            is_base: boolean;
+            /**
+             * Name
+             * @description The name of the category.
+             */
+            name: string;
+        };
+        /** CategoryList */
+        CategoryList: {
+            /**
+             * Categories
+             * @description The categories, by name.
+             */
+            categories: components["schemas"]["CategoryItem"][];
         };
         /** CategorySpendingItem */
         CategorySpendingItem: {
@@ -568,6 +724,63 @@ export interface components {
              * @description What the user wrote.
              */
             text: string;
+        };
+        /** CreateBudgetPeriodRequest */
+        CreateBudgetPeriodRequest: {
+            /**
+             * Budgets
+             * @description The limits of the period, one per category.
+             */
+            budgets: components["schemas"]["BudgetLimitRequest"][];
+            /**
+             * Estimated Income
+             * @description What the user expects to receive in the period.
+             */
+            estimated_income: number | string;
+            /**
+             * Family Group Id
+             * @description Always null or absent: building a period of a group is not available yet.
+             */
+            family_group_id?: string | null;
+            /**
+             * Period End
+             * @description The last day of the period, included. Required in a custom period. In a monthly or a biweekly one it is computed, and if it comes it has to be that day.
+             */
+            period_end?: string | null;
+            /**
+             * Period Start
+             * Format: date
+             * @description The first day of the period.
+             */
+            period_start: string;
+            /** @description `monthly`, which lasts a month; `biweekly`, the fortnight of the calendar; or `custom`, which ends on the day given. */
+            period_type: components["schemas"]["PeriodType"];
+            /**
+             * Primary Currency
+             * @description The currency of the period, as an ISO 4217 code. What it spent is in it.
+             */
+            primary_currency: string;
+        };
+        /** CurrencyItem */
+        CurrencyItem: {
+            /**
+             * Code
+             * @description The ISO 4217 code of the currency.
+             */
+            code: string;
+            /**
+             * Name
+             * @description The name of the currency.
+             */
+            name: string;
+        };
+        /** CurrencyList */
+        CurrencyList: {
+            /**
+             * Currencies
+             * @description The currencies, by code.
+             */
+            currencies: components["schemas"]["CurrencyItem"][];
         };
         /** DevSessionRequest */
         DevSessionRequest: {
@@ -694,7 +907,7 @@ export interface components {
          * PeriodType
          * @enum {string}
          */
-        PeriodType: "monthly" | "biweekly";
+        PeriodType: "monthly" | "biweekly" | "custom";
         /**
          * ResponseKind
          * @description What kind of reply a message was (docs/03-modelo-de-datos.md, OUTBOUND_MESSAGE).
@@ -834,6 +1047,206 @@ export interface operations {
             };
         };
     };
+    create_period_budget_periods_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBudgetPeriodRequest"];
+            };
+        };
+        responses: {
+            /** @description The draft, whole, in the same shape as an item of the list. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetPeriodItem"];
+                };
+            };
+            /** @description There is no valid session: missing, unknown, revoked or expired, told apart nowhere. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description A category of the limits does not exist, or it is not of the user. The same answer for both. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description It overlaps another period of the same owner (`budget_period_overlap`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description A field is missing, unknown or has no valid value, or the content breaks a rule of the period: its `error` says which. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    update_period_budget_periods__period_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The identifier of the period. */
+                period_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BudgetPeriodRequest"];
+            };
+        };
+        responses: {
+            /** @description The period, whole, in the same shape as an item of the list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetPeriodItem"];
+                };
+            };
+            /** @description There is no valid session: missing, unknown, revoked or expired, told apart nowhere. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description The request did not come from the page of the API itself or it is not JSON, or the period is of a group the user is a member of without being its owner (`not_the_owner`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description The period does not exist or the user cannot read it, or a category of the limits is not of the user. The same answer for each. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description It changes the cadence, the dates or the currency of a confirmed period (`confirmed_period_fixed`), or it overlaps another period of the same owner (`budget_period_overlap`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description A field is missing, unknown or has no valid value, or the content breaks a rule of the period: its `error` says which. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    confirm_period_budget_periods__period_id__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The identifier of the period. */
+                period_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The period, confirmed, in the same shape as an item of the list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BudgetPeriodItem"];
+                };
+            };
+            /** @description There is no valid session: missing, unknown, revoked or expired, told apart nowhere. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description The request did not come from the page of the API itself or it is not JSON, or the period is of a group the user is a member of without being its owner (`not_the_owner`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description The period does not exist, or the user cannot read it. The same answer for both. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description `period_id` is not a UUID. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     period_summary_budget_periods__period_id__summary_get: {
         parameters: {
             query?: never;
@@ -925,6 +1338,35 @@ export interface operations {
             };
             /** @description `budget_id` is not a UUID. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    categories_categories_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The categories of expenses of the user. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryList"];
+                };
+            };
+            /** @description There is no valid session: missing, unknown, revoked or expired, told apart nowhere. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1056,6 +1498,35 @@ export interface operations {
             };
             /** @description The text is empty, only spaces or over 4096 characters, or the header `Idempotency-Key` is missing. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    currencies_currencies_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The currencies of the catalog. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurrencyList"];
+                };
+            };
+            /** @description There is no valid session: missing, unknown, revoked or expired, told apart nowhere. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

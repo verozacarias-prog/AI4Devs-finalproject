@@ -170,6 +170,58 @@ responses:
     description: No valid session
 ```
 
+### `GET /categories`
+
+Lista las categorías de gasto que el usuario autenticado puede usar, para elegir a cuáles ponerles
+tope al armar un período en el dashboard: las del catálogo base y las propias
+([reglas de dominio § 4](reglas-de-dominio.md#4-categorías-catálogo-base-categorías-propias-y-creación-con-confirmación)).
+Crear una categoría todavía no tiene endpoint: hoy se hace conversando, con confirmación. Decidido
+por Vero el 29 de octubre de 2026. También se va a poder crear desde el dashboard, si entra en la
+[entrega final](hoja-de-ruta.md#alcance-de-la-entrega-final). Decidido por Vero el 1 de noviembre
+de 2026.
+
+- Devuelve solo las de gasto: un tope va sobre lo que se gasta.
+- De las propias, devuelve solo las del usuario de la sesión. Las de otro usuario no aparecen.
+- `is_base` dice si es del catálogo base.
+- Vienen ordenadas por nombre, sin distinguir mayúsculas.
+
+```yaml
+responses:
+  200:
+    content:
+      application/json:
+        example:
+          categories:
+            - id: "cat-salud"
+              name: "Salud"
+              is_base: true
+            - id: "cat-clases"
+              name: "Clases de inglés"
+              is_base: false
+  401:
+    description: No valid session
+```
+
+### `GET /currencies`
+
+Lista las monedas del catálogo, para elegir la de un período en el dashboard en vez de escribir su
+código. Vienen ordenadas por código. Decidido por Vero el 31 de octubre de 2026.
+
+```yaml
+responses:
+  200:
+    content:
+      application/json:
+        example:
+          currencies:
+            - code: "ARS"
+              name: "Peso argentino"
+            - code: "USD"
+              name: "Dólar estadounidense"
+  401:
+    description: No valid session
+```
+
 ### `GET /budgets/{budget_id}`
 
 Devuelve el estado actual del límite de **una categoría** dentro de un período de presupuesto: límite, gastado hasta el momento (convertido a la moneda primaria del período, y neto de los reintegros vinculados que llegaron en ese período, según [reglas de dominio § 16](reglas-de-dominio.md#16-reintegros-devoluciones-y-plata-que-te-deben)) y movimientos asociados. La vista completa del período, con todas las categorías, sale de `GET /budget-periods/{period_id}/summary`.
@@ -244,26 +296,76 @@ está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual
   en la zona horaria del usuario y no en la del navegador ([reglas de dominio § 1](reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma)).
   Como los períodos de un mismo dueño no se solapan (§ 3), lo marca como mucho uno por dueño, y
   ninguno si ningún período cubre hoy. Es el que la pantalla de presupuesto abre primero.
-- `POST /budget-periods` crea un borrador. Sin `family_group_id` es individual. En un período
-  mensual, `period_end` es opcional y se calcula desde `period_start`.
-- `PUT /budget-periods/{period_id}` reemplaza el contenido de un borrador: fechas, moneda,
-  ingreso estimado y topes. Un período confirmado responde `409`.
-- `POST /budget-periods/{period_id}/confirm` lo pasa a `confirmed`. Confirmar uno ya confirmado
-  responde `200` sin cambios. El cuerpo lleva, opcionalmente, los montos de las reglas
-  recurrentes de monto variable que vencen en el período. Las que no van en la lista quedan sin
+- `POST /budget-periods` crea un borrador y responde `201` con el período completo, con la misma
+  forma que cada elemento de `GET /budget-periods`, para que la pantalla lo sume a su lista sin
+  otra llamada. El período es individual, del usuario de la sesión. Crear uno de grupo llega con
+  los grupos, en la segunda versión: mientras tanto, un pedido con `family_group_id` responde
+  `422` con `group_period_not_supported`. Decidido por Vero el 30 de octubre de 2026. En un período
+  mensual, `period_end` es opcional y se calcula desde `period_start`, y si viene tiene que ser ese día. Uno
+  quincenal, con `period_type` en `biweekly`, solo empieza el día 1 o el 16, y su fin se calcula
+  igual. En uno personalizado, `custom`, es obligatorio: sin él responde `422` con
+  `period_end_required`. Decidido por Vero el 1 de noviembre de 2026.
+  Decidido por Vero el 29 de octubre de 2026.
+- `PUT /budget-periods/{period_id}` reemplaza el contenido de un período: fechas, moneda,
+  ingreso estimado y topes. En un borrador cambia todo. En uno confirmado cambian solo el
+  ingreso estimado y los topes, como en el primer período, que nace confirmado y sin topes
+  ([reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)):
+  el pedido repite su cadencia, sus fechas y su moneda, y si las cambia responde `409` con
+  `confirmed_period_fixed`. Responde `200` con el período completo, con la misma forma que el
+  `POST`, para que la pantalla lo reemplace en su lista. Decidido por Vero el 29 de octubre de
+  2026.
+- En `POST` y `PUT`, cada monto, `estimated_income` y cada `limit_amount`, se acepta como número
+  JSON o como texto decimal, como `"1450000.55"`, y se guarda exacto, sin pasar por punto
+  flotante. Con más de dos decimales se redondea a dos, con la mitad hacia arriba, y no se rechaza
+  ([modelo de datos](03-modelo-de-datos.md)). El dashboard lo manda como texto. Las respuestas lo
+  devuelven como número. Decidido por Vero el 29 y el 31 de octubre de 2026.
+- `POST /budget-periods/{period_id}/confirm` lo pasa a `confirmed` y responde `200` con el
+  período completo, con la misma forma que el `POST` y el `PUT`, para que la pantalla reemplace
+  su fila. Confirmar uno ya confirmado responde lo mismo, sin cambios. Decidido por Vero el 29 de
+  octubre de 2026. Todavía no lee un cuerpo: lo que sigue llega con las reglas recurrentes, y hoy
+  una lista enviada se ignora. Decidido por Vero el 1 de noviembre de 2026. El cuerpo llevará,
+  opcionalmente, los montos de las reglas recurrentes de monto variable que vencen en el período. Las que no van en la lista quedan sin
   confirmar y se preguntan al vencer
   ([reglas de dominio § 8](reglas-de-dominio.md#8-movimientos-recurrentes-la-excepción-a-la-confirmación)).
   `GET /budget-periods` devuelve esas reglas con el último monto confirmado, para que la pantalla
   las muestre.
 
-Validaciones, en este orden:
+Un pedido que no tiene la forma del contrato responde `422` con `invalid_request`, antes de las
+validaciones que siguen: un `period_id` que no es un UUID y, en `POST` y `PUT`, un campo que la API
+no conoce, que no se ignora. `family_group_id` es un campo conocido solo al crear, así que en un
+`PUT` también responde `invalid_request`. Decidido por Vero el 31 de octubre de 2026.
 
-1. Un período de otro usuario, o de un grupo al que no pertenece, responde `404`.
-2. Crear, cambiar o confirmar un período familiar exige ser el dueño vigente del grupo. Un
+Validaciones, en este orden. Las fechas van antes que lo que las compara, porque sin un fin válido
+no se puede saber si un período cambia sus fechas o se superpone con otro. Decidido por Vero el 31
+de octubre de 2026.
+
+1. Crear un período con `family_group_id` responde `422`, con `group_period_not_supported`.
+2. Un período de otro usuario, o de un grupo al que no pertenece, responde `404`.
+3. Cambiar o confirmar un período familiar exige ser el dueño vigente del grupo. Un
    miembro que no lo es recibe `403`, porque el período existe para él: lo puede leer.
-3. Un período que se superpone con otro del mismo dueño responde `409`, antes de que la
-   restricción de exclusión de la base lo rechace igual.
-4. Fechas invertidas, un tope menor o igual a cero, o una categoría repetida responden `422`.
+4. Responden `422`, cada uno con su código: un período personalizado sin `period_end`, con
+   `period_end_required`; un quincenal que no empieza el día 1 o el 16, con
+   `biweekly_start_invalid`; un mensual o un quincenal con otro fin, con `period_end_not_matching`
+   (Decidido por Vero el 1 de noviembre de 2026); y fechas invertidas, con `period_dates_inverted`. Decidido por Vero el 30
+   de octubre de 2026.
+5. Cambiar la cadencia, las fechas o la moneda de un período confirmado responde `409`, con
+   `confirmed_period_fixed`. Decidido por Vero el 31 de octubre de 2026.
+6. Un período que se superpone con otro del mismo dueño responde `409`, con
+   `budget_period_overlap`, antes de que la restricción de exclusión de la base lo rechace
+   igual. Decidido por Vero el 30 de octubre de 2026.
+7. Los topes y el ingreso. Una categoría que no es del usuario responde `404`. Responden `422`,
+   cada uno con su código: un tope menor o igual a cero, con `budget_limit_not_positive`, y una
+   categoría repetida, con `budget_category_repeated`. Decidido por Vero el 30 de octubre de 2026.
+   Un tope sobre una categoría de ingreso también, con `budget_category_not_expense`: un tope va
+   sobre lo que se gasta
+   ([reglas de dominio § 4](reglas-de-dominio.md#4-categorías-catálogo-base-categorías-propias-y-creación-con-confirmación)).
+   Y un ingreso estimado negativo, con `estimated_income_negative`: acepta 0 o más, y 0 es el del
+   primer período, que nace sin ingreso. Decidido por Vero el 29 de octubre de 2026.
+   Un ingreso o un tope que no entra en `NUMERIC(20,2)`, de más de 18 cifras enteras, con
+   `amount_too_large`. Decidido por Vero el 1 de noviembre de 2026.
+8. Una moneda que no está en el catálogo responde `422`, con `currency_not_found`. La pantalla no
+   la deja elegir, pero la API también recibe pedidos que no salen de ella. Decidido por Vero el 31
+   de octubre de 2026.
 
 ```yaml
 # GET /budget-periods
@@ -299,7 +401,6 @@ requestBody:
   content:
     application/json:
       example:
-        family_group_id: null          # null: individual; a group id: family, owner only
         period_type: "monthly"
         period_start: "2026-10-10"
         period_end: null               # monthly: derived, 2026-11-09
@@ -312,37 +413,121 @@ requestBody:
             limit_amount: 80000
 responses:
   201:
+    description: Created; the whole period, the same shape as an item of GET /budget-periods
     content:
       application/json:
         example:
           id: "bp2..."
+          family_group_id: null
+          family_group_name: null
+          period_type: "monthly"
+          period_start: "2026-10-10"
+          period_end: "2026-11-09"            # monthly: derived
           status: "draft"
+          primary_currency: "ARS"
+          estimated_income: 1450000
+          can_edit: true
+          is_current: false
+          budgets:
+            - id: "c3b4..."
+              category_id: "cat-supermercado"
+              category: "Supermercado"
+              limit_amount: 300000
+  401:
+    description: No valid session
+  403:
+    description: The request does not come from the page of the API, or it is not JSON
+  404:
+    description: A category does not belong to the authenticated user
+  409:
+    description: Overlaps another period of the same owner (budget_period_overlap)
+  422:
+    description: Invalid dates, dates that do not match the cadence, a custom period without period_end, non-positive limit, repeated category, a category that is not an expense one, a negative estimated income, an amount too large, a currency not in the catalog, a family_group_id (group_period_not_supported), or a field the API does not know (invalid_request)
+
+# PUT /budget-periods/{period_id}
+requestBody:
+  content:
+    application/json:
+      example:                         # the same body as POST
+        period_type: "monthly"
+        period_start: "2026-10-10"
+        period_end: null
+        primary_currency: "ARS"
+        estimated_income: 1500000
+        budgets:
+          - category_id: "cat-supermercado"
+            limit_amount: 320000
+responses:
+  200:
+    description: Replaced; the whole period, the same shape as an item of GET /budget-periods
+    content:
+      application/json:
+        example:
+          id: "bp2..."
+          family_group_id: null
+          family_group_name: null
+          period_type: "monthly"
           period_start: "2026-10-10"
           period_end: "2026-11-09"
+          status: "draft"
+          primary_currency: "ARS"
+          estimated_income: 1500000
+          can_edit: true
+          is_current: false
+          budgets:
+            - id: "c3b4..."
+              category_id: "cat-supermercado"
+              category: "Supermercado"
+              limit_amount: 320000
+  401:
+    description: No valid session
   403:
-    description: The user is a member but not the owner of the family group
+    description: The period belongs to a family group the user is a member of but does not own
   404:
-    description: The family group or a category does not belong to the authenticated user
+    description: The period belongs to another user or to a group the user is not in, or a category does not belong to the authenticated user
   409:
-    description: Overlaps another period of the same owner, or the period is already confirmed (PUT)
+    description: Changes the cadence, the dates or the currency of a confirmed period (confirmed_period_fixed), or overlaps another period of the same owner (budget_period_overlap)
   422:
-    description: Invalid dates, non-positive limit or repeated category
+    description: Invalid dates, dates that do not match the cadence, a custom period without period_end, non-positive limit, repeated category, a category that is not an expense one, a negative estimated income, an amount too large, a currency not in the catalog, a field the API does not know, or a period_id that is not a UUID (invalid_request)
 
 # POST /budget-periods/{period_id}/confirm
 requestBody:
   content:
     application/json:
       example:
-        recurring_amounts:             # optional; variable rules due in the period
+        recurring_amounts:             # not read yet, it comes with the recurring rules; optional; variable rules due in the period
           - recurring_rule_id: "rr-rent"
             amount: 850356
 responses:
   200:
-    description: Confirmed, or already confirmed; listed variable amounts are confirmed until period_end
+    description: Confirmed, or already confirmed; the whole period, the same shape as an item of GET /budget-periods; listed variable amounts are confirmed until period_end
+    content:
+      application/json:
+        example:
+          id: "bp2..."
+          family_group_id: null
+          family_group_name: null
+          period_type: "monthly"
+          period_start: "2026-10-10"
+          period_end: "2026-11-09"
+          status: "confirmed"
+          primary_currency: "ARS"
+          estimated_income: 1500000
+          can_edit: true
+          is_current: false
+          budgets:
+            - id: "c3b4..."
+              category_id: "cat-supermercado"
+              category: "Supermercado"
+              limit_amount: 320000
+  401:
+    description: No valid session
+  403:
+    description: The period belongs to a family group the user is a member of but does not own
   404:
-    description: A listed rule is not a variable rule of this user due in the period
-  409:
-    description: Overlaps a confirmed period of the same owner
+    description: The period belongs to another user or to a group the user is not in, or a listed rule is not a variable rule of this user due in the period
+  422:
+    description: The period_id is not a UUID
 ```
 
 ### `GET /budget-periods/{period_id}/summary`

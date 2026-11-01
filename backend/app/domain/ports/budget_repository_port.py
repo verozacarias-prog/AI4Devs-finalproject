@@ -7,6 +7,11 @@ from app.domain.entities.budget import Budget
 
 
 class BudgetRepositoryPort(Protocol):
+    def replace_for_period(self, period_id: uuid.UUID, budgets: list[Budget]) -> None:
+        """The limits of that period become these: a limit not given stops existing, and one
+        whose id is already there keeps it, with its new amount."""
+        ...
+
     def list_by_period(self, period_id: uuid.UUID) -> list[Budget]:
         """The limits of that period, one per category that has one."""
         ...

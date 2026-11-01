@@ -143,7 +143,9 @@ def test_the_type_and_the_status_of_a_period_come_from_a_closed_set(
     rows: Rows, column: str
 ) -> None:
     # Cases 31 and 32.
-    rows.period(user=rows.user(), period_type="biweekly", status=DRAFT)
+    rows.period(
+        user=rows.user(), period_type="biweekly", period_end=date(2026, 3, 15), status=DRAFT
+    )
 
     values = {"period_type": MONTHLY, "status": CONFIRMED, column: OUTSIDE_THE_SET}
 
@@ -153,10 +155,55 @@ def test_the_type_and_the_status_of_a_period_come_from_a_closed_set(
 
 def test_a_period_does_not_end_before_it_starts(rows: Rows) -> None:
     # Case 33. A period of a single day is valid.
-    rows.period(user=rows.user(), period_start=date(2026, 3, 1), period_end=date(2026, 3, 1))
+    rows.period(
+        user=rows.user(),
+        period_type="custom",
+        period_start=date(2026, 3, 1),
+        period_end=date(2026, 3, 1),
+    )
 
     with rows.rejected_by("ck_budget_period_dates"):
-        rows.period(user=rows.user(), period_start=date(2026, 3, 2), period_end=date(2026, 3, 1))
+        rows.period(
+            user=rows.user(),
+            period_type="custom",
+            period_start=date(2026, 3, 2),
+            period_end=date(2026, 3, 1),
+        )
+
+
+def test_the_dates_of_a_period_have_to_match_its_cadence(rows: Rows) -> None:
+    # Case C2-56.
+    with rows.rejected_by("ck_budget_period_monthly_dates"):
+        rows.period(
+            user=rows.user(), period_start=date(2026, 11, 10), period_end=date(2026, 11, 30)
+        )
+    with rows.rejected_by("ck_budget_period_biweekly_dates"):
+        rows.period(
+            user=rows.user(),
+            period_type="biweekly",
+            period_start=date(2026, 11, 10),
+            period_end=date(2026, 11, 24),
+        )
+
+    rows.period(
+        user=rows.user(),
+        period_type="custom",
+        period_start=date(2026, 11, 10),
+        period_end=date(2026, 11, 30),
+    )
+    rows.period(
+        user=rows.user(),
+        period_type="custom",
+        period_start=date(2026, 11, 10),
+        period_end=date(2026, 11, 24),
+    )
+    rows.period(user=rows.user(), period_start=date(2027, 1, 31), period_end=date(2027, 2, 27))
+    rows.period(
+        user=rows.user(),
+        period_type="biweekly",
+        period_start=date(2027, 2, 16),
+        period_end=date(2027, 2, 28),
+    )
 
 
 def test_the_periods_of_a_user_do_not_overlap(rows: Rows) -> None:
@@ -167,7 +214,12 @@ def test_the_periods_of_a_user_do_not_overlap(rows: Rows) -> None:
     rows.period(user=rows.user())
 
     with rows.rejected_by("ex_budget_period_user_overlap"):
-        rows.period(user=user, period_start=date(2026, 3, 31), period_end=date(2026, 3, 31))
+        rows.period(
+            user=user,
+            period_type="custom",
+            period_start=date(2026, 3, 31),
+            period_end=date(2026, 3, 31),
+        )
 
 
 def test_the_periods_of_a_group_do_not_overlap(rows: Rows) -> None:

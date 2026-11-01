@@ -18,6 +18,9 @@ class PostgresBudgetPeriodRepository:
     def add(self, period: BudgetPeriod) -> None:
         execute_write(self._connection, queries.INSERT_BUDGET_PERIOD, asdict(period))
 
+    def update(self, period: BudgetPeriod) -> None:
+        execute_write(self._connection, queries.UPDATE_BUDGET_PERIOD, asdict(period))
+
     def confirm(self, period_id: uuid.UUID) -> None:
         execute_write(self._connection, queries.CONFIRM_BUDGET_PERIOD, {"period_id": period_id})
 

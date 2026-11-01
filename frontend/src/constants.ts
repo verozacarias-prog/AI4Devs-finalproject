@@ -22,12 +22,24 @@ export const ISO_TIME_END = 16
 
 export const HTTP_UNAUTHORIZED = 401
 export const HTTP_NOT_FOUND = 404
+export const HTTP_SERVER_ERROR = 500
 export const HTTP_SERVICE_UNAVAILABLE = 503
+/** What the API answers for something that is not there, or that is of someone else. */
+export const API_ERROR_NOT_FOUND = 'not_found'
+export const API_ERROR_PERIOD_OVERLAP = 'budget_period_overlap'
+/** How long an ISO date is, such as 2026-10-15. */
+export const ISO_DATE_LENGTH = 10
 
 export const JSON_CONTENT_TYPE = 'application/json'
 
 /** How the dashboard writes an amount: Argentine format, always with two decimals. */
 export const AMOUNT_LOCALE = 'es-AR'
+// How a person writes an amount. A parameter, for the user to choose it in a future settings section.
+export const AMOUNT_SEPARATORS = { thousands: '.', decimal: ',' }
+// The API always takes a plain decimal text, whatever a person writes: 1450000.55.
+export const API_DECIMAL_POINT = '.'
+export const THOUSANDS_GROUP_SIZE = 3
+export const THOUSANDS_GROUP_BOUNDARY = /\B(?=(\d{3})+$)/g
 export const AMOUNT_DECIMALS = 2
 /** How the dashboard writes a calendar day, such as 9/10/2026. */
 export const DATE_LOCALE = 'es-AR'

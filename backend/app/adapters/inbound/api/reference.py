@@ -11,7 +11,9 @@ from __future__ import annotations
 from app.adapters.inbound.api.routes import (
     ACCOUNTS_TAG,
     BUDGETS_TAG,
+    CATEGORIES_TAG,
     CHAT_TAG,
+    CURRENCIES_TAG,
     DEV_TAG,
     HEALTH_TAG,
     SESSION_TAG,
@@ -48,7 +50,16 @@ TAGS: list[dict[str, str]] = [
     {
         "name": BUDGETS_TAG,
         "description": "The budget periods the user of the session can read, the summary of "
-        "one, and what one limit spent, computed from the movements.",
+        "one, and what one limit spent, computed from the movements. Building, changing and "
+        "confirming a period of their own.",
+    },
+    {
+        "name": CATEGORIES_TAG,
+        "description": "The categories of expenses the user of the session can put a limit on.",
+    },
+    {
+        "name": CURRENCIES_TAG,
+        "description": "The currencies of the catalog, to choose the one of a budget period.",
     },
     {
         "name": CHAT_TAG,
@@ -164,7 +175,10 @@ PERIOD_GROUP_ID = "The group the period belongs to, or null in an individual per
 PERIOD_GROUP_NAME = (
     "The name of the group, to tell the budgets apart, or null in an individual one."
 )
-PERIOD_TYPE = "`monthly` or `biweekly`."
+PERIOD_TYPE = (
+    "`monthly`, which lasts a month; `biweekly`, the fortnight of the calendar; or `custom`, "
+    "which ends on the day given."
+)
 PERIOD_START = "The first day of the period."
 PERIOD_END = "The last day of the period, included."
 PERIOD_STATUS = "`draft` while it is being built, `confirmed` once it can receive movements."
@@ -183,6 +197,53 @@ BUDGET_ID = "The identifier of the limit."
 BUDGET_CATEGORY_ID = "The category the limit is for."
 BUDGET_CATEGORY = "The name of the category."
 BUDGET_LIMIT = "The limit, in the currency of the period."
+CREATE_PERIOD_SUMMARY = "Build a budget period"
+CREATE_PERIOD_DESCRIPTION = (
+    "A draft of an individual period of the user of the session, with its limits. A monthly "
+    "period ends the day before the same day of the next month, and a biweekly one starts on "
+    "the 1st or the 16th and ends on the 15th or the last day of the month. Each "
+    "amount is accepted as a JSON number or as a decimal text, and kept exact."
+)
+CREATE_PERIOD_CREATED = "The draft, whole, in the same shape as an item of the list."
+PERIOD_CONTENT_INVALID = (
+    "A field is missing, unknown or has no valid value, or the content breaks a rule of the "
+    "period: its `error` says which."
+)
+PERIOD_CREATE_GROUP_ID = "Always null or absent: building a period of a group is not available yet."
+PERIOD_CATEGORY_NOT_FOUND = (
+    "A category of the limits does not exist, or it is not of the user. The same answer for both."
+)
+PERIOD_OVERLAP = "It overlaps another period of the same owner (`budget_period_overlap`)."
+PERIOD_EDIT_FORBIDDEN = (
+    "The request did not come from the page of the API itself or it is not JSON, or the period "
+    "is of a group the user is a member of without being its owner (`not_the_owner`)."
+)
+PERIOD_EDIT_NOT_FOUND = (
+    "The period does not exist or the user cannot read it, or a category of the limits is not "
+    "of the user. The same answer for each."
+)
+PERIOD_EDIT_CONFLICT = (
+    "It changes the cadence, the dates or the currency of a confirmed period "
+    "(`confirmed_period_fixed`), or it overlaps another period of the same owner "
+    "(`budget_period_overlap`)."
+)
+UPDATE_PERIOD_SUMMARY = "Change a budget period"
+UPDATE_PERIOD_DESCRIPTION = (
+    "Replaces the content of a period: its dates, currency, estimated income and limits. A "
+    "limit that stays keeps its id."
+)
+UPDATE_PERIOD_OK = "The period, whole, in the same shape as an item of the list."
+CONFIRM_PERIOD_SUMMARY = "Confirm a budget period"
+CONFIRM_PERIOD_DESCRIPTION = (
+    "A draft becomes confirmed, and from then on receives movements. Confirming one already "
+    "confirmed answers the same, and changes nothing."
+)
+CONFIRM_PERIOD_OK = "The period, confirmed, in the same shape as an item of the list."
+PERIOD_CONTENT_BUDGETS = "The limits of the period, one per category."
+PERIOD_CONTENT_END = (
+    "The last day of the period, included. Required in a custom period. In a monthly or a "
+    "biweekly one it is computed, and if it comes it has to be that day."
+)
 PERIOD_SUMMARY_SUMMARY = "Read the summary of a period"
 PERIOD_SUMMARY_DESCRIPTION = (
     "The incomes of the period and what each category spent, in the currency of the period. "
@@ -313,3 +374,23 @@ DEV_SESSION_INVALID = "Neither `user_id` nor `access_token` was sent, or `user_i
 DEV_SESSION_USER_ID = "The test user to enter as, from the list. Only in the local environment."
 # Not a secret: the description of the field that carries the value of a link.
 DEV_SESSION_ACCESS_TOKEN = "The value of a personal link. Not built yet: it answers `404`."  # noqa: S105
+
+# The categories.
+CATEGORIES_SUMMARY = "List the categories of expenses"
+CATEGORIES_DESCRIPTION = (
+    "The categories of expenses the user of the session can put a limit on: those of the base "
+    "catalog and their own, by name, without telling capitals apart."
+)
+CATEGORIES_OK = "The categories of expenses of the user."
+CATEGORIES_LIST = "The categories, by name."
+CATEGORY_ID = "The identifier of the category."
+CATEGORY_NAME = "The name of the category."
+CATEGORY_IS_BASE = "Whether it is of the base catalog, which every user has."
+
+# The currencies.
+CURRENCIES_SUMMARY = "List the currencies"
+CURRENCIES_DESCRIPTION = "The currencies of the catalog a budget period can be in, by code."
+CURRENCIES_OK = "The currencies of the catalog."
+CURRENCIES_LIST = "The currencies, by code."
+CURRENCY_CODE = "The ISO 4217 code of the currency."
+CURRENCY_NAME = "The name of the currency."

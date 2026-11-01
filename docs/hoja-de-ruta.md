@@ -89,6 +89,15 @@ configuración de Meta, que no suma a lo que se evalúa.
 los propios datos van al final. De la HU2 quedan afuera el borrador que se arma solo y el
 recordatorio antes del inicio, que son procesos programados, y los montos recurrentes.
 
+**Crear una categoría desde el dashboard entra si queda tiempo.** Una categoría se va a poder crear
+de dos formas: conversando con Platita, como hoy, y desde el dashboard, al armar un período. Lo
+segundo necesita un endpoint nuevo y va después de terminar la HU2. Decidido por Vero el 1 de
+noviembre de 2026.
+
+**El formato de los montos queda listo para configurarse.** Hoy el punto separa los miles y la coma
+los centavos, como parámetros del dashboard. Cuando exista una sección de configuración del usuario,
+se va a poder elegir ahí; todavía no tiene fecha. Decidido por Vero el 1 de noviembre de 2026.
+
 Pasa a una segunda versión, con su diseño ya escrito en `docs/`: el adaptador de WhatsApp, el
 login por código, los números habilitados y el alta conversacional; los consejos con RAG y la
 base de conocimiento; los grupos familiares y la elección entre el presupuesto individual y el
@@ -126,6 +135,8 @@ sus planes pagos más chicos ([ADR 0029](adr/0029-el-entorno-demo-en-render-en-p
 | Revisar las dependencias que trae `langchain-text-splitters` y que ninguna envíe datos por su cuenta | Se instale, con la carga de la base de conocimiento | Lo pide el [ADR 0020](adr/0020-sin-framework-de-orquestacion-de-ia.md). Es para la entrega final |
 | Política de acceso central y tests de aislamiento entre usuarios | Exista el scaffold | La regla ya está en la [API](04-api.md): el usuario sale de la sesión y un recurso ajeno responde `404`. Lo que falta es aplicarla en un solo lugar del dominio, incluida la visibilidad por intervalos de membresía de los grupos familiares y las respuestas por WhatsApp que citan un lote, y probarla en cada endpoint y en el worker. Implementada caso por caso, alguno se escapa |
 | Cambiar la rama por defecto del fork al abrir la rama de la entrega final | Exista esa rama | El portal se publica desde ahí, si el entorno `github-pages` la tiene autorizada, Dependabot abre ahí sus pull requests, y los enlaces del portal a GitHub apuntan a la rama por defecto. En la entrega 2 ya se hizo. Detalle en [documentación viva](documentacion-viva.md#7-el-modelo-de-ramas) |
+| Decidir si se guarda el día de inicio elegido de un ciclo mensual, para que un ciclo del 31 vuelva al 31 después de febrero | Llegue el borrador que se arma solo | Sin eso el inicio queda corrido: un período del 31 de enero termina el 27 de febrero, el siguiente empieza el 28 y desde ahí el ciclo sigue el 28 ([reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)). Se aceptó así el 29 de octubre de 2026 |
+| Pasar al backend la regla de con qué arranca un período nuevo: la copia del último, la sugerencia de mensual después de un personalizado y el día de inicio, con un endpoint que devuelva la propuesta y un dashboard que solo la muestre | Llegue el borrador que se arma solo | Hoy vive solo en el dashboard, como permite la [regla § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio); con el borrador automático quedaría escrita dos veces y podría decir cosas distintas |
 
 ## Más adelante — aplicación móvil
 

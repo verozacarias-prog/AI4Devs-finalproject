@@ -71,7 +71,7 @@ de pre-commit. No son una recomendación: rompen el commit.
 
 ## 4. Mapa de carpetas
 
-- `backend/app/domain/entities/` — User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, PendingTransaction, PendingBatch, AdviceDocument, AdviceChunk, InboundMessage, OutboundMessage, ChatMessage, Classification, LlmCall, LlmUsage.
+- `backend/app/domain/entities/` — User, Session, Account, Currency, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, PendingTransaction, PendingBatch, AdviceDocument, AdviceChunk, InboundMessage, OutboundMessage, ChatMessage, Classification, LlmCall, LlmUsage.
 - `backend/app/domain/use_cases/` — una carpeta por funcionalidad, como `sessions/`, `messages/` o `accounts/`, con sus casos de uso: CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, GetPeriodSummary, ListBudgetPeriods, ListAccounts, SendChatMessage, ListChatMessages, ClaimNextMessage, AnswerMessage, ProcessNextMessage, ValidateSession, CheckReadiness, CheckQueue, GenerateProactiveAlert.
 - `backend/app/domain/ports/` — interfaces que el dominio declara y no implementa.
 - `backend/app/domain/errors.py` — los errores que una regla de negocio prevé, cada uno con su código y su categoría.
@@ -107,6 +107,12 @@ de pre-commit. No son una recomendación: rompen el commit.
 - La moneda viaja siempre junto al monto, nunca implícita.
 - El saldo de una cuenta se calcula, no se almacena como campo mutable.
 - Una categoría nueva no se crea sin confirmación.
+
+Por encima de estas, lo primero es que los datos sean verdaderos y coherentes: lo que un dato dice
+tiene que ser lo que en realidad es. Antes de proponer o aceptar un valor, comprobá que el nombre y
+el contenido digan lo mismo, aunque otra regla o un caso ya aprobado lo permita; si no coinciden,
+frená y reportalo
+([reglas de dominio](docs/reglas-de-dominio.md)).
 
 Estas reglas las controla el código, y entender lo que la persona escribe lo hace el modelo: no se
 suma una regla de código para cada forma de contestar. Antes de proponer un caso para una
