@@ -248,7 +248,7 @@ erDiagram
         uuid id PK
         uuid user_id FK "NULLABLE"
         uuid family_group_id FK "NULLABLE"
-        string period_type "NOT NULL, CHECK IN ('monthly','biweekly')"
+        string period_type "NOT NULL, CHECK IN ('monthly','biweekly','custom'), y sus fechas tienen que coincidir con la cadencia"
         date period_start "NOT NULL"
         date period_end "NOT NULL, CHECK (period_end >= period_start)"
         string primary_currency "NOT NULL, FK to CURRENCY — fixed once confirmed"
@@ -674,7 +674,7 @@ Ver también, en otra tabla: [la categoría del mismo tipo que el movimiento, en
 
 ##### BUDGET_PERIOD
 
-El "presupuesto del mes" (o de la quincena) como concepto completo — puede pertenecer a un usuario individual o a un grupo familiar (nunca ambos, ver sus restricciones). `period_type` define la cadencia (mensual o quincenal) y determina cómo se calculan `period_start`/`period_end` del siguiente período al generarlo. `estimated_income` guarda el ingreso proyectado para el período completo, para que armar el presupuesto sea contrastar gastos planeados contra ingreso esperado, no solo poner topes por categoría sueltos. `status` distingue un período todavía en armado (`draft`, generado copiando el período anterior del mismo dueño o creado a mano en el dashboard) de uno ya confirmado por el usuario. El primer período individual se crea ya confirmado al completar el alta. `period_start` puede ser cualquier día, y el siguiente período empieza el día después de `period_end`, así que el día de inicio del ciclo no necesita una columna propia — cuándo debe estar en `confirmed` y qué recordatorio se dispara si sigue en `draft` está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio).
+El "presupuesto del mes" (o de la quincena) como concepto completo — puede pertenecer a un usuario individual o a un grupo familiar (nunca ambos, ver sus restricciones). `period_type` define la cadencia (mensual, quincenal o personalizada) y determina cómo se calculan `period_start`/`period_end` del siguiente período al generarlo. `estimated_income` guarda el ingreso proyectado para el período completo, para que armar el presupuesto sea contrastar gastos planeados contra ingreso esperado, no solo poner topes por categoría sueltos. `status` distingue un período todavía en armado (`draft`, generado copiando el período anterior del mismo dueño o creado a mano en el dashboard) de uno ya confirmado por el usuario. El primer período individual se crea ya confirmado al completar el alta. `period_start` puede ser cualquier día, y el siguiente período empieza el día después de `period_end`, así que el día de inicio del ciclo no necesita una columna propia — cuándo debe estar en `confirmed` y qué recordatorio se dispara si sigue en `draft` está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio).
 
 **Restricciones:**
 

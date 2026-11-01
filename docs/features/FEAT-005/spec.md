@@ -50,10 +50,10 @@ la entrega final es individual; cambiar o confirmar uno ya existente sí, solo s
 
 El usuario arma el presupuesto de un período, que queda en borrador hasta que lo confirma.
 
-- **CA-1.** El usuario crea un período individual en borrador, con su cadencia, mensual o quincenal, su día de inicio, su moneda, su ingreso estimado y un tope por cada categoría que quiera controlar. El período es del usuario de la sesión.
+- **CA-1.** El usuario crea un período individual en borrador, con su cadencia, mensual, quincenal o personalizada, su día de inicio, su moneda, su ingreso estimado y un tope por cada categoría que quiera controlar. El período es del usuario de la sesión.
 - **CA-2.** El período puede empezar cualquier día. Uno mensual sin fin indicado termina el día anterior al mismo día del mes siguiente: uno que empieza el 10 de noviembre termina el 9 de diciembre.
-- **CA-3.** Un período mensual con el fin indicado termina ese día, aunque dure más o menos de un mes: es el período de transición para mover el día de inicio.
-- **CA-11.** Un período quincenal termina el día que el usuario indica: su fin no se calcula, y sin él el período no se crea.
+- **CA-3.** Un período mensual termina siempre el día que se calcula, y con otro fin no se guarda. El período de transición, para mover el día de inicio, es personalizado: termina el día indicado, aunque dure más o menos de un mes. Decidido por Vero el 1 de noviembre de 2026.
+- **CA-11.** Un período quincenal es la quincena de calendario: empieza el 1 y termina el 15, o empieza el 16 y termina el último día del mes. Con otro inicio o con otro fin no se guarda. Un período personalizado sin fin no se crea. Decidido por Vero el 1 de noviembre de 2026.
 - **CA-4.** Cambiar un borrador reemplaza su contenido entero: sus fechas, su moneda, su ingreso estimado y sus topes. Un tope que no va en el cambio deja de existir.
 - **CA-5.** El ingreso estimado y cada tope se guardan y se devuelven con sus centavos exactos.
 - **CA-15.** El ingreso estimado es 0 o más: 0 es el de un período sin ingreso, como el primero, y con uno negativo el período no se guarda.
@@ -112,7 +112,7 @@ no es miembro de ningún grupo, y hoy es 29 de octubre de 2026.
 | C1-01 | Un mensual termina el día anterior al mismo día del mes siguiente | Unitario | CA-2 |
 | C1-02 | Un mensual que empieza el 1 termina el último día del mes | Unitario | CA-2 |
 | C1-03 | Un mensual que empieza un día que el mes siguiente no tiene | Unitario | CA-2 |
-| C1-04 | Un mensual con el fin indicado termina ese día | Unitario | CA-3 |
+| C1-04 | Un personalizado termina el día indicado | Unitario | CA-3 |
 | C1-05 | Crear deja un borrador del usuario, con sus topes | Unitario | CA-1 |
 | C1-06 | Cambiar un borrador reemplaza su contenido entero | Unitario | CA-4 |
 | C1-07 | Confirmar un borrador no cambia nada más de él | Unitario | CA-7 |
@@ -127,7 +127,7 @@ no es miembro de ningún grupo, y hoy es 29 de octubre de 2026.
 | C1-16 | El ingreso y los topes llegan con sus centavos exactos | Integración | CA-5 |
 | C1-17 | **Nuevo.** Cambiar un confirmado cambia su ingreso y sus topes, y nada más | Unitario | CA-10 |
 | C1-18 | **Nuevo.** Lucía les pone otro ingreso y otros topes a su período actual | Integración | CA-10 |
-| C1-19 | **Nuevo.** Un quincenal termina el día indicado | Unitario | CA-11 |
+| C1-19 | **Nuevo.** Un quincenal termina el 15 o el último día del mes | Unitario | CA-11 |
 | C1-20 | **Nuevo.** Lucía ve sus categorías de gasto, base y propias, por nombre | Integración | CA-12 |
 | C1-21 | **Nuevo.** Las categorías propias de otro usuario no aparecen | Integración | CA-12 |
 | C1-22 | **Pantalla.** Mientras prepara el formulario, lo dice y no muestra campos | Componente | el contrato de UI |
@@ -167,14 +167,15 @@ no es miembro de ningún grupo, y hoy es 29 de octubre de 2026.
   siguiente pasa a ser el 28, el último del mes, y el período termina el día anterior.
 - **Test:** `tests/unit/test_budget_period_end.py::test_a_monthly_one_that_starts_on_a_day_the_next_month_does_not_have`
 
-#### C1-04 · Un mensual con el fin indicado termina ese día
+#### C1-04 · Un personalizado termina el día indicado
 
+- **Estado:** cambiado, sin aprobar: un mensual ya no acepta otro fin
 - **Sale de:** CA-3 · **Tipo:** unitario
-- **Dado** un período mensual que empieza el 10 de noviembre de 2026, con el fin indicado el 30
+- **Dado** un período personalizado que empieza el 10 de noviembre de 2026, con el fin indicado el 30
   de noviembre de 2026,
 - **cuando** se calcula su fin,
 - **entonces** es el 30 de noviembre de 2026, aunque dure 21 días.
-- **Test:** `tests/unit/test_budget_period_end.py::test_a_monthly_one_with_its_end_given_ends_that_day`
+- **Test:** `tests/unit/test_budget_period_end.py::test_a_custom_one_ends_on_the_day_given`
 
 #### C1-05 · Crear deja un borrador del usuario, con sus topes
 
@@ -340,15 +341,14 @@ no es miembro de ningún grupo, y hoy es 29 de octubre de 2026.
   `confirmed`, las mismas fechas, ese ingreso y solo esos dos topes.
 - **Test:** `tests/integration/test_budget_planning.py::test_lucia_puts_another_income_and_other_limits_on_her_current_period`
 
-#### C1-19 · Un quincenal termina el día indicado
+#### C1-19 · Un quincenal termina el 15 o el último día del mes
 
-- **Estado:** nuevo, aprobado
+- **Estado:** cambiado, sin aprobar: el fin ya no se indica
 - **Sale de:** CA-11 · **Tipo:** unitario
-- **Dado** un período quincenal que empieza el 10 de noviembre de 2026, con el fin indicado el 24
-  de noviembre de 2026,
+- **Dado** un período quincenal que empieza el 1 de noviembre de 2026, y otro el 16 de febrero de 2027,
 - **cuando** se calcula su fin,
-- **entonces** es el 24 de noviembre de 2026, el que indicó el usuario.
-- **Test:** `tests/unit/test_budget_period_end.py::test_a_biweekly_one_ends_on_the_day_given`
+- **entonces** es el 15 de noviembre de 2026 y el 28 de febrero de 2027.
+- **Test:** `tests/unit/test_budget_period_end.py::test_a_biweekly_one_ends_on_the_15th_or_on_the_last_day_of_the_month`
 
 #### C1-20 · Lucía ve sus categorías de gasto, base y propias, por nombre
 
@@ -426,7 +426,7 @@ no es miembro de ningún grupo, y hoy es 29 de octubre de 2026.
 
 - **Sale de:** CA-1, CA-2 y CA-5 · **Tipo:** componente
 - **Dado** el formulario de Lucía, con el fin vacío,
-- **cuando** escribe `1450000,55` de ingreso y `320000.10` en un tope, y aprieta "Guardar borrador",
+- **cuando** escribe `1450000,55` de ingreso y `320.000,10` en un tope, y aprieta "Guardar borrador",
 - **entonces** se pide `POST /budget-periods` con `"1450000.55"`, `"320000.10"` y `period_end` nulo.
 - **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::saving sends the amounts as text with their cents`
 
@@ -470,6 +470,7 @@ no es miembro de ningún grupo, y hoy es 29 de octubre de 2026.
 - **C2-46 a C2-48, sumados al probar a mano:** Veronica Zacarias 01/11/2026
 - **C2-49, sumado al probar a mano:** Veronica Zacarias 01/11/2026
 - **C2-49, cambiado al probar a mano:** Veronica Zacarias 01/11/2026
+- **C2-50 a C2-59, sumados en la revisión, y C1-04, C1-19, C2-07, C2-12 y C2-13, cambiados:** Veronica Zacarias 01/11/2026
 
 Entran las validaciones de [la API](../../04-api.md), en su orden: el período de otro usuario,
 `404`; el período de un grupo para un miembro que no es el dueño, `403`
@@ -489,7 +490,7 @@ en el corte 1: entran acá, con sus tests primero (ADR 0024). Hasta entonces, un
 categoría que no existe termina en `500`, porque la base rechaza la referencia, y lo cubre el
 `404` de la categoría ajena. Decidido por Vero el 30 de octubre de 2026.
 
-- **Total:** 49 casos, 10 unitarios, 24 de integración y 15 de componente. Además de los datos de
+- **Total:** 59 casos, 13 unitarios, 27 de integración y 19 de componente. Además de los datos de
   arriba, Pablo es el dueño del grupo "Casa" y Sofía es miembro, sin serlo; el grupo tiene un
   período confirmado del 10 de octubre al 9 de noviembre de 2026 y un borrador del 10 de
   noviembre al 9 de diciembre. Pablo tiene un período propio del 10 de octubre al 9 de noviembre
@@ -509,8 +510,8 @@ categoría que no existe termina en `500`, porque la base rechaza la referencia,
 | C2-09 | Un período que se superpone con otro del mismo dueño no se guarda | Unitario | Validación 6 |
 | C2-10 | Lucía crea un período que empieza dentro del actual | Integración | Validación 6 |
 | C2-11 | Lucía mueve un borrador sobre su período actual | Integración | Validación 6 |
-| C2-12 | Un quincenal sin fin no tiene fin | Unitario | CA-11 |
-| C2-13 | Lucía crea un quincenal sin `period_end` | Integración | CA-11 |
+| C2-12 | Un personalizado sin fin no tiene fin | Unitario | CA-11 |
+| C2-13 | Lucía crea un personalizado sin `period_end` | Integración | CA-11 |
 | C2-14 | Fechas invertidas, un tope de cero o menos y una categoría repetida no se guardan | Unitario | Validaciones 4 y 7 |
 | C2-15 | Lucía crea un período con un tope de 0 | Integración | Validación 7 |
 | C2-16 | Un tope sobre una categoría de ingreso no se guarda | Unitario | CA-14 |
@@ -547,6 +548,16 @@ categoría que no existe termina en `500`, porque la base rechaza la referencia,
 | C2-47 | **Pantalla.** El resumen separa crear un período de ver los existentes | Componente | el contrato de UI |
 | C2-48 | **Pantalla.** Los topes se cargan con un solo dropdown y se agregan a una tabla | Componente | el contrato de UI |
 | C2-49 | **Pantalla.** Los campos de monto aceptan cifras, puntos de miles y una coma decimal | Componente | el contrato de UI |
+| C2-50 | **Pantalla.** Un monto cuyo punto no separa miles no se guarda | Componente | el contrato de UI |
+| C2-51 | **Pantalla.** Si al volver del formulario falla la lista, reintentar la vuelve a pedir | Componente | el contrato de UI |
+| C2-52 | **Pantalla.** El fin se escribe solo en un personalizado | Componente | CA-3 y CA-11 |
+| C2-53 | Un mensual con otro fin no se guarda | Unitario | CA-3 |
+| C2-54 | Un quincenal con otro inicio o con otro fin no se guarda | Unitario | CA-11 |
+| C2-55 | Lucía crea un mensual y un quincenal que no coinciden con su cadencia, y un personalizado | Integración | CA-3 y CA-11 |
+| C2-56 | La base rechaza fechas que no coinciden con la cadencia | Integración | Reglas de dominio § 3 |
+| C2-57 | La migración deja como personalizados los períodos que no coinciden | Integración | Reglas de dominio § 3 |
+| C2-58 | El primer período es mensual si el alta es el día 1, y si no personalizado | Unitario | Reglas de dominio § 3 |
+| C2-59 | **Pantalla.** Después de un personalizado se sugiere mensual | Componente | CA-13 |
 
 #### C2-01 · Cambiar o confirmar un período que no existe responde que no existe
 
@@ -601,7 +612,7 @@ categoría que no existe termina en `500`, porque la base rechaza la referencia,
 
 - **Sale de:** CA-10 · **Tipo:** unitario
 - **Dado** el período actual de Lucía, confirmado y mensual,
-- **cuando** se cambia a quincenal con sus mismas fechas, con otro `period_start`, con otro
+- **cuando** se cambia a personalizado con sus mismas fechas, con otro `period_start`, con otro
   `period_end` o con otra moneda, cada uno por separado,
 - **entonces** el caso de uso lo rechaza con `confirmed_period_fixed`, y no escribe nada.
 - **Test:** `tests/unit/test_budget_planning.py::test_in_a_confirmed_period_changing_the_cadence_the_start_the_end_or_the_currency_is_not_saved`
@@ -642,22 +653,24 @@ categoría que no existe termina en `500`, porque la base rechaza la referencia,
   noviembre al 9 de diciembre.
 - **Test:** `tests/integration/test_budget_planning.py::test_lucia_moves_a_draft_over_her_current_period`
 
-#### C2-12 · Un quincenal sin fin no tiene fin
+#### C2-12 · Un personalizado sin fin no tiene fin
 
+- **Estado:** cambiado, sin aprobar
 - **Sale de:** CA-11 · **Tipo:** unitario
-- **Dado** un período quincenal que empieza el 10 de noviembre de 2026, sin fin indicado,
+- **Dado** un período personalizado que empieza el 10 de noviembre de 2026, sin fin indicado,
 - **cuando** se calcula su fin,
 - **entonces** no se calcula: falla con `period_end_required`.
-- **Test:** `tests/unit/test_budget_period_end.py::test_a_biweekly_period_without_an_end_has_no_end`
+- **Test:** `tests/unit/test_budget_period_end.py::test_a_custom_period_without_an_end_has_no_end`
 
-#### C2-13 · Lucía crea un quincenal sin `period_end`
+#### C2-13 · Lucía crea un personalizado sin `period_end`
 
+- **Estado:** cambiado, sin aprobar
 - **Sale de:** CA-11 · **Tipo:** integración
 - **Dado** Lucía con su sesión abierta,
-- **cuando** pide `POST /budget-periods` con `period_type` quincenal, `period_start` 2026-11-10 y
+- **cuando** pide `POST /budget-periods` con `period_type` personalizado, `period_start` 2026-11-10 y
   sin `period_end`,
 - **entonces** responde `422` con `period_end_required`, y no se guarda ningún período.
-- **Test:** `tests/integration/test_budget_planning.py::test_lucia_creates_a_biweekly_period_without_period_end`
+- **Test:** `tests/integration/test_budget_planning.py::test_lucia_creates_a_custom_period_without_period_end`
 
 #### C2-14 · Fechas invertidas, un tope de cero o menos y una categoría repetida no se guardan
 
@@ -978,6 +991,96 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 - **entonces** quedan `12`, `500`, `130`, `11.000`, `1.450.000,55` y `1,55`: letras, signos y una segunda coma no se escriben. Se pide guardar sin los puntos y con punto decimal, como `1450000.55`, y un monto que llega de la API se muestra igual, como `1.450.000,5`. Debajo del ingreso y de los topes se ve "Usá punto para los miles y coma para los centavos: 1.450.000,55". Decidido por Vero el 1 de noviembre de 2026.
 - **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::the amount fields take digits thousands points and one decimal comma` y `frontend/src/pages/BudgetPeriodFormPage.test.tsx::an amount is sent without points and with a decimal point`
 
+#### C2-50 · Un monto cuyo punto no separa miles no se guarda
+
+- **Sale de:** el contrato de UI · **Tipo:** componente
+- **Estado:** nuevo, sin aprobar
+- **Dado** Lucía con el formulario abierto,
+- **cuando** escribe `1.5` o `320000.10` en el ingreso, en el monto del tope nuevo o en el de una fila, y guarda o suma el tope,
+- **entonces** no se pide nada a la API ni se suma la fila, se ve "Revisá el monto: el punto separa los miles. Para los centavos usá coma", y lo escrito no se pierde. `11.000` y `1.450.000,55` se aceptan: después de cada punto tiene que haber exactamente 3 cifras. Decidido por Vero el 1 de noviembre de 2026.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::an amount whose point does not separate thousands is not saved`
+
+#### C2-51 · Si al volver del formulario falla la lista, reintentar la vuelve a pedir
+
+- **Sale de:** el contrato de UI · **Tipo:** componente
+- **Estado:** nuevo, sin aprobar
+- **Dado** Lucía guardó un período nuevo y `GET /budget-periods` falla al volver al resumen,
+- **cuando** aprieta "Reintentar",
+- **entonces** se vuelve a pedir la lista, aparece el período guardado, elegido, y la fecha del próximo período está actualizada. Si era su primer período, la pantalla tampoco queda cargando. Decidido por Vero el 1 de noviembre de 2026.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::if the list fails when coming back from the form retrying asks for it again`
+
+#### C2-52 · El fin se escribe solo en un personalizado
+
+- **Sale de:** CA-3 y CA-11 · **Tipo:** componente
+- **Estado:** nuevo, sin aprobar
+- **Dado** Lucía con el formulario abierto, con la cadencia "Mensual", "Quincenal" y "Personalizado" para elegir,
+- **cuando** elige cada una y guarda,
+- **entonces** en mensual y en quincenal no aparece "Fin" y se pide guardar con `period_end` nulo; en personalizado aparece "Fin", obligatorio, y se pide con esa fecha. Decidido por Vero el 1 de noviembre de 2026.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::a custom period writes its end and needs it`
+
+#### C2-53 · Un mensual con otro fin no se guarda
+
+- **Sale de:** CA-3 · **Tipo:** unitario
+- **Estado:** nuevo, sin aprobar
+- **Dado** un período mensual que empieza el 10 de noviembre de 2026,
+- **cuando** se crea con fin el 30 de noviembre, y con fin el 9 de diciembre,
+- **entonces** el primero se rechaza con `period_end_not_matching` y sin escribir nada, y el segundo se guarda.
+- **Test:** `tests/unit/test_budget_planning.py::test_a_monthly_period_with_another_end_is_not_saved`
+
+#### C2-54 · Un quincenal con otro inicio o con otro fin no se guarda
+
+- **Sale de:** CA-11 · **Tipo:** unitario
+- **Estado:** nuevo, sin aprobar
+- **Dado** un período quincenal,
+- **cuando** se crea desde el 10 de noviembre de 2026, y desde el 1 de noviembre con fin el 20,
+- **entonces** el primero se rechaza con `biweekly_start_invalid`, el segundo con `period_end_not_matching`, y no se escribe nada.
+- **Test:** `tests/unit/test_budget_planning.py::test_a_biweekly_period_with_another_start_or_another_end_is_not_saved`
+
+#### C2-55 · Lucía crea un mensual y un quincenal que no coinciden con su cadencia, y un personalizado
+
+- **Sale de:** CA-3 y CA-11 · **Tipo:** integración
+- **Estado:** nuevo, sin aprobar
+- **Dado** Lucía con su sesión abierta,
+- **cuando** pide `POST /budget-periods` con un mensual del 10 al 30 de noviembre de 2026, con un quincenal desde el 10, y con un `custom` del 10 al 30,
+- **entonces** los dos primeros responden `422` con `period_end_not_matching` y `biweekly_start_invalid`, sin guardar nada, y el tercero responde `201` con `period_type` en `custom`.
+- **Test:** `tests/integration/test_budget_planning.py::test_lucia_creates_periods_that_do_not_match_their_cadence_and_a_custom_one`
+
+#### C2-56 · La base rechaza fechas que no coinciden con la cadencia
+
+- **Sale de:** reglas de dominio § 3 · **Tipo:** integración
+- **Estado:** nuevo, sin aprobar
+- **Dado** la base,
+- **cuando** se inserta directamente un mensual del 10 al 30 de noviembre, y un quincenal del 10 al 24,
+- **entonces** los dos se rechazan por su `CHECK`, y el mismo período como `custom` se acepta; también un mensual del 31 de enero al 27 de febrero de 2027 y un quincenal del 16 al 28 de febrero.
+- **Test:** `tests/integration/schema/test_accounts_categories_and_budgets.py::test_the_dates_of_a_period_have_to_match_its_cadence`
+
+#### C2-57 · La migración deja como personalizados los períodos que no coinciden
+
+- **Sale de:** reglas de dominio § 3 · **Tipo:** integración
+- **Estado:** nuevo, sin aprobar
+- **Dado** una base con la migración anterior y un período mensual del 15 al 30 de noviembre, confirmado, un quincenal del 10 al 24, y un mensual del 10 de octubre al 9 de noviembre,
+- **cuando** se aplica la migración nueva,
+- **entonces** los dos primeros quedan como `custom`, con sus mismas fechas, y el tercero sigue mensual.
+- **Test:** `tests/integration/test_migrations.py::test_the_migration_leaves_as_custom_the_periods_that_do_not_match_their_cadence`
+
+#### C2-58 · El primer período es mensual si el alta es el día 1, y si no personalizado
+
+- **Sale de:** reglas de dominio § 3 · **Tipo:** unitario
+- **Estado:** nuevo, sin aprobar
+- **Dado** un usuario que se da de alta el 1 de noviembre de 2026, y otro el 15,
+- **cuando** se crea su primer período,
+- **entonces** el primero es mensual, del 1 al 30, y el segundo es personalizado, del 15 al 30.
+- **Test:** `tests/unit/test_create_test_user.py::test_the_first_period_is_monthly_if_the_signup_is_on_the_first_and_custom_otherwise`
+
+#### C2-59 · Después de un personalizado se sugiere mensual
+
+- **Sale de:** CA-13 · **Tipo:** componente
+- **Estado:** nuevo, sin aprobar
+- **Dado** el último período de Lucía es personalizado, del 15 al 30 de noviembre de 2026,
+- **cuando** abre el formulario para armar uno nuevo,
+- **entonces** la cadencia viene en "Mensual", con inicio el 1 de diciembre, y se copian la moneda, el ingreso y los topes.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::after a custom period it suggests a monthly one`
+
 ### Corte 3 — observabilidad y accesibilidad
 
 - **Aprobado por:** pendiente
@@ -1040,6 +1143,8 @@ en `frontend/src/messages.ts`.
    calcula, y el pedido lo trae siempre (CA-11). Sin él responde `422` con
    `period_end_required`, que es del corte 2. Quedó en [la API](../../04-api.md), y se sumó
    C1-19.
+   Cambiada el 1 de noviembre de 2026: un quincenal es la quincena de calendario, su fin se calcula,
+   y `period_end_required` queda para el período personalizado (CA-11).
 4. ~~De dónde salen las categorías del formulario.~~ Resuelta el 29 de octubre de 2026: de
    `GET /categories`, que se sumó a [la API](../../04-api.md) en este corte (CA-12, C1-20 y
    C1-21). Su `401` es del corte 2. Al implementarlo, sus textos van en `reference.py`.

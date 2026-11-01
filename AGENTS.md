@@ -108,6 +108,12 @@ de pre-commit. No son una recomendación: rompen el commit.
 - El saldo de una cuenta se calcula, no se almacena como campo mutable.
 - Una categoría nueva no se crea sin confirmación.
 
+Por encima de estas, lo primero es que los datos sean verdaderos y coherentes: lo que un dato dice
+tiene que ser lo que en realidad es. Antes de proponer o aceptar un valor, comprobá que el nombre y
+el contenido digan lo mismo, aunque otra regla o un caso ya aprobado lo permita; si no coinciden,
+frená y reportalo
+([reglas de dominio](docs/reglas-de-dominio.md)).
+
 Estas reglas las controla el código, y entender lo que la persona escribe lo hace el modelo: no se
 suma una regla de código para cada forma de contestar. Antes de proponer un caso para una
 respuesta del usuario, se decide si es interpretación, que va al prompt, o una invariante, que va

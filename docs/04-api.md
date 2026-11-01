@@ -296,8 +296,10 @@ está en [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual
   otra llamada. El período es individual, del usuario de la sesión. Crear uno de grupo llega con
   los grupos, en la segunda versión: mientras tanto, un pedido con `family_group_id` responde
   `422` con `group_period_not_supported`. Decidido por Vero el 30 de octubre de 2026. En un período
-  mensual, `period_end` es opcional y se calcula desde `period_start`. En uno quincenal es
-  obligatorio, porque su fin no se calcula: sin él responde `422` con `period_end_required`.
+  mensual, `period_end` es opcional y se calcula desde `period_start`, y si viene tiene que ser ese día. Uno
+  quincenal, con `period_type` en `biweekly`, solo empieza el día 1 o el 16, y su fin se calcula
+  igual. En uno personalizado, `custom`, es obligatorio: sin él responde `422` con
+  `period_end_required`. Decidido por Vero el 1 de noviembre de 2026.
   Decidido por Vero el 29 de octubre de 2026.
 - `PUT /budget-periods/{period_id}` reemplaza el contenido de un período: fechas, moneda,
   ingreso estimado y topes. En un borrador cambia todo. En uno confirmado cambian solo el
@@ -335,8 +337,10 @@ de octubre de 2026.
 2. Un período de otro usuario, o de un grupo al que no pertenece, responde `404`.
 3. Cambiar o confirmar un período familiar exige ser el dueño vigente del grupo. Un
    miembro que no lo es recibe `403`, porque el período existe para él: lo puede leer.
-4. Responden `422`, cada uno con su código: un período quincenal sin `period_end`, con
-   `period_end_required`, y fechas invertidas, con `period_dates_inverted`. Decidido por Vero el 30
+4. Responden `422`, cada uno con su código: un período personalizado sin `period_end`, con
+   `period_end_required`; un quincenal que no empieza el día 1 o el 16, con
+   `biweekly_start_invalid`; un mensual o un quincenal con otro fin, con `period_end_not_matching`
+   (Decidido por Vero el 1 de noviembre de 2026); y fechas invertidas, con `period_dates_inverted`. Decidido por Vero el 30
    de octubre de 2026.
 5. Cambiar la cadencia, las fechas o la moneda de un período confirmado responde `409`, con
    `confirmed_period_fixed`. Decidido por Vero el 31 de octubre de 2026.
@@ -432,7 +436,7 @@ responses:
   409:
     description: Overlaps another period of the same owner (budget_period_overlap)
   422:
-    description: Invalid dates, a biweekly period without period_end, non-positive limit, repeated category, a category that is not an expense one, a negative estimated income, a family_group_id (group_period_not_supported), or a field the API does not know (invalid_request)
+    description: Invalid dates, dates that do not match the cadence, a custom period without period_end, non-positive limit, repeated category, a category that is not an expense one, a negative estimated income, an amount too large, a currency not in the catalog, a family_group_id (group_period_not_supported), or a field the API does not know (invalid_request)
 
 # PUT /budget-periods/{period_id}
 requestBody:
@@ -478,7 +482,7 @@ responses:
   409:
     description: Changes the cadence, the dates or the currency of a confirmed period (confirmed_period_fixed), or overlaps another period of the same owner (budget_period_overlap)
   422:
-    description: Invalid dates, a biweekly period without period_end, non-positive limit, repeated category, a category that is not an expense one, a negative estimated income, a field the API does not know, or a period_id that is not a UUID (invalid_request)
+    description: Invalid dates, dates that do not match the cadence, a custom period without period_end, non-positive limit, repeated category, a category that is not an expense one, a negative estimated income, an amount too large, a currency not in the catalog, a field the API does not know, or a period_id that is not a UUID (invalid_request)
 
 # POST /budget-periods/{period_id}/confirm
 requestBody:

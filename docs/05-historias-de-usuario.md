@@ -34,7 +34,7 @@
 
 *Criterios de aceptación:*
 
-- Puedo crear un período de presupuesto individual o familiar, eligiendo cadencia mensual o quincenal.
+- Puedo crear un período de presupuesto individual o familiar, eligiendo cadencia mensual, quincenal o personalizada.
 - Cargo el ingreso estimado del período y un tope por cada categoría que quiera controlar.
 - Mientras está en armado, el período figura como borrador y no se usa para calcular nada.
 - El borrador del próximo período se arma solo, copiando el ingreso estimado y los topes del período anterior. Lo cambio o armo uno nuevo desde el dashboard.

@@ -9,6 +9,12 @@ la descripción del producto y se enlazan desde cada grupo.
 
 Antes de escribir código para cualquier ticket de dominio, leer este documento completo.
 
+**Lo primero es que los datos sean verdaderos y coherentes.** Lo que un dato dice tiene que ser lo
+que en realidad es: un período "mensual" dura un mes. Si un caso no entra en un valor, se modela
+con un valor que lo diga, y no se acepta el dato disfrazado. Ante una duda entre comodidad y
+veracidad, gana la veracidad; lo que se pueda imponer, se impone en el código y en la base.
+Decidido por Vero el 1 de noviembre de 2026.
+
 ---
 
 ## 1. Registro de un movimiento: qué se asume y qué se confirma
@@ -248,7 +254,8 @@ semanas. Decidido por Vero el 31 de octubre de 2026.
 **El primer período nace en el alta.** Al completar la parte obligatoria del alta (§ 11), el
 sistema crea el primer período individual del usuario, ya confirmado: mensual, en su moneda
 primaria, con ingreso estimado 0 y sin topes, desde el día del alta hasta el último día de ese
-mes. Es uno de los dos períodos que nacen confirmados, porque ya arrancó; el otro es el primer
+mes. Es mensual si el alta es el día 1; si no, es personalizado, porque no dura un mes: el día del
+alta no tiene por qué ser el inicio de sus meses. Decidido por Vero el 1 de noviembre de 2026. Es uno de los dos períodos que nacen confirmados, porque ya arrancó; el otro es el primer
 período de un grupo, que nace igual al crearlo (§ 10). Así el
 primer gasto, incluido el que el usuario escribió antes de darse de alta, tiene dónde imputarse. Un período sin topes registra el gastado igual, pero no dispara alertas. El mensaje
 que cierra el alta le avisa que ese primer período existe y que puede ponerle ingreso y topes
@@ -260,8 +267,18 @@ mes, como el 31, se usa el último día del mes, igual que en las reglas recurre
 empieza el 31 de enero termina el 27 de febrero, el día anterior al 28. Decidido por Vero el 29 de
 octubre de 2026. El período siguiente empieza el día después de que termina el anterior. Para mover el día de
 inicio, por ejemplo para alinearlo con el cobro, el usuario cambia las fechas de un borrador, y
-desde ahí los siguientes se calculan a partir de ese. El período de transición puede durar más o
-menos de un mes.
+desde ahí los siguientes se calculan a partir de ese.
+
+**Cada cadencia dice lo que el período dura.** Un período tiene una de tres:
+
+- **Mensual:** el fin siempre se calcula, con la regla de arriba. No acepta otro fin.
+- **Quincenal:** es la quincena de calendario. Empieza el día 1 y termina el 15, o empieza el 16 y
+  termina el último día del mes. No acepta otro inicio ni otro fin.
+- **Personalizado:** el usuario indica el fin, y puede durar lo que quiera mientras no termine antes
+  de empezar. Es el período de transición, para mover el día de inicio, y el de una quincena que no
+  coincide con el calendario.
+
+La base lo impone. Decidido por Vero el 1 de noviembre de 2026.
 
 **El borrador copia el período anterior.** Con anticipación al inicio de cada período, el sistema
 genera el borrador del siguiente para el mismo dueño, copiando del último período: la cadencia,
@@ -271,7 +288,7 @@ inflación (could-have) reemplazará a la copia cuando exista, sin cambiar el re
 Mientras el borrador no se genera solo, que llega en una segunda versión, el dashboard ofrece la
 misma copia al armar un período nuevo: el formulario viene con la cadencia, la moneda, el ingreso
 estimado y los topes del último período del usuario, y con el inicio en el día después de que
-termina ese período, y el usuario cambia lo que quiera antes de guardar. Decidido por Vero el 29 de octubre de 2026.
+termina ese período, y el usuario cambia lo que quiera antes de guardar. Decidido por Vero el 29 de octubre de 2026. Si el último es personalizado, se sugiere mensual en vez de copiar esa cadencia. Decidido por Vero el 1 de noviembre de 2026.
 
 **Dónde se arma y dónde se confirma.**
 
