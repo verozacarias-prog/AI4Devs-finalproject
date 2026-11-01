@@ -40,6 +40,16 @@ def _fortnight_end(period_start: date) -> date:
     raise InvalidError(ErrorCode.BIWEEKLY_START_INVALID)
 
 
+def check_dates_can_be_compared(
+    period_type: PeriodType, period_start: date, indicated_end: date | None
+) -> None:
+    """Without an end, or with one before the start, there are no dates to compare with others."""
+    if period_type is PeriodType.CUSTOM and indicated_end is None:
+        raise InvalidError(ErrorCode.PERIOD_END_REQUIRED)
+    if indicated_end is not None and indicated_end < period_start:
+        raise InvalidError(ErrorCode.PERIOD_DATES_INVERTED)
+
+
 def checked_period_end(
     period_type: PeriodType, period_start: date, indicated_end: date | None
 ) -> date:
