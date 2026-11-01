@@ -30,6 +30,15 @@ updates:
     schedule:
       interval: weekly
       day: monday
+  # Las imágenes de Docker Compose. La de pgvector se repite en app-quality.yml, que se
+  # actualiza a mano en el mismo pull request: un test del backend falla si difieren.
+  - package-ecosystem: docker-compose
+    directories:
+      - /
+      - /frontend/e2e
+    schedule:
+      interval: weekly
+      day: monday
   - package-ecosystem: npm
     directory: /frontend
     schedule:

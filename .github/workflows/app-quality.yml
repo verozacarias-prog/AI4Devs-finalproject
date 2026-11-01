@@ -31,7 +31,7 @@ jobs:
           python-version: '3.14'
           cache: pip
           cache-dependency-path: backend/requirements-dev.txt
-      - run: pip install -r requirements-dev.txt
+      - run: pip install --require-hashes -r requirements-dev.txt
       - run: ruff check .
       - run: ruff format --check .
       - run: mypy
@@ -47,7 +47,7 @@ jobs:
       # A real PostgreSQL with pgvector, empty on every run: the migrations test applies
       # them from scratch. The credentials only exist inside this job.
       db:
-        image: pgvector/pgvector:pg16
+        image: pgvector/pgvector:pg16@sha256:0dd3149a06e4579a0d70d8fef9945636cd514005e7237deb27f9b67886f8dc4f
         env:
           POSTGRES_USER: platita
           POSTGRES_PASSWORD: platita
@@ -71,7 +71,7 @@ jobs:
           python-version: '3.14'
           cache: pip
           cache-dependency-path: backend/requirements-dev.txt
-      - run: pip install -r requirements-dev.txt
+      - run: pip install --require-hashes -r requirements-dev.txt
       - run: pytest
 
   backend-dependencias:
@@ -89,9 +89,8 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.14'
-      # The version is the one pinned in requirements-dev.txt, so there is a single place
-      # to update it.
-      - run: pip install "$(grep '^pip-audit==' requirements-dev.txt)"
+      # The version is the one pinned in requirements-dev.txt, with its hash.
+      - run: pip install --require-hashes -r requirements-dev.txt
       # Blocks on any vulnerability that has a fix: the tool does not filter by severity.
       - run: pip-audit -r requirements.txt
 
@@ -196,7 +195,7 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - run: pip install -r requirements.txt
+      - run: pip install --require-hashes -r requirements.txt
         working-directory: backend
       - name: Export the contract from the API
         run: python -m app.adapters.inbound.api.export_openapi > ../frontend/src/api/openapi.json
