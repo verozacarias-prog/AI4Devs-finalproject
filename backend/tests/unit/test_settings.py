@@ -71,6 +71,16 @@ def test_the_development_entry_enabled_in_production_stops_startup() -> None:
     assert "production" in message
 
 
+def test_the_development_entry_in_demo_without_the_server_key_stops_startup() -> None:
+    """Case 19 of issue #84."""
+    environ = BASE_ENVIRON | {"APP_ENV": "demo", "DEV_ENTRY_ENABLED": "true"}
+
+    with pytest.raises(SettingsError) as error:
+        load_settings(environ)
+
+    assert "SERVER_SECRET_KEY" in str(error.value)
+
+
 def test_the_web_chat_enabled_in_production_stops_startup() -> None:
     """Case C2-18 of FEAT-002."""
     environ = BASE_ENVIRON | {"APP_ENV": "production", "WEB_CHAT_ENABLED": "true"}

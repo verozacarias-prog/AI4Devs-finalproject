@@ -264,3 +264,161 @@ test('case 67: what changes something is sent as JSON, which the API requires', 
     ['logout', 'application/json'],
   ])
 })
+
+// Cases 22 to 28 of issue #84: entering the demo environment with a personal link (ADR 0016).
+
+const ANA = { id: crypto.randomUUID(), name: 'Ana' }
+const LINK_VALUE = 'the-value-of-the-link'
+const NOTICE_REQUIRED = { error: 'test_notice_required', notice_version: 'demo-1' }
+
+function openLink() {
+  window.history.replaceState(null, '', `/app/#${LINK_VALUE}`)
+}
+
+function closeLink() {
+  window.history.replaceState(null, '', '/')
+}
+
+test('case 22: the link goes in the body and leaves the address bar before the answer', async () => {
+  openLink()
+  let answer: () => void = () => {}
+  const pending = new Promise<void>((resolve) => {
+    answer = resolve
+  })
+  const bodies: unknown[] = []
+  api.use(
+    http.post(SESSION, async ({ request }) => {
+      bodies.push(await request.json())
+      await pending
+      return noContent()
+    }),
+    http.get(ME, sessionOf(ANA)),
+  )
+
+  render(<DevEntryPage />)
+
+  await vi.waitFor(() => expect(bodies).toEqual([{ access_token: LINK_VALUE }]))
+  expect(window.location.hash).toBe('')
+  answer()
+  await screen.findByText('Entraste como Ana')
+  closeLink()
+})
+
+test('case 23: the first time it shows the notice, and only accepting it enters', async () => {
+  openLink()
+  const bodies: unknown[] = []
+  let accepted = false
+  api.use(
+    http.post(SESSION, async ({ request }) => {
+      const body = (await request.json()) as { accept_test_notice?: string }
+      bodies.push(body)
+      accepted = body.accept_test_notice === 'demo-1'
+      return accepted ? noContent() : HttpResponse.json(NOTICE_REQUIRED, { status: 409 })
+    }),
+    http.get(ME, () => (accepted ? HttpResponse.json(ANA) : noSession())),
+  )
+
+  render(<DevEntryPage />)
+
+  const accept = await screen.findByRole('button', { name: 'Acepto' })
+  screen.getByText(/entorno de prueba/)
+  screen.getByText(/proveedor de IA/)
+  screen.getByText(/pueden borrarse sin aviso/)
+  expect(screen.queryByText('Entraste como Ana')).toBeNull()
+  expect(bodies).toEqual([{ access_token: LINK_VALUE }])
+
+  accept.click()
+
+  await screen.findByText('Entraste como Ana')
+  expect(bodies[1]).toEqual({ access_token: LINK_VALUE, accept_test_notice: 'demo-1' })
+  closeLink()
+})
+
+test('case 24: a link that does not work says so, without offering a retry', async () => {
+  openLink()
+  api.use(http.post(SESSION, notFound))
+
+  render(<DevEntryPage />)
+
+  const alert = await screen.findByRole('alert')
+  expect(alert.textContent).toContain('Este enlace ya no sirve')
+  expect(screen.queryByRole('button', { name: 'Reintentar' })).toBeNull()
+  closeLink()
+})
+
+test('case 25: when the network fails, retrying sends the link again', async () => {
+  openLink()
+  const bodies: unknown[] = []
+  let failing = true
+  api.use(
+    http.post(SESSION, async ({ request }) => {
+      bodies.push(await request.json())
+      return failing ? HttpResponse.error() : noContent()
+    }),
+    http.get(ME, sessionOf(ANA)),
+  )
+
+  render(<DevEntryPage />)
+
+  const retry = await screen.findByRole('button', { name: 'Reintentar' })
+  expect(window.location.hash).toBe('')
+  failing = false
+  retry.click()
+
+  await screen.findByText('Entraste como Ana')
+  expect(bodies).toEqual([{ access_token: LINK_VALUE }, { access_token: LINK_VALUE }])
+  closeLink()
+})
+
+test('case 26: while the link is being checked, the status line says so', async () => {
+  openLink()
+  api.use(http.post(SESSION, neverAnswers))
+
+  render(<DevEntryPage />)
+
+  expect(screen.getByRole('status').textContent).toBe('Consultando la sesión…')
+  closeLink()
+})
+
+test('case 27: with the session of someone else open, the link enters its own account', async () => {
+  openLink()
+  let entered = false
+  api.use(
+    http.post(SESSION, () => {
+      entered = true
+      return noContent()
+    }),
+    http.get(ME, () => HttpResponse.json(entered ? ANA : PABLO)),
+  )
+
+  render(<DevEntryPage />)
+
+  await screen.findByText('Entraste como Ana')
+  expect(screen.queryByText('Entraste como Pablo')).toBeNull()
+  closeLink()
+})
+
+test('case 28: without a link or a session in demo, the card is never drawn', async () => {
+  closeLink()
+  let answer: () => void = () => {}
+  const pending = new Promise<void>((resolve) => {
+    answer = resolve
+  })
+  let asked = false
+  api.use(
+    http.get(ME, noSession),
+    http.get(USERS, async () => {
+      asked = true
+      await pending
+      return notFound()
+    }),
+  )
+
+  const { container } = render(<DevEntryPage />)
+
+  expect(screen.queryByText('Entrada de desarrollo')).toBeNull()
+  await vi.waitFor(() => expect(asked).toBe(true))
+  expect(screen.queryByText('Entrada de desarrollo')).toBeNull()
+  answer()
+  await vi.waitFor(() => expect(container.innerHTML).toBe(''))
+})
