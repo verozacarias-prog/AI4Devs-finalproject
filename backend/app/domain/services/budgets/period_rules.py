@@ -11,6 +11,11 @@ from app.domain.entities.category import Category
 from app.domain.entities.transaction import TransactionType
 from app.domain.errors import ConflictError, ErrorCode, InvalidError, NotFoundError
 
+# Amounts are stored rounded to cents, half up, in NUMERIC(20,2): what rounds to 0 is not a limit,
+# and what rounds to 10^18 does not fit (docs/03-modelo-de-datos.md).
+_SMALLEST_LIMIT = Decimal("0.005")
+_TOO_LARGE = Decimal("999999999999999999.995")
+
 
 def check_confirmed_stays_fixed(stored: BudgetPeriod, changed: BudgetPeriod) -> None:
     """A confirmed period changes only its estimated income and its limits (CA-10)."""
@@ -53,7 +58,7 @@ def check_limits_and_income(
         category = categories.get(category_id)
         if category is None or category.user_id not in (None, user_id):
             raise NotFoundError(ErrorCode.NOT_FOUND)
-    if any(amount <= 0 for _, amount in limits):
+    if any(amount < _SMALLEST_LIMIT for _, amount in limits):
         raise InvalidError(ErrorCode.BUDGET_LIMIT_NOT_POSITIVE)
     if len({category_id for category_id, _ in limits}) != len(limits):
         raise InvalidError(ErrorCode.BUDGET_CATEGORY_REPEATED)
@@ -63,3 +68,5 @@ def check_limits_and_income(
         raise InvalidError(ErrorCode.BUDGET_CATEGORY_NOT_EXPENSE)
     if estimated_income < 0:
         raise InvalidError(ErrorCode.ESTIMATED_INCOME_NEGATIVE)
+    if estimated_income >= _TOO_LARGE or any(amount >= _TOO_LARGE for _, amount in limits):
+        raise InvalidError(ErrorCode.AMOUNT_TOO_LARGE)

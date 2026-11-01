@@ -6,9 +6,11 @@ import {
   confirmPeriod,
   loadBudgetPeriods,
   loadCategories,
+  loadCurrencies,
   savePeriod,
   type BudgetPeriod,
   type Category,
+  type Currency,
   type Loaded,
   type PeriodContent,
   type Saved,
@@ -23,6 +25,8 @@ import { MESSAGES } from '../messages'
  * decides by itself is what a new period starts with: a copy of the last one (CA-13).
  */
 type ErrorCause = Exclude<Failure['kind'], 'cancelled'>
+
+type Working = 'save' | 'confirm'
 
 type Limit = { key: string; categoryId: string; amount: string }
 
@@ -63,11 +67,12 @@ type Props = {
 
 export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs }: Props) {
   const [categories, setCategories] = useState<Category[] | null>(null)
+  const [currencies, setCurrencies] = useState<Currency[] | null>(null)
   const [periods, setPeriods] = useState<BudgetPeriod[] | null>(null)
   const [period, setPeriod] = useState<BudgetPeriod | null>(null)
   const [fields, setFields] = useState<Fields>(EMPTY_FIELDS)
   const [view, setView] = useState<View>({ kind: 'loading' })
-  const [busy, setBusy] = useState(false)
+  const [working, setWorking] = useState<Working | null>(null)
   const [problem, setProblem] = useState<Problem | null>(null)
   // Retrying the first load repeats only the query that failed.
   const [attempt, setAttempt] = useState(0)
@@ -79,13 +84,18 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
     void Promise.all([
       categories ? already(categories) : loadCategories(options),
       periods ? already(periods) : loadBudgetPeriods(options),
-    ]).then(([categoriesLoaded, periodsLoaded]) => {
-      if (stop.signal.aborted || categoriesLoaded.kind === 'cancelled' || periodsLoaded.kind === 'cancelled') return
-      if (categoriesLoaded.kind === 'no-session' || periodsLoaded.kind === 'no-session') return onNoSession()
+      currencies ? already(currencies) : loadCurrencies(options),
+    ]).then(([categoriesLoaded, periodsLoaded, currenciesLoaded]) => {
+      const loads = [categoriesLoaded, periodsLoaded, currenciesLoaded]
+      if (stop.signal.aborted || loads.some((load) => load.kind === 'cancelled')) return
+      if (loads.some((load) => load.kind === 'no-session')) return onNoSession()
       if (categoriesLoaded.kind === 'loaded') setCategories(categoriesLoaded.value)
+      if (currenciesLoaded.kind === 'loaded') setCurrencies(currenciesLoaded.value)
       if (periodsLoaded.kind === 'loaded') setPeriods(periodsLoaded.value)
-      if (categoriesLoaded.kind !== 'loaded') return setProblem({ kind: 'load', cause: categoriesLoaded.kind })
-      if (periodsLoaded.kind !== 'loaded') return setProblem({ kind: 'load', cause: periodsLoaded.kind })
+      if (categoriesLoaded.kind !== 'loaded' || periodsLoaded.kind !== 'loaded' || currenciesLoaded.kind !== 'loaded') {
+        const failed = loads.find((load) => load.kind !== 'loaded')
+        return setProblem({ kind: 'load', cause: failed?.kind as ErrorCause })
+      }
       const stored = periodsLoaded.value.find((candidate) => candidate.id === periodId) ?? null
       if (periodId !== null && stored === null) return setProblem({ kind: 'refused', code: API_ERROR_NOT_FOUND })
       setPeriod(stored)
@@ -98,8 +108,8 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attempt, periodId, timeoutMs, onNoSession])
 
-  function settle(saved: Saved, next: View, failedKind: 'save' | 'confirm') {
-    setBusy(false)
+  function settle(saved: Saved, next: View, failedKind: Working) {
+    setWorking(null)
     if (saved.kind === 'cancelled') return
     if (saved.kind === 'no-session') return onNoSession()
     if (saved.kind === 'refused') return setProblem({ kind: 'refused', code: saved.code })
@@ -110,7 +120,7 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
   }
 
   function send() {
-    setBusy(true)
+    setWorking('save')
     setProblem(null)
     void savePeriod(contentOf(fields), period?.id ?? null, { timeoutMs }).then((saved) =>
       settle(saved, { kind: 'saved' }, 'save'),
@@ -119,7 +129,7 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
 
   function confirm() {
     if (period === null) return
-    setBusy(true)
+    setWorking('confirm')
     setProblem(null)
     void confirmPeriod(period.id, { timeoutMs }).then((saved) => settle(saved, { kind: 'confirmed' }, 'confirm'))
   }
@@ -138,6 +148,7 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
     send()
   }
 
+  const busy = working !== null
   const fixed = period?.status === 'confirmed'
   const options = categoryOptions(categories ?? [], period)
 
@@ -147,7 +158,7 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
         {period ? TEXT.headingEdit : TEXT.headingNew}
       </CardTitle>
       <p ref={statusLine} role="status" tabIndex={-1} className="text-sm text-muted-foreground outline-none empty:hidden">
-        {statusText(view, busy, problem)}
+        {statusText(view, working, problem, period)}
       </p>
       {view.kind === 'editing' && (
         <form onSubmit={submit} className="flex flex-col gap-4">
@@ -169,13 +180,20 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
               </label>
               <label className="flex flex-col gap-1 text-sm font-medium">
                 {TEXT.currency}
-                <input
+                <select
                   value={fields.currency}
                   required
                   disabled={fixed}
-                  onChange={(event) => setFields({ ...fields, currency: event.target.value.toUpperCase() })}
+                  onChange={(event) => setFields({ ...fields, currency: event.target.value })}
                   className={CONTROL}
-                />
+                >
+                  {fields.currency === '' && <option value="">{TEXT.chooseCurrency}</option>}
+                  {(currencies ?? []).map((currency) => (
+                    <option key={currency.code} value={currency.code}>
+                      {TEXT.currencyOption(currency.code, currency.name)}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label className="flex flex-col gap-1 text-sm font-medium">
                 {TEXT.start}
@@ -236,7 +254,6 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
       )}
       {view.kind === 'saved' && period && (
         <section className="flex flex-col gap-4">
-          <p className="text-sm font-medium">{TEXT.savedNotice}</p>
           <PeriodContentList period={period} />
           {problem && <ProblemAlert problem={problem} onRetry={retry} />}
           <div className="flex flex-wrap gap-2">
@@ -263,7 +280,6 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
       )}
       {view.kind === 'confirmed' && period && (
         <section className="flex flex-col gap-4">
-          <p className="text-sm font-medium">{TEXT.confirmedNotice(formatDate(period.period_start))}</p>
           <PeriodContentList period={period} />
           <Button className="self-start" onClick={() => onDone(period.id)}>
             {TEXT.back}
@@ -392,9 +408,14 @@ function ProblemAlert({ problem, onRetry, onBack }: { problem: Problem; onRetry:
   )
 }
 
-function statusText(view: View, busy: boolean, problem: Problem | null): string {
-  if (busy) return TEXT.saving
-  return view.kind === 'loading' && problem === null ? TEXT.loading : ''
+function statusText(view: View, working: Working | null, problem: Problem | null, period: BudgetPeriod | null): string {
+  if (working === 'save') return TEXT.saving
+  if (working === 'confirm') return TEXT.confirming
+  if (problem !== null) return ''
+  if (view.kind === 'loading') return TEXT.loading
+  if (view.kind === 'saved') return TEXT.savedNotice
+  if (view.kind === 'confirmed' && period) return TEXT.confirmedNotice(formatDate(period.period_start))
+  return ''
 }
 
 /** A list that arrived in an earlier attempt, so that a retry does not ask for it again. */

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from decimal import Decimal
 
@@ -13,6 +13,7 @@ from app.domain.ports.unit_of_work_port import UnitOfWorkPort
 from app.domain.services.budgets.period_dates import checked_period_end
 from app.domain.services.budgets.period_rules import check_limits_and_income, check_no_overlap
 from app.domain.services.dates.local_date import local_today
+from app.domain.services.transactions.movement_resolution import rounded
 from app.domain.use_cases.budgets.list_budget_periods import ReadablePeriod, describe_period
 from app.shared.clock import Clock
 
@@ -44,7 +45,7 @@ def find_user(unit_of_work: UnitOfWorkPort, user_id: uuid.UUID) -> User:
 
 
 def check_content(unit_of_work: UnitOfWorkPort, user_id: uuid.UUID, content: PeriodContent) -> None:
-    """The limits and the estimated income, the last validations of the API."""
+    """The limits, the estimated income and the currency, the last validations of the API."""
     limits = [(limit.category_id, limit.limit_amount) for limit in content.limits]
     check_limits_and_income(
         user_id,
@@ -52,6 +53,8 @@ def check_content(unit_of_work: UnitOfWorkPort, user_id: uuid.UUID, content: Per
         unit_of_work.categories.list_by_ids({category_id for category_id, _ in limits}),
         content.estimated_income,
     )
+    if not unit_of_work.currencies.exists(content.primary_currency):
+        raise InvalidError(ErrorCode.CURRENCY_NOT_FOUND)
 
 
 class CreateBudgetPeriod:
@@ -87,11 +90,12 @@ class CreateBudgetPeriod:
             )
             check_no_overlap(period, unit_of_work.budget_periods.list_owned_by(user_id, set()))
             check_content(unit_of_work, user_id, content)
+            period = replace(period, estimated_income=rounded(content.estimated_income))
             unit_of_work.budget_periods.add(period)
             unit_of_work.budgets.replace_for_period(
                 period.id,
                 [
-                    Budget(uuid.uuid4(), period.id, limit.category_id, limit.limit_amount)
+                    Budget(uuid.uuid4(), period.id, limit.category_id, rounded(limit.limit_amount))
                     for limit in content.limits
                 ],
             )

@@ -43,6 +43,10 @@ BUDGETS_TAG = "budgets"
 CATEGORIES = "/categories"
 CATEGORIES_TAG = "categories"
 
+# The currencies a period can be in.
+CURRENCIES = "/currencies"
+CURRENCIES_TAG = "currencies"
+
 # The web chat. It exists only when it is enabled, and never in production (ADR 0016).
 CHAT_MESSAGES = "/chat/messages"
 CHAT_TAG = "chat"

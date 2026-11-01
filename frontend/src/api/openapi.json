@@ -763,6 +763,43 @@
         "title": "CreateBudgetPeriodRequest",
         "type": "object"
       },
+      "CurrencyItem": {
+        "properties": {
+          "code": {
+            "description": "The ISO 4217 code of the currency.",
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "description": "The name of the currency.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ],
+        "title": "CurrencyItem",
+        "type": "object"
+      },
+      "CurrencyList": {
+        "properties": {
+          "currencies": {
+            "description": "The currencies, by code.",
+            "items": {
+              "$ref": "#/components/schemas/CurrencyItem"
+            },
+            "title": "Currencies",
+            "type": "array"
+          }
+        },
+        "required": [
+          "currencies"
+        ],
+        "title": "CurrencyList",
+        "type": "object"
+      },
       "DevSessionRequest": {
         "properties": {
           "access_token": {
@@ -1779,6 +1816,43 @@
         ]
       }
     },
+    "/currencies": {
+      "get": {
+        "description": "The currencies of the catalog a budget period can be in, by code.",
+        "operationId": "currencies_currencies_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrencyList"
+                }
+              }
+            },
+            "description": "The currencies of the catalog."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "List the currencies",
+        "tags": [
+          "currencies"
+        ]
+      }
+    },
     "/dev/session": {
       "post": {
         "description": "Opens a real session without a login code and returns it in the session cookie. In the local environment the user is chosen from the list, with `user_id`. A personal link, with `access_token`, is the way in of the demo environment and is not built yet: it answers `404`. One of the two is required.",
@@ -2010,6 +2084,10 @@
     {
       "description": "The categories of expenses the user of the session can put a limit on.",
       "name": "categories"
+    },
+    {
+      "description": "The currencies of the catalog, to choose the one of a budget period.",
+      "name": "currencies"
     },
     {
       "description": "The chat of the dashboard, for development and demonstration. A message goes the same way as one of WhatsApp: it is stored, and the worker answers it later. These routes exist only when the web chat is enabled, and never in production.",

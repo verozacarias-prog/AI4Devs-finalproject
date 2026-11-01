@@ -13,6 +13,7 @@ from app.adapters.outbound.postgres.repositories.budget_periods import (
 from app.adapters.outbound.postgres.repositories.budgets import PostgresBudgetRepository
 from app.adapters.outbound.postgres.repositories.categories import PostgresCategoryRepository
 from app.adapters.outbound.postgres.repositories.chat_messages import PostgresChatMessageRepository
+from app.adapters.outbound.postgres.repositories.currencies import PostgresCurrencyRepository
 from app.adapters.outbound.postgres.repositories.family_groups import PostgresFamilyGroupRepository
 from app.adapters.outbound.postgres.repositories.financial_profiles import (
     PostgresFinancialProfileRepository,
@@ -35,6 +36,7 @@ from app.domain.ports.budget_period_repository_port import BudgetPeriodRepositor
 from app.domain.ports.budget_repository_port import BudgetRepositoryPort
 from app.domain.ports.category_repository_port import CategoryRepositoryPort
 from app.domain.ports.chat_message_repository_port import ChatMessageRepositoryPort
+from app.domain.ports.currency_repository_port import CurrencyRepositoryPort
 from app.domain.ports.family_group_repository_port import FamilyGroupRepositoryPort
 from app.domain.ports.financial_profile_repository_port import FinancialProfileRepositoryPort
 from app.domain.ports.inbound_message_repository_port import InboundMessageRepositoryPort
@@ -59,6 +61,7 @@ class SqlAlchemyUnitOfWork:
     budget_periods: BudgetPeriodRepositoryPort
     budgets: BudgetRepositoryPort
     categories: CategoryRepositoryPort
+    currencies: CurrencyRepositoryPort
     pendings: PendingRepositoryPort
     financial_profiles: FinancialProfileRepositoryPort
     family_groups: FamilyGroupRepositoryPort
@@ -86,6 +89,7 @@ class SqlAlchemyUnitOfWork:
         self.budget_periods = PostgresBudgetPeriodRepository(connection)
         self.budgets = PostgresBudgetRepository(connection)
         self.categories = PostgresCategoryRepository(connection)
+        self.currencies = PostgresCurrencyRepository(connection)
         self.pendings = PostgresPendingRepository(connection)
         self.financial_profiles = PostgresFinancialProfileRepository(connection)
         self.family_groups = PostgresFamilyGroupRepository(connection)

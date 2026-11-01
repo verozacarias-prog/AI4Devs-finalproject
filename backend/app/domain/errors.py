@@ -64,6 +64,8 @@ class ErrorCode(StrEnum):
     BUDGET_CATEGORY_REPEATED = "budget_category_repeated"
     BUDGET_CATEGORY_NOT_EXPENSE = "budget_category_not_expense"
     ESTIMATED_INCOME_NEGATIVE = "estimated_income_negative"
+    AMOUNT_TOO_LARGE = "amount_too_large"
+    CURRENCY_NOT_FOUND = "currency_not_found"
 
 
 class DomainError(Exception):

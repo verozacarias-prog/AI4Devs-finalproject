@@ -192,6 +192,18 @@ SELECT_CATEGORIES_AVAILABLE = """
      WHERE user_id IS NULL OR user_id = :user_id
 """
 
+SELECT_CURRENCIES = """
+    SELECT code, name
+      FROM currency
+     ORDER BY code
+"""
+
+SELECT_CURRENCY = """
+    SELECT code
+      FROM currency
+     WHERE code = :code
+"""
+
 SELECT_CATEGORIES_BY_IDS = """
     SELECT id, name, kind, user_id
       FROM category

@@ -735,7 +735,10 @@ test('case C3-05: without periods the notice is a heading, not a status', async 
 
 test('case C1-23 of FEAT-005: the summary offers to build and to edit', async () => {
   apiWith([CURRENT], { [CURRENT.id]: summary(CURRENT.id, LUCIA_CATEGORIES, 104756.04) })
-  api.use(http.get('*/categories', () => HttpResponse.json({ categories: [] })))
+  api.use(
+    http.get('*/categories', () => HttpResponse.json({ categories: [] })),
+    http.get('*/currencies', () => HttpResponse.json({ currencies: [] })),
+  )
 
   render(<BudgetPage onNoSession={nothing} />)
 

@@ -192,6 +192,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/currencies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the currencies
+         * @description The currencies of the catalog a budget period can be in, by code.
+         */
+        get: operations["currencies_currencies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dev/session": {
         parameters: {
             query?: never;
@@ -740,6 +760,27 @@ export interface components {
              * @description The currency of the period, as an ISO 4217 code. What it spent is in it.
              */
             primary_currency: string;
+        };
+        /** CurrencyItem */
+        CurrencyItem: {
+            /**
+             * Code
+             * @description The ISO 4217 code of the currency.
+             */
+            code: string;
+            /**
+             * Name
+             * @description The name of the currency.
+             */
+            name: string;
+        };
+        /** CurrencyList */
+        CurrencyList: {
+            /**
+             * Currencies
+             * @description The currencies, by code.
+             */
+            currencies: components["schemas"]["CurrencyItem"][];
         };
         /** DevSessionRequest */
         DevSessionRequest: {
@@ -1439,6 +1480,35 @@ export interface operations {
             };
             /** @description The text is empty or only spaces, or the header `Idempotency-Key` is missing. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    currencies_currencies_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The currencies of the catalog. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurrencyList"];
+                };
+            };
+            /** @description There is no valid session: missing, unknown, revoked or expired, told apart nowhere. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -9,9 +9,11 @@ export type CategorySpending = components['schemas']['CategorySpendingItem']
 export type BudgetStatus = components['schemas']['BudgetStatusBody']
 export type BudgetMovement = components['schemas']['BudgetMovementItem']
 export type Category = components['schemas']['CategoryItem']
+export type Currency = components['schemas']['CurrencyItem']
 export type PeriodContent = components['schemas']['BudgetPeriodRequest']
 type BudgetPeriodList = components['schemas']['BudgetPeriodList']
 type CategoryList = components['schemas']['CategoryList']
+type CurrencyList = components['schemas']['CurrencyList']
 type ErrorBody = components['schemas']['ErrorBody']
 
 export type Loaded<T> = { kind: 'loaded'; value: T } | { kind: 'no-session' } | Failure
@@ -52,6 +54,12 @@ export function loadBudgetStatus(budgetId: string, options: Options = {}): Promi
 export async function loadCategories(options: Options = {}): Promise<Loaded<Category[]>> {
   const loaded = await load<CategoryList>(API_ROUTES.categories, options)
   return loaded.kind === 'loaded' ? { kind: 'loaded', value: loaded.value.categories } : loaded
+}
+
+/** The currencies of the catalog, by code (GET /currencies). */
+export async function loadCurrencies(options: Options = {}): Promise<Loaded<Currency[]>> {
+  const loaded = await load<CurrencyList>(API_ROUTES.currencies, options)
+  return loaded.kind === 'loaded' ? { kind: 'loaded', value: loaded.value.currencies } : loaded
 }
 
 /** Builds a draft, or replaces the content of that period (POST and PUT /budget-periods). */

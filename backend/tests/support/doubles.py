@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from app.domain.entities.budget import Budget
     from app.domain.entities.category import Category
     from app.domain.entities.chat_message import ChatMessage
+    from app.domain.entities.currency import Currency
     from app.domain.entities.inbound_message import InboundMessage
     from app.domain.entities.llm_call import LlmCall
     from app.domain.entities.llm_usage import UsageCounter
@@ -136,6 +137,10 @@ class InMemoryCurrencies:
 
     def __init__(self) -> None:
         self.codes = {"ARS", "USD"}
+
+    def list_all(self) -> list[Currency]:
+        # No unit case reads the list: GET /currencies is covered against the database.
+        return []
 
     def exists(self, code: str) -> bool:
         return code in self.codes

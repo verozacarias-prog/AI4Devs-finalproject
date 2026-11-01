@@ -13,6 +13,7 @@ from app.adapters.inbound.api.routes import (
     BUDGETS_TAG,
     CATEGORIES_TAG,
     CHAT_TAG,
+    CURRENCIES_TAG,
     DEV_TAG,
     HEALTH_TAG,
     SESSION_TAG,
@@ -55,6 +56,10 @@ TAGS: list[dict[str, str]] = [
     {
         "name": CATEGORIES_TAG,
         "description": "The categories of expenses the user of the session can put a limit on.",
+    },
+    {
+        "name": CURRENCIES_TAG,
+        "description": "The currencies of the catalog, to choose the one of a budget period.",
     },
     {
         "name": CHAT_TAG,
@@ -373,3 +378,11 @@ CATEGORIES_LIST = "The categories, by name."
 CATEGORY_ID = "The identifier of the category."
 CATEGORY_NAME = "The name of the category."
 CATEGORY_IS_BASE = "Whether it is of the base catalog, which every user has."
+
+# The currencies.
+CURRENCIES_SUMMARY = "List the currencies"
+CURRENCIES_DESCRIPTION = "The currencies of the catalog a budget period can be in, by code."
+CURRENCIES_OK = "The currencies of the catalog."
+CURRENCIES_LIST = "The currencies, by code."
+CURRENCY_CODE = "The ISO 4217 code of the currency."
+CURRENCY_NAME = "The name of the currency."

@@ -13,6 +13,7 @@ from app.domain.services.budgets.period_access import can_edit, can_read
 from app.domain.services.budgets.period_dates import checked_period_end
 from app.domain.services.budgets.period_rules import check_confirmed_stays_fixed, check_no_overlap
 from app.domain.services.dates.local_date import local_today
+from app.domain.services.transactions.movement_resolution import rounded
 from app.domain.use_cases.budgets.create_budget_period import (
     PeriodContent,
     check_content,
@@ -67,6 +68,7 @@ class UpdateBudgetPeriod:
             group_ids = {period.family_group_id} if period.family_group_id is not None else set()
             check_no_overlap(changed, unit_of_work.budget_periods.list_owned_by(user_id, group_ids))
             check_content(unit_of_work, user_id, content)
+            changed = replace(changed, estimated_income=rounded(content.estimated_income))
             unit_of_work.budget_periods.update(changed)
             # A limit that stays keeps its id: the dashboard reads its detail by it.
             kept = {
@@ -80,7 +82,7 @@ class UpdateBudgetPeriod:
                         kept.get(limit.category_id, uuid.uuid4()),
                         period_id,
                         limit.category_id,
-                        limit.limit_amount,
+                        rounded(limit.limit_amount),
                     )
                     for limit in content.limits
                 ],
