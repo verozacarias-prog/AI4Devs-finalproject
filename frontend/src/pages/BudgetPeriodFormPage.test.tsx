@@ -1,5 +1,5 @@
 /**
- * Cases C1-22, C1-24 to C1-32, C2-32 to C2-38, C2-43, C2-45, C2-46, C2-48 to C2-52, C2-59, C3-06 to C3-09, C3-11 and C3-12 of FEAT-005 (docs/features/FEAT-005/spec.md): the states of the
+ * Cases C1-22, C1-24 to C1-32, C2-32 to C2-38, C2-43, C2-45, C2-46, C2-48 to C2-52, C2-59, C3-06 to C3-09, C3-11 to C3-13 of FEAT-005 (docs/features/FEAT-005/spec.md): the states of the
  * form of a budget period. The API is simulated at the network level, so the page and its API calls are tested
  * together.
  */
@@ -987,4 +987,38 @@ test('case C3-12: a new limit without an amount is announced and marks the field
 
   expect(screen.queryByRole('alert')).toBeNull()
   expect(field('Monto del tope nuevo').getAttribute('aria-invalid')).not.toBe('true')
+})
+
+test('case C3-13: editing without touching an amount does not change it', async () => {
+  const draft = period('2026-11-10', '2026-12-09', {
+    status: 'draft',
+    estimated_income: 1,
+    budgets: [{ id: crypto.randomUUID(), category_id: SUPERMERCADO, category: 'Supermercado', limit_amount: 2 }],
+  })
+  // Written by hand: a number of JavaScript could not hold these digits, and the API sends them.
+  const listed = JSON.stringify({ budget_periods: [draft] })
+    .replace('"estimated_income":1', '"estimated_income":999999999999999999.99')
+    .replace('"limit_amount":2', '"limit_amount":1234567890123456.78')
+  const bodies: Record<string, unknown>[] = []
+  api.use(
+    http.get(PERIODS, () => new HttpResponse(listed, { headers: { 'Content-Type': 'application/json' } })),
+    http.get(CATEGORIES, () => HttpResponse.json({ categories: CATEGORY_LIST })),
+    http.put(PERIOD, async ({ request }) => {
+      bodies.push((await request.json()) as Record<string, unknown>)
+      return HttpResponse.json(draft)
+    }),
+  )
+
+  renderForm(draft.id)
+
+  await ready()
+  expect(field('Ingreso estimado').value).toBe('999.999.999.999.999.999,99')
+  expect(field('Monto del tope de Supermercado').value).toBe('1.234.567.890.123.456,78')
+  save()
+
+  await screen.findByText('El período quedó guardado.')
+  expect(bodies[0]).toMatchObject({
+    estimated_income: '999999999999999999.99',
+    budgets: [{ category_id: SUPERMERCADO, limit_amount: '1234567890123456.78' }],
+  })
 })

@@ -1115,7 +1115,8 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 ### Corte 3 — observabilidad y accesibilidad
 
 - **Aprobado por:** Veronica Zacarias 01/11/2026
-- **Total:** 12 casos, 5 de integración y 7 de componente.
+- **C3-13, sumado por un monto que cambiaba al editarlo:** Veronica Zacarias 01/11/2026
+- **Total:** 13 casos, 5 de integración y 8 de componente.
 
 Cubre lo que cada pedido deja en los registros, la moneda de cada monto y la accesibilidad del
 formulario. El contraste se anota en la lista de accesibilidad del
@@ -1139,6 +1140,7 @@ cambiar lo que comprueban.
 | C3-10 | **Pantalla.** Al abrir el formulario y al volver al resumen, el foco va al título | Componente | Accesibilidad |
 | C3-11 | **Pantalla.** Al quitar un tope, el foco va al selector del tope nuevo | Componente | Accesibilidad |
 | C3-12 | **Pantalla.** Un tope nuevo sin monto se anuncia y marca el campo | Componente | Accesibilidad |
+| C3-13 | **Pantalla.** Editar sin tocar un monto no lo cambia | Componente | CA-5 y C2-60 |
 
 #### C3-01 · Los registros no llevan montos ni nombres
 
@@ -1251,6 +1253,17 @@ cambiar lo que comprueban.
 - **entonces** el aviso de que falta el monto es una alerta, y el campo queda inválido y descripto
   por ese aviso. Al escribir un monto y sumarlo, deja de estar inválido.
 - **Test:** `src/pages/BudgetPeriodFormPage.test.tsx` › "case C3-12: a new limit without an amount is announced and marks the field"
+
+#### C3-13 · Editar sin tocar un monto no lo cambia
+
+- **Sale de:** CA-5 y C2-60 · **Tipo:** componente
+- **Dado** un borrador de Lucía que la API devuelve con un ingreso de `999999999999999999.99` y un
+  tope de Supermercado de `1234567890123456.78`, escritos como números JSON,
+- **cuando** lo abre con "Editar" y aprieta "Guardar borrador" sin tocar nada,
+- **entonces** el formulario muestra `999.999.999.999.999.999,99` y `1.234.567.890.123.456,78`, y se
+  pide `PUT /budget-periods/{period_id}` con `"999999999999999999.99"` y `"1234567890123456.78"`,
+  sin que cambie ninguna cifra. El contrato de la API no cambia.
+- **Test:** `src/pages/BudgetPeriodFormPage.test.tsx` › "case C3-13: editing without touching an amount does not change it"
 
 ## Estados de pantalla
 
