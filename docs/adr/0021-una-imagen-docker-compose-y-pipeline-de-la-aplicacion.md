@@ -28,7 +28,9 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
 1. **Una sola imagen para la API y el worker.** El Dockerfile tiene dos etapas: la primera
    compila el dashboard, y la final lleva el backend con ese build, que la API sirve bajo
    `/app`. La imagen corre con un usuario sin privilegios y declara un chequeo de salud contra
-   `GET /healthz`.
+   `GET /healthz`. Las imágenes van fijadas por digest, y las dependencias del backend se
+   instalan con `--require-hashes` desde un archivo con todo su árbol, que genera pip-tools, para
+   que dos builds instalen lo mismo.
 2. **Docker Compose con cuatro servicios.** La base, con la imagen `pgvector/pgvector:pg16`;
    las migraciones, que corren `alembic upgrade head` una vez y terminan; la API; y el worker.
    La API y el worker esperan a que las migraciones terminen bien, y ninguno de los dos migra al
@@ -61,7 +63,8 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
    5. Vulnerabilidades en dependencias. En Python, `pip-audit`, que bloquea ante cualquier
       vulnerabilidad que tenga arreglo: la herramienta no filtra por severidad. En el dashboard,
       `npm audit`, que bloquea desde severidad alta. Además, Dependabot propone una vez por
-      semana la actualización de las dependencias y de las acciones.
+      semana la actualización de las dependencias, incluidas las indirectas del backend, y de las
+      acciones.
    6. Análisis de seguridad del código, con CodeQL. Sigue el recorrido de un dato por el
       backend, el dashboard y los flujos de GitHub Actions, y publica lo que encuentra como
       alertas del repositorio. Corre también una vez por semana, porque sus consultas cambian
@@ -112,6 +115,10 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
 - Probar a mano cuesta tokens y exige una clave del proveedor en cada máquina.
 - Las acciones fijadas por hash hay que actualizarlas. Dependabot abre un pull request por
   semana, que alguien tiene que mirar.
+- Los archivos con hashes del backend no se escriben a mano: se regeneran con un script. Dependabot
+  suma pull requests, porque también propone sus dependencias indirectas.
+- La imagen de pgvector se repite en Compose y en el pipeline. Un pull request que actualiza una
+  copia falla hasta que alguien edita la otra en el mismo cambio.
 - En un fork, Dependabot y la protección de la rama se habilitan a mano en GitHub. Si nadie lo
   hace, los controles avisan pero no bloquean.
 - En Python el control de vulnerabilidades es más estricto que en el dashboard: bloquea también

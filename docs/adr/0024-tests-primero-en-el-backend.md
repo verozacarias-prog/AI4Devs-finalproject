@@ -41,7 +41,7 @@ integración y al menos uno de punta a punta.
    funcionalidad. Sigue la misma regla con un lugar más liviano: el asistente propone los
    casos, la persona los aprueba antes de que se escriba ningún test, y quedan en la
    descripción del pull request, cada uno en una línea con su resultado esperado. Lo que no tiene lógica que probar, como un
-   Dockerfile o un archivo de configuración, no lleva casos, y el pull request lo dice.
+   Dockerfile o un archivo de configuración, no lleva casos, y el pull request lo dice. Sí los lleva si protege una regla de seguridad, como que toda imagen vaya fijada por digest.
 5. **Cada criterio de aceptación tiene un identificador,** y cada caso y cada test dicen de cuál
    salen.
 6. **Un test no se modifica, no se deshabilita y no se borra sin la aprobación de una persona.**

@@ -1,7 +1,7 @@
 # One image for every backend process, with the dashboard build inside it (ADR 0021).
 
 # Stage 1: compiles the dashboard to static files. Nothing of Node reaches the final image.
-FROM node:26-slim AS dashboard
+FROM node:26-slim@sha256:e4db4c914bf8ad241bd24804fc25d272d89bad97e68cdc8a1414862790a02c39 AS dashboard
 
 WORKDIR /srv/frontend
 
@@ -12,7 +12,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # Stage 2: the backend, which serves that build under /app (ADR 0016).
-FROM python:3.14-slim
+FROM python:3.14-slim@sha256:cd89c30eda26ee911a4611b18680086e0ea42e6f5f8cbe653d07fa7958c9cec8
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -21,7 +21,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /srv/backend
 
 COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --require-hashes -r requirements.txt
 
 COPY backend/alembic.ini .
 COPY backend/migrations migrations
