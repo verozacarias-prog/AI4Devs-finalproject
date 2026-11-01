@@ -93,6 +93,8 @@ cd site && npm install                # solo para ver o regenerar el portal
   [`prompts.md`](../prompts.md), con hasta tres por sección, y abrir el pull request de la rama de
   la entrega a `main`.
 - **Cada lunes:** revisar los pull requests de Dependabot.
+- **Al cambiar una dependencia del backend a mano:** editar su archivo `.in` en `backend/` y correr
+  `scripts/lock_backend_dependencies.sh`. No hace falta para levantar la aplicación.
 
 Los pasos 1 a 12 se pueden recorrer con el command `/ticket`, que se detiene en cada punto que
 decide una persona. Los commands, el skill y el agente están descritos en el

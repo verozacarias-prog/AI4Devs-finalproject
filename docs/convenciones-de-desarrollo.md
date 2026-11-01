@@ -73,7 +73,7 @@ Tres reglas acompañan ese orden:
   scaffold o un arreglo, no tiene `spec.md`. El asistente propone los casos, la persona los
   aprueba antes de que exista un test, y van en la descripción del pull request, cada uno en
   una línea con su resultado esperado. Lo que no tiene lógica que probar, como un Dockerfile, no lleva casos, y el pull
-  request lo dice. El orden de los dos commits vale igual.
+  request lo dice. Sí los lleva si protege una regla de seguridad, como que toda imagen vaya fijada por digest. El orden de los dos commits vale igual.
 - **Se integra con un commit de merge.** Aplastar los commits del pull request en uno borraría
   el orden entre tests e implementación.
 - **El pull request se abre con el corte en verde.** El commit de los tests deja la rama de
