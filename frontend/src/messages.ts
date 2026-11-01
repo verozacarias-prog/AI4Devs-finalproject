@@ -125,7 +125,7 @@ export const MESSAGES = {
     newLimitCategory: 'Categoría del tope nuevo',
     newLimitAmount: 'Monto del tope nuevo',
     missingAmount: 'Poné un monto para sumar el tope.',
-    amountHint: 'Sin puntos de miles. Para los centavos usá coma: 1450000,55',
+    amountHint: 'Usá punto para los miles y coma para los centavos: 1.450.000,55',
     allLimited: 'Ya tienen tope todas tus categorías',
     limitAmount: (position: number) => `Monto del tope ${position}`,
     addLimit: 'Sumar un tope',

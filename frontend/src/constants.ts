@@ -32,6 +32,8 @@ export const JSON_CONTENT_TYPE = 'application/json'
 
 /** How the dashboard writes an amount: Argentine format, always with two decimals. */
 export const AMOUNT_LOCALE = 'es-AR'
+// How a person writes an amount. A parameter, for the user to choose it in a future settings section.
+export const AMOUNT_SEPARATORS = { thousands: '.', decimal: ',' }
 export const AMOUNT_DECIMALS = 2
 /** How the dashboard writes a calendar day, such as 9/10/2026. */
 export const DATE_LOCALE = 'es-AR'

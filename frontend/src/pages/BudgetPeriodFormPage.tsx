@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardTitle } from '@/components/ui/card'
+import { amountForApi, amountFromApi, amountText } from '@/lib/amount-text'
 import { formatAmount, formatDate } from '@/lib/budget-format'
 import { lastIndividualPeriod, nextPeriodStart } from '@/lib/next-period'
 import {
@@ -535,7 +536,7 @@ function fieldsOf(period: BudgetPeriod): Fields {
     start: period.period_start,
     end: period.period_end,
     currency: period.primary_currency,
-    income: String(period.estimated_income),
+    income: amountFromApi(period.estimated_income),
     limits: limitsOf(period),
   }
 }
@@ -544,7 +545,7 @@ function limitsOf(period: BudgetPeriod): Limit[] {
   return period.budgets.map((budget) => ({
     key: budget.id,
     categoryId: budget.category_id,
-    amount: String(budget.limit_amount),
+    amount: amountFromApi(budget.limit_amount),
   }))
 }
 
@@ -563,14 +564,6 @@ function otherPeriods(periods: BudgetPeriod[], period: BudgetPeriod | null): Bud
   return periods.filter((candidate) => candidate.family_group_id === owner && candidate.id !== period?.id)
 }
 
-/** What an amount field keeps of what is typed: digits and the first decimal separator. */
-function amountText(written: string): string {
-  const kept = written.replace(/[^\d.,]/g, '')
-  const separator = kept.search(/[.,]/)
-  if (separator < 0) return kept
-  return kept.slice(0, separator + 1) + kept.slice(separator + 1).replace(/[.,]/g, '')
-}
-
 /** Each amount goes as the text the user wrote, with the decimal comma they may have used. */
 function contentOf(fields: Fields): PeriodContent {
   return {
@@ -578,14 +571,11 @@ function contentOf(fields: Fields): PeriodContent {
     period_start: fields.start,
     period_end: fields.end === '' ? null : fields.end,
     primary_currency: fields.currency.trim(),
-    estimated_income: decimalText(fields.income),
+    estimated_income: amountForApi(fields.income),
     budgets: fields.limits.map((limit) => ({
       category_id: limit.categoryId,
-      limit_amount: decimalText(limit.amount),
+      limit_amount: amountForApi(limit.amount),
     })),
   }
 }
 
-function decimalText(amount: string): string {
-  return amount.trim().replace(',', '.')
-}
