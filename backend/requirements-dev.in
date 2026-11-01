@@ -5,7 +5,7 @@
 -r requirements.in
 # No version here: the application tree already fixes it, through requirements.txt.
 httpx2
-mypy==2.4.0
+mypy==2.4.1
 pip-audit==2.10.1
 pip-tools==7.6.2
 pytest==9.2.0
