@@ -5,6 +5,9 @@ from __future__ import annotations
 # How the schema names its primary keys (docs/03-modelo-de-datos.md, 3.2). PostgreSQL reports
 # a repeated primary key and a repeated unique key with the same error, and only the name
 # tells them apart.
+PERIOD_OVERLAP_CONSTRAINTS = frozenset(
+    {"ex_budget_period_user_overlap", "ex_budget_period_group_overlap"}
+)
 PRIMARY_KEY_PREFIX = "pk_"
 
 # The cheapest query that proves the database answers.

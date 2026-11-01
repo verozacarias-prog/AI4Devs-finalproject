@@ -12,7 +12,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.adapters.inbound.api import reference
 from app.adapters.inbound.api.errors import documented_errors
-from app.adapters.inbound.api.exact_json import AmountInput, ExactAmount, ExactJSONResponse
+from app.adapters.inbound.api.exact_json import (
+    AmountInput,
+    ExactAmount,
+    ExactJSONResponse,
+    ExactJsonRoute,
+)
 from app.adapters.inbound.api.request_logging import identify_user
 from app.adapters.inbound.api.routers.session import SessionToken
 from app.adapters.inbound.api.routes import (
@@ -175,7 +180,7 @@ def build_budgets_router(
     get_period_summary: Callable[[], GetPeriodSummary],
     get_budget_status: Callable[[], GetBudgetStatus],
 ) -> APIRouter:
-    router = APIRouter(tags=[BUDGETS_TAG])
+    router = APIRouter(tags=[BUDGETS_TAG], route_class=ExactJsonRoute)
 
     @router.get(
         BUDGET_PERIODS,
