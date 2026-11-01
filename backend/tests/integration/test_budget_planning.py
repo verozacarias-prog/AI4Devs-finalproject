@@ -1269,3 +1269,74 @@ def test_a_draft_moves_to_another_currency_with_its_income_and_its_limits(
     assert [(item["category"], item["limit_amount"]) for item in categories] == [
         (SUPERMARKET, Decimal("320.25"))
     ]
+
+
+def test_every_error_changing_a_period_says_which_period_and_every_error_on_a_limit_which_category(
+    seeded_database_url: str, engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Case C3-14.
+    _lucia_october(engine)
+    client, stream = _client_with_logs(seeded_database_url)
+    _enter_as(client, "Lucía")
+    draft = _create_november(client, engine)["id"]
+    supermarket = _base_category(engine, SUPERMARKET)
+    same_limit = {"category_id": supermarket, "limit_amount": 10000}
+    start = "2026-11-10"
+
+    def assert_says_which(content: str, code: str, *, on_a_limit: bool = False) -> None:
+        written_before = _written(stream)
+
+        response = client.put(f"/budget-periods/{draft}", content=content, headers=SAME_ORIGIN)
+
+        assert response.json()["error"] == code
+        line = _expected_error(stream, written_before)
+        assert line["error_code"] == code
+        assert line["budget_period_id"] == draft
+        if on_a_limit:
+            assert line["category_id"] == supermarket
+
+    assert_says_which(_content(engine, start, "1", {}, period_type="custom"), "period_end_required")
+    assert_says_which(_content(engine, start, "1", {}, currency="ZZZ"), "currency_not_found")
+    assert_says_which(_content(engine, start, "-1", {}), "estimated_income_negative")
+    assert_says_which(
+        _content(engine, start, "1", {SUPERMARKET: "0"}),
+        "budget_limit_not_positive",
+        on_a_limit=True,
+    )
+    assert_says_which(
+        _with_fields(_content(engine, start, "1", {}), budgets=[same_limit, same_limit]),
+        "budget_category_repeated",
+        on_a_limit=True,
+    )
+    assert_says_which(
+        _content(engine, start, "1", {SUPERMARKET: "1000000000000000000"}),
+        "amount_too_large",
+        on_a_limit=True,
+    )
+    monkeypatch.setattr(
+        "app.domain.use_cases.budgets.update_budget_period.check_no_overlap",
+        lambda *_, **__: None,
+    )
+    assert_says_which(_content(engine, "2026-11-01", "1", {}), "budget_period_overlap")
+
+
+def test_in_a_confirmed_period_a_missing_end_and_inverted_dates_answer_first(
+    client: TestClient, engine: Engine
+) -> None:
+    # Case C3-15.
+    october = _lucia_october(engine)
+    before = _snapshot(engine, october)
+    _enter_as(client, "Lucía")
+    limits = {SUPERMARKET: "300000", TRANSPORT: "80000"}
+
+    for end, code in ((None, "period_end_required"), ("2026-10-01", "period_dates_inverted")):
+        response = client.put(
+            f"/budget-periods/{october}",
+            content=_content(
+                engine, "2026-10-10", "1450000", limits, end=end, period_type="custom"
+            ),
+            headers=SAME_ORIGIN,
+        )
+
+        _assert_error(response, 422, code)
+        assert _snapshot(engine, october) == before

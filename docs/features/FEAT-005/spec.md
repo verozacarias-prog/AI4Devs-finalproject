@@ -1116,7 +1116,8 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 
 - **Aprobado por:** Veronica Zacarias 01/11/2026
 - **C3-13, sumado por un monto que cambiaba al editarlo:** Veronica Zacarias 01/11/2026
-- **Total:** 13 casos, 5 de integración y 8 de componente.
+- **C3-14 y C3-15, sumados por lo que encontró `/spec-drift`: ** Veronica Zacarias 01/11/2026
+- **Total:** 15 casos, 7 de integración y 8 de componente.
 
 Cubre lo que cada pedido deja en los registros, la moneda de cada monto y la accesibilidad del
 formulario. El contraste se anota en la lista de accesibilidad del
@@ -1141,6 +1142,8 @@ cambiar lo que comprueban.
 | C3-11 | **Pantalla.** Al quitar un tope, el foco va al selector del tope nuevo | Componente | Accesibilidad |
 | C3-12 | **Pantalla.** Un tope nuevo sin monto se anuncia y marca el campo | Componente | Accesibilidad |
 | C3-13 | **Pantalla.** Editar sin tocar un monto no lo cambia | Componente | CA-5 y C2-60 |
+| C3-14 | Todo error de un cambio dice su período, y todo error de un tope dice su categoría | Integración | Operación 6.3 |
+| C3-15 | En un confirmado, el fin que falta y las fechas invertidas se responden primero | Integración | Validaciones 4 y 5 y pregunta abierta 12 |
 
 #### C3-01 · Los registros no llevan montos ni nombres
 
@@ -1264,6 +1267,35 @@ cambiar lo que comprueban.
   pide `PUT /budget-periods/{period_id}` con `"999999999999999999.99"` y `"1234567890123456.78"`,
   sin que cambie ninguna cifra. El contrato de la API no cambia.
 - **Test:** `src/pages/BudgetPeriodFormPage.test.tsx` › "case C3-13: editing without touching an amount does not change it"
+
+#### C3-14 · Todo error de un cambio dice su período, y todo error de un tope dice su categoría
+
+- **Sale de:** [Operación 6.3](../../operacion.md#63-registros) · **Tipo:** integración
+- **Estado:** nuevo, sin aprobar
+- **Dado** los datos del corte 2 y un borrador de Lucía,
+- **cuando** lo cambia, en pedidos separados, a personalizado sin fin, con la moneda `ZZZ`, con un
+  ingreso negativo, con un tope de 0 sobre Supermercado, con dos topes sobre Supermercado, con un
+  tope de `1000000000000000000` sobre Supermercado, y con fechas que la base rechaza por
+  superponerse,
+- **entonces** cada pedido deja una línea `error.expected` con su `error_code`,
+  `period_end_required`, `currency_not_found`, `estimated_income_negative`,
+  `budget_limit_not_positive`, `budget_category_repeated`, `amount_too_large` o
+  `budget_period_overlap`, y el `budget_period_id` del borrador; y las tres por un tope llevan
+  además el `category_id` de Supermercado.
+- **Test:** `tests/integration/test_budget_planning.py::test_every_error_changing_a_period_says_which_period_and_every_error_on_a_limit_which_category`
+
+#### C3-15 · En un confirmado, el fin que falta y las fechas invertidas se responden primero
+
+- **Sale de:** validaciones 4 y 5 de [la API](../../04-api.md) y la
+  [pregunta abierta 12](#preguntas-abiertas) · **Tipo:** integración
+- **Estado:** nuevo, sin aprobar
+- **Dado** el período actual de Lucía, confirmado y mensual,
+- **cuando** pide `PUT /budget-periods/{period_id}` como personalizado sin `period_end`, y después
+  como personalizado con un `period_end` anterior a su `period_start`,
+- **entonces** responde `422` con `period_end_required` y con `period_dates_inverted`, y no
+  `confirmed_period_fixed`, y el período no cambia. Otro inicio u otro fin de un mensual siguen
+  respondiendo `confirmed_period_fixed`, como en C2-07.
+- **Test:** `tests/integration/test_budget_planning.py::test_in_a_confirmed_period_a_missing_end_and_inverted_dates_answer_first`
 
 ## Estados de pantalla
 
