@@ -146,13 +146,13 @@ test('case C1-24: a new period comes as a copy of the last one', async () => {
   await ready()
   expect(field('Cadencia').value).toBe('monthly')
   expect(field('Moneda').value).toBe('ARS')
-  expect(field('Ingreso estimado').value).toBe('1450000.5')
+  expect(field('Ingreso estimado').value).toBe('1.450.000,5')
   expect(field('Inicio').value).toBe('2026-11-10')
   expect(field('Fin').value).toBe('')
   expect(within(limitRows()[0]).getByRole('rowheader').textContent).toBe('Supermercado')
-  expect(field('Monto del tope 1').value).toBe('300000')
+  expect(field('Monto del tope 1').value).toBe('300.000')
   expect(within(limitRows()[1]).getByRole('rowheader').textContent).toBe('Transporte')
-  expect(field('Monto del tope 2').value).toBe('80000')
+  expect(field('Monto del tope 2').value).toBe('80.000')
 })
 
 test('case C1-25: the last one is the individual one that starts latest even a draft', async () => {
@@ -163,7 +163,7 @@ test('case C1-25: the last one is the individual one that starts latest even a d
 
   await ready()
   expect(field('Inicio').value).toBe('2026-12-10')
-  expect(field('Ingreso estimado').value).toBe('1500000')
+  expect(field('Ingreso estimado').value).toBe('1.500.000')
 })
 
 test('case C1-26: without a previous period the form comes empty', async () => {
@@ -206,7 +206,7 @@ test('case C1-28: saving sends the amounts as text with their cents', async () =
 
   await ready()
   type('Ingreso estimado', '1450000,55')
-  type('Monto del tope 1', '320000.10')
+  type('Monto del tope 1', '320.000,10')
   save()
 
   await screen.findByText('El período quedó guardado.')
@@ -643,7 +643,7 @@ test('case C2-48: the limits are loaded with a single dropdown and go into a tab
 })
 
 test.each(['Ingreso estimado', 'Monto del tope nuevo', 'Monto del tope 1'])(
-  'case C2-49: the amount fields take only digits and one decimal separator (%s)',
+  'case C2-49: the amount fields take digits thousands points and one decimal comma (%s)',
   async (label) => {
     apiWith([OCTOBER])
 
@@ -654,12 +654,38 @@ test.each(['Ingreso estimado', 'Monto del tope nuevo', 'Monto del tope 1'])(
       ['12a', '12'],
       ['-500', '500'],
       ['1e30', '130'],
-      ['1450000,55', '1450000,55'],
-      ['1.450.000', '1.450000'],
+      ['11.000', '11.000'],
+      ['1.450.000,55', '1.450.000,55'],
+      ['1,5,5', '1,55'],
     ]) {
       type(label, written)
       expect(field(label).value).toBe(kept)
     }
-    expect(screen.getAllByText('Sin puntos de miles. Para los centavos usá coma: 1450000,55')).toHaveLength(2)
+    expect(screen.getAllByText('Usá punto para los miles y coma para los centavos: 1.450.000,55')).toHaveLength(2)
   },
 )
+
+test('case C2-49: an amount is sent without points and with a decimal point', async () => {
+  apiWith([OCTOBER])
+  const bodies = saving(NOVEMBER)
+
+  renderForm()
+
+  await ready()
+  expect(field('Ingreso estimado').value).toBe('1.450.000,5')
+  type('Ingreso estimado', '1.450.000,55')
+  type('Monto del tope 1', '11.000')
+  type('Monto del tope nuevo', '40.000,10')
+  addLimit()
+  save()
+
+  await screen.findByText('El período quedó guardado.')
+  expect(bodies[0]).toMatchObject({
+    estimated_income: '1450000.55',
+    budgets: [
+      { category_id: SUPERMERCADO, limit_amount: '11000' },
+      { category_id: TRANSPORTE, limit_amount: '80000' },
+      { category_id: SALUD, limit_amount: '40000.10' },
+    ],
+  })
+})
