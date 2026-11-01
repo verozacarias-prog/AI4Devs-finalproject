@@ -1,7 +1,7 @@
 # Especificación — FEAT-005 · Armar y confirmar el presupuesto de un período
 
 - **Historia de usuario:** [HU2](../../05-historias-de-usuario.md)
-- **Estado:** borrador
+- **Estado:** aprobada para los cortes 1, 2 y 3
 - **Fecha:** 2026-10-29
 
 ## Alcance
@@ -62,7 +62,7 @@ El usuario arma el presupuesto de un período, que queda en borrador hasta que l
 ### Las categorías y el formulario
 
 - **CA-12.** Para elegir a qué categorías ponerles tope, el usuario ve sus categorías de gasto, las del catálogo base y las propias, por nombre y sin distinguir mayúsculas. No ve las de ingreso ni las propias de otro usuario.
-- **CA-13.** Un período nuevo arranca como copia del último del usuario, que puede cambiar antes de guardar ([reglas de dominio § 3](../../reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)), con el inicio sugerido el día después del fin de ese período. El último es el período individual que empieza más tarde, aunque sea un borrador, decidido por Vero el 29 de octubre de 2026. En un mensual el fin lo calcula la API; en un quincenal queda vacío, porque se indica siempre. Sin un período anterior, el formulario viene vacío. Lo hace la pantalla con `GET /budget-periods`, sin regla nueva en el backend.
+- **CA-13.** Un período nuevo arranca como copia del último del usuario, que puede cambiar antes de guardar ([reglas de dominio § 3](../../reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)), con el inicio sugerido el día después del fin de ese período. El último es el período individual que empieza más tarde, aunque sea un borrador, decidido por Vero el 29 de octubre de 2026. En un mensual y en un quincenal el fin lo calcula la API, y el formulario no lo pide. Sin un período anterior, el formulario viene vacío. Lo hace la pantalla con `GET /budget-periods`, sin regla nueva en el backend.
 - **CA-14.** Un tope va solo sobre una categoría de gasto: sobre una de ingreso, el período no se guarda.
 - **CA-17.** La moneda del período se elige de una lista con las monedas del catálogo, no se escribe. Una moneda que no está en el catálogo no se guarda. Decidido por Vero el 31 de octubre de 2026.
 
@@ -1116,7 +1116,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 
 - **Aprobado por:** Veronica Zacarias 01/11/2026
 - **C3-13, sumado por un monto que cambiaba al editarlo:** Veronica Zacarias 01/11/2026
-- **C3-14 y C3-15, sumados por lo que encontró `/spec-drift`: ** Veronica Zacarias 01/11/2026
+- **C3-14 y C3-15, sumados por lo que encontró `/spec-drift`:** Veronica Zacarias 01/11/2026
 - **Total:** 15 casos, 7 de integración y 8 de componente.
 
 Cubre lo que cada pedido deja en los registros, la moneda de cada monto y la accesibilidad del

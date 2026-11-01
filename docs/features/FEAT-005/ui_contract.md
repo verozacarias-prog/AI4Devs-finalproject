@@ -3,7 +3,7 @@
 - **Historia de usuario:** [HU2](../../05-historias-de-usuario.md)
 - **Especificación:** [spec.md](spec.md)
 - **Se escribe:** antes de la pantalla del corte 1, junto con sus casos de componente.
-- **Estado:** borrador.
+- **Estado:** aprobado para los cortes 1, 2 y 3.
 
 Sigue la forma del [contrato de la pantalla de presupuesto](../FEAT-004/ui_contract.md).
 
@@ -75,4 +75,4 @@ Sin sesión no es un estado de esta pantalla: un `401` vuelve a la entrada.
 
 El último período es el individual que empieza más tarde, aunque sea un borrador (CA-13).
 
-Los casos de componente, también los de la precarga, se proponen cuando la pantalla esté armada.
+Los casos de componente, también los de la precarga, están en la [especificación](spec.md#casos-de-prueba).
