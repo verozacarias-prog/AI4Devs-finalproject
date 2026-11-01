@@ -469,6 +469,7 @@ no es miembro de ningún grupo, y hoy es 29 de octubre de 2026.
 - **C2-39 a C2-45, sumados al cerrar el corte:** Veronica Zacarias 01/11/2026
 - **C2-46 a C2-48, sumados al probar a mano:** Veronica Zacarias 01/11/2026
 - **C2-49, sumado al probar a mano:** Veronica Zacarias 01/11/2026
+- **C2-49, cambiado al probar a mano:** Veronica Zacarias 01/11/2026
 
 Entran las validaciones de [la API](../../04-api.md), en su orden: el período de otro usuario,
 `404`; el período de un grupo para un miembro que no es el dueño, `403`
@@ -545,7 +546,7 @@ categoría que no existe termina en `500`, porque la base rechaza la referencia,
 | C2-46 | **Pantalla.** Si las fechas se superponen, el aviso muestra los otros períodos | Componente | el contrato de UI |
 | C2-47 | **Pantalla.** El resumen separa crear un período de ver los existentes | Componente | el contrato de UI |
 | C2-48 | **Pantalla.** Los topes se cargan con un solo dropdown y se agregan a una tabla | Componente | el contrato de UI |
-| C2-49 | **Pantalla.** Los campos de monto aceptan solo cifras y un separador decimal | Componente | el contrato de UI |
+| C2-49 | **Pantalla.** Los campos de monto aceptan cifras, puntos de miles y una coma decimal | Componente | el contrato de UI |
 
 #### C2-01 · Cambiar o confirmar un período que no existe responde que no existe
 
@@ -968,14 +969,14 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 - **entonces** los topes copiados vienen como filas de una tabla, con el monto editable y "Quitar" en cada una; hay un solo dropdown, que ofrece solo las categorías sin tope; sin monto no se suma y lo dice; al quitar Transporte vuelve al dropdown; al sumar Salud, "Ya tienen tope todas tus categorías" aparece solo si no queda ninguna; y se pide guardar con los topes de la tabla. Decidido por Vero el 1 de noviembre de 2026.
 - **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::the limits are loaded with a single dropdown and go into a table`
 
-#### C2-49 · Los campos de monto aceptan solo cifras y un separador decimal
+#### C2-49 · Los campos de monto aceptan cifras, puntos de miles y una coma decimal
 
 - **Sale de:** el contrato de UI · **Tipo:** componente
-- **Estado:** nuevo, aprobado
+- **Estado:** cambiado, aprobado: el punto es de miles y la coma de los centavos, separadores parametrizables
 - **Dado** Lucía con el formulario abierto,
-- **cuando** escribe en el ingreso estimado, en el monto del tope nuevo y en el monto de una fila `12a`, `-500`, `1e30`, `1450000,55` y `1.450.000`,
-- **entonces** quedan `12`, `500`, `130`, `1450000,55` y `1.450000`: letras, signos y un segundo separador no se escriben, y debajo del ingreso y de los topes se ve "Sin puntos de miles. Para los centavos usá coma: 1450000,55". Decidido por Vero el 1 de noviembre de 2026.
-- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::the amount fields take only digits and one decimal separator`
+- **cuando** escribe en el ingreso estimado, en el monto del tope nuevo y en el monto de una fila `12a`, `-500`, `1e30`, `11.000`, `1.450.000,55` y `1,5,5`, guarda un monto y abre uno que llega de la API,
+- **entonces** quedan `12`, `500`, `130`, `11.000`, `1.450.000,55` y `1,55`: letras, signos y una segunda coma no se escriben. Se pide guardar sin los puntos y con punto decimal, como `1450000.55`, y un monto que llega de la API se muestra igual, como `1.450.000,5`. Debajo del ingreso y de los topes se ve "Usá punto para los miles y coma para los centavos: 1.450.000,55". Decidido por Vero el 1 de noviembre de 2026.
+- **Test:** `frontend/src/pages/BudgetPeriodFormPage.test.tsx::the amount fields take digits thousands points and one decimal comma` y `frontend/src/pages/BudgetPeriodFormPage.test.tsx::an amount is sent without points and with a decimal point`
 
 ### Corte 3 — observabilidad y accesibilidad
 

@@ -94,6 +94,10 @@ de dos formas: conversando con Platita, como hoy, y desde el dashboard, al armar
 segundo necesita un endpoint nuevo y va después de terminar la HU2. Decidido por Vero el 1 de
 noviembre de 2026.
 
+**El formato de los montos queda listo para configurarse.** Hoy el punto separa los miles y la coma
+los centavos, como parámetros del dashboard. Cuando exista una sección de configuración del usuario,
+se va a poder elegir ahí; todavía no tiene fecha. Decidido por Vero el 1 de noviembre de 2026.
+
 Pasa a una segunda versión, con su diseño ya escrito en `docs/`: el adaptador de WhatsApp, el
 login por código, los números habilitados y el alta conversacional; los consejos con RAG y la
 base de conocimiento; los grupos familiares y la elección entre el presupuesto individual y el

@@ -18,7 +18,7 @@ Sigue la forma del [contrato de la pantalla de presupuesto](../FEAT-004/ui_contr
 | Cadencia, moneda y categoría de un tope nuevo | Nuevos, sobre un `select` nativo | Como el selector de período de la FEAT-004: shadcn/ui no tiene uno instalado. La moneda se elige del catálogo, con su código y su nombre, y no se escribe (CA-17). Decidido por Vero el 31 de octubre de 2026 |
 | Tabla de topes | Nueva, en `BudgetPeriodFormPage` | Un solo dropdown y un monto para sumar un tope, que ofrece solo las categorías sin tope. Cada tope es una fila con su categoría, su monto editable y "Quitar". Decidido por Vero el 1 de noviembre de 2026 |
 | Fecha de inicio y de fin | Nuevos, sobre un `input type="date"` nativo | El fin es optativo en un período mensual: vacío, lo calcula el backend |
-| Montos | Nuevos, sobre un `input` de texto con `inputMode="decimal"` | El ingreso y cada tope viajan como texto decimal, nunca como `number` de JavaScript. Aceptan solo cifras y un separador decimal, con el aviso "Sin puntos de miles. Para los centavos usá coma: 1450000,55". Decidido por Vero el 1 de noviembre de 2026 |
+| Montos | Nuevos, sobre un `input` de texto con `inputMode="decimal"` | El ingreso y cada tope viajan como texto decimal, nunca como `number` de JavaScript. Aceptan cifras, puntos de miles y una coma decimal, con el aviso "Usá punto para los miles y coma para los centavos: 1.450.000,55". Los separadores son parámetros, para que después los elija el usuario. Decidido por Vero el 1 de noviembre de 2026 |
 | Línea de estado (`role="status"`) | Existe, como en las otras pantallas | Anuncia la carga, el guardado y la confirmación |
 | Alerta de error (`role="alert"`) | Existe, como en las otras pantallas | El estado de error |
 
