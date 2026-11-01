@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Iterable, Sequence
+from datetime import date
 from decimal import Decimal
 
-from app.domain.entities.budget_period import BudgetPeriod, PeriodStatus
+from app.domain.entities.budget_period import BudgetPeriod, PeriodStatus, PeriodType
 from app.domain.entities.category import Category
 from app.domain.entities.transaction import TransactionType
 from app.domain.errors import ConflictError, ErrorCode, InvalidError, NotFoundError
@@ -17,18 +18,20 @@ _SMALLEST_LIMIT = Decimal("0.005")
 _TOO_LARGE = Decimal("999999999999999999.995")
 
 
-def check_confirmed_stays_fixed(stored: BudgetPeriod, changed: BudgetPeriod) -> None:
-    """A confirmed period changes only its estimated income and its limits (CA-10)."""
+def check_confirmed_stays_fixed(
+    stored: BudgetPeriod,
+    *,
+    period_type: PeriodType,
+    period_start: date,
+    indicated_end: date | None,
+    primary_currency: str,
+) -> None:
+    """A confirmed period changes only its estimated income and its limits (CA-10). An end that
+    was not given is not a change: it is the one of its cadence."""
     if stored.status is PeriodStatus.CONFIRMED and (
-        changed.period_type,
-        changed.period_start,
-        changed.period_end,
-        changed.primary_currency,
-    ) != (
-        stored.period_type,
-        stored.period_start,
-        stored.period_end,
-        stored.primary_currency,
+        (period_type, period_start, primary_currency)
+        != (stored.period_type, stored.period_start, stored.primary_currency)
+        or indicated_end not in (None, stored.period_end)
     ):
         raise ConflictError(ErrorCode.CONFIRMED_PERIOD_FIXED)
 

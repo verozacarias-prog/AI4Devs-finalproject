@@ -54,6 +54,13 @@ class UpdateBudgetPeriod:
             user = find_user(unit_of_work, user_id)
             memberships = unit_of_work.family_groups.list_memberships(user_id)
             period = editable_period(unit_of_work, user, period_id, memberships)
+            check_confirmed_stays_fixed(
+                period,
+                period_type=content.period_type,
+                period_start=content.period_start,
+                indicated_end=content.period_end,
+                primary_currency=content.primary_currency,
+            )
             changed = replace(
                 period,
                 period_type=content.period_type,
@@ -64,7 +71,6 @@ class UpdateBudgetPeriod:
                 primary_currency=content.primary_currency,
                 estimated_income=content.estimated_income,
             )
-            check_confirmed_stays_fixed(period, changed)
             group_ids = {period.family_group_id} if period.family_group_id is not None else set()
             check_no_overlap(changed, unit_of_work.budget_periods.list_owned_by(user_id, group_ids))
             check_content(unit_of_work, user_id, content)

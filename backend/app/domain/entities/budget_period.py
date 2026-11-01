@@ -11,6 +11,7 @@ from enum import StrEnum
 class PeriodType(StrEnum):
     MONTHLY = "monthly"
     BIWEEKLY = "biweekly"
+    CUSTOM = "custom"
 
 
 class PeriodStatus(StrEnum):
@@ -42,15 +43,16 @@ def first_period(
 ) -> BudgetPeriod:
     """The period a user or a group is born with (domain rules, § 3 and § 10).
 
-    Already confirmed, because it already started: monthly, with no estimated income and no
-    limits, from today to the last day of this month.
+    Already confirmed, because it already started, with no estimated income and no limits, from
+    today to the last day of this month: monthly when today is the first, custom otherwise,
+    because it does not last a month.
     """
     last_day = calendar.monthrange(today.year, today.month)[1]
     return BudgetPeriod(
         id=uuid.uuid4(),
         user_id=user_id,
         family_group_id=family_group_id,
-        period_type=PeriodType.MONTHLY,
+        period_type=PeriodType.MONTHLY if today.day == 1 else PeriodType.CUSTOM,
         period_start=today,
         period_end=today.replace(day=last_day),
         primary_currency=currency,

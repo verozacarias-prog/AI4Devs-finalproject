@@ -174,7 +174,10 @@ PERIOD_GROUP_ID = "The group the period belongs to, or null in an individual per
 PERIOD_GROUP_NAME = (
     "The name of the group, to tell the budgets apart, or null in an individual one."
 )
-PERIOD_TYPE = "`monthly` or `biweekly`."
+PERIOD_TYPE = (
+    "`monthly`, which lasts a month; `biweekly`, the fortnight of the calendar; or `custom`, "
+    "which ends on the day given."
+)
 PERIOD_START = "The first day of the period."
 PERIOD_END = "The last day of the period, included."
 PERIOD_STATUS = "`draft` while it is being built, `confirmed` once it can receive movements."
@@ -196,7 +199,8 @@ BUDGET_LIMIT = "The limit, in the currency of the period."
 CREATE_PERIOD_SUMMARY = "Build a budget period"
 CREATE_PERIOD_DESCRIPTION = (
     "A draft of an individual period of the user of the session, with its limits. A monthly "
-    "period without `period_end` ends the day before the same day of the next month. Each "
+    "period ends the day before the same day of the next month, and a biweekly one starts on "
+    "the 1st or the 16th and ends on the 15th or the last day of the month. Each "
     "amount is accepted as a JSON number or as a decimal text, and kept exact."
 )
 CREATE_PERIOD_CREATED = "The draft, whole, in the same shape as an item of the list."
@@ -236,7 +240,8 @@ CONFIRM_PERIOD_DESCRIPTION = (
 CONFIRM_PERIOD_OK = "The period, confirmed, in the same shape as an item of the list."
 PERIOD_CONTENT_BUDGETS = "The limits of the period, one per category."
 PERIOD_CONTENT_END = (
-    "The last day of the period, included. Optional in a monthly period, where it is computed."
+    "The last day of the period, included. Required in a custom period. In a monthly or a "
+    "biweekly one it is computed, and if it comes it has to be that day."
 )
 PERIOD_SUMMARY_SUMMARY = "Read the summary of a period"
 PERIOD_SUMMARY_DESCRIPTION = (

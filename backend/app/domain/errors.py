@@ -58,6 +58,8 @@ class ErrorCode(StrEnum):
     NOT_THE_OWNER = "not_the_owner"
     PERIOD_END_REQUIRED = "period_end_required"
     PERIOD_DATES_INVERTED = "period_dates_inverted"
+    PERIOD_END_NOT_MATCHING = "period_end_not_matching"
+    BIWEEKLY_START_INVALID = "biweekly_start_invalid"
     CONFIRMED_PERIOD_FIXED = "confirmed_period_fixed"
     BUDGET_PERIOD_OVERLAP = "budget_period_overlap"
     BUDGET_LIMIT_NOT_POSITIVE = "budget_limit_not_positive"

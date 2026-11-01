@@ -71,12 +71,15 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
   const [formPeriodId, setFormPeriodId] = useState<string | null | undefined>(undefined)
   // The period to show when the list arrives again, after the form saved one.
   const reopen = useRef<string | null>(null)
+  // Whether what failed was the list, even with an older one in hand: retrying repeats that.
+  const listFailed = useRef(false)
 
   useEffect(() => {
     const abandon = new AbortController()
     void loadBudgetPeriods({ timeoutMs, signal: abandon.signal }).then((loaded) => {
       if (abandon.signal.aborted || loaded.kind === 'cancelled') return
       if (loaded.kind === 'no-session') return onNoSession()
+      listFailed.current = loaded.kind !== 'loaded'
       if (loaded.kind !== 'loaded') return setView({ kind: 'error', cause: loaded.kind })
       setPeriods(loaded.value)
       if (loaded.value.length === 0) return setView({ kind: 'no-periods' })
@@ -122,7 +125,7 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
 
   function retry() {
     setView({ kind: 'loading' })
-    if (periods === null) setPeriodsAttempt((current) => current + 1)
+    if (listFailed.current) setPeriodsAttempt((current) => current + 1)
     else setViewAttempt((current) => current + 1)
     statusLine.current?.focus()
   }
@@ -130,6 +133,8 @@ export function BudgetPage({ onNoSession, timeoutMs }: Props) {
   function closeForm(saved: string | null) {
     setFormPeriodId(undefined)
     reopen.current = saved ?? periodId
+    // No period is shown until the list arrives: a summary answered meanwhile would hide its failure.
+    setPeriodId(null)
     setView({ kind: 'loading' })
     setShowing({ kind: 'summary' })
     setPeriodsAttempt((current) => current + 1)

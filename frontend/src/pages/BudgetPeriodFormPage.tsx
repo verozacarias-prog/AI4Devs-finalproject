@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardTitle } from '@/components/ui/card'
-import { amountForApi, amountFromApi, amountText } from '@/lib/amount-text'
+import { amountForApi, amountFromApi, amountText, thousandsAreWellPlaced } from '@/lib/amount-text'
 import { formatAmount, formatDate } from '@/lib/budget-format'
 import { lastIndividualPeriod, nextPeriodStart } from '@/lib/next-period'
 import {
@@ -49,6 +49,7 @@ type Problem =
   | { kind: 'save'; cause: ErrorCause }
   | { kind: 'confirm'; cause: ErrorCause }
   | { kind: 'refused'; code: string }
+  | { kind: 'amount' }
 
 const TEXT = MESSAGES.budgetForm
 const CONTROL =
@@ -122,6 +123,8 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
   }
 
   function send() {
+    const amounts = [fields.income, ...fields.limits.map((limit) => limit.amount)]
+    if (!amounts.every((amount) => thousandsAreWellPlaced(amount))) return setProblem({ kind: 'amount' })
     setWorking('save')
     setProblem(null)
     void savePeriod(contentOf(fields), period?.id ?? null, { timeoutMs }).then((saved) =>
@@ -178,6 +181,7 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
                 >
                   <option value="monthly">{TEXT.cadences.monthly}</option>
                   <option value="biweekly">{TEXT.cadences.biweekly}</option>
+                  <option value="custom">{TEXT.cadences.custom}</option>
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-sm font-medium">
@@ -208,24 +212,19 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
                   className={CONTROL}
                 />
               </label>
-              <div className="flex flex-col gap-1">
+              {fields.periodType === 'custom' && (
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   {TEXT.end}
                   <input
                     type="date"
                     value={fields.end}
+                    required
                     disabled={fixed}
-                    aria-describedby="period-end-hint"
                     onChange={(event) => setFields({ ...fields, end: event.target.value })}
                     className={CONTROL}
                   />
                 </label>
-                {fields.periodType === 'monthly' && !fixed && (
-                  <span id="period-end-hint" className="text-xs text-muted-foreground">
-                    {TEXT.endHint}
-                  </span>
-                )}
-              </div>
+              )}
               <div className="flex flex-col gap-1">
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   {TEXT.income}
@@ -246,7 +245,11 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
             <Limits
               limits={fields.limits}
               options={options}
-              onChange={(limits) => setFields({ ...fields, limits })}
+              onChange={(limits) => {
+                setFields({ ...fields, limits })
+                if (problem?.kind === 'amount') setProblem(null)
+              }}
+              onAmountNotReadable={() => setProblem({ kind: 'amount' })}
             />
           </fieldset>
           {problem && <ProblemAlert problem={problem} others={otherPeriods(periods ?? [], period)} onRetry={retry} />}
@@ -303,10 +306,12 @@ function Limits({
   limits,
   options,
   onChange,
+  onAmountNotReadable,
 }: {
   limits: Limit[]
   options: { id: string; name: string }[]
   onChange: (limits: Limit[]) => void
+  onAmountNotReadable: () => void
 }) {
   const [chosenCategory, setChosenCategory] = useState('')
   const [newAmount, setNewAmount] = useState('')
@@ -327,6 +332,7 @@ function Limits({
   const add = () => {
     if (newAmount.trim() === '') return setAmountMissing(true)
     setAmountMissing(false)
+    if (!thousandsAreWellPlaced(newAmount)) return onAmountNotReadable()
     setNewAmount('')
     onChange([...limits, { key: crypto.randomUUID(), categoryId: newCategory, amount: newAmount }])
   }
@@ -471,8 +477,10 @@ function ProblemAlert({
   const showOthers = problem.kind === 'refused' && problem.code === API_ERROR_PERIOD_OVERLAP && others.length > 0
   return (
     <div role="alert" className="flex flex-col items-start gap-2">
-      {problem.kind === 'refused' ? (
-        <p className="font-semibold text-destructive">{refusalText(problem.code)}</p>
+      {problem.kind === 'refused' || problem.kind === 'amount' ? (
+        <p className="font-semibold text-destructive">
+          {problem.kind === 'refused' ? refusalText(problem.code) : TEXT.amountNotReadable}
+        </p>
       ) : (
         <>
           <p className="font-semibold text-destructive">{problem.kind === 'load' ? TEXT.loadFailed : TEXT.saveFailed}</p>
@@ -551,11 +559,14 @@ function limitsOf(period: BudgetPeriod): Limit[] {
 
 /**
  * A new period starts as a copy of the last individual one, the one that starts latest even if
- * it is a draft, from the day after it ends, with its end empty (CA-13).
+ * it is a draft, from the day after it ends, with its end empty. A custom one is a one-off, so
+ * after it a monthly one is suggested (CA-13).
  */
 function copyOfLast(periods: BudgetPeriod[]): Fields {
   const last = lastIndividualPeriod(periods)
-  return last ? { ...fieldsOf(last), start: nextPeriodStart(last), end: '' } : EMPTY_FIELDS
+  if (last === null) return EMPTY_FIELDS
+  const periodType = last.period_type === 'custom' ? 'monthly' : last.period_type
+  return { ...fieldsOf(last), periodType, start: nextPeriodStart(last), end: '' }
 }
 
 /** The other periods of the same owner: the ones the dates of this one can overlap. */
@@ -569,7 +580,8 @@ function contentOf(fields: Fields): PeriodContent {
   return {
     period_type: fields.periodType,
     period_start: fields.start,
-    period_end: fields.end === '' ? null : fields.end,
+    // Only a custom period says when it ends: the API computes the others.
+    period_end: fields.periodType === 'custom' && fields.end !== '' ? fields.end : null,
     primary_currency: fields.currency.trim(),
     estimated_income: amountForApi(fields.income),
     budgets: fields.limits.map((limit) => ({

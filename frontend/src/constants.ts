@@ -34,6 +34,10 @@ export const JSON_CONTENT_TYPE = 'application/json'
 export const AMOUNT_LOCALE = 'es-AR'
 // How a person writes an amount. A parameter, for the user to choose it in a future settings section.
 export const AMOUNT_SEPARATORS = { thousands: '.', decimal: ',' }
+// The API always takes a plain decimal text, whatever a person writes: 1450000.55.
+export const API_DECIMAL_POINT = '.'
+export const THOUSANDS_GROUP_SIZE = 3
+export const THOUSANDS_GROUP_BOUNDARY = /\B(?=(\d{3})+$)/g
 export const AMOUNT_DECIMALS = 2
 /** How the dashboard writes a calendar day, such as 9/10/2026. */
 export const DATE_LOCALE = 'es-AR'

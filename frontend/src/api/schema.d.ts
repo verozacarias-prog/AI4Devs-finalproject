@@ -59,7 +59,7 @@ export interface paths {
         put?: never;
         /**
          * Build a budget period
-         * @description A draft of an individual period of the user of the session, with its limits. A monthly period without `period_end` ends the day before the same day of the next month. Each amount is accepted as a JSON number or as a decimal text, and kept exact.
+         * @description A draft of an individual period of the user of the session, with its limits. A monthly period ends the day before the same day of the next month, and a biweekly one starts on the 1st or the 16th and ends on the 15th or the last day of the month. Each amount is accepted as a JSON number or as a decimal text, and kept exact.
          */
         post: operations["create_period_budget_periods_post"];
         delete?: never;
@@ -521,7 +521,7 @@ export interface components {
              * @description The first day of the period.
              */
             period_start: string;
-            /** @description `monthly` or `biweekly`. */
+            /** @description `monthly`, which lasts a month; `biweekly`, the fortnight of the calendar; or `custom`, which ends on the day given. */
             period_type: components["schemas"]["PeriodType"];
             /**
              * Primary Currency
@@ -553,7 +553,7 @@ export interface components {
             estimated_income: number | string;
             /**
              * Period End
-             * @description The last day of the period, included. Optional in a monthly period, where it is computed.
+             * @description The last day of the period, included. Required in a custom period. In a monthly or a biweekly one it is computed, and if it comes it has to be that day.
              */
             period_end?: string | null;
             /**
@@ -562,7 +562,7 @@ export interface components {
              * @description The first day of the period.
              */
             period_start: string;
-            /** @description `monthly` or `biweekly`. */
+            /** @description `monthly`, which lasts a month; `biweekly`, the fortnight of the calendar; or `custom`, which ends on the day given. */
             period_type: components["schemas"]["PeriodType"];
             /**
              * Primary Currency
@@ -744,7 +744,7 @@ export interface components {
             family_group_id?: string | null;
             /**
              * Period End
-             * @description The last day of the period, included. Optional in a monthly period, where it is computed.
+             * @description The last day of the period, included. Required in a custom period. In a monthly or a biweekly one it is computed, and if it comes it has to be that day.
              */
             period_end?: string | null;
             /**
@@ -753,7 +753,7 @@ export interface components {
              * @description The first day of the period.
              */
             period_start: string;
-            /** @description `monthly` or `biweekly`. */
+            /** @description `monthly`, which lasts a month; `biweekly`, the fortnight of the calendar; or `custom`, which ends on the day given. */
             period_type: components["schemas"]["PeriodType"];
             /**
              * Primary Currency
@@ -907,7 +907,7 @@ export interface components {
          * PeriodType
          * @enum {string}
          */
-        PeriodType: "monthly" | "biweekly";
+        PeriodType: "monthly" | "biweekly" | "custom";
         /**
          * ResponseKind
          * @description What kind of reply a message was (docs/03-modelo-de-datos.md, OUTBOUND_MESSAGE).

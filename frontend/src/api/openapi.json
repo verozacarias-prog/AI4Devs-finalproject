@@ -297,7 +297,7 @@
           },
           "period_type": {
             "$ref": "#/components/schemas/PeriodType",
-            "description": "`monthly` or `biweekly`."
+            "description": "`monthly`, which lasts a month; `biweekly`, the fortnight of the calendar; or `custom`, which ends on the day given."
           },
           "primary_currency": {
             "description": "The currency of the period, as an ISO 4217 code. What it spent is in it.",
@@ -376,7 +376,7 @@
                 "type": "null"
               }
             ],
-            "description": "The last day of the period, included. Optional in a monthly period, where it is computed.",
+            "description": "The last day of the period, included. Required in a custom period. In a monthly or a biweekly one it is computed, and if it comes it has to be that day.",
             "title": "Period End"
           },
           "period_start": {
@@ -387,7 +387,7 @@
           },
           "period_type": {
             "$ref": "#/components/schemas/PeriodType",
-            "description": "`monthly` or `biweekly`."
+            "description": "`monthly`, which lasts a month; `biweekly`, the fortnight of the calendar; or `custom`, which ends on the day given."
           },
           "primary_currency": {
             "description": "The currency of the period, as an ISO 4217 code. What it spent is in it.",
@@ -734,7 +734,7 @@
                 "type": "null"
               }
             ],
-            "description": "The last day of the period, included. Optional in a monthly period, where it is computed.",
+            "description": "The last day of the period, included. Required in a custom period. In a monthly or a biweekly one it is computed, and if it comes it has to be that day.",
             "title": "Period End"
           },
           "period_start": {
@@ -745,7 +745,7 @@
           },
           "period_type": {
             "$ref": "#/components/schemas/PeriodType",
-            "description": "`monthly` or `biweekly`."
+            "description": "`monthly`, which lasts a month; `biweekly`, the fortnight of the calendar; or `custom`, which ends on the day given."
           },
           "primary_currency": {
             "description": "The currency of the period, as an ISO 4217 code. What it spent is in it.",
@@ -1005,7 +1005,8 @@
       "PeriodType": {
         "enum": [
           "monthly",
-          "biweekly"
+          "biweekly",
+          "custom"
         ],
         "title": "PeriodType",
         "type": "string"
@@ -1193,7 +1194,7 @@
         ]
       },
       "post": {
-        "description": "A draft of an individual period of the user of the session, with its limits. A monthly period without `period_end` ends the day before the same day of the next month. Each amount is accepted as a JSON number or as a decimal text, and kept exact.",
+        "description": "A draft of an individual period of the user of the session, with its limits. A monthly period ends the day before the same day of the next month, and a biweekly one starts on the 1st or the 16th and ends on the 15th or the last day of the month. Each amount is accepted as a JSON number or as a decimal text, and kept exact.",
         "operationId": "create_period_budget_periods_post",
         "requestBody": {
           "content": {
