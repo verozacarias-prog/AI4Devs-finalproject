@@ -1,7 +1,8 @@
 """The personal links of the demo environment (ADR 0016, docs/04-api.md, issue #84).
 
-Cases 1 to 18 and 20 of the description of the pull request. Each test has a database of its
-own, runs the commands the way a person does and talks to the API the way the dashboard does.
+Cases 1 to 18, 20 and 30 to 32 of the description of the pull request. Each test has a database
+of its own, runs the commands the way a person does and talks to the API the way the dashboard
+does.
 """
 
 from __future__ import annotations
@@ -486,3 +487,60 @@ def test_only_outside_local_every_answer_demands_https(fresh_database_url: str) 
     for path in ("/healthz", "/a-route-that-does-not-exist"):
         assert "max-age=" in demo.get(path).headers["Strict-Transport-Security"]
         assert "Strict-Transport-Security" not in local.get(path).headers
+
+
+# Closing every session of a person
+
+
+def _close_every_session(client: TestClient) -> httpx2.Response:
+    return client.post(
+        "/auth/logout-all", headers=SAME_ORIGIN | {"Content-Type": "application/json"}
+    )
+
+
+def test_closing_every_session_ends_them_on_all_devices_and_clears_the_cookie(
+    fresh_database_url: str, client: TestClient
+) -> None:
+    # Case 30.
+    value = _create(fresh_database_url)
+    computer = client
+    phone = _client(fresh_database_url)
+    assert _accept(computer, value).status_code == 204
+    entered = _post(phone, access_token=value)
+    assert entered.status_code == 204
+    phone_cookie = entered.cookies[COOKIE]
+
+    response = _close_every_session(phone)
+
+    assert response.status_code == 204
+    cleared = response.headers["set-cookie"].lower()
+    assert cleared.startswith('__host-sid="";') or cleared.startswith("__host-sid=;")
+    assert "max-age=0" in cleared
+    assert computer.get("/me").status_code == 401
+    # The browser dropped the cookie; someone who kept the token cannot use it either.
+    phone.cookies.clear()
+    assert phone.get("/me", cookies={COOKIE: phone_cookie}).status_code == 401
+
+
+def test_closing_every_session_leaves_the_sessions_of_another_person_open(
+    fresh_database_url: str, client: TestClient
+) -> None:
+    # Case 31.
+    ana = client
+    pedro = _client(fresh_database_url)
+    assert _accept(ana, _create(fresh_database_url, "Ana")).status_code == 204
+    assert _accept(pedro, _create(fresh_database_url, "Pedro")).status_code == 204
+
+    assert _close_every_session(ana).status_code == 204
+
+    assert pedro.get("/me").json()["name"] == "Pedro"
+
+
+def test_closing_every_session_without_a_session_is_not_authenticated(
+    client: TestClient,
+) -> None:
+    # Case 32.
+    response = _close_every_session(client)
+
+    assert response.status_code == 401
+    assert response.json() == {"error": "unauthorized"}

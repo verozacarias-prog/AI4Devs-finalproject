@@ -1,7 +1,7 @@
 /**
  * Cases T-01 to T-06 of the task that brings Tailwind and shadcn/ui (ADR 0027): the side
  * menu of the dashboard. The whole dashboard is rendered, with the API simulated at the
- * network level. The cases are in the description of its pull request.
+ * network level. The cases are in the description of its pull request. Case 33 is of issue #84.
  */
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
@@ -170,6 +170,41 @@ test('case T-06: when closing the session fails, the menu stays and it says why'
   render(<App />)
   await menu()
   screen.getByRole('button', { name: 'Cerrar sesión' }).click()
+
+  const alert = await screen.findByRole('alert')
+  within(alert).getByText('No se pudo cerrar la sesión')
+  within(alert).getByText('La API respondió con un error.')
+  screen.getByRole('navigation', { name: 'Menú principal' })
+  expect(screen.queryByRole('button', { name: 'Entrar como Lucía' })).toBeNull()
+})
+
+test('case 33: closing every session brings back the entry, without the menu', async () => {
+  apiWithLuciaIn()
+  let closed = false
+  api.use(
+    http.get('*/me', () => (closed ? noSession() : HttpResponse.json(LUCIA))),
+    http.post('*/auth/logout-all', () => {
+      closed = true
+      return new HttpResponse(null, { status: 204 })
+    }),
+  )
+
+  render(<App />)
+  await menu()
+  ;(await screen.findByRole('button', { name: 'Cerrar todas las sesiones' })).click()
+
+  await screen.findByRole('button', { name: 'Entrar como Lucía' })
+  expect(closed).toBe(true)
+  expect(screen.queryByRole('navigation')).toBeNull()
+})
+
+test('case 33: when closing every session fails, the menu stays and it says why', async () => {
+  apiWithLuciaIn()
+  api.use(http.post('*/auth/logout-all', () => HttpResponse.json({ error: 'internal_error' }, { status: 500 })))
+
+  render(<App />)
+  await menu()
+  ;(await screen.findByRole('button', { name: 'Cerrar todas las sesiones' })).click()
 
   const alert = await screen.findByRole('alert')
   within(alert).getByText('No se pudo cerrar la sesión')
