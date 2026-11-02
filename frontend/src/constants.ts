@@ -44,6 +44,7 @@ export const TRAILING_ZEROS = /0+$/
 // The amounts of a budget period in the text of an answer. A quote inside a JSON text is always
 // escaped, so these keys cannot match inside a value written by a person.
 export const PERIOD_AMOUNT_NUMBERS = /"(estimated_income|limit_amount)"\s*:\s*(-?\d+(?:\.\d+)?)/g
+export const PERIOD_AMOUNT_AS_TEXT = '"$1":"$2"'
 export const AMOUNT_DECIMALS = 2
 /** How the dashboard writes a calendar day, such as 9/10/2026. */
 export const DATE_LOCALE = 'es-AR'

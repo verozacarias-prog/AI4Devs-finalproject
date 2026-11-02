@@ -1,6 +1,7 @@
 import {
   AMOUNT_SEPARATORS,
   API_DECIMAL_POINT,
+  PERIOD_AMOUNT_AS_TEXT,
   PERIOD_AMOUNT_NUMBERS,
   THOUSANDS_GROUP_BOUNDARY,
   THOUSANDS_GROUP_SIZE,
@@ -47,7 +48,7 @@ export function amountFromApi(amount: AmountDigits, separators: Separators = AMO
  * them as numbers with their exact digits, and a number of JavaScript cannot hold them all.
  */
 export function periodAmountsAsText(answer: string): string {
-  return answer.replace(PERIOD_AMOUNT_NUMBERS, '"$1":"$2"')
+  return answer.replace(PERIOD_AMOUNT_NUMBERS, PERIOD_AMOUNT_AS_TEXT)
 }
 
 function onlyDigits(text: string): string {
