@@ -16,7 +16,7 @@ aviso de prueba que se acepta la primera vez. Se quita junto con la entrada de d
 |---|---|---|
 | `Button` de shadcn/ui, del [ADR 0027](../../adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md) | Existe | Entrar como un usuario, Acepto, Cerrar sesión y Reintentar |
 | `Card` y `CardTitle`, del mismo ADR | Existen | La tarjeta, que no se dibuja hasta la primera respuesta: antes no se sabe si esta entrada existe en el entorno |
-| Línea de estado (`role="status"`) | Nueva en esta pantalla, y de acá la tomaron las demás | Anuncia cargando, la lista, la sesión abierta, vacío y el aviso, y recibe el foco cuando desaparece el botón que se apretó |
+| Línea de estado (`role="status"`) | Nueva en esta pantalla, y de acá la tomaron las demás | Anuncia cargando, la lista, la sesión abierta, vacío, el aviso y la sesión que terminó, y recibe el foco cuando desaparece el botón que se apretó |
 | Alerta de error (`role="alert"`) | Nueva en esta pantalla, y de acá la tomaron las demás | El estado de error y el enlace que ya no sirve |
 
 ## Tokens del Design System
@@ -43,12 +43,18 @@ Todos salen de `frontend/src/design-tokens.css`. Esta pantalla no suma ninguno.
 
 Con un enlace no hay estado vacío: el pedido termina en el aviso, en la cuenta o en un rechazo.
 
-Hay dos situaciones que no son estados de la pantalla:
+Hay tres situaciones que no son estados de la pantalla:
 
 - **Enlace que no sirve.** `POST /dev/session` responde `404`: se ve "Este enlace ya no sirve" y a
   quién pedirle otro, sin Reintentar, porque reintentar no lo arreglaría.
 - **Entrada que no existe acá.** Sin sesión y con `GET /dev/users` en `404`, como en `demo` sin un
   enlace: la tarjeta no se dibuja, y se ven la marca y el estado del sistema.
+- **Sesión que terminó después de entrar con un enlace.** La misma respuesta, en un navegador que
+  ya entró con un enlace: la tarjeta dice "Tu sesión terminó" y que hay que abrir de nuevo el
+  enlace personal, sin ningún botón. Pasa cuando la sesión vence, al recargar o al seguir usando
+  la app, y cuando la persona la cierra. El navegador guarda solo que entró con un enlace, nunca
+  el enlace. Sin esa marca, o si el navegador no deja guardarla, la pantalla es la de la entrada
+  que no existe: en `production` la respuesta es la misma, y ahí no hay enlace que abrir.
 
 El valor del enlace sale de la barra del navegador antes de que llegue ninguna respuesta. Si la
 página tiene una sesión de otra persona, gana el enlace. Esa sesión no se revoca y sigue vigente
@@ -92,4 +98,6 @@ versión nueva, `TEST_NOTICE_VERSION`, en `backend/app/test_data.py`.
 | `accept` | Acepto |
 | `linkRejected` | Este enlace ya no sirve |
 | `linkRejectedDetail` | Pedile uno nuevo a quien te lo mandó. |
+| `linkSessionEnded` | Tu sesión terminó |
+| `linkSessionEndedDetail` | Para volver a entrar, abrí de nuevo tu enlace personal. |
 | `failed` | No se pudo consultar la sesión |
