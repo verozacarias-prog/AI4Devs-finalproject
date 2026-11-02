@@ -168,7 +168,7 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
   return (
     <Card aria-labelledby="period-form-heading">
       <CardTitle ref={heading} id="period-form-heading" tabIndex={-1} className="text-xl outline-none">
-        {period ? TEXT.headingEdit : TEXT.headingNew}
+        {period || periodId !== null ? TEXT.headingEdit : TEXT.headingNew}
       </CardTitle>
       <p ref={statusLine} role="status" tabIndex={-1} className="text-sm text-muted-foreground outline-none empty:hidden">
         {statusText(view, working, problem, period)}
@@ -286,6 +286,8 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
               onClick={() => {
                 setProblem(null)
                 setView({ kind: 'editing' })
+                // The button just pressed goes away: the focus goes to what comes back.
+                heading.current?.focus()
               }}
             >
               {TEXT.edit}

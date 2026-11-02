@@ -19,9 +19,7 @@ def period_end(period_type: PeriodType, period_start: date, indicated_end: date 
     when the month lacks it, as in the recurring rules: one that starts on 31 January ends on 27
     February. A biweekly one is the fortnight of the calendar."""
     if period_type is PeriodType.CUSTOM:
-        if indicated_end is None:
-            raise InvalidError(ErrorCode.PERIOD_END_REQUIRED)
-        return indicated_end
+        return _required_end(indicated_end)
     if period_type is PeriodType.BIWEEKLY:
         return _fortnight_end(period_start)
     year, month = divmod(period_start.month, 12)
@@ -29,6 +27,17 @@ def period_end(period_type: PeriodType, period_start: date, indicated_end: date 
     last_day = calendar.monthrange(next_year, next_month)[1]
     same_day = date(next_year, next_month, min(period_start.day, last_day))
     return same_day - timedelta(days=1)
+
+
+def _required_end(indicated_end: date | None) -> date:
+    if indicated_end is None:
+        raise InvalidError(ErrorCode.PERIOD_END_REQUIRED)
+    return indicated_end
+
+
+def _check_not_inverted(period_start: date, indicated_end: date | None) -> None:
+    if indicated_end is not None and indicated_end < period_start:
+        raise InvalidError(ErrorCode.PERIOD_DATES_INVERTED)
 
 
 def _fortnight_end(period_start: date) -> date:
@@ -44,10 +53,9 @@ def check_dates_can_be_compared(
     period_type: PeriodType, period_start: date, indicated_end: date | None
 ) -> None:
     """Without an end, or with one before the start, there are no dates to compare with others."""
-    if period_type is PeriodType.CUSTOM and indicated_end is None:
-        raise InvalidError(ErrorCode.PERIOD_END_REQUIRED)
-    if indicated_end is not None and indicated_end < period_start:
-        raise InvalidError(ErrorCode.PERIOD_DATES_INVERTED)
+    if period_type is PeriodType.CUSTOM:
+        _required_end(indicated_end)
+    _check_not_inverted(period_start, indicated_end)
 
 
 def checked_period_end(
@@ -56,8 +64,7 @@ def checked_period_end(
     """The end of a period that is about to be saved: it does not end before it starts, and an
     end that was given has to be the one of its cadence (domain rules, § 3)."""
     end = period_end(period_type, period_start, indicated_end)
-    if indicated_end is not None and indicated_end < period_start:
-        raise InvalidError(ErrorCode.PERIOD_DATES_INVERTED)
+    _check_not_inverted(period_start, indicated_end)
     if indicated_end is not None and indicated_end != end:
         raise InvalidError(ErrorCode.PERIOD_END_NOT_MATCHING)
     return end

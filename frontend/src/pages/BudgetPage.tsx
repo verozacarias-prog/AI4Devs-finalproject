@@ -28,8 +28,9 @@ import { BudgetPeriodFormPage } from './BudgetPeriodFormPage'
 
 /**
  * The budget of a period: its incomes, what each category spent, and the movements of one
- * limit (FEAT-004). The screen only shows what the API computed: it adds nothing, converts
- * nothing and rounds nothing. The only thing it decides is the state of each bar.
+ * limit (FEAT-004). The screen only shows what the API computed: it adds nothing and converts
+ * nothing. It reads amounts as numbers, so a figure of some 16 digits or more is rounded on
+ * screen, and only there (FEAT-005). The only thing it decides is the state of each bar.
  */
 type View =
   | { kind: 'loading' }
