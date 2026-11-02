@@ -32,6 +32,12 @@ cualquier fila. La prohibición existía en la base pero no protegía nada. Lo s
    `DATABASE_URL`, así que no pueden detectar que tenga otra contraseña.
 4. **Vale igual en todos los entornos:** Compose y Render corren el mismo paso, solo cambia de
    dónde salen los valores. Los tests siguen conectándose con el dueño, porque crean y borran bases.
+5. **En Render, la conexión del dueño está en el servicio web, y la API arranca sin ella.** Render
+   le da las variables al servicio y no al paso previo al despliegue, así que la migración solo
+   las recibe si las tiene el servicio. El servicio web arranca la API con
+   `env -u MIGRATIONS_DATABASE_URL -u APPLICATION_DB_PASSWORD`, y el worker no las declara. Un
+   test sobre `render.yaml` comprueba las dos cosas. Vale para `demo`, que tiene datos de prueba,
+   y no es un precedente para `production`, que se decide aparte.
 
 ## Consecuencias
 
@@ -52,11 +58,15 @@ cualquier fila. La prohibición existía en la base pero no protegía nada. Lo s
 - Hay una variable más que cargar en cada entorno.
 - Una tabla nueva sin permisos para el rol no falla en los tests que se conectan como dueño. Por
   eso un test comprueba que toda tabla le dé permisos a `platita_app`.
-- El rol no frena a quien logre ejecutar código en el servidor. Si el paso previo al despliegue de
-  Render comparte las variables del servicio, ese proceso también puede leer la conexión del dueño.
+- El rol no frena a quien logre ejecutar código en el servidor. En Render, la conexión del dueño
+  está en el servicio web: la API arranca sin ella, pero no se sabe si otro proceso de Render la
+  conserva. Si existiera alguno, quien ejecute código ahí podría borrar tablas. En `demo` se
+  acepta, porque los datos son de prueba. Llevar la migración a un servicio aparte cuesta
+  US$7 por mes, y que esa migración falle no frena el despliegue del servicio web.
 - Quedan por verificar en el primer despliegue:
   - Que el usuario por defecto de Render Postgres pueda crear el rol y cambiarle la contraseña.
-  - Si el paso previo al despliegue comparte las variables del servicio.
+  - Que el paso previo al despliegue reciba las variables del servicio, y que la API arranque
+    sin la conexión del dueño.
   - Que `DATABASE_URL` use el rol: con la conexión del dueño, todo funcionaría y la prohibición de
     `DELETE` no protegería nada.
 

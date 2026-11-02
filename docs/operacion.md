@@ -251,7 +251,10 @@ obligatorios.
 **El pipeline no guarda secretos.** Render lee el repositorio desde GitHub y despliega solo
 cuando los checks pasaron, así que Actions no necesita ni una clave de despliegue ni un token de
 Render. Los secretos de ejecución viven únicamente en el Environment Group de Render. La clave
-privada que descifra las copias no está ni en Render ni en GitHub.
+privada que descifra las copias no está ni en Render ni en GitHub. Un grupo que comparten el
+servicio web y el worker le daría al worker la conexión del dueño de la base, que `demo` le
+niega: antes de `production` hay que decidir dónde va
+([ADR 0030](adr/0030-rol-de-la-aplicacion-en-la-base.md)).
 
 ```yaml
 # render.yaml, fragmento ilustrativo; verificar la sintaxis vigente del Blueprint.
