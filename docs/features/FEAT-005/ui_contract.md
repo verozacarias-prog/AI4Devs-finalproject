@@ -53,10 +53,10 @@ Sin sesión no es un estado de esta pantalla: un `401` vuelve a la entrada.
 - [x] Todo control es nativo y tiene nombre accesible, y el monto y "Quitar" de cada tope nombran su
   categoría (C3-06).
 - [x] El contraste cumple el mínimo de WCAG AA: 4,5:1 para el texto y 3:1 para el borde de un campo.
-  Se calculó cada color contra la tarjeta: el texto más bajo es el error en rojo, con 5,37:1, el
-  borde de un campo da 3,23:1 y el anillo de foco, 3,75:1.
-- [x] El formulario se puede operar solo con teclado: Tab llega a cada control, y Enter en el monto
-  de un tope nuevo lo suma, sin guardar el período (C3-06).
+  Se calculó cada color contra su fondo: el texto más bajo es el del botón primario, con 5,32:1, el
+  error en rojo da 5,37:1, el borde de un campo 3,23:1 y el anillo de foco 3,75:1.
+- [x] El formulario se puede operar solo con teclado: Tab llega a cada control (C3-06), y Enter en el
+  monto de un tope nuevo lo suma, sin guardar el período.
 - [x] Cada monto dice su moneda: al editar, al lado del campo y en su descripción accesible (C3-07),
   y en lo guardado, con el formato de la moneda (C3-08).
 - [x] El foco tiene a dónde ir en los pasos principales: al título al abrir el formulario y al volver

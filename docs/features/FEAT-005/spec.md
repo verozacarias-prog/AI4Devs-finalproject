@@ -1241,7 +1241,7 @@ cambiar lo que comprueban.
 - **Dado** el resumen de Lucía,
 - **cuando** aprieta "Armar un período", y después "Volver al resumen",
 - **entonces** el foco queda en el título "Armar un período", y después en "Tu presupuesto".
-- **Test:** `src/pages/BudgetPage.test.tsx` › "case C3-10: opening the form and coming back move the focus to the heading"
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C3-10 of FEAT-005: opening the form and coming back move the focus to the heading"
 
 #### C3-11 · Al quitar un tope, el foco va al selector del tope nuevo
 
@@ -1303,7 +1303,7 @@ cambiar lo que comprueban.
 #### C3-16 · Al apretar "Editar" en el resumen, el foco va a un título que dice "Editar"
 
 - **Sale de:** Accesibilidad · **Tipo:** componente
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** el resumen de Lucía, con un período que puede editar,
 - **cuando** aprieta "Editar", y el formulario todavía está cargando,
 - **entonces** el foco queda en el título "Editar el período", que sigue igual si la carga falla, y
@@ -1313,11 +1313,11 @@ cambiar lo que comprueban.
 #### C3-17 · Al apretar "Editar" en lo guardado, el foco va al título
 
 - **Sale de:** Accesibilidad · **Tipo:** componente
+- **Estado:** aprobado
 - **Dado** el formulario de Lucía, con un borrador recién guardado,
 - **cuando** aprieta "Editar",
 - **entonces** el botón desaparece, el foco queda en el título "Editar el período", y los campos
   vuelven a estar disponibles.
-- **Estado:** nuevo, sin aprobar
 - **Test:** `src/pages/BudgetPeriodFormPage.test.tsx` › "case C3-17: editing what was saved moves the focus to the heading"
 
 ## Estados de pantalla
@@ -1360,6 +1360,11 @@ Quedan sin resolver estas cosas, que no cambian ningún dato:
 - Un monto ilegible en el tope nuevo, como `1.5`, se avisa al pie del formulario, sin marcar el
   campo como inválido.
 - "Reintentar" pierde el foco: ver la [hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final).
+- Si falla un guardado o una confirmación, el foco puede perderse, porque el botón estaba
+  deshabilitado durante el pedido. La alerta se anuncia igual.
+- Enter en el monto de un tope nuevo lo suma sin guardar el período, y ningún caso lo prueba.
+- Un error raro al confirmar, como un rechazo de la base, no llevaría su `budget_period_id`. Hoy es
+  casi inalcanzable, porque confirmar no puede chocar con otro período.
 
 ## Fuera de alcance
 
