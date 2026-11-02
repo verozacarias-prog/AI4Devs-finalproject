@@ -207,6 +207,12 @@ El entorno `demo` no figura en los costos de [1](#1-qué-se-suma-a-la-arquitectu
 segunda instancia con su base, y cuesta US$20 por mes en Render
 ([ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md)).
 
+En `demo`, la migración corre solo antes del despliegue del servicio web. El worker se despliega
+a la vez y no la espera. Si la migración falla, el servicio web sigue en la versión anterior y el
+worker no: en Render, se vuelve el worker al último despliegue que funcionó con el botón
+*Rollback*, se corrige la migración y se despliega de nuevo. Un mensaje que falló mientras tanto
+puede terminar con su aviso de error, y la persona lo puede escribir otra vez.
+
 Un staging igual a producción no está al lanzamiento: duplicaría el costo, y el riesgo principal que cubriría, una
 migración que rompe, lo cubre la CI probando la migración desde el esquema de la versión
 anterior. Cuándo agregarlo está en [7](#7-cuándo-crecer).

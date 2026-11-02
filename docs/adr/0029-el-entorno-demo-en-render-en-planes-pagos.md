@@ -54,7 +54,10 @@ Los límites del plan gratuito de Render, verificados en su
    lo admite en servicios pagos y corre antes de cambiar la versión: si la migración falla, el
    despliegue se cancela y sigue la versión anterior
    ([despliegues](https://render.com/docs/deploys)). Es el equivalente del servicio de
-   migraciones de Compose: ni la API ni el worker migran al arrancar.
+   migraciones de Compose: ni la API ni el worker migran al arrancar. El paso previo está solo
+   en el servicio web. El worker se despliega a la vez y no espera la migración: no puede
+   correrla, porque serían dos migraciones al mismo tiempo y el worker tendría la conexión del
+   dueño de la base, y su rol no puede leer la revisión del esquema para esperarla.
 4. **Despliega la rama de la entrega, `final-project-VNZ`, después de que pasan los controles.**
    El despliegue automático usa la opción de Render que espera a que pasen los checks del
    commit. Los flujos de la aplicación ya corren por push en `final-project-*`.
@@ -85,8 +88,8 @@ Los límites del plan gratuito de Render, verificados en su
 
 - Quien evalúa recibe la respuesta del chat sin esperar a que el servicio despierte, y la base
   sigue ahí durante toda la evaluación, aunque haya prórroga.
-- El despliegue respeta la arquitectura: el worker sigue aparte y una migración que falla no
-  deja la aplicación a medias.
+- El despliegue respeta la arquitectura: el worker sigue aparte, y una migración que falla deja
+  el servicio web en la versión anterior.
 - Es la misma topología que la propuesta de producción, así que lo que se aprenda en `demo`
   sirve para ella.
 
@@ -96,6 +99,13 @@ Los límites del plan gratuito de Render, verificados en su
 - `demo` no tiene copia fuera de Render. Si se pierde la cuenta, se pierden los datos de prueba,
   y se vuelven a crear con los comandos de operación.
 - La recuperación a un punto en el tiempo de la base es la del workspace Hobby: 3 días.
+- Mientras el servicio web migra, el worker ya corre la versión nueva contra el esquema anterior:
+  un mensaje que llega en esos minutos puede fallar y reintentarse. Si la migración falla, el
+  worker se queda en la versión nueva hasta que se lo vuelva atrás a mano
+  ([operación](../operacion.md#2-entornos)). Se acepta porque en `demo` los datos son de prueba
+  y el daño es un mensaje que falla, no un dato roto. La otra salida, desplegar el worker a mano
+  después del servicio web, suma un paso a cada despliegue, y olvidarlo deja el worker anterior
+  contra el esquema nuevo.
 - Quedan por verificar en el primer despliegue:
   - Que 512 MB de memoria alcancen para la API y para el worker.
   - Que la migración del esquema pueda crear el rol `platita_app` en la base gestionada
