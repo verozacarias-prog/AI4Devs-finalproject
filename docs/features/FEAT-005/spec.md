@@ -1352,8 +1352,9 @@ Los pedidos simultáneos con fechas superpuestas quedaron cubiertos por C2-61.
 Quedan sin resolver estas cosas, que no cambian ningún dato:
 
 - Una cifra muy grande que la pantalla de presupuesto solo muestra se redondea, porque el resumen y
-  el detalle leen los montos como números de JavaScript. El formulario y lo guardado leen las
-  cifras exactas (C3-13).
+  el detalle leen los montos como números de JavaScript. Pasa desde unas 16 cifras, y el dato
+  guardado no cambia. El formulario y lo guardado leen las cifras exactas (C3-13). Decidido por Vero
+  el 1 de noviembre de 2026.
 - Al sumar el último tope disponible, el foco se pierde, porque desaparecen el selector, el monto y
   el botón.
 - Un monto ilegible en el tope nuevo, como `1.5`, se avisa al pie del formulario, sin marcar el
