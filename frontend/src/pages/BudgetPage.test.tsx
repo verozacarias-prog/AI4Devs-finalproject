@@ -1,6 +1,6 @@
 /**
  * Cases C1-26 to C1-37, C2-09 to C2-14 and C3-02 to C3-05 of FEAT-004 (docs/features/FEAT-004/spec.md), and
- * C1-23, C2-30, C2-31, C2-47 and C3-10 of FEAT-005 (docs/features/FEAT-005/spec.md): the four states of the budget screen. The API is simulated at the network level, so the page and its API calls are
+ * C1-23, C2-30, C2-31, C2-47, C3-10 and C3-16 of FEAT-005 (docs/features/FEAT-005/spec.md): the four states of the budget screen. The API is simulated at the network level, so the page and its API calls are
  * tested together.
  */
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
@@ -815,4 +815,24 @@ test('case C3-10 of FEAT-005: opening the form and coming back move the focus to
   fireEvent.click(await screen.findByRole('button', { name: 'Volver al resumen' }))
   const summaryHeading = await screen.findByRole('heading', { name: 'Tu presupuesto' })
   expect(document.activeElement).toBe(summaryHeading)
+})
+
+test('case C3-16 of FEAT-005: editing from the summary moves the focus to a heading that says so', async () => {
+  apiWith([CURRENT], { [CURRENT.id]: summary(CURRENT.id, LUCIA_CATEGORIES, 104756.04) })
+  api.use(
+    http.get('*/categories', () => new HttpResponse(null, { status: 500 })),
+    http.get('*/currencies', () => HttpResponse.json({ currencies: [] })),
+  )
+
+  render(<BudgetPage onNoSession={nothing} />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Editar' }))
+
+  // Still loading: nothing has been answered yet.
+  expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Editar el período' }))
+  expect(screen.queryByRole('heading', { name: 'Armar un período' })).toBeNull()
+
+  await screen.findByRole('alert')
+  expect(screen.getByRole('heading', { name: 'Editar el período' })).toBeTruthy()
+  expect(screen.queryByRole('heading', { name: 'Armar un período' })).toBeNull()
 })

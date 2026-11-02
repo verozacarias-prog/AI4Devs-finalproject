@@ -94,6 +94,11 @@ de dos formas: conversando con Platita, como hoy, y desde el dashboard, al armar
 segundo necesita un endpoint nuevo y va después de terminar la HU2. Decidido por Vero el 1 de
 noviembre de 2026.
 
+**La línea de estado oculta cuando está vacía, si queda tiempo.** Tiene `empty:hidden` en las
+pantallas de presupuesto, cuentas y chat. En presupuesto, "Reintentar" le pasa el foco cuando está
+vacía, y el foco se pierde; y algunos lectores de pantalla podrían no anunciar lo que aparece en
+ella. Los tests no lo detectan, porque no cargan los estilos.
+
 **El formato de los montos queda listo para configurarse.** Hoy el punto separa los miles y la coma
 los centavos, como parámetros del dashboard. Cuando exista una sección de configuración del usuario,
 se va a poder elegir ahí; todavía no tiene fecha. Decidido por Vero el 1 de noviembre de 2026.

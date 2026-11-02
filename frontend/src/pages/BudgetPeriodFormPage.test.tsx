@@ -1,5 +1,5 @@
 /**
- * Cases C1-22, C1-24 to C1-32, C2-32 to C2-38, C2-43, C2-45, C2-46, C2-48 to C2-52, C2-59, C3-06 to C3-09, C3-11 to C3-13 of FEAT-005 (docs/features/FEAT-005/spec.md): the states of the
+ * Cases C1-22, C1-24 to C1-32, C2-32 to C2-38, C2-43, C2-45, C2-46, C2-48 to C2-52, C2-59, C3-06 to C3-09, C3-11 to C3-13, C3-17 of FEAT-005 (docs/features/FEAT-005/spec.md): the states of the
  * form of a budget period. The API is simulated at the network level, so the page and its API calls are tested
  * together.
  */
@@ -1021,4 +1021,20 @@ test('case C3-13: editing without touching an amount does not change it', async 
     estimated_income: '999999999999999999.99',
     budgets: [{ category_id: SUPERMERCADO, limit_amount: '1234567890123456.78' }],
   })
+})
+
+test('case C3-17: editing what was saved moves the focus to the heading', async () => {
+  apiWith([OCTOBER])
+  saving(NOVEMBER)
+
+  renderForm()
+
+  await ready()
+  save()
+  await screen.findByText('El período quedó guardado.')
+  fireEvent.click(screen.getByRole('button', { name: 'Editar' }))
+
+  expect(screen.queryByRole('button', { name: 'Editar' })).toBeNull()
+  expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Editar el período' }))
+  expect(field('Ingreso estimado').disabled).toBe(false)
 })

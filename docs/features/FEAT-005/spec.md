@@ -477,7 +477,7 @@ Entran las validaciones de [la API](../../04-api.md), en su orden: el período d
 `404`; el período de un grupo para un miembro que no es el dueño, `403`
 (CA-16); la superposición con otro período del mismo dueño,
 `409` con `budget_period_overlap`; cambiar la cadencia, las fechas o la moneda de un período
-confirmado, `409` con `confirmed_period_fixed` (CA-10); un período quincenal sin fin, `422` con `period_end_required`
+confirmado, `409` con `confirmed_period_fixed` (CA-10); un período personalizado sin fin, `422` con `period_end_required`
 (CA-11); un tope sobre una categoría de ingreso, `422` con `budget_category_not_expense`
 (CA-14); un ingreso estimado negativo, `422` con `estimated_income_negative` (CA-15), y el `CHECK` que
 lo impide en la base, en una migración nueva (AGENTS.md § 8); y los tres `422` de fechas
@@ -1117,7 +1117,8 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 - **Aprobado por:** Veronica Zacarias 01/11/2026
 - **C3-13, sumado por un monto que cambiaba al editarlo:** Veronica Zacarias 01/11/2026
 - **C3-14 y C3-15, sumados por lo que encontró `/spec-drift`:** Veronica Zacarias 01/11/2026
-- **Total:** 15 casos, 7 de integración y 8 de componente.
+- **C3-16 y C3-17, sumados por lo que encontró `pr-reviewer`:** Veronica Zacarias 01/11/2026
+- **Total:** 17 casos, 7 de integración y 10 de componente.
 
 Cubre lo que cada pedido deja en los registros, la moneda de cada monto y la accesibilidad del
 formulario. El contraste se anota en la lista de accesibilidad del
@@ -1144,6 +1145,8 @@ cambiar lo que comprueban.
 | C3-13 | **Pantalla.** Editar sin tocar un monto no lo cambia | Componente | CA-5 y C2-60 |
 | C3-14 | Todo error de un cambio dice su período, y todo error de un tope dice su categoría | Integración | Operación 6.3 |
 | C3-15 | En un confirmado, el fin que falta y las fechas invertidas se responden primero | Integración | Validaciones 4 y 5 y pregunta abierta 12 |
+| C3-16 | **Pantalla.** Al apretar "Editar" en el resumen, el foco va a un título que dice "Editar" | Componente | Accesibilidad |
+| C3-17 | **Pantalla.** Al apretar "Editar" en lo guardado, el foco va al título | Componente | Accesibilidad |
 
 #### C3-01 · Los registros no llevan montos ni nombres
 
@@ -1271,7 +1274,7 @@ cambiar lo que comprueban.
 #### C3-14 · Todo error de un cambio dice su período, y todo error de un tope dice su categoría
 
 - **Sale de:** [Operación 6.3](../../operacion.md#63-registros) · **Tipo:** integración
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** los datos del corte 2 y un borrador de Lucía,
 - **cuando** lo cambia, en pedidos separados, a personalizado sin fin, con la moneda `ZZZ`, con un
   ingreso negativo, con un tope de 0 sobre Supermercado, con dos topes sobre Supermercado, con un
@@ -1288,7 +1291,7 @@ cambiar lo que comprueban.
 
 - **Sale de:** validaciones 4 y 5 de [la API](../../04-api.md) y la
   [pregunta abierta 12](#preguntas-abiertas) · **Tipo:** integración
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** el período actual de Lucía, confirmado y mensual,
 - **cuando** pide `PUT /budget-periods/{period_id}` como personalizado sin `period_end`, y después
   como personalizado con un `period_end` anterior a su `period_start`,
@@ -1296,6 +1299,26 @@ cambiar lo que comprueban.
   `confirmed_period_fixed`, y el período no cambia. Otro inicio u otro fin de un mensual siguen
   respondiendo `confirmed_period_fixed`, como en C2-07.
 - **Test:** `tests/integration/test_budget_planning.py::test_in_a_confirmed_period_a_missing_end_and_inverted_dates_answer_first`
+
+#### C3-16 · Al apretar "Editar" en el resumen, el foco va a un título que dice "Editar"
+
+- **Sale de:** Accesibilidad · **Tipo:** componente
+- **Estado:** nuevo, sin aprobar
+- **Dado** el resumen de Lucía, con un período que puede editar,
+- **cuando** aprieta "Editar", y el formulario todavía está cargando,
+- **entonces** el foco queda en el título "Editar el período", que sigue igual si la carga falla, y
+  nunca dice "Armar un período".
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C3-16 of FEAT-005: editing from the summary moves the focus to a heading that says so"
+
+#### C3-17 · Al apretar "Editar" en lo guardado, el foco va al título
+
+- **Sale de:** Accesibilidad · **Tipo:** componente
+- **Dado** el formulario de Lucía, con un borrador recién guardado,
+- **cuando** aprieta "Editar",
+- **entonces** el botón desaparece, el foco queda en el título "Editar el período", y los campos
+  vuelven a estar disponibles.
+- **Estado:** nuevo, sin aprobar
+- **Test:** `src/pages/BudgetPeriodFormPage.test.tsx` › "case C3-17: editing what was saved moves the focus to the heading"
 
 ## Estados de pantalla
 
@@ -1326,9 +1349,16 @@ en `frontend/src/messages.ts`.
 
 Los pedidos simultáneos con fechas superpuestas quedaron cubiertos por C2-61.
 
-Queda sin resolver una cosa, que no cambia ningún dato: una cifra muy grande que la pantalla de
-presupuesto solo muestra se redondea, porque el resumen y el detalle leen los montos como números
-de JavaScript. El formulario y lo guardado leen las cifras exactas (C3-13).
+Quedan sin resolver estas cosas, que no cambian ningún dato:
+
+- Una cifra muy grande que la pantalla de presupuesto solo muestra se redondea, porque el resumen y
+  el detalle leen los montos como números de JavaScript. El formulario y lo guardado leen las
+  cifras exactas (C3-13).
+- Al sumar el último tope disponible, el foco se pierde, porque desaparecen el selector, el monto y
+  el botón.
+- Un monto ilegible en el tope nuevo, como `1.5`, se avisa al pie del formulario, sin marcar el
+  campo como inválido.
+- "Reintentar" pierde el foco: ver la [hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final).
 
 ## Fuera de alcance
 

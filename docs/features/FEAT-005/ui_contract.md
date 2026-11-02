@@ -18,7 +18,7 @@ Sigue la forma del [contrato de la pantalla de presupuesto](../FEAT-004/ui_contr
 | Cadencia, moneda y categoría de un tope nuevo | Nuevos, sobre un `select` nativo | Como el selector de período de la FEAT-004: shadcn/ui no tiene uno instalado. La moneda se elige del catálogo, con su código y su nombre, y no se escribe (CA-17). Decidido por Vero el 31 de octubre de 2026 |
 | Tabla de topes | Nueva, en `BudgetPeriodFormPage` | Un solo dropdown y un monto para sumar un tope, que ofrece solo las categorías sin tope. Cada tope es una fila con su categoría, su monto editable y "Quitar", y el nombre accesible de los dos controles dice la categoría (C3-06). Decidido por Vero el 1 de noviembre de 2026 |
 | Fecha de inicio y de fin | Nuevos, sobre un `input type="date"` nativo | El fin se escribe solo en un período personalizado; en uno mensual o quincenal no aparece, porque lo calcula el backend. Decidido por Vero el 1 de noviembre de 2026 |
-| Montos | Nuevos, sobre un `input` de texto con `inputMode="decimal"` | El ingreso y cada tope viajan como texto decimal, nunca como `number` de JavaScript. Aceptan cifras, puntos de miles y una coma decimal, con el aviso "Usá punto para los miles y coma para los centavos: 1.450.000,55". Los separadores son parámetros, para que después los elija el usuario. Decidido por Vero el 1 de noviembre de 2026. Al lado de cada uno se ve el código de la moneda elegida, que forma parte de su descripción accesible (C3-07). Precargan las cifras exactas que escribió la API, sin pasar por un `number` de JavaScript (C3-13) |
+| Montos | Nuevos, sobre un `input` de texto con `inputMode="decimal"` | El ingreso y cada tope viajan como texto decimal, nunca como `number` de JavaScript. Aceptan cifras, puntos de miles y una coma decimal, con el aviso "Usá punto para los miles y coma para los centavos: 1.450.000,55". Los separadores son parámetros, para que después los elija el usuario. Decidido por Vero el 1 de noviembre de 2026. Al lado de cada uno se ve el código de la moneda elegida, que forma parte de su descripción accesible (C3-07). Precargan las cifras que escribió la API, sin pasar por un `number` de JavaScript y sin los ceros finales de los centavos: `1500000.50` se ve `1.500.000,5` (C3-13) |
 | Línea de estado (`role="status"`) | Existe, como en las otras pantallas | Anuncia la carga, el guardado y la confirmación |
 | Alerta de error (`role="alert"`) | Existe, como en las otras pantallas | El estado de error |
 
@@ -59,9 +59,10 @@ Sin sesión no es un estado de esta pantalla: un `401` vuelve a la entrada.
   de un tope nuevo lo suma, sin guardar el período (C3-06).
 - [x] Cada monto dice su moneda: al editar, al lado del campo y en su descripción accesible (C3-07),
   y en lo guardado, con el formato de la moneda (C3-08).
-- [x] El foco no se pierde: va al título al abrir el formulario y al volver al resumen (C3-10), a la
-  línea de estado al guardar y al confirmar (C3-09), y al selector del tope nuevo al quitar un tope
-  (C3-11).
+- [x] El foco tiene a dónde ir en los pasos principales: al título al abrir el formulario y al volver
+  al resumen (C3-10), también al editar (C3-16 y C3-17), a la línea de estado al guardar y al
+  confirmar (C3-09), y al selector del tope nuevo al quitar un tope (C3-11). Lo que falta está en
+  [Sin cubrir](spec.md#sin-cubrir).
 - [x] Un tope nuevo sin monto se anuncia con una alerta y marca el campo como inválido (C3-12).
 
 ## Datos que consume

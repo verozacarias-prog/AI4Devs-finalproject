@@ -1,7 +1,7 @@
 """Building and confirming a budget period over HTTP, against PostgreSQL (FEAT-005).
 
 Cases C1-11 to C1-16, C1-18, C1-20, C1-21 and the integration ones of C2-01 to C2-44 and
-C3-01 to C3-05 of docs/features/FEAT-005/spec.md: POST /budget-periods,
+C3-01 to C3-05, C3-14 and C3-15 of docs/features/FEAT-005/spec.md: POST /budget-periods,
 PUT /budget-periods/{period_id}, POST /budget-periods/{period_id}/confirm, GET /budget-periods,
 GET /categories and GET /currencies. Each test has a
 database of its own, with the test data of the script, and talks to the API the way the
