@@ -11,6 +11,9 @@ services:
     healthCheckPath: /readyz
     # It runs before the version changes: if a migration fails, the previous version stays.
     preDeployCommand: alembic upgrade head
+    # Render gives the variables to the service, not to the step before it, so the migration only
+    # gets the connection of the owner if the service has it. The API starts without it (ADR 0030).
+    dockerCommand: env -u MIGRATIONS_DATABASE_URL -u APPLICATION_DB_PASSWORD python -m app.adapters.inbound.api.main
     envVars:
       - key: APP_ENV
         value: demo
