@@ -1,7 +1,8 @@
 /**
  * Cases T-01 to T-06 of the task that brings Tailwind and shadcn/ui (ADR 0027): the side
  * menu of the dashboard. The whole dashboard is rendered, with the API simulated at the
- * network level. The cases are in the description of its pull request. Case 33 is of issue #84.
+ * network level. The cases are in the description of its pull request. Cases 33, 34 and 35
+ * are of issue #84.
  */
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
@@ -23,6 +24,9 @@ beforeAll(() => api.listen({ onUnhandledFrame: 'error' }))
 afterEach(() => {
   cleanup()
   api.resetHandlers()
+  // What the browser remembers of an earlier test must not reach the next one.
+  window.localStorage.clear()
+  window.history.replaceState(null, '', '/')
 })
 afterAll(() => api.close())
 
@@ -211,4 +215,56 @@ test('case 33: when closing every session fails, the menu stays and it says why'
   within(alert).getByText('La API respondió con un error.')
   screen.getByRole('navigation', { name: 'Menú principal' })
   expect(screen.queryByRole('button', { name: 'Entrar como Lucía' })).toBeNull()
+})
+
+const ANA = { id: crypto.randomUUID(), name: 'Ana' }
+const OPEN_THE_LINK_AGAIN = 'Para volver a entrar, abrí de nuevo tu enlace personal.'
+
+/** An API in demo: Ana enters with her link, and the entry without one does not exist. */
+function demoApiWithAnaIn() {
+  window.history.replaceState(null, '', '/app/#the-value-of-the-link')
+  const session = { alive: false }
+  api.use(
+    http.get('*/healthz', () => HttpResponse.json({ status: 'ok' })),
+    http.get('*/readyz', () => HttpResponse.json({ status: 'ok' })),
+    http.post('*/dev/session', () => {
+      session.alive = true
+      return new HttpResponse(null, { status: 204 })
+    }),
+    http.get('*/me', () => (session.alive ? HttpResponse.json(ANA) : noSession())),
+    http.get('*/dev/users', () => HttpResponse.json({ error: 'not_found' }, { status: 404 })),
+    http.get('*/accounts', () => (session.alive ? HttpResponse.json({ accounts: ACCOUNTS }) : noSession())),
+    // Only asked for in case 34, once the session already ended.
+    http.get('*/budget-periods', noSession),
+    http.post('*/auth/logout', () => {
+      session.alive = false
+      return new HttpResponse(null, { status: 204 })
+    }),
+  )
+  return session
+}
+
+test('case 34: when the session ends while in use, it says to open the link again', async () => {
+  const session = demoApiWithAnaIn()
+  render(<App />)
+  const nav = await menu()
+  await screen.findByText('Efectivo', { selector: '.account__name' })
+
+  // Thirty minutes later the session expired, and the next screen asks the API.
+  session.alive = false
+  within(nav).getByRole('button', { name: 'Presupuesto' }).click()
+
+  await screen.findByText(OPEN_THE_LINK_AGAIN)
+  expect(screen.queryByRole('navigation')).toBeNull()
+})
+
+test('case 35: closing the session after entering with a link says to open the link again', async () => {
+  demoApiWithAnaIn()
+  render(<App />)
+  await menu()
+
+  screen.getByRole('button', { name: 'Cerrar sesión' }).click()
+
+  await screen.findByText(OPEN_THE_LINK_AGAIN)
+  expect(screen.queryByRole('navigation')).toBeNull()
 })

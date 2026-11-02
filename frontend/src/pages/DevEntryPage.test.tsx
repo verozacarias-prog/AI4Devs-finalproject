@@ -35,6 +35,8 @@ beforeAll(() => api.listen({ onUnhandledFrame: 'error' }))
 afterEach(() => {
   cleanup()
   api.resetHandlers()
+  // What the browser remembers of an earlier test must not reach the next one.
+  window.localStorage.clear()
 })
 afterAll(() => api.close())
 
@@ -432,4 +434,70 @@ test('case 28: without a link or a session in demo, the card is never drawn', as
   expect(screen.queryByText('Entrada de desarrollo')).toBeNull()
   answer()
   await vi.waitFor(() => expect(container.innerHTML).toBe(''))
+})
+
+// Cases 34, 36 and 37 of issue #84: after entering with a link, an ended session says how to
+// come back. Case 35 is in AppShell.test.tsx.
+
+const ENDED = 'Tu sesión terminó'
+const OPEN_THE_LINK_AGAIN = 'Para volver a entrar, abrí de nuevo tu enlace personal.'
+
+/** An API in demo where the link of Ana works, until her session ends. */
+function demoApiWithAna() {
+  const session = { alive: true }
+  api.use(
+    http.post(SESSION, () => {
+      session.alive = true
+      return noContent()
+    }),
+    http.get(ME, () => (session.alive ? HttpResponse.json(ANA) : noSession())),
+    http.get(USERS, notFound),
+  )
+  return session
+}
+
+test('case 34: after entering with a link, an ended session says to open the link again', async () => {
+  openLink()
+  const session = demoApiWithAna()
+  render(<DevEntryPage />)
+  await screen.findByText('Entraste como Ana')
+  cleanup()
+
+  // The session ended, and the page is loaded again, without the link in the address.
+  session.alive = false
+  render(<DevEntryPage />)
+
+  await vi.waitFor(() => expect(screen.getByRole('status').textContent).toBe(ENDED))
+  screen.getByText(OPEN_THE_LINK_AGAIN)
+  expect(screen.queryAllByRole('button')).toEqual([])
+  expect(screen.queryByRole('list')).toBeNull()
+})
+
+test('case 36: without ever entering with a link here, nothing about links is shown', async () => {
+  closeLink()
+  api.use(http.get(ME, noSession), http.get(USERS, notFound))
+
+  const { container } = render(<DevEntryPage />)
+
+  await vi.waitFor(() => expect(container.innerHTML).toBe(''))
+  expect(screen.queryByText(OPEN_THE_LINK_AGAIN)).toBeNull()
+})
+
+test('case 37: opening the link again after the message enters, and the message goes away', async () => {
+  openLink()
+  const session = demoApiWithAna()
+  render(<DevEntryPage />)
+  await screen.findByText('Entraste como Ana')
+  cleanup()
+  session.alive = false
+  render(<DevEntryPage />)
+  await screen.findByText(OPEN_THE_LINK_AGAIN)
+  cleanup()
+
+  openLink()
+  render(<DevEntryPage />)
+
+  await screen.findByText('Entraste como Ana')
+  expect(screen.queryByText(OPEN_THE_LINK_AGAIN)).toBeNull()
+  closeLink()
 })
