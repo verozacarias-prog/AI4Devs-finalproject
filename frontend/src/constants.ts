@@ -7,6 +7,12 @@ export const DASHBOARD_BASE = '/app/'
 export const API_TIMEOUT_MS = 10_000
 
 /**
+ * Where the browser remembers that someone entered here with a personal link, to tell them how
+ * to come back when the session ends. It keeps neither the link nor anything secret.
+ */
+export const ENTERED_WITH_LINK_KEY = 'platita.entered-with-link'
+
+/**
  * How often the chat asks for new messages while its screen is open (FEAT-002): more often
  * while a reply of Platita is pending, so it shows up at once, and less the rest of the time.
  */

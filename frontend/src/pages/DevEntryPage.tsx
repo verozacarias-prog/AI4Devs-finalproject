@@ -10,7 +10,7 @@ import {
   type DevUser,
   type SessionUser,
 } from '../api/session'
-import { SEED_TEST_DATA_COMMAND } from '../constants'
+import { ENTERED_WITH_LINK_KEY, SEED_TEST_DATA_COMMAND } from '../constants'
 import { MESSAGES } from '../messages'
 
 /**
@@ -28,6 +28,8 @@ type State =
   /** A personal link opened for the first time: the test notice waits to be accepted. */
   | { kind: 'notice'; value: string; version: string }
   | { kind: 'link-rejected' }
+  /** No session, no entry without a link, and this browser entered with one before. */
+  | { kind: 'link-ended' }
 
 type ErrorCause = Exclude<Failure['kind'], 'cancelled'>
 
@@ -41,6 +43,27 @@ type Step =
 /** The value of a personal link: it travels in the fragment, which never reaches the server. */
 function linkInTheAddress(): string | null {
   return window.location.hash.slice(1) || null
+}
+
+/**
+ * Whether this browser entered with a personal link before. Only then does an ended session
+ * tell how to come back: in production the entry answers the same, and there is no link. When
+ * the browser does not let the page keep it, the screen behaves as if it never entered.
+ */
+function rememberEnteredWithLink(): void {
+  try {
+    window.localStorage.setItem(ENTERED_WITH_LINK_KEY, 'true')
+  } catch {
+    // Nothing to do: the message is a help, not a condition to enter.
+  }
+}
+
+function enteredWithLinkBefore(): boolean {
+  try {
+    return window.localStorage.getItem(ENTERED_WITH_LINK_KEY) !== null
+  } catch {
+    return false
+  }
 }
 
 const TEXT = MESSAGES.devEntry
@@ -98,6 +121,7 @@ export function DevEntryPage({ onSessionChange, timeoutMs }: Props) {
           return { kind: 'notice', value: step.value, version: done.version }
         }
         if (done.kind !== 'entered') return { kind: 'error', cause: done.kind, retry }
+        rememberEnteredWithLink()
       } else if (step.kind !== 'load') {
         const done = step.kind === 'enter' ? await enterAs(step.userId, options) : await logout(options)
         if (done.kind === 'cancelled') return null
@@ -110,8 +134,9 @@ export function DevEntryPage({ onSessionChange, timeoutMs }: Props) {
         case 'cancelled':
           return null
         case 'signed-in':
-        case 'unavailable':
           return entry
+        case 'unavailable':
+          return enteredWithLinkBefore() ? { kind: 'link-ended' } : entry
         case 'choose':
           return entry.users.length > 0 ? entry : { kind: 'empty' }
         default:
@@ -124,7 +149,7 @@ export function DevEntryPage({ onSessionChange, timeoutMs }: Props) {
       setState(next)
       setAnswered(true)
       // An error says nothing about the session, so it changes nothing outside.
-      if (next.kind === 'signed-in' || next.kind === 'choose' || next.kind === 'empty' || next.kind === 'unavailable') {
+      if (next.kind === 'signed-in' || next.kind === 'choose' || next.kind === 'empty' || next.kind === 'unavailable' || next.kind === 'link-ended') {
         sessionListener.current?.(next.kind === 'signed-in' ? next.user : null)
       }
     })
@@ -146,7 +171,11 @@ export function DevEntryPage({ onSessionChange, timeoutMs }: Props) {
     >
       {answered && (
         <CardTitle id="dev-entry-heading">
-          {state.kind === 'notice' ? TEXT.noticeHeading : link === null ? TEXT.heading : TEXT.linkHeading}
+          {state.kind === 'notice'
+            ? TEXT.noticeHeading
+            : link === null && state.kind !== 'link-ended'
+              ? TEXT.heading
+              : TEXT.linkHeading}
         </CardTitle>
       )}
       <p
@@ -181,6 +210,7 @@ export function DevEntryPage({ onSessionChange, timeoutMs }: Props) {
           <p className="text-sm text-muted-foreground">{TEXT.linkRejectedDetail}</p>
         </div>
       )}
+      {state.kind === 'link-ended' && <p className="text-sm">{TEXT.linkSessionEndedDetail}</p>}
       {state.kind === 'choose' && (
         <ul className="flex flex-wrap gap-2">
           {state.users.map((user) => (
@@ -232,6 +262,8 @@ function statusText(state: Exclude<State, { kind: 'unavailable' }>): string {
       return TEXT.empty
     case 'notice':
       return TEXT.noticeAnnounced
+    case 'link-ended':
+      return TEXT.linkSessionEnded
     case 'error':
     case 'link-rejected':
       // The error is announced by the alert below, not by the status line.

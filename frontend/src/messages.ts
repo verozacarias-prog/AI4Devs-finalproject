@@ -49,6 +49,8 @@ export const MESSAGES = {
     linkHeading: 'Entrar a Platita',
     linkRejected: 'Este enlace ya no sirve',
     linkRejectedDetail: 'Pedile uno nuevo a quien te lo mandó.',
+    linkSessionEnded: 'Tu sesión terminó',
+    linkSessionEndedDetail: 'Para volver a entrar, abrí de nuevo tu enlace personal.',
     noticeHeading: 'Antes de entrar',
     noticeAnnounced: 'Antes de entrar, leé este aviso',
     // A change in this text comes with a new TEST_NOTICE_VERSION in the backend (ADR 0016).
