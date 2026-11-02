@@ -1,7 +1,7 @@
 # Especificación — FEAT-005 · Armar y confirmar el presupuesto de un período
 
 - **Historia de usuario:** [HU2](../../05-historias-de-usuario.md)
-- **Estado:** borrador
+- **Estado:** aprobada para los cortes 1, 2 y 3
 - **Fecha:** 2026-10-29
 
 ## Alcance
@@ -62,7 +62,7 @@ El usuario arma el presupuesto de un período, que queda en borrador hasta que l
 ### Las categorías y el formulario
 
 - **CA-12.** Para elegir a qué categorías ponerles tope, el usuario ve sus categorías de gasto, las del catálogo base y las propias, por nombre y sin distinguir mayúsculas. No ve las de ingreso ni las propias de otro usuario.
-- **CA-13.** Un período nuevo arranca como copia del último del usuario, que puede cambiar antes de guardar ([reglas de dominio § 3](../../reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)), con el inicio sugerido el día después del fin de ese período. El último es el período individual que empieza más tarde, aunque sea un borrador, decidido por Vero el 29 de octubre de 2026. En un mensual el fin lo calcula la API; en un quincenal queda vacío, porque se indica siempre. Sin un período anterior, el formulario viene vacío. Lo hace la pantalla con `GET /budget-periods`, sin regla nueva en el backend.
+- **CA-13.** Un período nuevo arranca como copia del último del usuario, que puede cambiar antes de guardar ([reglas de dominio § 3](../../reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)), con el inicio sugerido el día después del fin de ese período. El último es el período individual que empieza más tarde, aunque sea un borrador, decidido por Vero el 29 de octubre de 2026. En un mensual y en un quincenal el fin lo calcula la API, y el formulario no lo pide. Sin un período anterior, el formulario viene vacío. Lo hace la pantalla con `GET /budget-periods`, sin regla nueva en el backend.
 - **CA-14.** Un tope va solo sobre una categoría de gasto: sobre una de ingreso, el período no se guarda.
 - **CA-17.** La moneda del período se elige de una lista con las monedas del catálogo, no se escribe. Una moneda que no está en el catálogo no se guarda. Decidido por Vero el 31 de octubre de 2026.
 
@@ -169,7 +169,7 @@ no es miembro de ningún grupo, y hoy es 29 de octubre de 2026.
 
 #### C1-04 · Un personalizado termina el día indicado
 
-- **Estado:** cambiado, sin aprobar: un mensual ya no acepta otro fin
+- **Estado:** aprobado, cambiado: un mensual ya no acepta otro fin
 - **Sale de:** CA-3 · **Tipo:** unitario
 - **Dado** un período personalizado que empieza el 10 de noviembre de 2026, con el fin indicado el 30
   de noviembre de 2026,
@@ -343,7 +343,7 @@ no es miembro de ningún grupo, y hoy es 29 de octubre de 2026.
 
 #### C1-19 · Un quincenal termina el 15 o el último día del mes
 
-- **Estado:** cambiado, sin aprobar: el fin ya no se indica
+- **Estado:** aprobado, cambiado: el fin ya no se indica
 - **Sale de:** CA-11 · **Tipo:** unitario
 - **Dado** un período quincenal que empieza el 1 de noviembre de 2026, y otro el 16 de febrero de 2027,
 - **cuando** se calcula su fin,
@@ -477,7 +477,7 @@ Entran las validaciones de [la API](../../04-api.md), en su orden: el período d
 `404`; el período de un grupo para un miembro que no es el dueño, `403`
 (CA-16); la superposición con otro período del mismo dueño,
 `409` con `budget_period_overlap`; cambiar la cadencia, las fechas o la moneda de un período
-confirmado, `409` con `confirmed_period_fixed` (CA-10); un período quincenal sin fin, `422` con `period_end_required`
+confirmado, `409` con `confirmed_period_fixed` (CA-10); un período personalizado sin fin, `422` con `period_end_required`
 (CA-11); un tope sobre una categoría de ingreso, `422` con `budget_category_not_expense`
 (CA-14); un ingreso estimado negativo, `422` con `estimated_income_negative` (CA-15), y el `CHECK` que
 lo impide en la base, en una migración nueva (AGENTS.md § 8); y los tres `422` de fechas
@@ -659,7 +659,7 @@ categoría que no existe termina en `500`, porque la base rechaza la referencia,
 
 #### C2-12 · Un personalizado sin fin no tiene fin
 
-- **Estado:** cambiado, sin aprobar
+- **Estado:** aprobado, cambiado
 - **Sale de:** CA-11 · **Tipo:** unitario
 - **Dado** un período personalizado que empieza el 10 de noviembre de 2026, sin fin indicado,
 - **cuando** se calcula su fin,
@@ -668,7 +668,7 @@ categoría que no existe termina en `500`, porque la base rechaza la referencia,
 
 #### C2-13 · Lucía crea un personalizado sin `period_end`
 
-- **Estado:** cambiado, sin aprobar
+- **Estado:** aprobado, cambiado
 - **Sale de:** CA-11 · **Tipo:** integración
 - **Dado** Lucía con su sesión abierta,
 - **cuando** pide `POST /budget-periods` con `period_type` personalizado, `period_start` 2026-11-10 y
@@ -998,7 +998,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-50 · Un monto cuyo punto no separa miles no se guarda
 
 - **Sale de:** el contrato de UI · **Tipo:** componente
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** Lucía con el formulario abierto,
 - **cuando** escribe `1.5` o `320000.10` en el ingreso, en el monto del tope nuevo o en el de una fila, y guarda o suma el tope,
 - **entonces** no se pide nada a la API ni se suma la fila, se ve "Revisá el monto: el punto separa los miles. Para los centavos usá coma", y lo escrito no se pierde. `11.000` y `1.450.000,55` se aceptan: después de cada punto tiene que haber exactamente 3 cifras. Decidido por Vero el 1 de noviembre de 2026.
@@ -1007,7 +1007,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-51 · Si al volver del formulario falla la lista, reintentar la vuelve a pedir
 
 - **Sale de:** el contrato de UI · **Tipo:** componente
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** Lucía guardó un período nuevo y `GET /budget-periods` falla al volver al resumen,
 - **cuando** aprieta "Reintentar",
 - **entonces** se vuelve a pedir la lista, aparece el período guardado, elegido, y la fecha del próximo período está actualizada. Si era su primer período, la pantalla tampoco queda cargando. Decidido por Vero el 1 de noviembre de 2026.
@@ -1016,7 +1016,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-52 · El fin se escribe solo en un personalizado
 
 - **Sale de:** CA-3 y CA-11 · **Tipo:** componente
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** Lucía con el formulario abierto, con la cadencia "Mensual", "Quincenal" y "Personalizado" para elegir,
 - **cuando** elige cada una y guarda,
 - **entonces** en mensual y en quincenal no aparece "Fin" y se pide guardar con `period_end` nulo; en personalizado aparece "Fin", obligatorio, y se pide con esa fecha. Decidido por Vero el 1 de noviembre de 2026.
@@ -1025,7 +1025,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-53 · Un mensual con otro fin no se guarda
 
 - **Sale de:** CA-3 · **Tipo:** unitario
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** un período mensual que empieza el 10 de noviembre de 2026,
 - **cuando** se crea con fin el 30 de noviembre, y con fin el 9 de diciembre,
 - **entonces** el primero se rechaza con `period_end_not_matching` y sin escribir nada, y el segundo se guarda.
@@ -1034,7 +1034,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-54 · Un quincenal con otro inicio o con otro fin no se guarda
 
 - **Sale de:** CA-11 · **Tipo:** unitario
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** un período quincenal,
 - **cuando** se crea desde el 10 de noviembre de 2026, y desde el 1 de noviembre con fin el 20,
 - **entonces** el primero se rechaza con `biweekly_start_invalid`, el segundo con `period_end_not_matching`, y no se escribe nada.
@@ -1043,7 +1043,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-55 · Lucía crea un mensual y un quincenal que no coinciden con su cadencia, y un personalizado
 
 - **Sale de:** CA-3 y CA-11 · **Tipo:** integración
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** Lucía con su sesión abierta,
 - **cuando** pide `POST /budget-periods` con un mensual del 10 al 30 de noviembre de 2026, con un quincenal desde el 10, y con un `custom` del 10 al 30,
 - **entonces** los dos primeros responden `422` con `period_end_not_matching` y `biweekly_start_invalid`, sin guardar nada, y el tercero responde `201` con `period_type` en `custom`.
@@ -1052,7 +1052,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-56 · La base rechaza fechas que no coinciden con la cadencia
 
 - **Sale de:** reglas de dominio § 3 · **Tipo:** integración
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** la base,
 - **cuando** se inserta directamente un mensual del 10 al 30 de noviembre, y un quincenal del 10 al 24,
 - **entonces** los dos se rechazan por su `CHECK`, y el mismo período como `custom` se acepta; también un mensual del 31 de enero al 27 de febrero de 2027 y un quincenal del 16 al 28 de febrero.
@@ -1061,7 +1061,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-57 · La migración deja como personalizados los períodos que no coinciden
 
 - **Sale de:** reglas de dominio § 3 · **Tipo:** integración
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** una base con la migración anterior y un período mensual del 15 al 30 de noviembre, confirmado, un quincenal del 10 al 24, y un mensual del 10 de octubre al 9 de noviembre,
 - **cuando** se aplica la migración nueva,
 - **entonces** los dos primeros quedan como `custom`, con sus mismas fechas, y el tercero sigue mensual.
@@ -1070,7 +1070,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-58 · El primer período es mensual si el alta es el día 1, y si no personalizado
 
 - **Sale de:** reglas de dominio § 3 · **Tipo:** unitario
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** un usuario que se da de alta el 1 de noviembre de 2026, y otro el 15,
 - **cuando** se crea su primer período,
 - **entonces** el primero es mensual, del 1 al 30, y el segundo es personalizado, del 15 al 30.
@@ -1079,7 +1079,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-59 · Después de un personalizado se sugiere mensual
 
 - **Sale de:** CA-13 · **Tipo:** componente
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** el último período de Lucía es personalizado, del 15 al 30 de noviembre de 2026,
 - **cuando** abre el formulario para armar uno nuevo,
 - **entonces** la cadencia viene en "Mensual", con inicio el 1 de diciembre, y se copian la moneda, el ingreso y los topes.
@@ -1088,7 +1088,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-60 · Un monto enviado como número JSON se guarda exacto
 
 - **Sale de:** [la API](../../04-api.md) · **Tipo:** integración
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** Lucía con su sesión abierta,
 - **cuando** pide `POST /budget-periods` con un tope de `1234567890123456.78`, escrito como número JSON,
 - **entonces** responde `201`, y se guarda y se responde exactamente ese monto. Decidido por Vero el 1 de noviembre de 2026.
@@ -1097,7 +1097,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-61 · Dos pedidos simultáneos con fechas superpuestas responden `409`
 
 - **Sale de:** [la API](../../04-api.md) · **Tipo:** integración
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** dos pedidos de Lucía con fechas superpuestas, que pasan los dos el control del caso de uso,
 - **cuando** la base rechaza el segundo por su restricción de superposición,
 - **entonces** responde `409` con `budget_period_overlap`, no `500`, y queda guardado solo el primero.
@@ -1106,7 +1106,7 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 #### C2-62 · Un tope que redondea a 0 y el límite exacto de un monto
 
 - **Sale de:** [la API](../../04-api.md) · **Tipo:** unitario
-- **Estado:** nuevo, sin aprobar
+- **Estado:** aprobado
 - **Dado** un período con un tope de `0.004`, otro de `0.005`, y otros de `999999999999999999.99` y `999999999999999999.995`,
 - **cuando** se crea,
 - **entonces** `0.004` se rechaza con `budget_limit_not_positive`, `0.005` se acepta, `999999999999999999.99` se acepta, y `999999999999999999.995` se rechaza con `amount_too_large`.
@@ -1114,7 +1114,211 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 
 ### Corte 3 — observabilidad y accesibilidad
 
-- **Aprobado por:** pendiente
+- **Aprobado por:** Veronica Zacarias 01/11/2026
+- **C3-13, sumado por un monto que cambiaba al editarlo:** Veronica Zacarias 01/11/2026
+- **C3-14 y C3-15, sumados por lo que encontró `/spec-drift`:** Veronica Zacarias 01/11/2026
+- **C3-16 y C3-17, sumados por lo que encontró `pr-reviewer`:** Veronica Zacarias 01/11/2026
+- **Total:** 17 casos, 7 de integración y 10 de componente.
+
+Cubre lo que cada pedido deja en los registros, la moneda de cada monto y la accesibilidad del
+formulario. El contraste se anota en la lista de accesibilidad del
+[contrato de UI](ui_contract.md), sin caso propio, igual que en las otras pantallas.
+
+Los nombres de los montos y de "Quitar" de la tabla de topes pasan de la posición a la categoría.
+Eso cambia el nombre que usan los tests de C1-24, C1-27, C1-28, C1-32, C2-48, C2-49 y C2-50, sin
+cambiar lo que comprueban.
+
+| Caso | Qué prueba | Tipo | Sale de |
+|---|---|---|---|
+| C3-01 | Los registros no llevan montos ni nombres | Integración | AGENTS.md § 7 |
+| C3-02 | Un error al cambiar o confirmar un período dice cuál período | Integración | Operación 6.3 |
+| C3-03 | Un error por la categoría de un tope dice cuál categoría | Integración | Operación 6.3 |
+| C3-04 | Un rechazo de la base deja el nombre de su restricción | Integración | Operación 6.3 |
+| C3-05 | Un borrador pasa a otra moneda con su ingreso y sus topes | Integración | CA-4 y reglas de dominio § 6 |
+| C3-06 | **Pantalla.** Los controles tienen nombre, y el de cada tope dice su categoría | Componente | Accesibilidad |
+| C3-07 | **Pantalla.** Cada monto del formulario dice su moneda | Componente | AGENTS.md § 5 y accesibilidad |
+| C3-08 | **Pantalla.** Todo monto de lo guardado se escribe con su moneda | Componente | AGENTS.md § 5 y accesibilidad |
+| C3-09 | **Pantalla.** Al guardar y al confirmar, el foco va a la línea de estado | Componente | Accesibilidad |
+| C3-10 | **Pantalla.** Al abrir el formulario y al volver al resumen, el foco va al título | Componente | Accesibilidad |
+| C3-11 | **Pantalla.** Al quitar un tope, el foco va al selector del tope nuevo | Componente | Accesibilidad |
+| C3-12 | **Pantalla.** Un tope nuevo sin monto se anuncia y marca el campo | Componente | Accesibilidad |
+| C3-13 | **Pantalla.** Editar sin tocar un monto no lo cambia | Componente | CA-5 y C2-60 |
+| C3-14 | Todo error de un cambio dice su período, y todo error de un tope dice su categoría | Integración | Operación 6.3 |
+| C3-15 | En un confirmado, el fin que falta y las fechas invertidas se responden primero | Integración | Validaciones 4 y 5 y pregunta abierta 12 |
+| C3-16 | **Pantalla.** Al apretar "Editar" en el resumen, el foco va a un título que dice "Editar" | Componente | Accesibilidad |
+| C3-17 | **Pantalla.** Al apretar "Editar" en lo guardado, el foco va al título | Componente | Accesibilidad |
+
+#### C3-01 · Los registros no llevan montos ni nombres
+
+- **Sale de:** AGENTS.md § 7 · **Tipo:** integración
+- **Dado** Lucía con su sesión abierta,
+- **cuando** pide `GET /categories`, `GET /currencies`, crea el borrador de C1-11, lo cambia como en
+  C1-13 y lo confirma,
+- **entonces** la línea de cada pedido lleva su endpoint, y ninguna línea escrita durante los cinco
+  contiene un monto, "Supermercado", "Transporte", "Salud", "Galicia" ni "Lucía".
+- **Test:** `tests/integration/test_budget_planning.py::test_the_logs_carry_no_amounts_or_names`
+
+#### C3-02 · Un error al cambiar o confirmar un período dice cuál período
+
+- **Sale de:** [Operación 6.3](../../operacion.md#63-registros) · **Tipo:** integración
+- **Dado** los datos del corte 2,
+- **cuando** Sofía cambia y confirma el borrador de "Casa", Lucía cambia y confirma el de Pablo,
+  Lucía le cambia la moneda a su período actual, y Lucía mueve un borrador sobre su período actual,
+- **entonces** cada pedido deja una línea `error.expected` con su `error_code`, `not_the_owner`,
+  `not_found`, `confirmed_period_fixed` o `budget_period_overlap`, el `user_id` de quien pidió y el
+  `budget_period_id` del período pedido.
+- **Test:** `tests/integration/test_budget_planning.py::test_an_error_changing_or_confirming_a_period_says_which_period`
+
+#### C3-03 · Un error por la categoría de un tope dice cuál categoría
+
+- **Sale de:** [Operación 6.3](../../operacion.md#63-registros) · **Tipo:** integración
+- **Dado** los datos del corte 2,
+- **cuando** Lucía crea un período con un tope sobre "Kiosco", la categoría de Pablo, y otro con un
+  tope sobre "Clases particulares", su categoría de ingreso,
+- **entonces** cada pedido deja una línea `error.expected` con su `error_code` y el `category_id` de
+  esa categoría, sin su nombre.
+- **Test:** `tests/integration/test_budget_planning.py::test_an_error_on_the_category_of_a_limit_says_which_category`
+
+#### C3-04 · Un rechazo de la base deja el nombre de su restricción
+
+- **Sale de:** [Operación 6.3](../../operacion.md#63-registros) · **Tipo:** integración
+- **Dado** los dos pedidos simultáneos de C2-61,
+- **cuando** la base rechaza el segundo por su restricción de superposición,
+- **entonces** su línea `error.expected` lleva `budget_period_overlap` como `error_code` y el nombre
+  de la restricción en `constraint`, sin ninguna fecha ni monto.
+- **Test:** `tests/integration/test_budget_planning.py::test_a_rejection_of_the_database_leaves_the_name_of_its_constraint`
+
+#### C3-05 · Un borrador pasa a otra moneda con su ingreso y sus topes
+
+- **Sale de:** CA-4 y [reglas de dominio § 6](../../reglas-de-dominio.md#6-multimoneda-y-cotización) · **Tipo:** integración
+- **Dado** Lucía con el borrador de C1-11 guardado, en ARS,
+- **cuando** pide `PUT /budget-periods/{period_id}` con `primary_currency` USD, `estimated_income`
+  1500.50 y un tope de Supermercado de 320.25,
+- **entonces** responde `200` con `primary_currency` USD y esos montos, sin convertirlos, y
+  `GET /budget-periods/{period_id}/summary` responde con esa moneda y esos montos.
+- **Test:** `tests/integration/test_budget_planning.py::test_a_draft_moves_to_another_currency_with_its_income_and_its_limits`
+
+#### C3-06 · Los controles tienen nombre, y el de cada tope dice su categoría
+
+- **Sale de:** Accesibilidad · **Tipo:** componente
+- **Dado** el formulario de Lucía, con sus topes de Supermercado y Transporte,
+- **cuando** se abre,
+- **entonces** la cadencia, la moneda, las fechas, el ingreso, los campos del tope nuevo, "Sumar un tope",
+  "Guardar borrador" y "Volver al resumen" son controles nativos, habilitados y sin nada que los saque del orden de Tab; y
+  cada fila ofrece "Monto del tope de Supermercado" y "Quitar el tope de Supermercado".
+- **Test:** `src/pages/BudgetPeriodFormPage.test.tsx` › "case C3-06: the controls have a name and each limit says its category"
+
+#### C3-07 · Cada monto del formulario dice su moneda
+
+- **Sale de:** AGENTS.md § 5 y accesibilidad · **Tipo:** componente
+- **Dado** el formulario de Lucía, en ARS,
+- **cuando** se abre, y después elige USD,
+- **entonces** el ingreso, el tope nuevo y cada tope se ven con "ARS" y lo tienen en su descripción
+  accesible, y después con "USD". En un formulario sin moneda elegida, ningún monto dice una.
+- **Test:** `src/pages/BudgetPeriodFormPage.test.tsx` › "case C3-07: each amount of the form says its currency"
+
+#### C3-08 · Todo monto de lo guardado se escribe con su moneda
+
+- **Sale de:** AGENTS.md § 5 y accesibilidad · **Tipo:** componente
+- **Dado** un borrador en USD que la API devuelve guardado, y después confirmado,
+- **cuando** se ve lo guardado y lo confirmado,
+- **entonces** el ingreso y cada tope empiezan con "US$": ninguno es un número suelto.
+- **Test:** `src/pages/BudgetPeriodFormPage.test.tsx` › "case C3-08: every saved amount is written with its currency"
+
+#### C3-09 · Al guardar y al confirmar, el foco va a la línea de estado
+
+- **Sale de:** Accesibilidad · **Tipo:** componente
+- **Dado** el formulario de Lucía,
+- **cuando** aprieta "Guardar borrador" y termina de guardarse, y después "Confirmar" y termina de
+  confirmarse,
+- **entonces** cada vez el foco queda en la línea de estado, que dice cómo terminó, y no se pierde
+  con el botón que desapareció.
+- **Test:** `src/pages/BudgetPeriodFormPage.test.tsx` › "case C3-09: saving and confirming move the focus to the status line"
+
+#### C3-10 · Al abrir el formulario y al volver al resumen, el foco va al título
+
+- **Sale de:** Accesibilidad · **Tipo:** componente
+- **Dado** el resumen de Lucía,
+- **cuando** aprieta "Armar un período", y después "Volver al resumen",
+- **entonces** el foco queda en el título "Armar un período", y después en "Tu presupuesto".
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C3-10 of FEAT-005: opening the form and coming back move the focus to the heading"
+
+#### C3-11 · Al quitar un tope, el foco va al selector del tope nuevo
+
+- **Sale de:** Accesibilidad · **Tipo:** componente
+- **Dado** el formulario de Lucía, con sus dos topes,
+- **cuando** aprieta "Quitar el tope de Transporte",
+- **entonces** el foco queda en "Categoría del tope nuevo", que ofrece Transporte.
+- **Test:** `src/pages/BudgetPeriodFormPage.test.tsx` › "case C3-11: removing a limit moves the focus to the new limit selector"
+
+#### C3-12 · Un tope nuevo sin monto se anuncia y marca el campo
+
+- **Sale de:** Accesibilidad · **Tipo:** componente
+- **Dado** el formulario de Lucía, con "Monto del tope nuevo" vacío,
+- **cuando** aprieta "Sumar un tope",
+- **entonces** el aviso de que falta el monto es una alerta, y el campo queda inválido y descripto
+  por ese aviso. Al escribir un monto y sumarlo, deja de estar inválido.
+- **Test:** `src/pages/BudgetPeriodFormPage.test.tsx` › "case C3-12: a new limit without an amount is announced and marks the field"
+
+#### C3-13 · Editar sin tocar un monto no lo cambia
+
+- **Sale de:** CA-5 y C2-60 · **Tipo:** componente
+- **Dado** un borrador de Lucía que la API devuelve con un ingreso de `999999999999999999.99` y un
+  tope de Supermercado de `1234567890123456.78`, escritos como números JSON,
+- **cuando** lo abre con "Editar" y aprieta "Guardar borrador" sin tocar nada,
+- **entonces** el formulario muestra `999.999.999.999.999.999,99` y `1.234.567.890.123.456,78`, y se
+  pide `PUT /budget-periods/{period_id}` con `"999999999999999999.99"` y `"1234567890123456.78"`,
+  sin que cambie ninguna cifra. El contrato de la API no cambia.
+- **Test:** `src/pages/BudgetPeriodFormPage.test.tsx` › "case C3-13: editing without touching an amount does not change it"
+
+#### C3-14 · Todo error de un cambio dice su período, y todo error de un tope dice su categoría
+
+- **Sale de:** [Operación 6.3](../../operacion.md#63-registros) · **Tipo:** integración
+- **Estado:** aprobado
+- **Dado** los datos del corte 2 y un borrador de Lucía,
+- **cuando** lo cambia, en pedidos separados, a personalizado sin fin, con la moneda `ZZZ`, con un
+  ingreso negativo, con un tope de 0 sobre Supermercado, con dos topes sobre Supermercado, con un
+  tope de `1000000000000000000` sobre Supermercado, y con fechas que la base rechaza por
+  superponerse,
+- **entonces** cada pedido deja una línea `error.expected` con su `error_code`,
+  `period_end_required`, `currency_not_found`, `estimated_income_negative`,
+  `budget_limit_not_positive`, `budget_category_repeated`, `amount_too_large` o
+  `budget_period_overlap`, y el `budget_period_id` del borrador; y las tres por un tope llevan
+  además el `category_id` de Supermercado.
+- **Test:** `tests/integration/test_budget_planning.py::test_every_error_changing_a_period_says_which_period_and_every_error_on_a_limit_which_category`
+
+#### C3-15 · En un confirmado, el fin que falta y las fechas invertidas se responden primero
+
+- **Sale de:** validaciones 4 y 5 de [la API](../../04-api.md) y la
+  [pregunta abierta 12](#preguntas-abiertas) · **Tipo:** integración
+- **Estado:** aprobado
+- **Dado** el período actual de Lucía, confirmado y mensual,
+- **cuando** pide `PUT /budget-periods/{period_id}` como personalizado sin `period_end`, y después
+  como personalizado con un `period_end` anterior a su `period_start`,
+- **entonces** responde `422` con `period_end_required` y con `period_dates_inverted`, y no
+  `confirmed_period_fixed`, y el período no cambia. Otro inicio u otro fin de un mensual siguen
+  respondiendo `confirmed_period_fixed`, como en C2-07.
+- **Test:** `tests/integration/test_budget_planning.py::test_in_a_confirmed_period_a_missing_end_and_inverted_dates_answer_first`
+
+#### C3-16 · Al apretar "Editar" en el resumen, el foco va a un título que dice "Editar"
+
+- **Sale de:** Accesibilidad · **Tipo:** componente
+- **Estado:** aprobado
+- **Dado** el resumen de Lucía, con un período que puede editar,
+- **cuando** aprieta "Editar", y el formulario todavía está cargando,
+- **entonces** el foco queda en el título "Editar el período", que sigue igual si la carga falla, y
+  nunca dice "Armar un período".
+- **Test:** `src/pages/BudgetPage.test.tsx` › "case C3-16 of FEAT-005: editing from the summary moves the focus to a heading that says so"
+
+#### C3-17 · Al apretar "Editar" en lo guardado, el foco va al título
+
+- **Sale de:** Accesibilidad · **Tipo:** componente
+- **Estado:** aprobado
+- **Dado** el formulario de Lucía, con un borrador recién guardado,
+- **cuando** aprieta "Editar",
+- **entonces** el botón desaparece, el foco queda en el título "Editar el período", y los campos
+  vuelven a estar disponibles.
+- **Test:** `src/pages/BudgetPeriodFormPage.test.tsx` › "case C3-17: editing what was saved moves the focus to the heading"
 
 ## Estados de pantalla
 
@@ -1143,7 +1347,24 @@ en `frontend/src/messages.ts`.
 
 ## Sin cubrir
 
-Nada: los pedidos simultáneos con fechas superpuestas quedaron cubiertos por C2-61.
+Los pedidos simultáneos con fechas superpuestas quedaron cubiertos por C2-61.
+
+Quedan sin resolver estas cosas, que no cambian ningún dato:
+
+- Una cifra muy grande que la pantalla de presupuesto solo muestra se redondea, porque el resumen y
+  el detalle leen los montos como números de JavaScript. Pasa desde unas 16 cifras, y el dato
+  guardado no cambia. El formulario y lo guardado leen las cifras exactas (C3-13). Decidido por Vero
+  el 1 de noviembre de 2026.
+- Al sumar el último tope disponible, el foco se pierde, porque desaparecen el selector, el monto y
+  el botón.
+- Un monto ilegible en el tope nuevo, como `1.5`, se avisa al pie del formulario, sin marcar el
+  campo como inválido.
+- "Reintentar" pierde el foco: ver la [hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final).
+- Si falla un guardado o una confirmación, el foco puede perderse, porque el botón estaba
+  deshabilitado durante el pedido. La alerta se anuncia igual.
+- Enter en el monto de un tope nuevo lo suma sin guardar el período, y ningún caso lo prueba.
+- Un error raro al confirmar, como un rechazo de la base, no llevaría su `budget_period_id`. Hoy es
+  casi inalcanzable, porque confirmar no puede chocar con otro período.
 
 ## Fuera de alcance
 

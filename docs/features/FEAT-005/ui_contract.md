@@ -3,7 +3,7 @@
 - **Historia de usuario:** [HU2](../../05-historias-de-usuario.md)
 - **Especificación:** [spec.md](spec.md)
 - **Se escribe:** antes de la pantalla del corte 1, junto con sus casos de componente.
-- **Estado:** borrador.
+- **Estado:** aprobado para los cortes 1, 2 y 3.
 
 Sigue la forma del [contrato de la pantalla de presupuesto](../FEAT-004/ui_contract.md).
 
@@ -16,9 +16,9 @@ Sigue la forma del [contrato de la pantalla de presupuesto](../FEAT-004/ui_contr
 | Entrada al formulario | Nuevo, en `BudgetPage` | "Armar un período" en su propio bloque, con la fecha desde la que puede empezar el próximo período individual, y "Editar" al lado del selector "Tus períodos existentes", en un período que el usuario puede editar (`can_edit`), en borrador o confirmado (CA-10). Decidido por Vero el 31 de octubre y el 1 de noviembre de 2026 |
 | Formulario del período | Nuevo, `BudgetPeriodFormPage` | La cadencia, el día de inicio, el fin, la moneda, el ingreso estimado y la lista de topes. Al armar uno nuevo viene con la cadencia, salvo que la última sea personalizada, que sugiere mensual, la moneda, el ingreso y los topes del último período del usuario, y el inicio el día después de su fin (CA-13); en uno confirmado, la cadencia, las fechas y la moneda no se editan (CA-10) |
 | Cadencia, moneda y categoría de un tope nuevo | Nuevos, sobre un `select` nativo | Como el selector de período de la FEAT-004: shadcn/ui no tiene uno instalado. La moneda se elige del catálogo, con su código y su nombre, y no se escribe (CA-17). Decidido por Vero el 31 de octubre de 2026 |
-| Tabla de topes | Nueva, en `BudgetPeriodFormPage` | Un solo dropdown y un monto para sumar un tope, que ofrece solo las categorías sin tope. Cada tope es una fila con su categoría, su monto editable y "Quitar". Decidido por Vero el 1 de noviembre de 2026 |
+| Tabla de topes | Nueva, en `BudgetPeriodFormPage` | Un solo dropdown y un monto para sumar un tope, que ofrece solo las categorías sin tope. Cada tope es una fila con su categoría, su monto editable y "Quitar", y el nombre accesible de los dos controles dice la categoría (C3-06). Decidido por Vero el 1 de noviembre de 2026 |
 | Fecha de inicio y de fin | Nuevos, sobre un `input type="date"` nativo | El fin se escribe solo en un período personalizado; en uno mensual o quincenal no aparece, porque lo calcula el backend. Decidido por Vero el 1 de noviembre de 2026 |
-| Montos | Nuevos, sobre un `input` de texto con `inputMode="decimal"` | El ingreso y cada tope viajan como texto decimal, nunca como `number` de JavaScript. Aceptan cifras, puntos de miles y una coma decimal, con el aviso "Usá punto para los miles y coma para los centavos: 1.450.000,55". Los separadores son parámetros, para que después los elija el usuario. Decidido por Vero el 1 de noviembre de 2026 |
+| Montos | Nuevos, sobre un `input` de texto con `inputMode="decimal"` | El ingreso y cada tope viajan como texto decimal, nunca como `number` de JavaScript. Aceptan cifras, puntos de miles y una coma decimal, con el aviso "Usá punto para los miles y coma para los centavos: 1.450.000,55". Los separadores son parámetros, para que después los elija el usuario. Decidido por Vero el 1 de noviembre de 2026. Al lado de cada uno se ve el código de la moneda elegida, que forma parte de su descripción accesible (C3-07). Precargan las cifras que escribió la API, sin pasar por un `number` de JavaScript y sin los ceros finales de los centavos: `1500000.50` se ve `1.500.000,5` (C3-13) |
 | Línea de estado (`role="status"`) | Existe, como en las otras pantallas | Anuncia la carga, el guardado y la confirmación |
 | Alerta de error (`role="alert"`) | Existe, como en las otras pantallas | El estado de error |
 
@@ -26,6 +26,10 @@ Sigue la forma del [contrato de la pantalla de presupuesto](../FEAT-004/ui_contr
 
 Los mismos que la [pantalla de presupuesto](../FEAT-004/ui_contract.md#tokens-del-design-system),
 sin tokens nuevos.
+
+Los campos del formulario y el selector de período usan `--color-input` como borde. Ese token se
+oscureció en el corte 3, sin sumar ninguno: su valor anterior, igual al de `--color-border`, daba
+1,27:1 contra la tarjeta. También es el borde del campo del chat de la FEAT-002.
 
 ## Máquina de estados
 
@@ -44,6 +48,23 @@ Un usuario sin períodos anteriores no es el estado vacío: ve el formulario en 
 categorías para elegir. Decidido por Vero el 31 de octubre de 2026.
 Sin sesión no es un estado de esta pantalla: un `401` vuelve a la entrada.
 
+## Accesibilidad
+
+- [x] Todo control es nativo y tiene nombre accesible, y el monto y "Quitar" de cada tope nombran su
+  categoría (C3-06).
+- [x] El contraste cumple el mínimo de WCAG AA: 4,5:1 para el texto y 3:1 para el borde de un campo.
+  Se calculó cada color contra su fondo: el texto más bajo es el del botón primario, con 5,32:1, el
+  error en rojo da 5,37:1, el borde de un campo 3,23:1 y el anillo de foco 3,75:1.
+- [x] El formulario se puede operar solo con teclado: Tab llega a cada control (C3-06), y Enter en el
+  monto de un tope nuevo lo suma, sin guardar el período.
+- [x] Cada monto dice su moneda: al editar, al lado del campo y en su descripción accesible (C3-07),
+  y en lo guardado, con el formato de la moneda (C3-08).
+- [x] El foco tiene a dónde ir en los pasos principales: al título al abrir el formulario y al volver
+  al resumen (C3-10), también al editar (C3-16 y C3-17), a la línea de estado al guardar y al
+  confirmar (C3-09), y al selector del tope nuevo al quitar un tope (C3-11). Lo que falta está en
+  [Sin cubrir](spec.md#sin-cubrir).
+- [x] Un tope nuevo sin monto se anuncia con una alerta y marca el campo como inválido (C3-12).
+
 ## Datos que consume
 
 - Crear, cambiar y confirmar el borrador, con los tres endpoints de escritura de
@@ -55,4 +76,4 @@ Sin sesión no es un estado de esta pantalla: un `401` vuelve a la entrada.
 
 El último período es el individual que empieza más tarde, aunque sea un borrador (CA-13).
 
-Los casos de componente, también los de la precarga, se proponen cuando la pantalla esté armada.
+Los casos de componente, también los de la precarga, están en la [especificación](spec.md#casos-de-prueba).

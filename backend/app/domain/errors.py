@@ -28,6 +28,8 @@ class ContextField(StrEnum):
     ENVIRONMENT = "environment"
     # How a call to the model ended: one of LlmOutcome.
     OUTCOME = "outcome"
+    BUDGET_PERIOD_ID = "budget_period_id"
+    CATEGORY_ID = "category_id"
 
 
 class ErrorCategory(StrEnum):

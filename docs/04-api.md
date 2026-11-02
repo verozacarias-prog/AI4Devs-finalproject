@@ -349,7 +349,10 @@ de octubre de 2026.
    (Decidido por Vero el 1 de noviembre de 2026); y fechas invertidas, con `period_dates_inverted`. Decidido por Vero el 30
    de octubre de 2026.
 5. Cambiar la cadencia, las fechas o la moneda de un período confirmado responde `409`, con
-   `confirmed_period_fixed`. Decidido por Vero el 31 de octubre de 2026.
+   `confirmed_period_fixed`. Decidido por Vero el 31 de octubre de 2026. Otro inicio u otro fin de
+   un mensual o un quincenal confirmado también responden este `409`, y no los `422` de su cadencia
+   de la validación 4: lo que se cambió es lo que no se puede cambiar. El fin que falta y las fechas
+   invertidas sí se responden antes. Decidido por Vero el 1 de noviembre de 2026.
 6. Un período que se superpone con otro del mismo dueño responde `409`, con
    `budget_period_overlap`, antes de que la restricción de exclusión de la base lo rechace
    igual. Decidido por Vero el 30 de octubre de 2026.

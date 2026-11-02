@@ -7,7 +7,7 @@ from app.domain.entities.budget import Budget
 from app.domain.entities.budget_period import BudgetPeriod
 from app.domain.entities.family_group import Membership
 from app.domain.entities.user import User
-from app.domain.errors import ErrorCode, ForbiddenError, NotFoundError
+from app.domain.errors import ContextField, DomainError, ErrorCode, ForbiddenError, NotFoundError
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
 from app.domain.services.budgets.period_access import can_edit, can_read
 from app.domain.services.budgets.period_dates import checked_period_end
@@ -33,9 +33,11 @@ def editable_period(
     exist; a member who is not the owner can read it, so for them it exists (CA-16)."""
     period = unit_of_work.budget_periods.find_by_id(period_id)
     if period is None or not can_read(period, user.id, memberships, user.time_zone):
-        raise NotFoundError(ErrorCode.NOT_FOUND)
+        raise NotFoundError(ErrorCode.NOT_FOUND, context={ContextField.BUDGET_PERIOD_ID: period_id})
     if not can_edit(period, user.id, memberships):
-        raise ForbiddenError(ErrorCode.NOT_THE_OWNER)
+        raise ForbiddenError(
+            ErrorCode.NOT_THE_OWNER, context={ContextField.BUDGET_PERIOD_ID: period_id}
+        )
     return period
 
 
@@ -48,6 +50,16 @@ class UpdateBudgetPeriod:
         self._clock = clock
 
     def execute(
+        self, user_id: uuid.UUID, period_id: uuid.UUID, content: PeriodContent
+    ) -> ReadablePeriod:
+        try:
+            return self._replace(user_id, period_id, content)
+        except DomainError as error:
+            # Whatever refused the change, also the database, its line says which period.
+            error.context.setdefault(ContextField.BUDGET_PERIOD_ID, period_id)
+            raise
+
+    def _replace(
         self, user_id: uuid.UUID, period_id: uuid.UUID, content: PeriodContent
     ) -> ReadablePeriod:
         with self._unit_of_work as unit_of_work:
