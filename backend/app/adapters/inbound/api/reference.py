@@ -123,6 +123,13 @@ LOGOUT_DESCRIPTION = (
     "of the request is ignored."
 )
 LOGOUT_OK = "The session was revoked and its cookie cleared."
+LOGOUT_ALL_SUMMARY = "Close every session of the user"
+LOGOUT_ALL_DESCRIPTION = (
+    "Revokes every session of the user, on all their devices and including this one, and "
+    "clears the cookie of this one. The sessions of other users stay open. The body of the "
+    "request is ignored."
+)
+LOGOUT_ALL_OK = "Every session of the user was revoked and this cookie cleared."
 
 # The accounts of the user.
 ACCOUNTS_SUMMARY = "List the accounts and their balance"

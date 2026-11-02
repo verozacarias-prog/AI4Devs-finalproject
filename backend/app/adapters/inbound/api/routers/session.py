@@ -18,6 +18,7 @@ from app.adapters.inbound.api.errors import documented_errors
 from app.adapters.inbound.api.request_logging import identify_user
 from app.adapters.inbound.api.routes import (
     AUTH_LOGOUT,
+    AUTH_LOGOUT_ALL,
     ME,
     SESSION_COOKIE,
     SESSION_COOKIE_PATH,
@@ -25,6 +26,7 @@ from app.adapters.inbound.api.routes import (
     SESSION_TAG,
 )
 from app.domain.use_cases.sessions.authenticate_session import AuthenticateSession
+from app.domain.use_cases.sessions.close_every_session import CloseEverySession
 from app.domain.use_cases.sessions.close_session import CloseSession
 
 # Reads the token of the session cookie, and tells the reference which operations ask for
@@ -69,6 +71,7 @@ def clear_session_cookie(response: Response) -> None:
 def build_session_router(
     authenticate_session: Callable[[], AuthenticateSession],
     close_session: Callable[[], CloseSession],
+    close_every_session: Callable[[], CloseEverySession],
 ) -> APIRouter:
     router = APIRouter(tags=[SESSION_TAG])
 
@@ -100,6 +103,26 @@ def build_session_router(
     )
     def logout(request: Request, token: SessionToken) -> Response:
         identify_user(request, close_session().execute(token))
+        response = Response(status_code=status.HTTP_204_NO_CONTENT)
+        clear_session_cookie(response)
+        return response
+
+    @router.post(
+        AUTH_LOGOUT_ALL,
+        status_code=status.HTTP_204_NO_CONTENT,
+        summary=reference.LOGOUT_ALL_SUMMARY,
+        description=reference.LOGOUT_ALL_DESCRIPTION,
+        response_description=reference.LOGOUT_ALL_OK,
+        responses=documented_errors(
+            {
+                status.HTTP_401_UNAUTHORIZED: reference.NO_SESSION,
+                status.HTTP_403_FORBIDDEN: reference.FOREIGN_REQUEST,
+                status.HTTP_413_CONTENT_TOO_LARGE: reference.BODY_TOO_LARGE,
+            }
+        ),
+    )
+    def logout_all(request: Request, token: SessionToken) -> Response:
+        identify_user(request, close_every_session().execute(token))
         response = Response(status_code=status.HTTP_204_NO_CONTENT)
         clear_session_cookie(response)
         return response

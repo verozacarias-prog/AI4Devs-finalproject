@@ -952,6 +952,56 @@
         ]
       }
     },
+    "/auth/logout-all": {
+      "post": {
+        "description": "Revokes every session of the user, on all their devices and including this one, and clears the cookie of this one. The sessions of other users stay open. The body of the request is ignored.",
+        "operationId": "logout_all_auth_logout_all_post",
+        "responses": {
+          "204": {
+            "description": "Every session of the user was revoked and this cookie cleared."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The body is over 64 KiB. What was left of it was not read."
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Close every session of the user",
+        "tags": [
+          "session"
+        ]
+      }
+    },
     "/budget-periods": {
       "get": {
         "description": "The periods the user of the session can read: their own, every period of the groups they are a current member of, and of a group they left, the ones that overlap their membership. Each one with its limits, whether the user can edit it, and whether it covers today, in the time zone of the user. The one that starts latest comes first; with the same start, the individual one before those of groups, by name.",

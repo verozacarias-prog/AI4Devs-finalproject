@@ -76,8 +76,17 @@ export async function enterWithLink(
 }
 
 /** Closes the session of this browser (POST /auth/logout). */
-export async function logout(options: Options = {}): Promise<{ kind: 'closed' } | Failure> {
-  const answer = await request(API_ROUTES.logout, { ...options, method: 'POST' })
+export function logout(options: Options = {}): Promise<{ kind: 'closed' } | Failure> {
+  return close(API_ROUTES.logout, options)
+}
+
+/** Closes every session of the user, on all their devices (POST /auth/logout-all). */
+export function logoutAll(options: Options = {}): Promise<{ kind: 'closed' } | Failure> {
+  return close(API_ROUTES.logoutAll, options)
+}
+
+async function close(route: string, options: Options): Promise<{ kind: 'closed' } | Failure> {
+  const answer = await request(route, { ...options, method: 'POST' })
   if (answer.kind !== 'answered') return answer
   // Without a valid session there is nothing left to close, which is what was asked for.
   return answer.ok || answer.status === HTTP_UNAUTHORIZED ? { kind: 'closed' } : { kind: 'api-error' }

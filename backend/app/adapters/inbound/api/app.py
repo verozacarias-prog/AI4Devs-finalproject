@@ -41,6 +41,7 @@ from app.domain.use_cases.health.check_readiness import CheckReadiness
 from app.domain.use_cases.messages.list_chat_messages import ListChatMessages
 from app.domain.use_cases.messages.send_chat_message import SendChatMessage
 from app.domain.use_cases.sessions.authenticate_session import AuthenticateSession, ValidateSession
+from app.domain.use_cases.sessions.close_every_session import CloseEverySession
 from app.domain.use_cases.sessions.close_session import CloseSession
 from app.domain.use_cases.sessions.open_dev_session import OpenDevSession
 from app.domain.use_cases.test_data.list_test_users import ListTestUsers
@@ -90,6 +91,7 @@ def create_app(
         build_session_router(
             lambda: AuthenticateSession(unit_of_work(), clock),
             lambda: CloseSession(unit_of_work(), clock),
+            lambda: CloseEverySession(unit_of_work(), clock),
         )
     )
     app.include_router(

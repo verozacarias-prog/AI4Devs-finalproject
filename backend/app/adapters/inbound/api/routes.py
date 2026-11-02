@@ -24,6 +24,7 @@ class HealthState(StrEnum):
 # development entry. Its prefix makes the browser reject it without Secure and Path=/.
 ME = "/me"
 AUTH_LOGOUT = "/auth/logout"
+AUTH_LOGOUT_ALL = "/auth/logout-all"
 SESSION_TAG = "session"
 SESSION_COOKIE = "__Host-sid"
 SESSION_COOKIE_PATH = "/"

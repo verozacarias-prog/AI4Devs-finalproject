@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { loadConversation } from './api/chat'
-import { logout } from './api/session'
+import { logout, logoutAll } from './api/session'
 import type { SessionUser } from './api/session'
 import { AppShell, type LogoutFailure, type Screen } from './components/AppShell'
 import { Brand } from './components/Brand'
@@ -36,9 +36,9 @@ export default function App() {
     return () => abandon.abort()
   }, [user])
 
-  function closeSession() {
+  function closeWith(close: typeof logout) {
     setLogoutFailure(null)
-    void logout().then((closed) => {
+    void close().then((closed) => {
       if (closed.kind === 'closed') sessionEnded()
       else if (closed.kind !== 'cancelled') setLogoutFailure(closed.kind)
     })
@@ -60,7 +60,8 @@ export default function App() {
       user={user}
       screen={screen}
       onSelect={setScreen}
-      onLogout={closeSession}
+      onLogout={() => closeWith(logout)}
+      onLogoutAll={() => closeWith(logoutAll)}
       logoutFailure={logoutFailure}
       chatAvailable={chatAvailable}
     >

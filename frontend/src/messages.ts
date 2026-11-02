@@ -14,6 +14,7 @@ export const MESSAGES = {
     chat: 'Chat',
     signedInAs: 'Sesión de',
     logout: 'Cerrar sesión',
+    logoutAll: 'Cerrar todas las sesiones',
     logoutFailed: 'No se pudo cerrar la sesión',
   },
   /** Shared by every screen that asks the API for something. */
