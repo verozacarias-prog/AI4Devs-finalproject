@@ -404,6 +404,13 @@ Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-princip
 
 Se usa cuando falta algo que **depende de una decisión del usuario** — la cuenta, el monto, el tipo si es ambiguo, o la confirmación del presupuesto; no se crea un pendiente por una fecha o una moneda ausente, porque esas se resuelven solas.
 
+**Un monto que no se puede guardar falta igual que uno que no se dijo.** Un monto se guarda
+redondeado a centavos con 18 cifras enteras como mucho ([3. Modelo de datos](03-modelo-de-datos.md)).
+Si redondeado da 0 o no entra, el monto falta: el movimiento no se registra y el pendiente lo
+pregunta. Cuando no entra, la respuesta lo dice antes de la pregunta, en una línea propia: «Ese monto
+es más grande de lo que puedo registrar.», y la pregunta sigue como siempre, con «¿Cuánto fue?». Vale igual para el mensaje que abre el pendiente y para la respuesta
+que lo continúa, y el mensaje no falla.
+
 Un movimiento que llega completo también pasa por un pendiente, en un lote de uno: el pendiente se promueve y el lote se cierra en la misma operación, con la confirmación como `confirmation_message_id`. Así hay un solo camino para todo movimiento, y cualquier confirmación se puede citar para corregirlo (§ 15).
 
 Cuando el usuario responde, se completa y se promueve a `TRANSACTION` (quedando enlazada por `resulting_transaction_id`). `expires_at` evita que se acumulen pendientes eternos de mensajes que nunca se contestaron. Un pendiente vence a las 24 horas de creado: es la ventana en la que WhatsApp deja escribirle al usuario con texto libre desde su último mensaje (§ 11), así que el recordatorio previo entra siempre en ella.
@@ -928,7 +935,7 @@ tiene un tope de 100 mensajes clasificados por día, que es configuración. La c
 descuenta de ninguna de las tres cuotas. Las tres suman 80, así que quien usa todo lo permitido
 no llega al tope. Un mensaje que llega con el tope alcanzado no se clasifica: se guarda y se
 procesa al día siguiente, como un registro que superó su cuota, porque no se puede saber si era
-un gasto. El aviso de que llegó al límite del día sale una sola vez por día.
+un gasto. Se guarda hasta el máximo de mensajes en espera, que se describe más abajo. El aviso de que llegó al límite del día sale una sola vez por día.
 
 **Tres cuotas diarias por usuario, separadas.**
 
@@ -947,8 +954,8 @@ sin desplegar.
 
 **Superar una cuota no pierde nada.**
 
-- **Registro:** el mensaje se guarda igual y queda sin procesar hasta que la cuota se renueva al
-  día siguiente. El asistente responde con un texto fijo, sin otra llamada al LLM, que avisa que
+- **Registro:** el mensaje se guarda igual, hasta el máximo de mensajes en espera, y queda sin
+  procesar hasta que la cuota se renueva al día siguiente. El asistente responde con un texto fijo, sin otra llamada al LLM, que avisa que
   lo va a procesar mañana. Perder un gasto que el usuario escribió sería peor que demorarlo. El
   mensaje demorado no traba a los que el usuario mande después: una consulta del mismo día se
   responde igual. Los demorados se procesan al día siguiente en el orden en que llegaron, y cada
@@ -961,6 +968,20 @@ sin desplegar.
 interpretar, recibe un texto fijo que pide una aclaración y no gasta ninguna cuota. Sí suma
 al tope diario total, que no es una cuota, igual que un mensaje que el modelo se niega a
 interpretar.
+
+**Un tope de mensajes en espera por usuario.** Un usuario puede tener como mucho 200 mensajes
+esperando respuesta, que es configuración. Esperan los que están pendientes o en proceso, y
+cuentan también los demorados al día siguiente por una cuota o por el tope diario. Con 200 en
+espera, el mensaje siguiente no se guarda, y el usuario puede volver a mandarlo cuando Platita
+conteste alguno. Un mensaje que repite uno ya guardado no es nuevo y no se rechaza. Los
+procesados, los fallidos y los de otros usuarios no cuentan. Dos mensajes que llegan en el mismo
+instante con 199 en espera pueden guardarse los dos y dejar 201: el tope es contra el abuso, y
+no se bloquea para evitar ese caso. Hoy lo aplica el chat web; qué ve
+el usuario de WhatsApp está en la [hoja de ruta](hoja-de-ruta.md#decisiones-abiertas).
+
+**Un mensaje que falla después de clasificarse cuenta igual.** La clasificación ya se pagó, así
+que suma al tope diario total aunque el registro falle, quede el mensaje `failed` o se reintente.
+Cada reintento vuelve a clasificar y vuelve a sumar: cuenta cada clasificación pagada.
 
 **Un tope global mensual como corte de emergencia.** Además de las cuotas por usuario, la cuenta
 del proveedor de LLM tiene un límite de gasto mensual de 20 dólares, configurado en la consola

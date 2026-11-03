@@ -146,3 +146,18 @@ def test_a_limit_that_is_not_a_positive_integer_stops_startup(variable: str, val
     message = str(error.value)
     assert variable in message
     assert value not in message
+
+
+def test_the_most_messages_waiting_comes_from_the_configuration() -> None:
+    """Case 19 of #125: 200 without the variable."""
+    assert load_settings(BASE_ENVIRON | {"WAITING_MESSAGES_LIMIT": "5"}).waiting_messages_limit == 5
+    assert load_settings(BASE_ENVIRON).waiting_messages_limit == 200
+
+
+@pytest.mark.parametrize("value", ["0", "abc"])
+def test_a_most_messages_waiting_that_is_not_a_positive_integer_stops_startup(value: str) -> None:
+    """Case 19 of #125, as the other limits."""
+    with pytest.raises(SettingsError) as error:
+        load_settings(BASE_ENVIRON | {"WAITING_MESSAGES_LIMIT": value})
+
+    assert "WAITING_MESSAGES_LIMIT" in str(error.value)

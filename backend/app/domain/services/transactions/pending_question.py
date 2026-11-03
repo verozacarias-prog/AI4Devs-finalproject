@@ -1,7 +1,8 @@
 """The question of a pending: what was understood, and what the user has to say (§ 5; FEAT-003).
 
-The first line says the movement as far as it is known; then one line for each thing that is
-missing, in the order of MissingField, with what can be chosen.
+The first line says the movement as far as it is known, after a line that says why when the
+amount given does not fit where it is stored; then one line for each thing that is missing, in
+the order of MissingField, with what can be chosen.
 """
 
 from __future__ import annotations
@@ -12,7 +13,11 @@ from decimal import Decimal
 from app import messages
 from app.constants import LINE_END
 from app.domain.entities.transaction import TransactionType
-from app.domain.services.transactions.movement_resolution import Missing, MissingField
+from app.domain.services.transactions.movement_resolution import (
+    Missing,
+    MissingField,
+    too_large,
+)
 from app.domain.services.transactions.registration_confirmation import (
     written_amount,
     written_day,
@@ -48,6 +53,10 @@ def question_text(
         else messages.QUESTION_SEVERAL_MISSING
     )
     lines = [first.format(movement=movement)]
+    amount = interpretation.amount
+    if amount is not None and too_large(amount):
+        # Why the amount it gave is asked again, before the question (domain rules, § 5).
+        lines.insert(0, messages.AMOUNT_TOO_LARGE)
     lines.extend(_line(field, missing, limits) for field in missing.fields)
     return LINE_END.join(lines)
 

@@ -40,6 +40,8 @@ class ErrorCategory(StrEnum):
     INVALID = "invalid"
     # A service the use case depends on did not answer, as the language model.
     UNAVAILABLE = "unavailable"
+    # The user already has as much as a limit allows waiting: it is let through once some ends.
+    TOO_MANY = "too_many"
 
 
 class ErrorCode(StrEnum):
@@ -76,6 +78,8 @@ class ErrorCode(StrEnum):
     ESTIMATED_INCOME_NEGATIVE = "estimated_income_negative"
     AMOUNT_TOO_LARGE = "amount_too_large"
     CURRENCY_NOT_FOUND = "currency_not_found"
+    # The most messages a user may have waiting for an answer (domain rules, § 12).
+    TOO_MANY_WAITING_MESSAGES = "too_many_waiting_messages"
 
 
 class DomainError(Exception):
@@ -129,6 +133,12 @@ class InvalidError(DomainError):
     """A value is missing or breaks a rule."""
 
     category = ErrorCategory.INVALID
+
+
+class TooManyError(DomainError):
+    """A limit of what may wait at once is reached; it is accepted again when some ends."""
+
+    category = ErrorCategory.TOO_MANY
 
 
 class TestDataNotAllowedError(ForbiddenError):

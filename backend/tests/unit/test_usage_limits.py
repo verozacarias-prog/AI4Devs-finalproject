@@ -22,6 +22,7 @@ from app.domain.entities.classification import (
     RegistrationType,
 )
 from app.domain.entities.llm_usage import UsageCounter
+from app.domain.errors import StoreUnavailableError
 from app.domain.use_cases.messages.answer_message import AnswerMessage
 from tests.support.doubles import FixedClock, InMemoryUnitOfWork
 from tests.support.fake_llm import FakeLLM
@@ -229,3 +230,79 @@ def test_an_expense_that_cannot_be_registered_yet_uses_no_quota_of_registration(
 
     assert unit_of_work.llm_usage.counts[registration] == 10
     assert unit_of_work.llm_usage.counts[classification] == 1
+
+
+def test_a_message_whose_registration_fails_still_counts_against_the_cap() -> None:
+    # Case 1 of #125. The model answered and was paid for: an error of the code after it does not
+    # undo the count, and the tokens of that call are kept.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    unit_of_work.transactions.failure = RuntimeError("a mistake of the code")
+    message = lucia.message(SUPERMARKET_EXPENSE)
+
+    with pytest.raises(RuntimeError):
+        AnswerMessage(unit_of_work, FixedClock(NOW), FakeLLM(supermarket_expense())).execute(
+            message
+        )
+
+    assert unit_of_work.inbound_messages.failed == [message.id]
+    [reply] = unit_of_work.outbound_messages.added
+    assert reply.text == (
+        "Tuve un problema y no pude procesar tu mensaje. ¿Me lo mandás de nuevo en un rato?"
+    )
+    key = (lucia.id, OCTOBER_17, UsageCounter.CLASSIFICATION)
+    assert unit_of_work.llm_usage.counts[key] == 1
+    assert unit_of_work.llm_usage.tokens[key] == (812, 64)
+
+
+def test_a_message_failed_by_the_store_on_its_last_attempt_still_counts() -> None:
+    # Case 13 of #125. The database falls after the model answered, on the last attempt: the
+    # message fails, and the call it paid for counts with its tokens.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    unit_of_work.transactions.failure = StoreUnavailableError()
+    message = replace(lucia.message(SUPERMARKET_EXPENSE), attempts=3)
+
+    with pytest.raises(StoreUnavailableError):
+        AnswerMessage(unit_of_work, FixedClock(NOW), FakeLLM(supermarket_expense())).execute(
+            message
+        )
+
+    assert unit_of_work.inbound_messages.failed == [message.id]
+    [reply] = unit_of_work.outbound_messages.added
+    assert reply.text == (
+        "Tuve un problema y no pude procesar tu mensaje. ¿Me lo mandás de nuevo en un rato?"
+    )
+    key = (lucia.id, OCTOBER_17, UsageCounter.CLASSIFICATION)
+    assert unit_of_work.llm_usage.counts[key] == 1
+    assert unit_of_work.llm_usage.tokens[key] == (812, 64)
+
+
+def test_a_message_retried_after_the_store_fell_counts_each_classification() -> None:
+    # Case 14 of #125. The database falls after the model answered, on the first attempt: the
+    # message is tried again without a notice, and that call counts. The retry classifies again,
+    # and counts again.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    unit_of_work.transactions.failure = StoreUnavailableError()
+    message = lucia.message(SUPERMARKET_EXPENSE)
+
+    with pytest.raises(StoreUnavailableError):
+        AnswerMessage(unit_of_work, FixedClock(NOW), FakeLLM(supermarket_expense())).execute(
+            message
+        )
+
+    assert unit_of_work.inbound_messages.failed == []
+    assert [retried for retried, _, _ in unit_of_work.inbound_messages.retried] == [message.id]
+    assert unit_of_work.outbound_messages.added == []
+    key = (lucia.id, OCTOBER_17, UsageCounter.CLASSIFICATION)
+    assert unit_of_work.llm_usage.counts[key] == 1
+    assert unit_of_work.llm_usage.tokens[key] == (812, 64)
+
+    unit_of_work.transactions.failure = None
+    AnswerMessage(unit_of_work, FixedClock(NOW), FakeLLM(supermarket_expense())).execute(
+        replace(message, attempts=2)
+    )
+
+    assert unit_of_work.llm_usage.counts[key] == 2
+    assert unit_of_work.llm_usage.tokens[key] == (1624, 128)

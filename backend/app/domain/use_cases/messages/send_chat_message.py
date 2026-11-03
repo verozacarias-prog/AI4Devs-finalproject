@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 
+from app.constants import DEFAULT_WAITING_MESSAGES_LIMIT
 from app.domain.entities.inbound_message import (
     InboundMessage,
     InboundStatus,
@@ -14,6 +15,7 @@ from app.domain.errors import (
     ErrorCode,
     InconsistentDataError,
     NotFoundError,
+    TooManyError,
     UnauthenticatedError,
 )
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
@@ -33,11 +35,18 @@ class SendChatMessage:
     The worker takes it later, like a message of WhatsApp. Its time is the one of the server
     clock: the request carries none. The same key sent again by the same user returns the
     message stored the first time, and a quoted message must be a reply of Platita to that user.
+    A user with `waiting_limit` messages waiting for an answer cannot add another one (§ 12).
     """
 
-    def __init__(self, unit_of_work: UnitOfWorkPort, clock: Clock) -> None:
+    def __init__(
+        self,
+        unit_of_work: UnitOfWorkPort,
+        clock: Clock,
+        waiting_limit: int = DEFAULT_WAITING_MESSAGES_LIMIT,
+    ) -> None:
         self._unit_of_work = unit_of_work
         self._clock = clock
+        self._waiting_limit = waiting_limit
 
     def execute(
         self,
@@ -60,6 +69,9 @@ class SendChatMessage:
             ):
                 # A reply to someone else, or no reply at all: told apart nowhere.
                 raise NotFoundError(ErrorCode.NOT_FOUND)
+            if unit_of_work.inbound_messages.count_waiting(user.id) >= self._waiting_limit:
+                # A repeated key was answered above: it is one of those waiting already.
+                raise TooManyError(ErrorCode.TOO_MANY_WAITING_MESSAGES)
             message = InboundMessage(
                 id=uuid.uuid4(),
                 provider=Provider.WEB,

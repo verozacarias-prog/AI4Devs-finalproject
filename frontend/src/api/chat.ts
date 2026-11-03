@@ -1,4 +1,10 @@
-import { HTTP_NOT_FOUND, HTTP_UNAUTHORIZED, IDEMPOTENCY_KEY_HEADER } from '../constants'
+import {
+  API_ERROR_TOO_MANY_WAITING,
+  HTTP_NOT_FOUND,
+  HTTP_TOO_MANY_REQUESTS,
+  HTTP_UNAUTHORIZED,
+  IDEMPOTENCY_KEY_HEADER,
+} from '../constants'
 import { request, type Failure, type Options } from './request'
 import { API_ROUTES } from './routes'
 import type { components } from './schema'
@@ -7,6 +13,7 @@ export type ChatMessage = components['schemas']['ChatMessageItem']
 type ChatConversation = components['schemas']['ChatConversation']
 type ChatMessageRequest = components['schemas']['ChatMessageRequest']
 type StoredChatMessage = components['schemas']['StoredChatMessage']
+type ErrorBody = components['schemas']['ErrorBody']
 
 export type Conversation =
   | { kind: 'loaded'; messages: ChatMessage[]; nextCursor: string | null }
@@ -30,7 +37,12 @@ export async function loadConversation(after: string | null, options: Options = 
   return { kind: 'loaded', messages: conversation.messages, nextCursor: conversation.next_cursor }
 }
 
-export type Sent = { kind: 'sent'; id: string } | { kind: 'no-session' } | Failure
+export type Sent =
+  | { kind: 'sent'; id: string }
+  | { kind: 'no-session' }
+  /** The user already has as many messages waiting for an answer as allowed: nothing was stored. */
+  | { kind: 'too-many-waiting' }
+  | Failure
 
 /**
  * Writes a message to Platita (POST /chat/messages). The API stores it and answers at once;
@@ -47,6 +59,9 @@ export async function sendMessage(text: string, idempotencyKey: string, options:
   })
   if (answer.kind !== 'answered') return answer
   if (answer.status === HTTP_UNAUTHORIZED) return { kind: 'no-session' }
+  // Told apart by its code, not by the status alone: another 429 is a plain failure (docs/04-api.md).
+  const code = (answer.body as ErrorBody | null)?.error
+  if (answer.status === HTTP_TOO_MANY_REQUESTS && code === API_ERROR_TOO_MANY_WAITING) return { kind: 'too-many-waiting' }
   if (!answer.ok) return { kind: 'api-error' }
   return { kind: 'sent', id: (answer.body as StoredChatMessage).id }
 }

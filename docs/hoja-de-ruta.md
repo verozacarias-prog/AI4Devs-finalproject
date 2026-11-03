@@ -181,6 +181,11 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   ([reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad)).
   Guardar cada intervalo exige que la membresía tenga su propio id, en vez de la clave
   `(user_id, family_group_id)`, y que la regla de visibilidad recorra todos los intervalos.
+- **Qué ve el usuario de WhatsApp con 200 mensajes en espera.** El tope de mensajes en espera
+  vale para todos los canales ([reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente)),
+  pero hoy lo aplica solo el chat web, que responde `429` y el dashboard pide esperar. El webhook
+  de WhatsApp tiene que responder `200` igual, así que falta decidir si el mensaje que lo supera
+  se descarta con un aviso, cuántas veces se avisa, y si se guarda para auditoría (issue #125).
 - **Qué pasa cuando un recurrente o una cuota no se pueden generar.** Los casos previstos, sin
   período confirmado o con una cotización por confirmar, quedan como pendiente
   ([reglas de dominio § 8](reglas-de-dominio.md#8-movimientos-recurrentes-la-excepción-a-la-confirmación)).

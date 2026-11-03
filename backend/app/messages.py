@@ -104,6 +104,8 @@ QUESTION_CATEGORY_PART = " en {category}"
 QUESTION_ACCOUNT_PART = " con {account}"
 ASK_TYPE = "¿Fue un gasto o un ingreso?"
 ASK_AMOUNT = "¿Cuánto fue?"
+# Before the question, when the amount does not fit where it is stored (domain rules, § 5).
+AMOUNT_TOO_LARGE = "Ese monto es más grande de lo que puedo registrar."
 ASK_ACCOUNT = "¿Con qué cuenta? {options}."
 # The last two options of a list go joined by this, and the rest by a comma.
 LAST_OPTION_JOINER = " o "
@@ -124,7 +126,9 @@ DRAFT_LIMIT = "{category} {amount}"
 DRAFT_WITHOUT_LIMITS = "Sin topes."
 NO_PERIOD = "No tenés un presupuesto para el {date}. Armalo en el dashboard y después avisame."
 # Another movement while a pending awaits its reply: one at a time in delivery 2 (CA-36).
-FINISH_THE_PENDING_FIRST = "Primero terminemos con lo anterior."
+FINISH_THE_PENDING_FIRST = (
+    "No anoté tu último mensaje: primero terminemos con lo anterior, y después mandámelo de nuevo."
+)
 PENDING_DISCARDED = "Listo, no lo anoto."
 # The model refused to interpret the message: it is not tried again (CA-40).
 MODEL_REFUSED = (

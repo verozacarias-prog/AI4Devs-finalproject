@@ -54,6 +54,7 @@ services:
       PUBLIC_ROOT_URL: ${PUBLIC_ROOT_URL:-http://localhost:${API_PORT:-8000}}
       # Empty means the default of the code (docs/operacion.md).
       QUEUE_MAX_WAIT_MINUTES: ${QUEUE_MAX_WAIT_MINUTES:-}
+      WAITING_MESSAGES_LIMIT: ${WAITING_MESSAGES_LIMIT:-}
       # Checked here too: with a lock not longer than the call, no process starts (ADR 0010).
       WORKER_LOCK_SECONDS: ${WORKER_LOCK_SECONDS:-}
       LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-}

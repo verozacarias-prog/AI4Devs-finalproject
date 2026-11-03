@@ -362,7 +362,8 @@ def test_with_an_open_pending_another_movement_is_not_registered() -> None:
     assert pending.status is PendingStatus.OPEN
     reply = unit_of_work.outbound_messages.added[-1]
     assert reply.text.splitlines() == [
-        "Primero terminemos con lo anterior.",
+        "No anoté tu último mensaje: primero terminemos con lo anterior, "
+        "y después mandámelo de nuevo.",
         "Para anotar el gasto de $3.500 en Supermercado me falta un dato:",
         ALL_ACCOUNTS,
     ]

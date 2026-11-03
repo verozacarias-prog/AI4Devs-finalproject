@@ -6,7 +6,7 @@ import { AppShell, type LogoutFailure, type Screen } from './components/AppShell
 import { Brand } from './components/Brand'
 import { AccountsPage } from './pages/AccountsPage'
 import { BudgetPage } from './pages/BudgetPage'
-import { ChatPage } from './pages/ChatPage'
+import { ChatPage, type Outgoing } from './pages/ChatPage'
 import { DevEntryPage } from './pages/DevEntryPage'
 import { StatusPage } from './pages/StatusPage'
 
@@ -15,6 +15,9 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('accounts')
   const [logoutFailure, setLogoutFailure] = useState<LogoutFailure | null>(null)
   const [chatAvailable, setChatAvailable] = useState(false)
+  // What was written in the chat and the conversation does not bring yet: here, so that it
+  // outlives going to another screen, and goes with the session (issue #125).
+  const [outgoing, setOutgoing] = useState<Outgoing[]>([])
   // Changing it starts the entry again, to show it when the session ended.
   const [entry, setEntry] = useState(0)
   const sessionEnded = useCallback(() => {
@@ -22,6 +25,7 @@ export default function App() {
     setScreen('accounts')
     setLogoutFailure(null)
     setChatAvailable(false)
+    setOutgoing([])
     setEntry((current) => current + 1)
   }, [])
 
@@ -67,7 +71,9 @@ export default function App() {
     >
       {screen === 'accounts' && <AccountsPage key={user.id} onNoSession={sessionEnded} />}
       {screen === 'budget' && <BudgetPage key={user.id} onNoSession={sessionEnded} />}
-      {screen === 'chat' && <ChatPage key={user.id} onNoSession={sessionEnded} />}
+      {screen === 'chat' && (
+        <ChatPage key={user.id} onNoSession={sessionEnded} outgoing={outgoing} setOutgoing={setOutgoing} />
+      )}
       {screen === 'status' && <StatusPage />}
     </AppShell>
   )

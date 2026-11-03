@@ -2,6 +2,7 @@
 
 Case C1-02: the time of the message comes from the clock, because the request carries none.
 Case C2-30: two requests at once with the same key answer the message stored first.
+Case 11 of #125: the most messages a user may have waiting comes from the configuration.
 """
 
 from __future__ import annotations
@@ -9,7 +10,10 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
+import pytest
+
 from app.domain.entities.inbound_message import InboundMessage, InboundStatus, Provider
+from app.domain.errors import DomainError
 from app.domain.use_cases.messages.send_chat_message import SendChatMessage
 from app.domain.use_cases.test_data.create_test_user import CreateTestUser
 from tests.support.doubles import FixedClock, InMemoryUnitOfWork
@@ -66,3 +70,23 @@ def test_two_requests_at_once_with_the_same_key_answer_the_original_message() ->
 
     assert sent.message == stored_by_the_other
     assert sent.created is False
+
+
+def test_the_most_messages_waiting_comes_from_the_configuration() -> None:
+    # Case 11 of #125. With a limit of 2, the third message waiting is not stored.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = CreateTestUser(FixedClock(NOW)).execute(
+        unit_of_work, name="Lucía", phone="+000000000001", terms_version="local-seed-1"
+    )
+    send = SendChatMessage(unit_of_work, FixedClock(NOW), waiting_limit=2)
+    send.execute(user_id=lucia.id, text="gasté 3500 en el súper", idempotency_key=str(uuid.uuid4()))
+    send.execute(user_id=lucia.id, text="y 1200 de nafta", idempotency_key=str(uuid.uuid4()))
+
+    with pytest.raises(DomainError) as raised:
+        send.execute(user_id=lucia.id, text="y 800 de pan", idempotency_key=str(uuid.uuid4()))
+
+    assert raised.value.code == "too_many_waiting_messages"
+    assert [message.text for message in unit_of_work.inbound_messages.added] == [
+        "gasté 3500 en el súper",
+        "y 1200 de nafta",
+    ]

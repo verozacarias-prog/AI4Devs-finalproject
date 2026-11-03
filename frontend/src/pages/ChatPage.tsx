@@ -1,4 +1,14 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+  type SetStateAction,
+} from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/class-names'
@@ -17,12 +27,18 @@ type State = { kind: 'loading' } | { kind: 'ready' } | { kind: 'error'; cause: E
 
 type ErrorCause = Exclude<Failure['kind'], 'cancelled'>
 
-/** A message written here that the conversation does not bring yet. */
-type Outgoing = {
+/**
+ * A message written here that the conversation does not bring yet. The dashboard keeps them
+ * while the session lasts in the tab, so one not sent is still there after going to another
+ * screen and back (issue #125). They are never written to the browser storage.
+ */
+export type Outgoing = {
   /** The Idempotency-Key: the same one on every retry, so it is never stored twice. */
   key: string
   text: string
   status: 'sending' | 'sent' | 'failed'
+  /** Not stored because too many messages wait for an answer: it says to wait before retrying. */
+  tooManyWaiting?: boolean
   /** The id the API gave it, to know when the conversation brings it. */
   id?: string
 }
@@ -34,15 +50,17 @@ const ERROR_MESSAGES: Record<ErrorCause, string> = MESSAGES.common.apiFailures
 type Props = {
   /** Called when the API says there is no session: the entry is shown again. */
   onNoSession: () => void
+  /** The messages written here that the conversation does not bring yet, kept by the dashboard. */
+  outgoing: Outgoing[]
+  setOutgoing: Dispatch<SetStateAction<Outgoing[]>>
   /** How long to wait for the API. Tests pass a short one. */
   timeoutMs?: number
 }
 
-export function ChatPage({ onNoSession, timeoutMs }: Props) {
+export function ChatPage({ onNoSession, outgoing, setOutgoing, timeoutMs }: Props) {
   const [state, setState] = useState<State>({ kind: 'loading' })
   const [attempt, setAttempt] = useState(0)
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [outgoing, setOutgoing] = useState<Outgoing[]>([])
   const [pollFailed, setPollFailed] = useState(false)
   const [draft, setDraft] = useState('')
   // Where the next read starts. A ref, so the polling does not start over with each answer.
@@ -61,7 +79,7 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
     })
     const ids = new Set(loaded.map((message) => message.id))
     setOutgoing((current) => current.filter((message) => message.id === undefined || !ids.has(message.id)))
-  }, [])
+  }, [setOutgoing])
 
   // The first read of the conversation.
   useEffect(() => {
@@ -83,6 +101,16 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
     })
     return () => abandon.abort()
   }, [attempt, timeoutMs, onNoSession])
+
+  // A message written here is shown only in the conversation once the conversation brings it.
+  // Its send may answer after the chat was left and opened again (issue #125): whichever of the
+  // two arrives last, the read or the answer of the send, it ends here.
+  useEffect(() => {
+    const brought = new Set(messages.map((message) => message.id))
+    if (outgoing.some((message) => message.id !== undefined && brought.has(message.id))) {
+      setOutgoing((current) => current.filter((message) => message.id === undefined || !brought.has(message.id)))
+    }
+  }, [messages, outgoing, setOutgoing])
 
   const ready = state.kind === 'ready'
   const empty = ready && messages.length === 0 && outgoing.length === 0
@@ -146,12 +174,12 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
               ? candidate
               : sent.kind === 'sent'
                 ? { ...candidate, status: 'sent', id: sent.id }
-                : { ...candidate, status: 'failed' },
+                : { ...candidate, status: 'failed', tooManyWaiting: sent.kind === 'too-many-waiting' },
           ),
         )
       })
     },
-    [timeoutMs, onNoSession],
+    [timeoutMs, onNoSession, setOutgoing],
   )
 
   // Counted by code points, as the API does: a plain emoji is one, a flag or a skin tone is more.
@@ -168,7 +196,7 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
   }
 
   function resend(message: Outgoing) {
-    const again: Outgoing = { ...message, status: 'sending' }
+    const again: Outgoing = { ...message, status: 'sending', tooManyWaiting: false }
     setOutgoing((current) => current.map((candidate) => (candidate.key === message.key ? again : candidate)))
     deliver(again)
   }
@@ -207,12 +235,19 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
               time={null}
               footer={
                 message.status === 'failed' && (
-                  <span className="chat__not-sent mt-2 flex items-center justify-end gap-2 self-end rounded-md bg-card px-2 py-1 text-xs">
-                    <span className="font-semibold text-destructive">{TEXT.notSent}</span>
-                    <Button size="sm" variant="outline" className="text-foreground" onClick={() => resend(message)}>
-                      {MESSAGES.common.retry}
-                    </Button>
-                  </span>
+                  <>
+                    {message.tooManyWaiting && (
+                      <span className="mt-2 self-end rounded-md bg-card px-2 py-1 text-xs text-foreground">
+                        {TEXT.tooManyWaiting}
+                      </span>
+                    )}
+                    <span className="chat__not-sent mt-2 flex items-center justify-end gap-2 self-end rounded-md bg-card px-2 py-1 text-xs">
+                      <span className="font-semibold text-destructive">{TEXT.notSent}</span>
+                      <Button size="sm" variant="outline" className="text-foreground" onClick={() => resend(message)}>
+                        {MESSAGES.common.retry}
+                      </Button>
+                    </span>
+                  </>
                 )
               }
             >

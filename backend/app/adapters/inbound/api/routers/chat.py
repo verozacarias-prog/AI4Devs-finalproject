@@ -91,6 +91,7 @@ def build_chat_router(
                     status.HTTP_413_CONTENT_TOO_LARGE: reference.BODY_TOO_LARGE,
                     status.HTTP_404_NOT_FOUND: reference.SEND_CHAT_MESSAGE_NOT_FOUND,
                     status.HTTP_422_UNPROCESSABLE_CONTENT: reference.SEND_CHAT_MESSAGE_INVALID,
+                    status.HTTP_429_TOO_MANY_REQUESTS: reference.SEND_CHAT_MESSAGE_TOO_MANY,
                 }
             ),
         },

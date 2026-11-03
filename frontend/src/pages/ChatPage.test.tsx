@@ -1,5 +1,6 @@
 /**
- * Cases C1-11 to C1-21, C2-22 to C2-29 and C3-10 to C3-11 of FEAT-002 (docs/features/FEAT-002/spec.md): the web chat. The whole
+ * Cases C1-11 to C1-21, C2-22 to C2-29 and C3-10 to C3-11 of FEAT-002 (docs/features/FEAT-002/spec.md), and
+ * cases 12 and 15 to 18 of issue #125: the web chat. The whole
  * dashboard is rendered, with Lucía already in and the API simulated at the network level.
  * The chat asks for new messages five times as often as it does for real: every 100 ms while
  * it waits for a reply instead of every half second, and every 600 ms instead of every 3 seconds.
@@ -343,6 +344,173 @@ test('case C2-24: a send that fails is retried with the same key', async () => {
   expect(keys[1]).toBe(keys[0])
   await waitFor(() => expect(screen.queryByText('No enviado')).toBeNull())
   expect(screen.getAllByText('gasté 3500 en el súper')).toHaveLength(1)
+})
+
+test('case 12 of #125: with too many messages waiting, it asks to wait and retries with the same key', async () => {
+  const keys: (string | null)[] = []
+  apiWithLuciaIn(
+    http.get(CHAT, () => conversation([], null)),
+    http.post(CHAT, ({ request }) => {
+      keys.push(request.headers.get('Idempotency-Key'))
+      if (keys.length === 1) return HttpResponse.json({ error: 'too_many_waiting_messages' }, { status: 429 })
+      return HttpResponse.json({ id: 'im1', status: 'pending' }, { status: 202 })
+    }),
+  )
+  await openChat()
+  const input = await screen.findByLabelText('Tu mensaje')
+  fireEvent.change(input, { target: { value: 'gasté 3500 en el súper' } })
+  fireEvent.keyDown(input, { key: 'Enter' })
+
+  await screen.findByText('No enviado')
+  screen.getByText('Tenés muchos mensajes esperando respuesta. Esperá a que te conteste y reintentá.')
+  fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
+
+  await waitFor(() => expect(keys).toHaveLength(2))
+  expect(keys[1]).toBe(keys[0])
+  await waitFor(() => expect(screen.queryByText('No enviado')).toBeNull())
+  expect(
+    screen.queryByText('Tenés muchos mensajes esperando respuesta. Esperá a que te conteste y reintentá.'),
+  ).toBeNull()
+})
+
+const CLOTHES = 'gaste 16mil en ropa con mp'
+const WAIT_NOTICE = 'Tenés muchos mensajes esperando respuesta. Esperá a que te conteste y reintentá.'
+/** The budget screen is only gone through: whatever it shows does not matter here. */
+const budgetGoneThrough = http.get('*/budget-periods', () => HttpResponse.json({ error: 'internal_error' }, { status: 500 }))
+
+async function write(text: string) {
+  const input = await screen.findByLabelText('Tu mensaje')
+  fireEvent.change(input, { target: { value: text } })
+  fireEvent.keyDown(input, { key: 'Enter' })
+}
+
+test('case 15 of #125: a message not sent is still there after going to the budget and back', async () => {
+  const keys: (string | null)[] = []
+  apiWithLuciaIn(
+    http.get(CHAT, () => conversation([], null)),
+    http.post(CHAT, ({ request }) => {
+      keys.push(request.headers.get('Idempotency-Key'))
+      if (keys.length === 1) return HttpResponse.json({ error: 'too_many_waiting_messages' }, { status: 429 })
+      return HttpResponse.json({ id: 'im1', status: 'pending' }, { status: 202 })
+    }),
+    budgetGoneThrough,
+  )
+  const nav = await openChat()
+  await write(CLOTHES)
+  await screen.findByText(WAIT_NOTICE)
+
+  fireEvent.click(within(nav).getByRole('button', { name: 'Presupuesto' }))
+  await waitFor(() => expect(screen.queryByRole('heading', { name: 'Chat con Platita' })).toBeNull())
+  fireEvent.click(within(nav).getByRole('button', { name: 'Chat' }))
+
+  await screen.findByText(CLOTHES)
+  screen.getByText(WAIT_NOTICE)
+  screen.getByText('No enviado')
+  fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
+  await waitFor(() => expect(keys).toHaveLength(2))
+  expect(keys[1]).toBe(keys[0])
+})
+
+test('case 16 of #125: a message on its way when leaving the chat is shown once on coming back', async () => {
+  let stored = false
+  apiWithLuciaIn(
+    http.get(CHAT, ({ request }) => {
+      const after = new URL(request.url).searchParams.get('after')
+      if (after === 'im1') return conversation([], 'im1')
+      return stored ? conversation([fromLucia('im1', CLOTHES, '2026-11-03T15:21:00-03:00')], 'im1') : conversation([], null)
+    }),
+    http.post(CHAT, async () => {
+      await delay(TWO_SECONDS_MS)
+      stored = true
+      return HttpResponse.json({ id: 'im1', status: 'pending' }, { status: 202 })
+    }),
+    budgetGoneThrough,
+  )
+  const nav = await openChat()
+  await write(CLOTHES)
+  fireEvent.click(within(nav).getByRole('button', { name: 'Presupuesto' }))
+  await waitFor(() => expect(stored).toBe(true))
+
+  fireEvent.click(within(nav).getByRole('button', { name: 'Chat' }))
+
+  await screen.findByText(CLOTHES)
+  await waitFor(() => expect(screen.getAllByText(CLOTHES)).toHaveLength(1))
+  expect(screen.queryByText('No enviado')).toBeNull()
+})
+
+test('case 18 of #125: a send answered after coming back to the chat is shown once', async () => {
+  let stored = false
+  let answered = false
+  apiWithLuciaIn(
+    http.get(CHAT, ({ request }) => {
+      if (new URL(request.url).searchParams.has('after')) return conversation([], 'om1')
+      return stored
+        ? conversation(
+            [
+              fromLucia('im1', CLOTHES, '2026-11-03T15:21:00-03:00'),
+              fromPlatita('om1', 'Recibí tu mensaje. Todavía no puedo procesarlo.', '2026-11-03T15:21:04-03:00'),
+            ],
+            'om1',
+          )
+        : conversation([], null)
+    }),
+    http.post(CHAT, async () => {
+      // Stored at once; its answer arrives only after Lucía is back in the chat.
+      stored = true
+      await delay(TWO_SECONDS_MS)
+      answered = true
+      return HttpResponse.json({ id: 'im1', status: 'pending' }, { status: 202 })
+    }),
+    budgetGoneThrough,
+  )
+  const nav = await openChat()
+  await write(CLOTHES)
+  fireEvent.click(within(nav).getByRole('button', { name: 'Presupuesto' }))
+  await waitFor(() => expect(screen.queryByRole('heading', { name: 'Chat con Platita' })).toBeNull())
+  fireEvent.click(within(nav).getByRole('button', { name: 'Chat' }))
+  await screen.findByText('Recibí tu mensaje. Todavía no puedo procesarlo.')
+
+  await waitFor(() => expect(answered).toBe(true))
+
+  await waitFor(() => expect(screen.getAllByText(CLOTHES)).toHaveLength(1))
+  await waitFor(() => expect(screen.queryByText('Platita está procesando…')).toBeNull())
+  expect(screen.queryByText('No enviado')).toBeNull()
+})
+
+test('case 17 of #125: whoever enters after Lucía does not see her message not sent', async () => {
+  const PABLO = { id: crypto.randomUUID(), name: 'Pablo' }
+  let current: typeof LUCIA | null = LUCIA
+  apiWithLuciaIn(
+    http.get(CHAT, () => conversation([], null)),
+    http.post(CHAT, () => HttpResponse.json({ error: 'too_many_waiting_messages' }, { status: 429 })),
+  )
+  api.use(
+    http.get('*/me', () =>
+      current === null ? HttpResponse.json({ error: 'unauthorized' }, { status: 401 }) : HttpResponse.json(current),
+    ),
+    http.post('*/auth/logout', () => {
+      current = null
+      return new HttpResponse(null, { status: 204 })
+    }),
+    http.get('*/dev/users', () => HttpResponse.json({ users: [LUCIA, PABLO] })),
+    http.post('*/dev/session', () => {
+      current = PABLO
+      return new HttpResponse(null, { status: 204 })
+    }),
+  )
+  await openChat()
+  await write(CLOTHES)
+  await screen.findByText(WAIT_NOTICE)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Entrar como Pablo' }))
+  const nav = await screen.findByRole('navigation', { name: 'Menú principal' })
+  fireEvent.click(await within(nav).findByRole('button', { name: 'Chat' }))
+
+  await screen.findByRole('heading', { name: 'Chat con Platita' })
+  await waitFor(() => expect(screen.queryByText('Abriendo la conversación…')).toBeNull())
+  expect(screen.queryByText(CLOTHES)).toBeNull()
+  expect(screen.queryByText(WAIT_NOTICE)).toBeNull()
 })
 
 test('case C2-25: if a periodic read fails, the conversation stays', async () => {

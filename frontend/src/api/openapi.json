@@ -1907,6 +1907,16 @@
               }
             },
             "description": "The text is empty, only spaces or over 4096 characters, or the header `Idempotency-Key` is missing."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The user already has as many messages waiting for an answer as allowed, 200 unless the configuration says otherwise: nothing is stored. It is accepted again once Platita answers."
           }
         },
         "security": [

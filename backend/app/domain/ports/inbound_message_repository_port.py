@@ -14,6 +14,12 @@ class InboundMessageRepositoryPort(Protocol):
         """The message of the web chat stored under that identifier, if any."""
         ...
 
+    def count_waiting(self, user_id: uuid.UUID) -> int:
+        """How many messages of the user wait for an answer: pending or in process, those put
+        off to the next day among them (domain rules, § 12).
+        """
+        ...
+
     def claim_next(self, now: datetime, locked_until: datetime) -> InboundMessage | None:
         """Takes the next message to process, if any, and leaves it in process until then.
 

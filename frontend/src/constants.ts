@@ -29,11 +29,13 @@ export const ISO_TIME_END = 16
 export const HTTP_UNAUTHORIZED = 401
 export const HTTP_NOT_FOUND = 404
 export const HTTP_CONFLICT = 409
+export const HTTP_TOO_MANY_REQUESTS = 429
 export const HTTP_SERVER_ERROR = 500
 export const HTTP_SERVICE_UNAVAILABLE = 503
 /** What the API answers for something that is not there, or that is of someone else. */
 export const API_ERROR_NOT_FOUND = 'not_found'
 export const API_ERROR_PERIOD_OVERLAP = 'budget_period_overlap'
+export const API_ERROR_TOO_MANY_WAITING = 'too_many_waiting_messages'
 /** How long an ISO date is, such as 2026-10-15. */
 export const ISO_DATE_LENGTH = 10
 

@@ -323,6 +323,10 @@ SEND_CHAT_MESSAGE_REPEATED = (
 SEND_CHAT_MESSAGE_NOT_FOUND = (
     "The web chat is disabled, or `quoted_message_id` is not a reply of Platita to this user."
 )
+SEND_CHAT_MESSAGE_TOO_MANY = (
+    "The user already has as many messages waiting for an answer as allowed, 200 unless the "
+    "configuration says otherwise: nothing is stored. It is accepted again once Platita answers."
+)
 IDEMPOTENCY_KEY = (
     "A UUID the browser generates once per message, and sends again unchanged if it repeats "
     "the request."
