@@ -407,8 +407,8 @@ Se usa cuando falta algo que **depende de una decisión del usuario** — la cue
 **Un monto que no se puede guardar falta igual que uno que no se dijo.** Un monto se guarda
 redondeado a centavos con 18 cifras enteras como mucho ([3. Modelo de datos](03-modelo-de-datos.md)).
 Si redondeado da 0 o no entra, el monto falta: el movimiento no se registra y el pendiente lo
-pregunta. Cuando no entra, la pregunta dice por qué: «Ese monto es más grande de lo que puedo
-registrar. ¿Cuánto fue?». Vale igual para el mensaje que abre el pendiente y para la respuesta
+pregunta. Cuando no entra, la respuesta lo dice antes de la pregunta, en una línea propia: «Ese monto
+es más grande de lo que puedo registrar.», y la pregunta sigue como siempre, con «¿Cuánto fue?». Vale igual para el mensaje que abre el pendiente y para la respuesta
 que lo continúa, y el mensaje no falla.
 
 Un movimiento que llega completo también pasa por un pendiente, en un lote de uno: el pendiente se promueve y el lote se cierra en la misma operación, con la confirmación como `confirmation_message_id`. Así hay un solo camino para todo movimiento, y cualquier confirmación se puede citar para corregirlo (§ 15).

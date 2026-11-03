@@ -101,7 +101,7 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 - **CA-45.** Un sí crea la categoría que la pregunta ofreció, o una con el nombre que la respuesta escribe, como "sí, pero llamala Barbería". Un nombre que el modelo devuelve sin que la pregunta lo haya ofrecido ni la respuesta lo escriba no se crea: el pendiente sigue esperando, y se vuelve a ofrecer la que se mostró ([ADR 0028](../../adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md), punto 2). Decidido por Vero el 17/10/2026, con la segunda revisión de `pr-reviewer` del corte 2. El control actúa sobre todo el sí, no solo sobre la categoría: si al pendiente le falta solo el período y el modelo devuelve igual un nombre que nadie escribió, ese sí tampoco confirma el borrador, y la pregunta se repite. Es conservador, no rompe ninguna invariante, y Vero decidió dejarlo así con la tercera revisión.
 - **CA-43.** El nombre de una categoría que propone el modelo se valida en código antes de mostrarlo o guardarlo: hasta 40 caracteres, solo letras, números, espacios, guiones, comas y paréntesis. Uno que no pasa se trata como si el modelo no hubiera propuesto ninguno ([ADR 0013](../../adr/0013-datos-minimos-al-proveedor-de-llm.md), punto 10). Sumado el 17/10/2026, con la revisión de `pr-reviewer` del corte 2.
 - **CA-25.** Un único período posible que está en borrador deja el movimiento pendiente, y la pregunta ofrece confirmar el borrador con su resumen: con un sí, el período queda confirmado y el movimiento se registra en él. Sin ningún período para esa fecha, la pregunta manda al dashboard a armarlo ([reglas de dominio § 3](../../reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)). Ampliado el 17/10/2026, por decisión de Vero.
-- **CA-36.** Con un pendiente esperando respuesta, un mensaje que trae otro movimiento no se anota: el asistente pide terminar primero el anterior y repite su pregunta. Sumar el movimiento nuevo al lote es de la entrega final. Decidido por Vero el 17/10/2026.
+- **CA-36.** Con un pendiente esperando respuesta, un mensaje que trae otro movimiento no se anota: el asistente dice que no lo anotó, pide terminar primero el anterior y volver a mandarlo después, y repite su pregunta. Que lo diga explícitamente lo decidió Vero el 3/11/2026, en la prueba a mano de la issue #125. Sumar el movimiento nuevo al lote es de la entrega final. Decidido por Vero el 17/10/2026.
 - **CA-37.** El usuario puede descartar el pendiente que espera respuesta, como con "dejalo, no lo anotes": queda rechazado, su lote cerrado, y no se registra nada.
 - **CA-38.** Un pendiente vencido, a las 24 horas de creado, no se continúa: queda `expired`, y el mensaje se procesa como si no hubiera nada abierto. Las 24 horas se cuentan hasta el momento en que el usuario escribió la respuesta, no hasta el que se procesa: una respuesta escrita a tiempo y demorada por los reintentos sigue valiendo, igual que la fecha de un movimiento es el día en que se escribió (§ 1). Anotado el 17/10/2026 con el `/spec-drift` del corte 2.
 - **CA-41.** Cada respuesta que cambia un dato que el modelo ya había interpretado —el monto, el tipo, la fecha, la categoría o la cuenta, con su moneda— suma uno al contador de correcciones del pendiente; completar un dato que faltaba no suma ([reglas de dominio § 5](../../reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)). Sumado el 17/10/2026, con el `/spec-drift` del corte 2. El código compara lo que había con lo que quedó, así que una fecha que se había asumido por defecto y la respuesta cambia también suma: es un costo asumido del [ADR 0028](../../adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md), hasta que el modelo devuelva qué campos corrigió el usuario, con la métrica del corte 3.
@@ -701,7 +701,8 @@ defecto.
   Galicia pesos", y el modelo responde que trae otro movimiento, un ingreso completo,
 - **cuando** se procesa,
 - **entonces** no se registra nada ni se crea otro pendiente; el pendiente de C2-01 sigue
-  `open`; y la respuesta es "Primero terminemos con lo anterior." seguido de las dos líneas de
+  `open`; y la respuesta es "No anoté tu último mensaje: primero terminemos con lo anterior, y
+  después mandámelo de nuevo." seguido de las dos líneas de
   la pregunta de C2-02, con `question_message_id` del lote apuntando a esta respuesta.
 - **Test:** `tests/unit/test_pending_registration.py::test_with_an_open_pending_another_movement_is_not_registered`
 
@@ -1534,7 +1535,7 @@ sigue una línea por cada dato que falta, en este orden:
 
 Con un pendiente esperando respuesta, ante otro movimiento, antes de repetir la pregunta:
 
-> Primero terminemos con lo anterior.
+> No anoté tu último mensaje: primero terminemos con lo anterior, y después mandámelo de nuevo.
 
 Cuando la categoría que propone el modelo tiene el nombre de una que ya existe, en lugar de la
 línea que propone crearla:
