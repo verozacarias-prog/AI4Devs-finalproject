@@ -35,6 +35,8 @@ beforeAll(() => api.listen({ onUnhandledFrame: 'error' }))
 afterEach(() => {
   cleanup()
   api.resetHandlers()
+  // What the browser remembers of an earlier test must not reach the next one.
+  window.localStorage.clear()
 })
 afterAll(() => api.close())
 
@@ -263,4 +265,257 @@ test('case 67: what changes something is sent as JSON, which the API requires', 
     ['session', 'application/json'],
     ['logout', 'application/json'],
   ])
+})
+
+// Cases 22 to 28 of issue #84: entering the demo environment with a personal link (ADR 0016).
+
+const ANA = { id: crypto.randomUUID(), name: 'Ana' }
+const LINK_VALUE = 'the-value-of-the-link'
+const NOTICE_REQUIRED = { error: 'test_notice_required', notice_version: 'demo-1' }
+
+function openLink() {
+  window.history.replaceState(null, '', `/app/#${LINK_VALUE}`)
+}
+
+function closeLink() {
+  window.history.replaceState(null, '', '/')
+}
+
+test('case 22: the link goes in the body and leaves the address bar before the answer', async () => {
+  openLink()
+  let answer: () => void = () => {}
+  const pending = new Promise<void>((resolve) => {
+    answer = resolve
+  })
+  const bodies: unknown[] = []
+  api.use(
+    http.post(SESSION, async ({ request }) => {
+      bodies.push(await request.json())
+      await pending
+      return noContent()
+    }),
+    http.get(ME, sessionOf(ANA)),
+  )
+
+  render(<DevEntryPage />)
+
+  await vi.waitFor(() => expect(bodies).toEqual([{ access_token: LINK_VALUE }]))
+  expect(window.location.hash).toBe('')
+  answer()
+  await screen.findByText('Entraste como Ana')
+  closeLink()
+})
+
+test('case 23: the first time it shows the notice, and only accepting it enters', async () => {
+  openLink()
+  const bodies: unknown[] = []
+  let accepted = false
+  api.use(
+    http.post(SESSION, async ({ request }) => {
+      const body = (await request.json()) as { accept_test_notice?: string }
+      bodies.push(body)
+      accepted = body.accept_test_notice === 'demo-1'
+      return accepted ? noContent() : HttpResponse.json(NOTICE_REQUIRED, { status: 409 })
+    }),
+    http.get(ME, () => (accepted ? HttpResponse.json(ANA) : noSession())),
+  )
+
+  render(<DevEntryPage />)
+
+  const accept = await screen.findByRole('button', { name: 'Acepto' })
+  screen.getByText(/entorno de prueba/)
+  screen.getByText(/proveedor de IA/)
+  screen.getByText(/pueden borrarse sin aviso/)
+  expect(screen.queryByText('Entraste como Ana')).toBeNull()
+  expect(bodies).toEqual([{ access_token: LINK_VALUE }])
+
+  accept.click()
+
+  await screen.findByText('Entraste como Ana')
+  expect(bodies[1]).toEqual({ access_token: LINK_VALUE, accept_test_notice: 'demo-1' })
+  closeLink()
+})
+
+test('case 24: a link that does not work says so, without offering a retry', async () => {
+  openLink()
+  api.use(http.post(SESSION, notFound))
+
+  render(<DevEntryPage />)
+
+  const alert = await screen.findByRole('alert')
+  expect(alert.textContent).toContain('Este enlace ya no sirve')
+  expect(screen.queryByRole('button', { name: 'Reintentar' })).toBeNull()
+  closeLink()
+})
+
+test('case 25: when the network fails, retrying sends the link again', async () => {
+  openLink()
+  const bodies: unknown[] = []
+  let failing = true
+  api.use(
+    http.post(SESSION, async ({ request }) => {
+      bodies.push(await request.json())
+      return failing ? HttpResponse.error() : noContent()
+    }),
+    http.get(ME, sessionOf(ANA)),
+  )
+
+  render(<DevEntryPage />)
+
+  const retry = await screen.findByRole('button', { name: 'Reintentar' })
+  expect(window.location.hash).toBe('')
+  failing = false
+  retry.click()
+
+  await screen.findByText('Entraste como Ana')
+  expect(bodies).toEqual([{ access_token: LINK_VALUE }, { access_token: LINK_VALUE }])
+  closeLink()
+})
+
+test('case 26: while the link is being checked, the status line says so', async () => {
+  openLink()
+  api.use(http.post(SESSION, neverAnswers))
+
+  render(<DevEntryPage />)
+
+  expect(screen.getByRole('status').textContent).toBe('Consultando la sesión…')
+  closeLink()
+})
+
+test('case 27: with the session of someone else open, the link enters its own account', async () => {
+  openLink()
+  let entered = false
+  api.use(
+    http.post(SESSION, () => {
+      entered = true
+      return noContent()
+    }),
+    http.get(ME, () => HttpResponse.json(entered ? ANA : PABLO)),
+  )
+
+  render(<DevEntryPage />)
+
+  await screen.findByText('Entraste como Ana')
+  expect(screen.queryByText('Entraste como Pablo')).toBeNull()
+  closeLink()
+})
+
+test('case 29: when the notice shows up, the status line announces it', async () => {
+  openLink()
+  api.use(http.post(SESSION, () => HttpResponse.json(NOTICE_REQUIRED, { status: 409 })))
+
+  render(<DevEntryPage />)
+
+  await screen.findByRole('button', { name: 'Acepto' })
+  expect(screen.getByRole('status').textContent).toBe('Antes de entrar, leé este aviso')
+  closeLink()
+})
+
+test('case 28: without a link or a session in demo, the card is never drawn', async () => {
+  closeLink()
+  let answer: () => void = () => {}
+  const pending = new Promise<void>((resolve) => {
+    answer = resolve
+  })
+  let asked = false
+  api.use(
+    http.get(ME, noSession),
+    http.get(USERS, async () => {
+      asked = true
+      await pending
+      return notFound()
+    }),
+  )
+
+  const { container } = render(<DevEntryPage />)
+
+  expect(screen.queryByText('Entrada de desarrollo')).toBeNull()
+  await vi.waitFor(() => expect(asked).toBe(true))
+  expect(screen.queryByText('Entrada de desarrollo')).toBeNull()
+  answer()
+  await vi.waitFor(() => expect(container.innerHTML).toBe(''))
+})
+
+// Cases 34, 36 and 37 of issue #84: after entering with a link, an ended session says how to
+// come back. Case 35 is in AppShell.test.tsx.
+
+const ENDED = 'Tu sesión terminó'
+const OPEN_THE_LINK_AGAIN = 'Para volver a entrar, abrí de nuevo tu enlace personal.'
+
+/** An API in demo where the link of Ana works, until her session ends. */
+function demoApiWithAna() {
+  const session = { alive: true }
+  api.use(
+    http.post(SESSION, () => {
+      session.alive = true
+      return noContent()
+    }),
+    http.get(ME, () => (session.alive ? HttpResponse.json(ANA) : noSession())),
+    http.get(USERS, notFound),
+  )
+  return session
+}
+
+test('case 34: after entering with a link, an ended session says to open the link again', async () => {
+  openLink()
+  const session = demoApiWithAna()
+  render(<DevEntryPage />)
+  await screen.findByText('Entraste como Ana')
+  cleanup()
+
+  // The session ended, and the page is loaded again, without the link in the address.
+  session.alive = false
+  render(<DevEntryPage />)
+
+  await vi.waitFor(() => expect(screen.getByRole('status').textContent).toBe(ENDED))
+  screen.getByText(OPEN_THE_LINK_AGAIN)
+  expect(screen.queryAllByRole('button')).toEqual([])
+  expect(screen.queryByRole('list')).toBeNull()
+})
+
+test('case 36: without ever entering with a link here, nothing about links is shown', async () => {
+  closeLink()
+  api.use(http.get(ME, noSession), http.get(USERS, notFound))
+
+  const { container } = render(<DevEntryPage />)
+
+  await vi.waitFor(() => expect(container.innerHTML).toBe(''))
+  expect(screen.queryByText(OPEN_THE_LINK_AGAIN)).toBeNull()
+})
+
+test('case 37: opening the link again after the message enters, and the message goes away', async () => {
+  openLink()
+  const session = demoApiWithAna()
+  render(<DevEntryPage />)
+  await screen.findByText('Entraste como Ana')
+  cleanup()
+  session.alive = false
+  render(<DevEntryPage />)
+  await screen.findByText(OPEN_THE_LINK_AGAIN)
+  cleanup()
+
+  openLink()
+  render(<DevEntryPage />)
+
+  await screen.findByText('Entraste como Ana')
+  expect(screen.queryByText(OPEN_THE_LINK_AGAIN)).toBeNull()
+  closeLink()
+})
+
+// Case 41 of issue #84: a 409 that is not the notice is an error, never a notice without a version.
+
+test.each([
+  ['another conflict', () => HttpResponse.json({ error: 'conflict' }, { status: 409 })],
+  ['an answer that is not JSON', () => new HttpResponse('Conflict', { status: 409 })],
+])('case 41: a 409 without the version of the notice, from %s, is an error with a retry', async (_, conflict) => {
+  openLink()
+  api.use(http.post(SESSION, conflict))
+
+  render(<DevEntryPage />)
+
+  const alert = await screen.findByRole('alert')
+  expect(alert.textContent).toContain('No se pudo consultar la sesión')
+  screen.getByRole('button', { name: 'Reintentar' })
+  expect(screen.queryByRole('button', { name: 'Acepto' })).toBeNull()
+  closeLink()
 })

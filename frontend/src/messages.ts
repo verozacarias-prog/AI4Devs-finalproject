@@ -14,6 +14,7 @@ export const MESSAGES = {
     chat: 'Chat',
     signedInAs: 'Sesión de',
     logout: 'Cerrar sesión',
+    logoutAll: 'Cerrar todas las sesiones',
     logoutFailed: 'No se pudo cerrar la sesión',
   },
   /** Shared by every screen that asks the API for something. */
@@ -45,6 +46,20 @@ export const MESSAGES = {
     empty: 'No hay usuarios de prueba',
     emptyDetail: 'Corré el script de datos de prueba y volvé a consultar:',
     failed: 'No se pudo consultar la sesión',
+    linkHeading: 'Entrar a Platita',
+    linkRejected: 'Este enlace ya no sirve',
+    linkRejectedDetail: 'Pedile uno nuevo a quien te lo mandó.',
+    linkSessionEnded: 'Tu sesión terminó',
+    linkSessionEndedDetail: 'Para volver a entrar, abrí de nuevo tu enlace personal.',
+    noticeHeading: 'Antes de entrar',
+    noticeAnnounced: 'Antes de entrar, leé este aviso',
+    // A change in this text comes with a new TEST_NOTICE_VERSION in the backend (ADR 0016).
+    noticePoints: [
+      'Este es un entorno de prueba.',
+      'Lo que escribas lo procesa un proveedor de IA.',
+      'Tus datos pueden borrarse sin aviso.',
+    ],
+    accept: 'Acepto',
   },
   accounts: {
     heading: 'Tus cuentas',

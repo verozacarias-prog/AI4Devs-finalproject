@@ -11,6 +11,7 @@ from collections.abc import Awaitable, Callable
 from fastapi import Request, Response
 
 from app.adapters.inbound.api.routes import DASHBOARD_PREFIX
+from app.constants import Environment
 
 # Sent with every response.
 COMMON_HEADERS = {
@@ -38,15 +39,30 @@ DASHBOARD_HEADERS = {
 }
 
 
-def security_headers_for(path: str) -> dict[str, str]:
+# Outside local the page is served over https only, and the browser must never try otherwise:
+# it closes the gap of an http page that passes the origin check (ADR 0016, point 7). In local
+# there is no https to demand.
+TRANSPORT_HEADERS = {"Strict-Transport-Security": "max-age=31536000"}
+
+
+def security_headers_for(path: str, environment: Environment) -> dict[str, str]:
     """The headers a response to this path must carry."""
-    is_dashboard = path == DASHBOARD_PREFIX or path.startswith(f"{DASHBOARD_PREFIX}/")
-    return COMMON_HEADERS | DASHBOARD_HEADERS if is_dashboard else COMMON_HEADERS
+    headers = dict(COMMON_HEADERS)
+    if environment is not Environment.LOCAL:
+        headers |= TRANSPORT_HEADERS
+    if path == DASHBOARD_PREFIX or path.startswith(f"{DASHBOARD_PREFIX}/"):
+        headers |= DASHBOARD_HEADERS
+    return headers
 
 
-async def add_security_headers(
-    request: Request, call_next: Callable[[Request], Awaitable[Response]]
-) -> Response:
-    response = await call_next(request)
-    response.headers.update(security_headers_for(request.url.path))
-    return response
+def build_security_headers_middleware(
+    environment: Environment,
+) -> Callable[[Request, Callable[[Request], Awaitable[Response]]], Awaitable[Response]]:
+    async def add_security_headers(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        response = await call_next(request)
+        response.headers.update(security_headers_for(request.url.path, environment))
+        return response
+
+    return add_security_headers

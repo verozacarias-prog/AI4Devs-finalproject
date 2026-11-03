@@ -10,6 +10,7 @@ export const API_ROUTES = {
   readyz: '/readyz',
   me: '/me',
   logout: '/auth/logout',
+  logoutAll: '/auth/logout-all',
   devUsers: '/dev/users',
   devSession: '/dev/session',
   accounts: '/accounts',

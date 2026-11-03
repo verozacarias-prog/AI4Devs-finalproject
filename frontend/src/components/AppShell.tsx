@@ -1,4 +1,4 @@
-import { Activity, ChartPie, LogOut, MessageCircle, Wallet } from 'lucide-react'
+import { Activity, ChartPie, LogOut, MessageCircle, MonitorX, Wallet } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { Failure } from '@/api/request'
 import type { SessionUser } from '@/api/session'
@@ -19,6 +19,7 @@ export function AppShell({
   screen,
   onSelect,
   onLogout,
+  onLogoutAll,
   logoutFailure,
   chatAvailable,
   children,
@@ -27,6 +28,7 @@ export function AppShell({
   screen: Screen
   onSelect: (screen: Screen) => void
   onLogout: () => void
+  onLogoutAll: () => void
   // Why closing the session failed: the session is still alive, so the menu stays.
   logoutFailure: LogoutFailure | null
   // The web chat is a scaffold: its option exists only while the API has it on (ADR 0002).
@@ -67,14 +69,14 @@ export function AppShell({
             <span className="block text-xs text-sidebar-muted">{NAV.signedInAs}</span>
             <span className="font-semibold">{user.name}</span>
           </p>
-          <button
-            type="button"
-            onClick={onLogout}
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-muted transition-colors outline-none hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-(length:--focus-ring-width) focus-visible:ring-sidebar-primary/60 [&_svg]:size-4"
-          >
-            <LogOut aria-hidden="true" />
-            {NAV.logout}
-          </button>
+          <div className="flex flex-wrap justify-end gap-1 md:flex-col">
+            <SessionButton onClick={onLogout} icon={<LogOut aria-hidden="true" />}>
+              {NAV.logout}
+            </SessionButton>
+            <SessionButton onClick={onLogoutAll} icon={<MonitorX aria-hidden="true" />}>
+              {NAV.logoutAll}
+            </SessionButton>
+          </div>
           {logoutFailure && (
             <div role="alert" className="px-3 text-sm">
               <p className="font-semibold text-sidebar-destructive">{NAV.logoutFailed}</p>
@@ -85,6 +87,19 @@ export function AppShell({
       </aside>
       <main className="mx-auto w-full max-w-3xl px-4 py-6 md:px-10 md:py-10">{children}</main>
     </div>
+  )
+}
+
+function SessionButton({ onClick, icon, children }: { onClick: () => void; icon: ReactNode; children: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-muted transition-colors outline-none hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-(length:--focus-ring-width) focus-visible:ring-sidebar-primary/60 [&_svg]:size-4"
+    >
+      {icon}
+      {children}
+    </button>
   )
 }
 

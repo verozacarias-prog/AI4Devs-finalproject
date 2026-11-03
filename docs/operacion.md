@@ -122,7 +122,9 @@ sus permisos a `platita_app`.
 
 La entrada de desarrollo se enciende con `DEV_ENTRY_ENABLED=true`, y el chat web con
 `WEB_CHAT_ENABLED=true`. Sin la variable, cada una queda apagada, y con cualquiera de las dos
-encendida en `production` ningún proceso arranca
+encendida en `production` ningún proceso arranca. En `demo`, los enlaces personales se firman con
+`SERVER_SECRET_KEY`, larga y generada al azar: con la entrada encendida y sin esa variable, ningún
+proceso arranca. Por eso el worker de `demo` no enciende la entrada: no abre sesiones ni necesita esa clave
 ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 
 Dos esperas son configuración, y cada una tiene su variable, que es opcional:
@@ -202,7 +204,53 @@ para probar. Para empezar de cero se reinicia la base. Se niega a correr con
 el entorno en `demo` o en `production`.
 
 El entorno `demo` no figura en los costos de [1](#1-qué-se-suma-a-la-arquitectura): es una
-segunda instancia con su base, y cuánto cuesta depende del proveedor que se elija.
+segunda instancia con su base, y cuesta US$20 por mes en Render
+([ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md)).
+
+En `demo`, la migración corre solo antes del despliegue del servicio web. El worker se despliega
+a la vez y no la espera. Si la migración falla, el servicio web sigue en la versión anterior y el
+worker no: en Render, se vuelve el worker al último despliegue que funcionó con el botón
+*Rollback*, se corrige la migración y se despliega de nuevo. Un mensaje que falló mientras tanto
+puede terminar con su aviso de error, y la persona lo puede escribir otra vez.
+
+**El primer despliegue de `demo`.** `render.yaml` ya está en la rama de la entrega, y Render la
+despliega cuando pasan sus controles.
+
+1. En Render, con el workspace en un plan pago, se crea un Blueprint desde el repositorio. Pide
+   los valores marcados con `sync: false`, y todavía no existe la base:
+   - `SERVER_SECRET_KEY`: el resultado de `openssl rand -hex 32`.
+   - `APPLICATION_DB_PASSWORD`: el resultado de `openssl rand -hex 24`. Solo lleva letras y
+     números, como exige el [ADR 0030](adr/0030-rol-de-la-aplicacion-en-la-base.md).
+   - `OPENAI_API_KEY`: la clave del proveedor, en el worker.
+   - `DATABASE_URL` y `MIGRATIONS_DATABASE_URL`: un valor provisorio cualquiera. Con él, el paso
+     previo falla, el primer despliegue del servicio web se cancela y no queda nada a medias. El
+     worker se reinicia hasta tener la dirección real.
+2. Con la base creada, se copia su *Internal Database URL*, que tiene la forma
+   `postgresql://usuario:contraseña@host/base`. Las dos direcciones cambian `postgresql://` por
+   `postgresql+psycopg://`, porque la imagen trae psycopg 3 y SQLAlchemy, sin ese prefijo, busca
+   otro driver:
+   - `MIGRATIONS_DATABASE_URL`, en el servicio web: la dirección tal cual, con el usuario que creó
+     Render, dueño de las tablas.
+   - `DATABASE_URL`, en el servicio web y en el worker: la misma dirección con
+     `platita_app` como usuario y `APPLICATION_DB_PASSWORD` como contraseña.
+3. Se despliega a mano el servicio web y, cuando termina, el worker. La primera migración crea
+   las extensiones y el rol `platita_app`.
+4. Se comprueba, una sola vez:
+   - que `https://<servicio web>/readyz` responda `200`;
+   - que `curl -sI https://<servicio web>/app` redirija a una dirección con `https`;
+   - en el *Shell* del servicio web, que
+     `python -c "import os, sqlalchemy as s; print(s.create_engine(os.environ['DATABASE_URL']).connect().execute(s.text('select current_user')).scalar())"`
+     imprima `platita_app`;
+   - en las métricas de los dos servicios, que la memoria quede lejos de los 512 MB.
+5. Los enlaces se crean en el *Shell* del servicio web. En el del worker fallan, porque no tiene
+   `SERVER_SECRET_KEY`:
+   - `python -m app.adapters.inbound.operator_commands.create_personal_link <etiqueta>` crea uno;
+     la etiqueta es el nombre con que lo identifica quien opera, como `Ana`.
+   - `python -m app.adapters.inbound.operator_commands.regenerate_personal_link <etiqueta>`
+     reemplaza uno perdido: el anterior deja de servir y sus sesiones se cierran.
+
+   Los dos devuelven solo `/app/#…`, y hay que anteponerle `https://<servicio web>`. El enlace no
+   se guarda en ningún lado: se copia y se manda en ese momento.
 
 Un staging igual a producción no está al lanzamiento: duplicaría el costo, y el riesgo principal que cubriría, una
 migración que rompe, lo cubre la CI probando la migración desde el esquema de la versión
@@ -242,7 +290,10 @@ obligatorios.
 **El pipeline no guarda secretos.** Render lee el repositorio desde GitHub y despliega solo
 cuando los checks pasaron, así que Actions no necesita ni una clave de despliegue ni un token de
 Render. Los secretos de ejecución viven únicamente en el Environment Group de Render. La clave
-privada que descifra las copias no está ni en Render ni en GitHub.
+privada que descifra las copias no está ni en Render ni en GitHub. Un grupo que comparten el
+servicio web y el worker le daría al worker la conexión del dueño de la base, que `demo` le
+niega: antes de `production` hay que decidir dónde va
+([ADR 0030](adr/0030-rol-de-la-aplicacion-en-la-base.md)).
 
 ```yaml
 # render.yaml, fragmento ilustrativo; verificar la sintaxis vigente del Blueprint.
@@ -458,7 +509,7 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   |---|---|---|
   | `auth.code_requested` | Se pidió un código de acceso | El login por código |
   | `auth.code_failed` | Un canje de código falló | El login por código |
-  | `auth.session_created` | Se abrió una sesión, por código, por la lista de `local` o por un enlace personal. Lleva el usuario, la sesión y la forma en el campo `method`: hoy solo `dev_user_list` | La entrada de desarrollo |
+  | `auth.session_created` | Se abrió una sesión, por código, por la lista de `local` o por un enlace personal. Lleva el usuario, la sesión y la forma en el campo `method`: `dev_user_list` o `dev_personal_link` | La entrada de desarrollo |
   | `auth.throttled` | Se alcanzó un límite de intentos | El login por código |
   | `usage.quota_exceeded` | Un usuario superó una cuota o el tope diario total. Lleva el usuario, el mensaje y cuál superó en el campo `quota`: `classification` o `registration` | Las cuotas, con el registro de gastos |
   | `llm.output_blocked` | La validación de salida frenó una respuesta | Las consultas y los consejos |

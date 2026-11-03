@@ -15,7 +15,7 @@ from fastapi import APIRouter, Response, status
 from pydantic import BaseModel, Field, model_validator
 
 from app.adapters.inbound.api import reference
-from app.adapters.inbound.api.errors import documented_errors
+from app.adapters.inbound.api.errors import ErrorBody, documented_errors
 from app.adapters.inbound.api.routers.session import set_session_cookie
 from app.adapters.inbound.api.routes import DEV_SESSION, DEV_TAG, DEV_USERS
 from app.adapters.observability.events import Event, LoggerName, SessionMethod
@@ -38,12 +38,21 @@ class DevUsers(BaseModel):
 class DevSessionRequest(BaseModel):
     user_id: uuid.UUID | None = Field(default=None, description=reference.DEV_SESSION_USER_ID)
     access_token: str | None = Field(default=None, description=reference.DEV_SESSION_ACCESS_TOKEN)
+    accept_test_notice: str | None = Field(
+        default=None, description=reference.DEV_SESSION_ACCEPT_TEST_NOTICE
+    )
 
     @model_validator(mode="after")
     def _names_who_enters(self) -> Self:
         if self.user_id is None and self.access_token is None:
             raise ValueError
         return self
+
+
+class TestNoticeRequired(ErrorBody):
+    __test__ = False  # not a test class, whatever its name suggests to pytest
+
+    notice_version: str = Field(description=reference.DEV_SESSION_NOTICE_VERSION)
 
 
 def build_dev_entry_router(
@@ -79,16 +88,30 @@ def build_dev_entry_router(
                 status.HTTP_404_NOT_FOUND: reference.DEV_SESSION_NOT_FOUND,
                 status.HTTP_422_UNPROCESSABLE_CONTENT: reference.DEV_SESSION_INVALID,
             }
-        ),
+        )
+        | {
+            status.HTTP_409_CONFLICT: {
+                "model": TestNoticeRequired,
+                "description": reference.DEV_SESSION_NOTICE_REQUIRED,
+            }
+        },
     )
     def enter(body: DevSessionRequest) -> Response:
-        opened = open_dev_session().execute(user_id=body.user_id, access_token=body.access_token)
+        opened = open_dev_session().execute(
+            user_id=body.user_id,
+            access_token=body.access_token,
+            accept_test_notice=body.accept_test_notice,
+        )
         logger.info(
             Event.AUTH_SESSION_CREATED,
             extra={
                 LogField.USER_ID: str(opened.session.user_id),
                 LogField.SESSION_ID: str(opened.session.id),
-                LogField.METHOD: SessionMethod.DEV_USER_LIST,
+                LogField.METHOD: (
+                    SessionMethod.DEV_USER_LIST
+                    if body.user_id is not None
+                    else SessionMethod.DEV_PERSONAL_LINK
+                ),
             },
         )
         response = Response(status_code=status.HTTP_204_NO_CONTENT)

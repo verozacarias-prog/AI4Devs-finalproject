@@ -85,6 +85,7 @@ class SessionMethod(StrEnum):
     """The ways a session is opened."""
 
     DEV_USER_LIST = "dev_user_list"
+    DEV_PERSONAL_LINK = "dev_personal_link"
 
 
 class LineKey(StrEnum):

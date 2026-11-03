@@ -14,6 +14,9 @@ from app.adapters.outbound.postgres.repositories.budgets import PostgresBudgetRe
 from app.adapters.outbound.postgres.repositories.categories import PostgresCategoryRepository
 from app.adapters.outbound.postgres.repositories.chat_messages import PostgresChatMessageRepository
 from app.adapters.outbound.postgres.repositories.currencies import PostgresCurrencyRepository
+from app.adapters.outbound.postgres.repositories.dev_access_links import (
+    PostgresDevAccessLinkRepository,
+)
 from app.adapters.outbound.postgres.repositories.family_groups import PostgresFamilyGroupRepository
 from app.adapters.outbound.postgres.repositories.financial_profiles import (
     PostgresFinancialProfileRepository,
@@ -37,6 +40,7 @@ from app.domain.ports.budget_repository_port import BudgetRepositoryPort
 from app.domain.ports.category_repository_port import CategoryRepositoryPort
 from app.domain.ports.chat_message_repository_port import ChatMessageRepositoryPort
 from app.domain.ports.currency_repository_port import CurrencyRepositoryPort
+from app.domain.ports.dev_access_link_repository_port import DevAccessLinkRepositoryPort
 from app.domain.ports.family_group_repository_port import FamilyGroupRepositoryPort
 from app.domain.ports.financial_profile_repository_port import FinancialProfileRepositoryPort
 from app.domain.ports.inbound_message_repository_port import InboundMessageRepositoryPort
@@ -66,6 +70,7 @@ class SqlAlchemyUnitOfWork:
     financial_profiles: FinancialProfileRepositoryPort
     family_groups: FamilyGroupRepositoryPort
     sessions: SessionRepositoryPort
+    dev_access_links: DevAccessLinkRepositoryPort
     transactions: TransactionRepositoryPort
     transfers: TransferRepositoryPort
     inbound_messages: InboundMessageRepositoryPort
@@ -94,6 +99,7 @@ class SqlAlchemyUnitOfWork:
         self.financial_profiles = PostgresFinancialProfileRepository(connection)
         self.family_groups = PostgresFamilyGroupRepository(connection)
         self.sessions = PostgresSessionRepository(connection)
+        self.dev_access_links = PostgresDevAccessLinkRepository(connection)
         self.transactions = PostgresTransactionRepository(connection)
         self.transfers = PostgresTransferRepository(connection)
         self.inbound_messages = PostgresInboundMessageRepository(connection)

@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Self
 
 from app.domain.entities.account import Account
 from app.domain.entities.budget_period import BudgetPeriod, PeriodStatus
+from app.domain.entities.dev_access_link import DevAccessLink
 from app.domain.entities.family_group import FamilyGroup, GroupRole, Membership
 from app.domain.entities.financial_profile import FinancialProfile
 from app.domain.entities.session import Session
@@ -249,6 +250,34 @@ class InMemorySessions:
     def revoke(self, session_id: uuid.UUID, at: datetime) -> None:
         self.stored[session_id] = replace(self.stored[session_id], revoked_at=at)
 
+    def revoke_all_of_user(self, user_id: uuid.UUID, at: datetime) -> None:
+        for session in list(self.stored.values()):
+            if session.user_id == user_id and session.revoked_at is None:
+                self.revoke(session.id, at)
+
+
+class InMemoryDevAccessLinks:
+    def __init__(self) -> None:
+        self.stored: dict[uuid.UUID, DevAccessLink] = {}
+
+    def add(self, link: DevAccessLink) -> None:
+        self.stored[link.id] = link
+
+    def find_by_label(self, label: str) -> DevAccessLink | None:
+        return next((link for link in self.stored.values() if link.label == label), None)
+
+    def lock_by_label(self, label: str) -> DevAccessLink | None:
+        return self.find_by_label(label)
+
+    def lock_by_token_hash(self, token_hash: str) -> DevAccessLink | None:
+        return next((link for link in self.stored.values() if link.token_hash == token_hash), None)
+
+    def replace_token_hash(self, link_id: uuid.UUID, token_hash: str) -> None:
+        self.stored[link_id] = replace(self.stored[link_id], token_hash=token_hash)
+
+    def assign_user(self, link_id: uuid.UUID, user_id: uuid.UUID) -> None:
+        self.stored[link_id] = replace(self.stored[link_id], user_id=user_id)
+
 
 class InMemoryTransactions:
     def __init__(self) -> None:
@@ -425,6 +454,7 @@ class InMemoryUnitOfWork:
         self.financial_profiles = InMemoryFinancialProfiles()
         self.family_groups = InMemoryFamilyGroups()
         self.sessions = InMemorySessions()
+        self.dev_access_links = InMemoryDevAccessLinks()
         self.transactions = InMemoryTransactions()
         self.transfers = InMemoryTransfers()
         self.inbound_messages = InMemoryInboundMessages()

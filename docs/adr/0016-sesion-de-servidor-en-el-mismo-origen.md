@@ -117,7 +117,7 @@ para que la cookie de sesión funcione sin un dominio propio.
      Otro comando regenera el enlace, que se identifica por su etiqueta: el anterior deja de servir y se revocan las sesiones
      abiertas de ese usuario. Los dos comandos se niegan a correr con el entorno en
      `production`, igual que el script de datos de prueba. La base guarda solo un HMAC del
-     valor, con la clave del servidor. El valor viaja en el fragmento de la dirección, que el
+     valor, con la clave del servidor, `SERVER_SECRET_KEY`. El valor viaja en el fragmento de la dirección, que el
      navegador no envía al servidor, y la página lo manda en el cuerpo del pedido. El filtro de
      los registros lo quita como a cualquier credencial, y su test lo comprueba
      ([ADR 0023](0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).

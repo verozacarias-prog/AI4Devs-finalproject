@@ -9,6 +9,7 @@ from app.domain.ports.budget_repository_port import BudgetRepositoryPort
 from app.domain.ports.category_repository_port import CategoryRepositoryPort
 from app.domain.ports.chat_message_repository_port import ChatMessageRepositoryPort
 from app.domain.ports.currency_repository_port import CurrencyRepositoryPort
+from app.domain.ports.dev_access_link_repository_port import DevAccessLinkRepositoryPort
 from app.domain.ports.family_group_repository_port import FamilyGroupRepositoryPort
 from app.domain.ports.financial_profile_repository_port import FinancialProfileRepositoryPort
 from app.domain.ports.inbound_message_repository_port import InboundMessageRepositoryPort
@@ -52,6 +53,9 @@ class UnitOfWorkPort(Protocol):
 
     @property
     def sessions(self) -> SessionRepositoryPort: ...
+
+    @property
+    def dev_access_links(self) -> DevAccessLinkRepositoryPort: ...
 
     @property
     def transactions(self) -> TransactionRepositoryPort: ...

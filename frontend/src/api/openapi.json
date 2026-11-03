@@ -803,6 +803,18 @@
       },
       "DevSessionRequest": {
         "properties": {
+          "accept_test_notice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The version of the test notice the person accepted.",
+            "title": "Accept Test Notice"
+          },
           "access_token": {
             "anyOf": [
               {
@@ -812,7 +824,7 @@
                 "type": "null"
               }
             ],
-            "description": "The value of a personal link. Not built yet: it answers `404`.",
+            "description": "The value of a personal link.",
             "title": "Access Token"
           },
           "user_id": {
@@ -1048,6 +1060,26 @@
         "title": "StoredChatMessage",
         "type": "object"
       },
+      "TestNoticeRequired": {
+        "properties": {
+          "error": {
+            "description": "The code of the error: a short lowercase word that never changes.",
+            "title": "Error",
+            "type": "string"
+          },
+          "notice_version": {
+            "description": "The version of the test notice to show and accept.",
+            "title": "Notice Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "notice_version"
+        ],
+        "title": "TestNoticeRequired",
+        "type": "object"
+      },
       "TransactionSource": {
         "enum": [
           "manual",
@@ -1163,6 +1195,56 @@
           }
         ],
         "summary": "Close this session",
+        "tags": [
+          "session"
+        ]
+      }
+    },
+    "/auth/logout-all": {
+      "post": {
+        "description": "Revokes every session of the user, on all their devices and including this one, and clears the cookie of this one. The sessions of other users stay open. The body of the request is ignored.",
+        "operationId": "logout_all_auth_logout_all_post",
+        "responses": {
+          "204": {
+            "description": "Every session of the user was revoked and this cookie cleared."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "There is no valid session: missing, unknown, revoked or expired, told apart nowhere."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The request did not come from the page of the API itself, or it is not JSON. Nothing of what it sent was read."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "The body is over 64 KiB. What was left of it was not read."
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Close every session of the user",
         "tags": [
           "session"
         ]
@@ -1877,7 +1959,7 @@
     },
     "/dev/session": {
       "post": {
-        "description": "Opens a real session without a login code and returns it in the session cookie. In the local environment the user is chosen from the list, with `user_id`. A personal link, with `access_token`, is the way in of the demo environment and is not built yet: it answers `404`. One of the two is required.",
+        "description": "Opens a real session without a login code and returns it in the session cookie. In the local environment the user is chosen from the list, with `user_id`. A personal link, with `access_token`, is the way in of the demo environment. The first time, it asks to accept the test notice, and accepting it creates the test user. One of the two is required.",
         "operationId": "enter_dev_session_post",
         "requestBody": {
           "content": {
@@ -1912,6 +1994,16 @@
               }
             },
             "description": "The development entry is disabled, the user does not exist or is not a test user, `user_id` was sent outside the local environment, or the personal link is unknown. The same answer for all of them."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestNoticeRequired"
+                }
+              }
+            },
+            "description": "The link has no user yet and the test notice was not accepted, or the accepted version is not the current one."
           },
           "413": {
             "content": {

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from app.constants import Environment
+from app.constants import Environment, EnvVar
 from app.domain.errors import ErrorCode
 
 # Start-up errors. They name the variable and never show a value.
@@ -31,7 +31,20 @@ COMMAND_ERRORS: Mapping[str, str] = {
         f"The test data script runs only in the {Environment.LOCAL} environment, and this one "
         "is {environment}. Nothing was written."
     ),
+    ErrorCode.PERSONAL_LINK_NOT_ALLOWED: (
+        "Personal links do not exist in the {environment} environment. Nothing was written."
+    ),
+    ErrorCode.PERSONAL_LINK_LABEL_TAKEN: (
+        "That label already has a personal link. To replace the link, regenerate it."
+    ),
+    ErrorCode.PERSONAL_LINK_UNKNOWN_LABEL: "No personal link has that label.",
+    ErrorCode.SERVER_KEY_MISSING: (
+        f"Missing required environment variable: {EnvVar.SERVER_SECRET_KEY}"
+    ),
 }
+# The address goes on the domain of the environment. Shown once: the database keeps only its HMAC.
+PERSONAL_LINK_READY = "The personal link, after the address of the environment: {path}"
+PERSONAL_LINK_USAGE = "Give one argument: the label of the personal link."
 COMMAND_REFUSED = "The command was refused: {code}."
 COMMAND_FAILED = "The command failed."
 # A mistake of the code, for whoever reads the traceback: never shown to an end user.

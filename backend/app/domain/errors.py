@@ -53,6 +53,12 @@ class ErrorCode(StrEnum):
     # No valid session. One code for every reason, so that the answer tells none apart.
     UNAUTHORIZED = "unauthorized"
     TEST_DATA_NOT_ALLOWED = "test_data_not_allowed"
+    # A personal link with no user yet, and the current test notice was not accepted.
+    TEST_NOTICE_REQUIRED = "test_notice_required"
+    PERSONAL_LINK_NOT_ALLOWED = "personal_link_not_allowed"
+    PERSONAL_LINK_LABEL_TAKEN = "personal_link_label_taken"
+    PERSONAL_LINK_UNKNOWN_LABEL = "personal_link_unknown_label"
+    SERVER_KEY_MISSING = "server_key_missing"
     # The call to the model gave no answer to use: the message is tried again later.
     MODEL_CALL_FAILED = "model_call_failed"
     # The content of a budget period (docs/04-api.md).
@@ -135,6 +141,24 @@ class TestDataNotAllowedError(ForbiddenError):
             ErrorCode.TEST_DATA_NOT_ALLOWED, context={ContextField.ENVIRONMENT: environment}
         )
         self.environment = environment
+
+
+class TestNoticeRequiredError(ConflictError):
+    """The personal link has no user yet, and the current test notice was not accepted."""
+
+    __test__ = False  # not a test class, whatever its name suggests to pytest
+
+    def __init__(self, notice_version: str) -> None:
+        super().__init__(ErrorCode.TEST_NOTICE_REQUIRED, details={"notice_version": notice_version})
+
+
+class PersonalLinkNotAllowedError(ForbiddenError):
+    """A command of the personal links was asked to run in production."""
+
+    def __init__(self, environment: Environment) -> None:
+        super().__init__(
+            ErrorCode.PERSONAL_LINK_NOT_ALLOWED, context={ContextField.ENVIRONMENT: environment}
+        )
 
 
 class InconsistentDataError(Exception):

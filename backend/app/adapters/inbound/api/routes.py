@@ -5,6 +5,8 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Literal
 
+from app.constants import DASHBOARD_PREFIX as DASHBOARD_PREFIX
+
 HEALTHZ = "/healthz"
 READYZ = "/readyz"
 QUEUEZ = "/queuez"
@@ -22,6 +24,7 @@ class HealthState(StrEnum):
 # development entry. Its prefix makes the browser reject it without Secure and Path=/.
 ME = "/me"
 AUTH_LOGOUT = "/auth/logout"
+AUTH_LOGOUT_ALL = "/auth/logout-all"
 SESSION_TAG = "session"
 SESSION_COOKIE = "__Host-sid"
 SESSION_COOKIE_PATH = "/"
@@ -79,6 +82,4 @@ class ApiErrorCode(StrEnum):
     INTERNAL_ERROR = "internal_error"
 
 
-# The compiled dashboard is served under this prefix (ADR 0016).
-DASHBOARD_PREFIX = "/app"
 DASHBOARD_MOUNT_NAME = "dashboard"

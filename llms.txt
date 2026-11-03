@@ -44,6 +44,7 @@ nombres de archivo de código están en inglés.
 - [FEAT-XXX · <título>](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/template/pr/)
 - [Especificación — FEAT-XXX · <título>](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/template/spec/)
 - [Contrato de UI — FEAT-XXX · <pantalla>](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/template/ui_contract/)
+- [Contrato de UI — Entrada de desarrollo y enlace personal](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/entrada-de-desarrollo/ui_contract/)
 - [Flujo de trabajo con IA](https://verozacarias-prog.github.io/AI4Devs-finalproject/flujo-de-trabajo-con-ia/)
 - [Hoja de ruta](https://verozacarias-prog.github.io/AI4Devs-finalproject/hoja-de-ruta/)
 - [Operación](https://verozacarias-prog.github.io/AI4Devs-finalproject/operacion/)
