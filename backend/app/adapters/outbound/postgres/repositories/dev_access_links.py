@@ -23,6 +23,12 @@ class PostgresDevAccessLinkRepository:
         ).one_or_none()
         return None if row is None else _link_from(row)
 
+    def lock_by_label(self, label: str) -> DevAccessLink | None:
+        row = self._connection.execute(
+            text(queries.LOCK_DEV_ACCESS_LINK_BY_LABEL), {"label": label}
+        ).one_or_none()
+        return None if row is None else _link_from(row)
+
     def lock_by_token_hash(self, token_hash: str) -> DevAccessLink | None:
         row = self._connection.execute(
             text(queries.LOCK_DEV_ACCESS_LINK_BY_TOKEN_HASH), {"token_hash": token_hash}

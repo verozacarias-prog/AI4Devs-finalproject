@@ -11,6 +11,11 @@ class DevAccessLinkRepositoryPort(Protocol):
 
     def find_by_label(self, label: str) -> DevAccessLink | None: ...
 
+    def lock_by_label(self, label: str) -> DevAccessLink | None:
+        """Finds the link and holds it until the transaction ends: a regeneration waits for an
+        acceptance in progress, and sees the user it created."""
+        ...
+
     def lock_by_token_hash(self, token_hash: str) -> DevAccessLink | None:
         """Finds the link and holds it until the transaction ends: only one acceptance at a
         time can create its user."""

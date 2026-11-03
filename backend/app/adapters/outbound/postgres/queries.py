@@ -80,6 +80,15 @@ SELECT_DEV_ACCESS_LINK_BY_LABEL = """
     SELECT id, label, user_id, token_hash FROM dev_access_link WHERE label = :label
 """
 
+# The lock makes a regeneration wait for an acceptance in progress, so it closes the session that
+# acceptance opens.
+LOCK_DEV_ACCESS_LINK_BY_LABEL = """
+    SELECT id, label, user_id, token_hash
+      FROM dev_access_link
+     WHERE label = :label
+       FOR UPDATE
+"""
+
 # The lock makes two acceptances of one link wait for each other, so only one creates the user.
 # Not a secret: the name of this query has the word "token" in it.
 LOCK_DEV_ACCESS_LINK_BY_TOKEN_HASH = """

@@ -236,6 +236,9 @@ class InMemoryDevAccessLinks:
     def find_by_label(self, label: str) -> DevAccessLink | None:
         return next((link for link in self.stored.values() if link.label == label), None)
 
+    def lock_by_label(self, label: str) -> DevAccessLink | None:
+        return self.find_by_label(label)
+
     def lock_by_token_hash(self, token_hash: str) -> DevAccessLink | None:
         return next((link for link in self.stored.values() if link.token_hash == token_hash), None)
 

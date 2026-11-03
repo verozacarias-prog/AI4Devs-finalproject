@@ -76,7 +76,7 @@ class RegeneratePersonalLink:
         value = new_token()
         now = self._clock.now()
         with self._unit_of_work as unit_of_work:
-            link = unit_of_work.dev_access_links.find_by_label(label)
+            link = unit_of_work.dev_access_links.lock_by_label(label)
             if link is None:
                 raise NotFoundError(ErrorCode.PERSONAL_LINK_UNKNOWN_LABEL)
             unit_of_work.dev_access_links.replace_token_hash(link.id, hash_link_value(value, key))
