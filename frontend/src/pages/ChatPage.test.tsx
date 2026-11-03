@@ -1,6 +1,6 @@
 /**
  * Cases C1-11 to C1-21, C2-22 to C2-29 and C3-10 to C3-11 of FEAT-002 (docs/features/FEAT-002/spec.md), and
- * cases 12 and 15 to 17 of issue #125: the web chat. The whole
+ * cases 12 and 15 to 18 of issue #125: the web chat. The whole
  * dashboard is rendered, with Lucía already in and the API simulated at the network level.
  * The chat asks for new messages five times as often as it does for real: every 100 ms while
  * it waits for a reply instead of every half second, and every 600 ms instead of every 3 seconds.
@@ -435,6 +435,45 @@ test('case 16 of #125: a message on its way when leaving the chat is shown once 
 
   await screen.findByText(CLOTHES)
   await waitFor(() => expect(screen.getAllByText(CLOTHES)).toHaveLength(1))
+  expect(screen.queryByText('No enviado')).toBeNull()
+})
+
+test('case 18 of #125: a send answered after coming back to the chat is shown once', async () => {
+  let stored = false
+  let answered = false
+  apiWithLuciaIn(
+    http.get(CHAT, ({ request }) => {
+      if (new URL(request.url).searchParams.has('after')) return conversation([], 'om1')
+      return stored
+        ? conversation(
+            [
+              fromLucia('im1', CLOTHES, '2026-11-03T15:21:00-03:00'),
+              fromPlatita('om1', 'Recibí tu mensaje. Todavía no puedo procesarlo.', '2026-11-03T15:21:04-03:00'),
+            ],
+            'om1',
+          )
+        : conversation([], null)
+    }),
+    http.post(CHAT, async () => {
+      // Stored at once; its answer arrives only after Lucía is back in the chat.
+      stored = true
+      await delay(TWO_SECONDS_MS)
+      answered = true
+      return HttpResponse.json({ id: 'im1', status: 'pending' }, { status: 202 })
+    }),
+    budgetGoneThrough,
+  )
+  const nav = await openChat()
+  await write(CLOTHES)
+  fireEvent.click(within(nav).getByRole('button', { name: 'Presupuesto' }))
+  await waitFor(() => expect(screen.queryByRole('heading', { name: 'Chat con Platita' })).toBeNull())
+  fireEvent.click(within(nav).getByRole('button', { name: 'Chat' }))
+  await screen.findByText('Recibí tu mensaje. Todavía no puedo procesarlo.')
+
+  await waitFor(() => expect(answered).toBe(true))
+
+  await waitFor(() => expect(screen.getAllByText(CLOTHES)).toHaveLength(1))
+  await waitFor(() => expect(screen.queryByText('Platita está procesando…')).toBeNull())
   expect(screen.queryByText('No enviado')).toBeNull()
 })
 
