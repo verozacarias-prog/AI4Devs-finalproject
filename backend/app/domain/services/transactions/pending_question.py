@@ -1,7 +1,8 @@
 """The question of a pending: what was understood, and what the user has to say (§ 5; FEAT-003).
 
-The first line says the movement as far as it is known; then one line for each thing that is
-missing, in the order of MissingField, with what can be chosen.
+The first line says the movement as far as it is known, after a line that says why when the
+amount given does not fit where it is stored; then one line for each thing that is missing, in
+the order of MissingField, with what can be chosen.
 """
 
 from __future__ import annotations

@@ -935,7 +935,7 @@ tiene un tope de 100 mensajes clasificados por día, que es configuración. La c
 descuenta de ninguna de las tres cuotas. Las tres suman 80, así que quien usa todo lo permitido
 no llega al tope. Un mensaje que llega con el tope alcanzado no se clasifica: se guarda y se
 procesa al día siguiente, como un registro que superó su cuota, porque no se puede saber si era
-un gasto. El aviso de que llegó al límite del día sale una sola vez por día.
+un gasto. Se guarda hasta el máximo de mensajes en espera, que se describe más abajo. El aviso de que llegó al límite del día sale una sola vez por día.
 
 **Tres cuotas diarias por usuario, separadas.**
 
@@ -954,8 +954,8 @@ sin desplegar.
 
 **Superar una cuota no pierde nada.**
 
-- **Registro:** el mensaje se guarda igual y queda sin procesar hasta que la cuota se renueva al
-  día siguiente. El asistente responde con un texto fijo, sin otra llamada al LLM, que avisa que
+- **Registro:** el mensaje se guarda igual, hasta el máximo de mensajes en espera, y queda sin
+  procesar hasta que la cuota se renueva al día siguiente. El asistente responde con un texto fijo, sin otra llamada al LLM, que avisa que
   lo va a procesar mañana. Perder un gasto que el usuario escribió sería peor que demorarlo. El
   mensaje demorado no traba a los que el usuario mande después: una consulta del mismo día se
   responde igual. Los demorados se procesan al día siguiente en el orden en que llegaron, y cada
@@ -974,7 +974,9 @@ esperando respuesta, que es configuración. Esperan los que están pendientes o 
 cuentan también los demorados al día siguiente por una cuota o por el tope diario. Con 200 en
 espera, el mensaje siguiente no se guarda, y el usuario puede volver a mandarlo cuando Platita
 conteste alguno. Un mensaje que repite uno ya guardado no es nuevo y no se rechaza. Los
-procesados, los fallidos y los de otros usuarios no cuentan. Hoy lo aplica el chat web; qué ve
+procesados, los fallidos y los de otros usuarios no cuentan. Dos mensajes que llegan en el mismo
+instante con 199 en espera pueden guardarse los dos y dejar 201: el tope es contra el abuso, y
+no se bloquea para evitar ese caso. Hoy lo aplica el chat web; qué ve
 el usuario de WhatsApp está en la [hoja de ruta](hoja-de-ruta.md#decisiones-abiertas).
 
 **Un mensaje que falla después de clasificarse cuenta igual.** La clasificación ya se pagó, así

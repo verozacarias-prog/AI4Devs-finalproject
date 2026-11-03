@@ -52,7 +52,10 @@ Dentro de "Con contenido" hay cuatro situaciones, que no son estados de la panta
 - **Procesando.** El último mensaje es del usuario y todavía no tiene respuesta: debajo se ve
   "Platita está procesando…".
 - **No enviado.** El `POST` de un mensaje falló: la burbuja queda con "No enviado" y Reintentar,
-  y el reintento repite el pedido con la misma `Idempotency-Key`. El mensaje no enviado sigue ahí
+  y el reintento repite el pedido con la misma `Idempotency-Key`. Si la API respondió `429` con
+  `too_many_waiting_messages`, la burbuja muestra además el aviso de esperar a que Platita
+  conteste antes de reintentar; otro error, o un `429` con otro código, muestra solo "No
+  enviado". Al reintentar, el aviso se va. El mensaje no enviado sigue ahí
   aunque el usuario vaya a otra pantalla del dashboard y vuelva, con su aviso si lo tenía; uno
   que se estaba enviando cuando salió termina su envío, y al volver se ve una sola vez. Dura lo que la sesión en esa
   pestaña: no se guarda en el navegador, así que recargar la página o cerrar la sesión lo
@@ -116,6 +119,7 @@ Van en `frontend/src/messages.ts`, bajo `chat`, salvo los compartidos, bajo `com
 | `send` | Enviar |
 | `processing` | Platita está procesando… |
 | `notSent` | No enviado |
+| `tooManyWaiting` | Tenés muchos mensajes esperando respuesta. Esperá a que te conteste y reintentá. |
 | `tooLong` | Tu mensaje es muy largo: el máximo es de 4096 caracteres. |
 | `failed` | No se pudo abrir la conversación |
 | `pollFailed` | No se pudo buscar mensajes nuevos. Se reintenta en unos segundos. |

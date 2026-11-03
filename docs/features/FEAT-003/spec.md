@@ -1533,6 +1533,11 @@ sigue una línea por cada dato que falta, en este orden:
 | El presupuesto, en borrador | Tu presupuesto del 1/11/2026 al 30/11/2026 todavía no está confirmado. Ingreso estimado: $1.200.000. Topes: Supermercado $300.000. ¿Lo confirmo así? Sin topes, dice "Sin topes." |
 | El presupuesto, sin ninguno | No tenés un presupuesto para el 1/11/2026. Armalo en el dashboard y después avisame. |
 
+Cuando el monto que dio el usuario no entra donde se guarda, antes de la pregunta, que pide el
+monto con «¿Cuánto fue?» (issue #125):
+
+> Ese monto es más grande de lo que puedo registrar.
+
 Con un pendiente esperando respuesta, ante otro movimiento, antes de repetir la pregunta:
 
 > No anoté tu último mensaje: primero terminemos con lo anterior, y después mandámelo de nuevo.
