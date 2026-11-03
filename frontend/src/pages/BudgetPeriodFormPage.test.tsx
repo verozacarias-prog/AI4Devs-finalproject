@@ -330,9 +330,9 @@ test('case C1-32: in a confirmed period only the income and the limits are edite
   expect(field('Ingreso estimado').disabled).toBe(false)
   expect(field('Monto del tope de Supermercado').disabled).toBe(false)
   type('Ingreso estimado', '1520000')
-  save()
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
 
-  await screen.findByText('El período quedó guardado.')
+  await screen.findByText('Los cambios quedaron guardados.')
   expect(bodies[0]).toMatchObject({
     period_type: 'monthly',
     period_start: '2026-10-10',
@@ -1037,4 +1037,99 @@ test('case C3-17: editing what was saved moves the focus to the heading', async 
   expect(screen.queryByRole('button', { name: 'Editar' })).toBeNull()
   expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Editar el período' }))
   expect(field('Ingreso estimado').disabled).toBe(false)
+})
+
+// Cases T-01 to T-04 of the task tarea-estado-del-periodo: the form says whether the period is a draft or
+// confirmed, and a confirmed period saves changes, not a draft. They live in its pull request, not in a spec.md.
+
+test('case T-01: a draft is saved as a draft', async () => {
+  apiWith([NOVEMBER, OCTOBER])
+
+  renderForm(NOVEMBER.id)
+
+  await ready()
+  expect(screen.getByRole('button', { name: 'Guardar borrador' })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Guardar cambios' })).toBeNull()
+})
+
+test('case T-01: a new period is saved as a draft', async () => {
+  apiWith([OCTOBER])
+
+  renderForm()
+
+  await ready()
+  expect(screen.getByRole('button', { name: 'Guardar borrador' })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Guardar cambios' })).toBeNull()
+})
+
+test('case T-02: a confirmed period saves changes', async () => {
+  apiWith([OCTOBER])
+
+  renderForm(OCTOBER.id)
+
+  await ready()
+  expect(screen.getByRole('button', { name: 'Guardar cambios' })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Guardar borrador' })).toBeNull()
+})
+
+test('case T-03: the form of a draft says it does not receive movements yet', async () => {
+  apiWith([NOVEMBER, OCTOBER])
+
+  renderForm(NOVEMBER.id)
+
+  await ready()
+  expect(
+    screen.getByText('Borrador: todavía no recibe movimientos. Guardalo y confirmalo para que los reciba.'),
+  ).toBeTruthy()
+  expect(screen.queryByText(/^Confirmado:/)).toBeNull()
+})
+
+test('case T-03: the form of a confirmed period says it already receives movements', async () => {
+  apiWith([OCTOBER])
+
+  renderForm(OCTOBER.id)
+
+  await ready()
+  expect(
+    screen.getByText('Confirmado: ya recibe movimientos. Podés cambiar el ingreso estimado y los topes.'),
+  ).toBeTruthy()
+  expect(screen.queryByText(/^Borrador:/)).toBeNull()
+})
+
+test('case T-03: the form of a new period says no status', async () => {
+  apiWith([OCTOBER])
+
+  renderForm()
+
+  await ready()
+  expect(screen.queryByText(/^Borrador:/)).toBeNull()
+  expect(screen.queryByText(/^Confirmado:/)).toBeNull()
+})
+
+test('case T-04: saving a confirmed period says the changes were saved and offers no confirmation', async () => {
+  apiWith([OCTOBER])
+  api.use(http.put(PERIOD, () => HttpResponse.json(OCTOBER)))
+
+  renderForm(OCTOBER.id)
+
+  await ready()
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+
+  await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Los cambios quedaron guardados.'))
+  expect(screen.queryByText('El período quedó guardado.')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Confirmar' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Editar' })).toBeTruthy()
+})
+
+test('case T-04: saving a draft still says the period was saved', async () => {
+  apiWith([NOVEMBER, OCTOBER])
+  api.use(http.put(PERIOD, () => HttpResponse.json(NOVEMBER)))
+
+  renderForm(NOVEMBER.id)
+
+  await ready()
+  save()
+
+  await waitFor(() => expect(screen.getByRole('status').textContent).toBe('El período quedó guardado.'))
+  expect(screen.getByRole('button', { name: 'Confirmar' })).toBeTruthy()
 })
