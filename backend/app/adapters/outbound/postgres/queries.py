@@ -443,6 +443,14 @@ SELECT_WEB_INBOUND_MESSAGE_BY_PROVIDER_ID = """
      WHERE provider = 'web' AND provider_message_id = :provider_message_id
 """
 
+# The messages of a user waiting for an answer, those put off to the next day among them
+# (domain rules, § 12). The index ix_inbound_message_user_status serves it.
+COUNT_WAITING_INBOUND_MESSAGES = """
+    SELECT count(*)
+      FROM inbound_message
+     WHERE user_id = :user_id AND status IN ('pending', 'processing')
+"""
+
 # A message delayed on purpose has its next attempt in the future, so it does not count.
 INBOUND_MESSAGE_WAITING_SINCE_EXISTS = """
 SELECT EXISTS (

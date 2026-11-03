@@ -12,11 +12,10 @@ from app.domain.entities.category import Category
 from app.domain.entities.transaction import TransactionType
 from app.domain.errors import ConflictError, ContextField, ErrorCode, InvalidError, NotFoundError
 from app.domain.services.budgets.period_dates import check_dates_can_be_compared
-
-# Amounts are stored rounded to cents, half up, in NUMERIC(20,2): what rounds to 0 is not a limit,
-# and what rounds to 10^18 does not fit (docs/03-modelo-de-datos.md).
-_SMALLEST_LIMIT = Decimal("0.005")
-_TOO_LARGE = Decimal("999999999999999999.995")
+from app.domain.services.transactions.movement_resolution import (
+    SMALLEST_AMOUNT,
+    TOO_LARGE_AMOUNT,
+)
 
 
 def check_confirmed_stays_fixed(
@@ -67,7 +66,7 @@ def check_limits_and_income(
     _check_categories_are_of_expense(limits, categories)
     if estimated_income < 0:
         raise InvalidError(ErrorCode.ESTIMATED_INCOME_NEGATIVE)
-    if estimated_income >= _TOO_LARGE:
+    if estimated_income >= TOO_LARGE_AMOUNT:
         raise InvalidError(ErrorCode.AMOUNT_TOO_LARGE)
     _check_limits_fit(limits)
 
@@ -87,7 +86,7 @@ def _check_categories_are_of_the_user(
 
 def _check_limits_are_positive(limits: Sequence[tuple[uuid.UUID, Decimal]]) -> None:
     for category_id, amount in limits:
-        if amount < _SMALLEST_LIMIT:
+        if amount < SMALLEST_AMOUNT:
             raise _limit_error(ErrorCode.BUDGET_LIMIT_NOT_POSITIVE, category_id)
 
 
@@ -109,7 +108,7 @@ def _check_categories_are_of_expense(
 
 def _check_limits_fit(limits: Sequence[tuple[uuid.UUID, Decimal]]) -> None:
     for category_id, amount in limits:
-        if amount >= _TOO_LARGE:
+        if amount >= TOO_LARGE_AMOUNT:
             raise _limit_error(ErrorCode.AMOUNT_TOO_LARGE, category_id)
 
 

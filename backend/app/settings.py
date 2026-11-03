@@ -16,6 +16,7 @@ from app.constants import (
     DEFAULT_MESSAGE_RETRY_MAX_WAIT_SECONDS,
     DEFAULT_QUEUE_MAX_WAIT_MINUTES,
     DEFAULT_VERSION,
+    DEFAULT_WAITING_MESSAGES_LIMIT,
     DEFAULT_WORKER_LOCK_SECONDS,
     DISABLED,
     ENABLED,
@@ -59,6 +60,8 @@ class Settings:
     # The daily limits of use of each user (domain rules, § 12).
     llm_daily_classification_limit: int = DEFAULT_LLM_DAILY_CLASSIFICATION_LIMIT
     llm_daily_registration_limit: int = DEFAULT_LLM_DAILY_REGISTRATION_LIMIT
+    # The most messages a user may have waiting for an answer (domain rules, § 12).
+    waiting_messages_limit: int = DEFAULT_WAITING_MESSAGES_LIMIT
     # Only the worker calls the model, so only the worker requires it. Never logged.
     openai_api_key: str | None = field(default=None, repr=False)
 
@@ -164,6 +167,9 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
         ),
         llm_daily_registration_limit=_read_positive_integer(
             environ, EnvVar.LLM_DAILY_REGISTRATION_LIMIT, DEFAULT_LLM_DAILY_REGISTRATION_LIMIT
+        ),
+        waiting_messages_limit=_read_positive_integer(
+            environ, EnvVar.WAITING_MESSAGES_LIMIT, DEFAULT_WAITING_MESSAGES_LIMIT
         ),
         openai_api_key=_read(environ, EnvVar.OPENAI_API_KEY) or None,
     )

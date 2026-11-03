@@ -1588,6 +1588,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
+            /** @description The user already has as many messages waiting for an answer as allowed, 200 unless the configuration says otherwise: nothing is stored. It is accepted again once Platita answers. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
         };
     };
     currencies_currencies_get: {

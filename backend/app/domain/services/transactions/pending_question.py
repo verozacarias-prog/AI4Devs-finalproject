@@ -12,7 +12,11 @@ from decimal import Decimal
 from app import messages
 from app.constants import LINE_END
 from app.domain.entities.transaction import TransactionType
-from app.domain.services.transactions.movement_resolution import Missing, MissingField
+from app.domain.services.transactions.movement_resolution import (
+    Missing,
+    MissingField,
+    too_large,
+)
 from app.domain.services.transactions.registration_confirmation import (
     written_amount,
     written_day,
@@ -57,6 +61,9 @@ def _line(field: MissingField, missing: Missing, limits: Sequence[tuple[str, Dec
         case MissingField.TYPE:
             return messages.ASK_TYPE
         case MissingField.AMOUNT:
+            amount = missing.interpretation.amount
+            if amount is not None and too_large(amount):
+                return messages.ASK_AMOUNT_TOO_LARGE
             return messages.ASK_AMOUNT
         case MissingField.ACCOUNT:
             names = [account.name for account in missing.account_options]

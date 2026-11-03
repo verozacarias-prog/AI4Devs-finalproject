@@ -35,6 +35,7 @@ class EnvVar(StrEnum):
     MESSAGE_RETRY_MAX_WAIT_SECONDS = "MESSAGE_RETRY_MAX_WAIT_SECONDS"
     LLM_DAILY_CLASSIFICATION_LIMIT = "LLM_DAILY_CLASSIFICATION_LIMIT"
     LLM_DAILY_REGISTRATION_LIMIT = "LLM_DAILY_REGISTRATION_LIMIT"
+    WAITING_MESSAGES_LIMIT = "WAITING_MESSAGES_LIMIT"
     OPENAI_API_KEY = "OPENAI_API_KEY"
 
 
@@ -123,6 +124,9 @@ DEFAULT_LLM_TIMEOUT_SECONDS = 20
 # variables change them, without deploying (FEAT-003, CA-46).
 DEFAULT_LLM_DAILY_CLASSIFICATION_LIMIT = 100
 DEFAULT_LLM_DAILY_REGISTRATION_LIMIT = 50
+# The most messages a user may have waiting for an answer, pending or in process, those put off
+# to the next day among them (domain rules, § 12). WAITING_MESSAGES_LIMIT changes it.
+DEFAULT_WAITING_MESSAGES_LIMIT = 200
 # The worker retries a failed round itself (ADR 0010): the SDK does not retry on its own.
 LLM_SDK_RETRIES = 0
 TOKENS_PER_MILLION = 1_000_000

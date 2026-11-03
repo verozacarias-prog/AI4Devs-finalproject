@@ -23,6 +23,8 @@ type Outgoing = {
   key: string
   text: string
   status: 'sending' | 'sent' | 'failed'
+  /** Not stored because too many messages wait for an answer: it says to wait before retrying. */
+  tooManyWaiting?: boolean
   /** The id the API gave it, to know when the conversation brings it. */
   id?: string
 }
@@ -146,7 +148,7 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
               ? candidate
               : sent.kind === 'sent'
                 ? { ...candidate, status: 'sent', id: sent.id }
-                : { ...candidate, status: 'failed' },
+                : { ...candidate, status: 'failed', tooManyWaiting: sent.kind === 'too-many-waiting' },
           ),
         )
       })
@@ -168,7 +170,7 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
   }
 
   function resend(message: Outgoing) {
-    const again: Outgoing = { ...message, status: 'sending' }
+    const again: Outgoing = { ...message, status: 'sending', tooManyWaiting: false }
     setOutgoing((current) => current.map((candidate) => (candidate.key === message.key ? again : candidate)))
     deliver(again)
   }
@@ -207,12 +209,19 @@ export function ChatPage({ onNoSession, timeoutMs }: Props) {
               time={null}
               footer={
                 message.status === 'failed' && (
-                  <span className="chat__not-sent mt-2 flex items-center justify-end gap-2 self-end rounded-md bg-card px-2 py-1 text-xs">
-                    <span className="font-semibold text-destructive">{TEXT.notSent}</span>
-                    <Button size="sm" variant="outline" className="text-foreground" onClick={() => resend(message)}>
-                      {MESSAGES.common.retry}
-                    </Button>
-                  </span>
+                  <>
+                    {message.tooManyWaiting && (
+                      <span className="mt-2 self-end rounded-md bg-card px-2 py-1 text-xs text-foreground">
+                        {TEXT.tooManyWaiting}
+                      </span>
+                    )}
+                    <span className="chat__not-sent mt-2 flex items-center justify-end gap-2 self-end rounded-md bg-card px-2 py-1 text-xs">
+                      <span className="font-semibold text-destructive">{TEXT.notSent}</span>
+                      <Button size="sm" variant="outline" className="text-foreground" onClick={() => resend(message)}>
+                        {MESSAGES.common.retry}
+                      </Button>
+                    </span>
+                  </>
                 )
               }
             >

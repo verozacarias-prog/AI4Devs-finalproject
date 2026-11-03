@@ -104,6 +104,8 @@ QUESTION_CATEGORY_PART = " en {category}"
 QUESTION_ACCOUNT_PART = " con {account}"
 ASK_TYPE = "¿Fue un gasto o un ingreso?"
 ASK_AMOUNT = "¿Cuánto fue?"
+# An amount that does not fit where it is stored is asked again, saying why (domain rules, § 5).
+ASK_AMOUNT_TOO_LARGE = "Ese monto es más grande de lo que puedo registrar. ¿Cuánto fue?"
 ASK_ACCOUNT = "¿Con qué cuenta? {options}."
 # The last two options of a list go joined by this, and the rest by a comma.
 LAST_OPTION_JOINER = " o "

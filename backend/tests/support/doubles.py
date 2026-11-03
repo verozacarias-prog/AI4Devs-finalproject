@@ -13,6 +13,7 @@ from app.domain.entities.budget_period import BudgetPeriod, PeriodStatus
 from app.domain.entities.dev_access_link import DevAccessLink
 from app.domain.entities.family_group import FamilyGroup, GroupRole, Membership
 from app.domain.entities.financial_profile import FinancialProfile
+from app.domain.entities.inbound_message import InboundMessage, InboundStatus
 from app.domain.entities.session import Session
 from app.domain.entities.user import User
 from app.domain.errors import ConflictError, ErrorCode
@@ -22,7 +23,6 @@ if TYPE_CHECKING:
     from app.domain.entities.category import Category
     from app.domain.entities.chat_message import ChatMessage
     from app.domain.entities.currency import Currency
-    from app.domain.entities.inbound_message import InboundMessage
     from app.domain.entities.llm_call import LlmCall
     from app.domain.entities.llm_usage import UsageCounter
     from app.domain.entities.outbound_message import OutboundMessage
@@ -349,6 +349,12 @@ class InMemoryInboundMessages:
                 if message.provider_message_id == provider_message_id
             ),
             None,
+        )
+
+    def count_waiting(self, user_id: uuid.UUID) -> int:
+        waiting = (InboundStatus.PENDING, InboundStatus.PROCESSING)
+        return sum(
+            1 for message in self.added if message.user_id == user_id and message.status in waiting
         )
 
     def claim_next(self, now: datetime, locked_until: datetime) -> InboundMessage | None:

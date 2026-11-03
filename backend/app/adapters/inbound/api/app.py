@@ -135,7 +135,9 @@ def create_app(
             build_chat_router(
                 lambda: AuthenticateSession(unit_of_work(), clock),
                 lambda: ValidateSession(unit_of_work(), clock),
-                lambda: SendChatMessage(unit_of_work(), clock),
+                lambda: SendChatMessage(
+                    unit_of_work(), clock, waiting_limit=settings.waiting_messages_limit
+                ),
                 lambda: ListChatMessages(unit_of_work()),
             )
         )

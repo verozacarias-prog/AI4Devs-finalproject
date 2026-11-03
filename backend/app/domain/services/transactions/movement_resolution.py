@@ -41,6 +41,11 @@ _ACCOUNT_TYPES_FOR_MOVEMENTS = (
 )
 # Two decimals, as the database stores an amount (docs/03-modelo-de-datos.md).
 _CENTS = Decimal("0.01")
+# Amounts are stored rounded to cents, half up, in NUMERIC(20,2): what rounds to 0 is not an
+# amount, and what rounds to 10^18 does not fit (docs/03-modelo-de-datos.md). Compared before
+# rounding, which cannot even be done from 29 integer digits on.
+SMALLEST_AMOUNT = Decimal("0.005")
+TOO_LARGE_AMOUNT = Decimal("999999999999999999.995")
 _CATEGORY_NAME = re.compile(CATEGORY_NAME_PATTERN)
 
 
@@ -326,7 +331,7 @@ def _missing_fields(
     """What the user has to say, in the order it is asked (§ 5)."""
     lacks = {
         MissingField.TYPE: interpretation.type is None,
-        MissingField.AMOUNT: interpretation.amount is None or rounded(interpretation.amount) <= 0,
+        MissingField.AMOUNT: interpretation.amount is None or not fits(interpretation.amount),
         MissingField.ACCOUNT: account is None,
         MissingField.CATEGORY: interpretation.type is not None and category is None,
         MissingField.PERIOD: period is None or period.status is not PeriodStatus.CONFIRMED,
@@ -342,6 +347,16 @@ def verified_currency(classification: Classification, text: str) -> str | None:
     if is_unwritten(classification.currency_words, text):
         return None
     return classification.currency
+
+
+def fits(amount: Decimal) -> bool:
+    """Whether the amount, rounded to cents, is more than 0 and fits where it is stored."""
+    return SMALLEST_AMOUNT <= amount < TOO_LARGE_AMOUNT
+
+
+def too_large(amount: Decimal) -> bool:
+    """Whether the amount, rounded to cents, does not fit where it is stored (domain rules, § 5)."""
+    return amount >= TOO_LARGE_AMOUNT
 
 
 def rounded(amount: Decimal) -> Decimal:
