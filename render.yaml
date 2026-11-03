@@ -23,6 +23,9 @@ services:
         value: "true"
       - key: WEB_CHAT_ENABLED
         value: "true"
+      # Not a secret: the commands of the personal links print the whole link with it.
+      - key: PUBLIC_ROOT_URL
+        value: https://platita-demo-web.onrender.com
       # With the role platita_app, not with the owner of the tables (ADR 0030).
       - key: DATABASE_URL
         sync: false

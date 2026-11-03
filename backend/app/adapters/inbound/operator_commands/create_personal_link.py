@@ -17,9 +17,18 @@ from app import messages
 from app.adapters.inbound.operator_commands.runner import run_command
 from app.adapters.outbound.postgres.connection import create_db_engine
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
-from app.constants import DASHBOARD_PREFIX, EXIT_FAILED, LINE_END
+from app.constants import DASHBOARD_PREFIX, EXIT_FAILED, LINE_END, URL_PATH_SEPARATOR
 from app.domain.use_cases.test_data.personal_links import CreatePersonalLink
 from app.settings import Settings
+
+
+def personal_link_output(value: str, settings: Settings) -> str:
+    """What both commands print: the link, whole when the address of the environment is known."""
+    path = f"{DASHBOARD_PREFIX}/#{value}"
+    if settings.public_root_url is None:
+        return messages.PERSONAL_LINK_PATH_READY.format(path=path)
+    root = settings.public_root_url.rstrip(URL_PATH_SEPARATOR)
+    return messages.PERSONAL_LINK_READY.format(link=root + path)
 
 
 def _run(label: str, settings: Settings) -> str:
@@ -32,7 +41,7 @@ def _run(label: str, settings: Settings) -> str:
         ).execute(label)
     finally:
         engine.dispose()
-    return messages.PERSONAL_LINK_READY.format(path=f"{DASHBOARD_PREFIX}/#{value}")
+    return personal_link_output(value, settings)
 
 
 def main(

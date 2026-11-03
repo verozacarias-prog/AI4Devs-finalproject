@@ -43,7 +43,8 @@ COMMAND_ERRORS: Mapping[str, str] = {
     ),
 }
 # The address goes on the domain of the environment. Shown once: the database keeps only its HMAC.
-PERSONAL_LINK_READY = "The personal link, after the address of the environment: {path}"
+PERSONAL_LINK_READY = "The personal link: {link}"
+PERSONAL_LINK_PATH_READY = "The personal link, after the address of the environment: {path}"
 PERSONAL_LINK_USAGE = "Give one argument: the label of the personal link."
 COMMAND_REFUSED = "The command was refused: {code}."
 COMMAND_FAILED = "The command failed."
