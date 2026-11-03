@@ -52,6 +52,10 @@ def question_text(
         else messages.QUESTION_SEVERAL_MISSING
     )
     lines = [first.format(movement=movement)]
+    amount = interpretation.amount
+    if amount is not None and too_large(amount):
+        # Why the amount it gave is asked again, before the question (domain rules, § 5).
+        lines.insert(0, messages.AMOUNT_TOO_LARGE)
     lines.extend(_line(field, missing, limits) for field in missing.fields)
     return LINE_END.join(lines)
 
@@ -61,9 +65,6 @@ def _line(field: MissingField, missing: Missing, limits: Sequence[tuple[str, Dec
         case MissingField.TYPE:
             return messages.ASK_TYPE
         case MissingField.AMOUNT:
-            amount = missing.interpretation.amount
-            if amount is not None and too_large(amount):
-                return messages.ASK_AMOUNT_TOO_LARGE
             return messages.ASK_AMOUNT
         case MissingField.ACCOUNT:
             names = [account.name for account in missing.account_options]
