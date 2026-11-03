@@ -50,7 +50,11 @@ rama de la entrega con `git diff` y `git log`. Usá Bash solo para leer: `git di
    reportala, no elijas un lado (`AGENTS.md`, sección 10). En un endpoint,
    `scripts/verify_api_contract.py` compara del contrato hacia `04-api.md`. Vos mirás la
    otra dirección, que no ve: un estado o una regla que `04-api.md` promete y el contrato
-   no documenta, y un texto de la referencia que diga algo que el código no hace.
+   no documenta, y un texto de la referencia que diga algo que el código no hace. Si el cambio
+   modifica una regla, un caso o un comportamiento, buscá con `grep` en `docs/`, `AGENTS.md` y
+   `README.md` cada lugar que lo nombra: uno que quedó diciendo lo anterior es un bloqueante.
+   Incluye los diagramas Mermaid: si el cambio toca el esquema, un proceso o un recorrido, el
+   diagrama que lo dibuja tiene que mostrarlo.
 7. **Uso del modelo.** Si el cambio toca un prompt, una función de lectura, la base de
    conocimiento o la validación de salida, que la tabla de `docs/seguridad-llm.md` esté
    actualizada.
