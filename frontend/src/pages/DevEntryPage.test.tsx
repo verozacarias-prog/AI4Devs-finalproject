@@ -501,3 +501,21 @@ test('case 37: opening the link again after the message enters, and the message 
   expect(screen.queryByText(OPEN_THE_LINK_AGAIN)).toBeNull()
   closeLink()
 })
+
+// Case 41 of issue #84: a 409 that is not the notice is an error, never a notice without a version.
+
+test.each([
+  ['another conflict', () => HttpResponse.json({ error: 'conflict' }, { status: 409 })],
+  ['an answer that is not JSON', () => new HttpResponse('Conflict', { status: 409 })],
+])('case 41: a 409 without the version of the notice, from %s, is an error with a retry', async (_, conflict) => {
+  openLink()
+  api.use(http.post(SESSION, conflict))
+
+  render(<DevEntryPage />)
+
+  const alert = await screen.findByRole('alert')
+  expect(alert.textContent).toContain('No se pudo consultar la sesión')
+  screen.getByRole('button', { name: 'Reintentar' })
+  expect(screen.queryByRole('button', { name: 'Acepto' })).toBeNull()
+  closeLink()
+})
