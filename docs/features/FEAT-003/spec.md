@@ -119,7 +119,7 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 ### Límites y observabilidad — corte 3
 
 - **CA-29.** Con el tope diario total alcanzado, el mensaje no se clasifica y se procesa al día siguiente. El aviso de que llegó al límite sale una sola vez por día.
-- **CA-30.** Con la cuota de registro agotada, un gasto, un ingreso o la respuesta a un pendiente se demoran al día siguiente, con un texto fijo y sin otra llamada al modelo. Un mensaje demorado no traba a los siguientes y, al procesarse, conserva el día en que se escribió. Las cuotas de consultas y de consejos llegan con su código, en la entrega final: mientras tanto una consulta o un consejo reciben el texto fijo de C1-10 sin cobrar cuota ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final)). Decidido por Vero el 18/10/2026.
+- **CA-30.** Con la cuota de registro agotada, un gasto, un ingreso o la respuesta a un pendiente se demoran al día siguiente, con un texto fijo y sin otra llamada al modelo. Un mensaje demorado no traba a los siguientes y, al procesarse, conserva el día en que se escribió. La cuota de consultas llega con su código, en la entrega final, y la de consejos en una segunda versión, con los consejos: mientras tanto una consulta o un consejo reciben el texto fijo de C1-10 sin cobrar cuota ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final)). Decidido por Vero el 18/10/2026.
 - **CA-46.** El tope diario total y la cuota de registro son configuración, en variables de entorno, con 100 y 50 por defecto: se cambian sin desplegar, reiniciando el worker. Decidido por Vero el 18/10/2026; resuelve la contradicción entre [2.5](../../02-arquitectura.md#25-seguridad) y las [reglas de dominio § 12](../../reglas-de-dominio.md#12-límites-de-uso-del-asistente).
 - **CA-47.** Cuando la validación en código rechaza algo que devolvió el modelo, la fila de su llamada en `LLM_CALL` pasa a `blocked` ([ADR 0023](../../adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md), punto 6). Sumado el 18/10/2026: el corte 2 valida la salida pero deja la fila en `ok`. Cuenta como rechazo tanto un nombre de categoría que no pasa la validación (CA-43) como algo que el modelo devuelve sin que esté escrito: una mención de la cuenta (CA-9), las palabras de la moneda (CA-39) o un nombre de categoría que nadie escribió (CA-45). Así la métrica de alucinaciones ve también lo que el modelo inventa. Decidido por Vero el 18/10/2026.
 - **CA-31.** Ninguna línea de los registros lleva el texto, el monto ni el teléfono.
@@ -1560,7 +1560,7 @@ Cuando el modelo se niega a interpretar el mensaje:
 > súper con Mercado Pago».
 
 Cuando un gasto o un ingreso cae en más de un período posible, como uno individual y uno de
-un grupo, mientras elegir entre ellos sea de la entrega final (C2-52):
+un grupo, mientras elegir entre ellos sea de una segunda versión (C2-52):
 
 > Para esa fecha tenés más de un presupuesto, y todavía no sé elegir en cuál anotarlo.
 > Por ahora no lo anoto.
@@ -1621,10 +1621,10 @@ Los dos textos los aprobó Vero el 18/10/2026.
 
 ## Fuera de alcance
 
-- Varios movimientos en un mensaje, elegir entre el presupuesto individual y el de un grupo, y
-  corregir, borrar o restaurar: entrega final
-  ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-2)). Qué responde el asistente
-  ante cada uno se decide en la entrega final, salvo los varios movimientos en un mensaje, que
+- Varios movimientos en un mensaje, y corregir, borrar o restaurar: entrega final. Elegir entre
+  el presupuesto individual y el de un grupo: una segunda versión
+  ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final)). Qué responde el asistente
+  ante cada uno se decide cuando se construya, salvo los varios movimientos en un mensaje, que
   reciben el texto fijo de C1-09, por decisión de Vero del 17/10/2026, y el gasto con más de un
   período posible, que recibe el texto de C2-52, por decisión de Vero del 19/10/2026.
 - Un lote de más de un pendiente: con uno esperando respuesta, otro movimiento no se suma, y se
@@ -1632,17 +1632,18 @@ Los dos textos los aprobó Vero el 18/10/2026.
 - El recordatorio de un pendiente antes de vencer: es un proceso programado. Un pendiente
   vencido se marca al llegar el mensaje siguiente (CA-38). Si el usuario no vuelve a escribir,
   el pendiente queda `open` y su lote esperando respuesta después de las 24 horas, hasta que
-  exista el proceso que los vence ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-2)).
+  exista el proceso que los vence, en una segunda versión ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final)).
 - Corregir el ingreso estimado del borrador en la misma respuesta que lo confirma, como "sí, y
   el ingreso es 1.450.000" ([reglas de dominio § 3](../../reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)):
   en el corte 2 el "sí" confirma el borrador tal cual, y la corrección se ignora.
 - Un período de grupo en borrador: la pregunta que dice que falta la confirmación del dueño y
-  ofrece el presupuesto individual (§ 3) es de la entrega final, con el presupuesto de grupo.
+  ofrece el presupuesto individual (§ 3) es de una segunda versión, con el presupuesto de grupo.
   Mientras tanto, el movimiento recibe el texto fijo de C1-09.
 - Un gasto en otra moneda, transferencias, compras con tarjeta, reglas recurrentes, reintegros
   y el aviso de duplicado entre miembros: reciben el texto fijo de C1-09.
 - Las consultas y los consejos: reciben el texto fijo de C1-10. Sus cuotas, y el texto de una
-  cuota agotada, llegan con su código en la entrega final (CA-30).
+  cuota agotada, llegan con su código: la de consultas en la entrega final y la de consejos en
+  una segunda versión (CA-30).
 - El evento `llm.output_blocked`: según [Operación](../../operacion.md#63-registros) llega con
   las consultas y los consejos. En el corte 3 una salida rechazada solo marca su fila en
   `LLM_CALL` (CA-47).
@@ -1655,10 +1656,11 @@ Los dos textos los aprobó Vero el 18/10/2026.
 
 1. **Qué recibe el usuario si el modelo se niega a responder.** Resuelta el 17/10/2026 por
    Vero: CA-40.
-2. **Qué responde el asistente ante lo que pasó a la entrega final:** un usuario con un período
+2. **Qué responde el asistente ante lo que quedó para después:** un usuario con un período
    individual y uno de grupo para la misma fecha, y una respuesta que cita una confirmación
-   ([hoja de ruta](../../hoja-de-ruta.md#decisiones-abiertas)). Pasa a la entrega final, por
-   decisión de Vero del 17/10/2026. Varios movimientos en un mensaje reciben el texto fijo de
+   ([hoja de ruta](../../hoja-de-ruta.md#decisiones-abiertas)). Pasó a la entrega final, por
+   decisión de Vero del 17/10/2026; la elección entre los dos períodos pasó después a una
+   segunda versión. Varios movimientos en un mensaje reciben el texto fijo de
    C1-09, y un período individual y uno de grupo para la misma fecha, el texto de C2-52.
 3. **Qué responde ante un gasto en una cuenta o en una moneda distinta de la del período.**
    Resuelta por "Fuera de alcance": recibe el texto fijo de C1-09, también cuando la cuenta se

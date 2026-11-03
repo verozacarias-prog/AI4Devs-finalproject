@@ -31,7 +31,8 @@ Platita es un asistente financiero personal y familiar que funciona por WhatsApp
 
 ### 0.4. URL del proyecto:
 
-Pendiente: llega con el despliegue del entorno `demo`, en la entrega final.
+https://platita-demo-web.onrender.com, el entorno `demo`. Se entra con un enlace personal, que da
+la autora: cada persona que prueba tiene su usuario y sus datos ([operación](docs/operacion.md)).
 
 ### 0.5. URL o archivo comprimido del repositorio
 

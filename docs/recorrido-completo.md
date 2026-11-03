@@ -185,7 +185,7 @@ sequenceDiagram
     else Cambia topes o fechas en el dashboard
         N->>API: HTTPS PUT /budget-periods/id con la cookie
         API->>DB: SQL valida dueño y solapes, reemplaza BUDGET_PERIOD y BUDGET
-        N->>API: HTTPS POST /budget-periods/id/confirm<br/>hoy sin cuerpo; los montos de las reglas variables,<br/>en una segunda versión
+        N->>API: HTTPS POST /budget-periods/id/confirm<br/>hoy sin cuerpo, y los montos de las reglas variables,<br/>en una segunda versión
         API->>DB: SQL UPDATE BUDGET_PERIOD, y RECURRING_RULE<br/>en una segunda versión
     end
     Note over U,DB: Si empieza sin confirmar, la pregunta del primer<br/>pendiente ofrece confirmar el borrador en el mismo mensaje

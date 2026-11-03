@@ -12,7 +12,7 @@ pantalla del dashboard que las lista. Es la parte de la HU1 que entra en la entr
 efecto de cada movimiento.
 
 No entra dar de alta ni editar una cuenta. Las cuentas que se ven son las de los datos de
-prueba, y el alta conversacional queda para la entrega final.
+prueba, y el alta conversacional queda para una segunda versión.
 
 ## Reglas de dominio que aplican
 
@@ -36,7 +36,7 @@ La pantalla lista las cuentas del usuario, agrupadas por moneda, y las de invers
 - **CA-9.** Las cuentas se ven agrupadas por moneda.
 - **CA-12.** Primero va el grupo de la moneda primaria del usuario y después los demás, por código de moneda. Dentro de cada grupo las cuentas van por nombre, sin distinguir mayúsculas.
 - **CA-13.** Quien entra por la entrada de desarrollo ve primero la pantalla de cuentas, sin pasar por un menú.
-- **CA-15.** Una cuenta "Me deben" no aparece en la lista de cuentas, porque esa plata la tiene otra persona ([reglas de dominio § 16](../../reglas-de-dominio.md#16-reintegros-devoluciones-y-plata-que-te-deben)). La API la manda, marcada por su tipo, y la pantalla no la lista. Su sección propia llega en la entrega final.
+- **CA-15.** Una cuenta "Me deben" no aparece en la lista de cuentas, porque esa plata la tiene otra persona ([reglas de dominio § 16](../../reglas-de-dominio.md#16-reintegros-devoluciones-y-plata-que-te-deben)). La API la manda, marcada por su tipo, y la pantalla no la lista. Su sección propia llega en una segunda versión.
 
 ### El saldo se calcula
 
@@ -635,7 +635,7 @@ No hay mensajes de WhatsApp. Los textos de la pantalla van en `frontend/src/mess
   aparte del saldo.
 - El contraste mensual del saldo.
 - Los totales por moneda.
-- La sección "Me deben", con cada persona y su saldo: llega en la entrega final, con los préstamos, que son los que crean esas cuentas.
+- La sección "Me deben", con cada persona y su saldo: llega en una segunda versión, con los préstamos, que son los que crean esas cuentas.
 
 ## Decisiones tomadas al especificar
 

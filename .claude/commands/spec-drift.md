@@ -43,7 +43,8 @@ carpetas y los procesos, y uno de secuencia con el recorrido real del código, p
 
 ## Reglas de este comando, sin excepción
 
-- **No modifiques nada.** Ni el código ni la documentación.
+- **No modifiques nada.** Ni el código ni la documentación. Crear las issues que la persona
+  aprobó en el paso 5 no es modificar: es dejar registrado el hallazgo.
 - **No corrijas la documentación para que coincida con el código.** Es la tentación por defecto y
   es exactamente lo que no hay que hacer.
 - Por defecto la especificación manda y lo que se corrige es el código, pero la decisión final es
