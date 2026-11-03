@@ -1039,7 +1039,7 @@ test('case C3-17: editing what was saved moves the focus to the heading', async 
   expect(field('Ingreso estimado').disabled).toBe(false)
 })
 
-// Cases T-01 to T-04 of the task tarea-estado-del-periodo: the form says whether the period is a draft or
+// Cases T-01 to T-05 of the task tarea-estado-del-periodo: the form says whether the period is a draft or
 // confirmed, and a confirmed period saves changes, not a draft. They live in its pull request, not in a spec.md.
 
 test('case T-01: a draft is saved as a draft', async () => {
@@ -1132,4 +1132,34 @@ test('case T-04: saving a draft still says the period was saved', async () => {
 
   await waitFor(() => expect(screen.getByRole('status').textContent).toBe('El período quedó guardado.'))
   expect(screen.getByRole('button', { name: 'Confirmar' })).toBeTruthy()
+})
+
+test('case T-05: what was saved of a draft does not repeat its status', async () => {
+  apiWith([NOVEMBER, OCTOBER])
+  api.use(http.put(PERIOD, () => HttpResponse.json(NOVEMBER)))
+
+  renderForm(NOVEMBER.id)
+
+  await ready()
+  save()
+
+  await screen.findByText('El período quedó guardado.')
+  expect(screen.queryByText(/^Borrador:/)).toBeNull()
+  expect(screen.queryByText(/^Confirmado:/)).toBeNull()
+  expect(screen.getByRole('button', { name: 'Confirmar' })).toBeTruthy()
+})
+
+test('case T-05: what was saved of a confirmed period does not repeat its status', async () => {
+  apiWith([OCTOBER])
+  api.use(http.put(PERIOD, () => HttpResponse.json(OCTOBER)))
+
+  renderForm(OCTOBER.id)
+
+  await ready()
+  fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+
+  await screen.findByText('Los cambios quedaron guardados.')
+  expect(screen.queryByText(/^Borrador:/)).toBeNull()
+  expect(screen.queryByText(/^Confirmado:/)).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Confirmar' })).toBeNull()
 })

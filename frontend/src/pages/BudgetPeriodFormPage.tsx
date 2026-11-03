@@ -173,7 +173,7 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
       <p ref={statusLine} role="status" tabIndex={-1} className="text-sm text-muted-foreground outline-none empty:hidden">
         {statusText(view, working, problem, period)}
       </p>
-      {period && (view.kind === 'editing' || view.kind === 'saved') && (
+      {period && view.kind === 'editing' && (
         <p className="text-sm">{fixed ? TEXT.confirmedStatus : TEXT.draftStatus}</p>
       )}
       {view.kind === 'editing' && (
