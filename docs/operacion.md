@@ -213,6 +213,45 @@ worker no: en Render, se vuelve el worker al último despliegue que funcionó co
 *Rollback*, se corrige la migración y se despliega de nuevo. Un mensaje que falló mientras tanto
 puede terminar con su aviso de error, y la persona lo puede escribir otra vez.
 
+**El primer despliegue de `demo`.** `render.yaml` ya está en la rama de la entrega, y Render la
+despliega cuando pasan sus controles.
+
+1. En Render, con el workspace en un plan pago, se crea un Blueprint desde el repositorio. Pide
+   los valores marcados con `sync: false`, y todavía no existe la base:
+   - `SERVER_SECRET_KEY`: el resultado de `openssl rand -hex 32`.
+   - `APPLICATION_DB_PASSWORD`: el resultado de `openssl rand -hex 24`. Solo lleva letras y
+     números, como exige el [ADR 0030](adr/0030-rol-de-la-aplicacion-en-la-base.md).
+   - `OPENAI_API_KEY`: la clave del proveedor, en el worker.
+   - `DATABASE_URL` y `MIGRATIONS_DATABASE_URL`: un valor provisorio cualquiera. Con él, el paso
+     previo falla, el primer despliegue del servicio web se cancela y no queda nada a medias. El
+     worker se reinicia hasta tener la dirección real.
+2. Con la base creada, se copia su *Internal Database URL*, que tiene la forma
+   `postgresql://usuario:contraseña@host/base`. Las dos direcciones cambian `postgresql://` por
+   `postgresql+psycopg://`, porque la imagen trae psycopg 3 y SQLAlchemy, sin ese prefijo, busca
+   otro driver:
+   - `MIGRATIONS_DATABASE_URL`, en el servicio web: la dirección tal cual, con el usuario que creó
+     Render, dueño de las tablas.
+   - `DATABASE_URL`, en el servicio web y en el worker: la misma dirección con
+     `platita_app` como usuario y `APPLICATION_DB_PASSWORD` como contraseña.
+3. Se despliega a mano el servicio web y, cuando termina, el worker. La primera migración crea
+   las extensiones y el rol `platita_app`.
+4. Se comprueba, una sola vez:
+   - que `https://<servicio web>/readyz` responda `200`;
+   - que `curl -sI https://<servicio web>/app` redirija a una dirección con `https`;
+   - en el *Shell* del servicio web, que
+     `python -c "import os, sqlalchemy as s; print(s.create_engine(os.environ['DATABASE_URL']).connect().execute(s.text('select current_user')).scalar())"`
+     imprima `platita_app`;
+   - en las métricas de los dos servicios, que la memoria quede lejos de los 512 MB.
+5. Los enlaces se crean en el *Shell* del servicio web. En el del worker fallan, porque no tiene
+   `SERVER_SECRET_KEY`:
+   - `python -m app.adapters.inbound.operator_commands.create_personal_link <etiqueta>` crea uno;
+     la etiqueta es el nombre con que lo identifica quien opera, como `Ana`.
+   - `python -m app.adapters.inbound.operator_commands.regenerate_personal_link <etiqueta>`
+     reemplaza uno perdido: el anterior deja de servir y sus sesiones se cierran.
+
+   Los dos devuelven solo `/app/#…`, y hay que anteponerle `https://<servicio web>`. El enlace no
+   se guarda en ningún lado: se copia y se manda en ese momento.
+
 Un staging igual a producción no está al lanzamiento: duplicaría el costo, y el riesgo principal que cubriría, una
 migración que rompe, lo cubre la CI probando la migración desde el esquema de la versión
 anterior. Cuándo agregarlo está en [7](#7-cuándo-crecer).
