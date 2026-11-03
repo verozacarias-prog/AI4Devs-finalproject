@@ -204,7 +204,7 @@ para probar. Para empezar de cero se reinicia la base. Se niega a correr con
 el entorno en `demo` o en `production`.
 
 El entorno `demo` no figura en los costos de [1](#1-qué-se-suma-a-la-arquitectura): es una
-segunda instancia con su base, y cuesta US$20 por mes en Render
+segunda instancia con su base, y cuesta US$20,30 por mes en Render
 ([ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md)).
 
 En `demo`, la migración corre solo antes del despliegue del servicio web. El worker se despliega
@@ -216,8 +216,10 @@ puede terminar con su aviso de error, y la persona lo puede escribir otra vez.
 **El primer despliegue de `demo`.** `render.yaml` ya está en la rama de la entrega, y Render la
 despliega cuando pasan sus controles.
 
-1. En Render, con el workspace en un plan pago, se crea un Blueprint desde el repositorio. Pide
-   los valores marcados con `sync: false`, y todavía no existe la base:
+1. En Render se crea una cuenta, que queda en el workspace Hobby y no cobra nada por sí misma.
+   Lo que cobra es cada servicio que crea el Blueprint, con una tarjeta cargada en la cuenta. Se
+   crea un Blueprint desde el repositorio, que pide los valores marcados con `sync: false`
+   cuando todavía no existe la base:
    - `SERVER_SECRET_KEY`: el resultado de `openssl rand -hex 32`.
    - `APPLICATION_DB_PASSWORD`: el resultado de `openssl rand -hex 24`. Solo lleva letras y
      números, como exige el [ADR 0030](adr/0030-rol-de-la-aplicacion-en-la-base.md).
