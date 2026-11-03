@@ -7,6 +7,10 @@ una vista general con todas las relaciones y sin campos; después, un diagrama p
 campos de sus entidades. En el diagrama de un área, las entidades de otra aparecen sin campos,
 solo para mostrar la relación: sus campos están en el diagrama de su propia área.
 
+Las relaciones son las claves foráneas de las migraciones. Las de auditoría no se dibujan, para no
+tapar el resto: `updated_by` y `deleted_by` de `TRANSACTION`, `TRANSFER` y `RECURRING_RULE`, y
+`resolved_by` de `PENDING_TRANSACTION`, apuntan a `APP_USER`.
+
 #### Vista general
 
 ```mermaid
@@ -39,13 +43,17 @@ erDiagram
     CURRENCY ||--o{ ACCOUNT : "denominates"
     CURRENCY ||--o{ BUDGET_PERIOD : "denominates"
     CURRENCY ||--o{ EXCHANGE_RATE : "is quoted in"
+    CURRENCY ||--o{ TRANSACTION : denominates
+    APP_USER ||--o{ SENT_ALERT : receives
+    OUTBOUND_MESSAGE ||--o{ SENT_ALERT : carries
+    TRANSACTION |o--o{ TRANSACTION : "is duplicated, refunded or paired by"
     ACCOUNT ||--o{ TRANSACTION : affects
     APP_USER ||--o{ PENDING_TRANSACTION : "must complete"
     APP_USER ||--o{ PENDING_BATCH : "is asked about"
     PENDING_BATCH ||--|{ PENDING_TRANSACTION : groups
     OUTBOUND_MESSAGE |o--o{ PENDING_BATCH : "asks about"
     OUTBOUND_MESSAGE |o--o{ PENDING_BATCH : "confirms"
-    PENDING_TRANSACTION ||--o| TRANSACTION : "becomes, once complete"
+    PENDING_TRANSACTION |o--o| TRANSACTION : "becomes, once complete"
     PENDING_TRANSACTION |o--o| TRANSFER : "becomes, once complete"
     PENDING_TRANSACTION |o--o| RECURRING_RULE : "becomes, once complete"
     APP_USER |o--o{ INBOUND_MESSAGE : sends
@@ -53,6 +61,15 @@ erDiagram
     INBOUND_MESSAGE |o--o{ OUTBOUND_MESSAGE : "is answered by"
     OUTBOUND_MESSAGE |o--o{ INBOUND_MESSAGE : "is quoted by"
     INBOUND_MESSAGE |o--o{ LLM_CALL : "triggers"
+    CURRENCY ||--o{ APP_USER : "is primary for"
+    APP_USER ||--o{ GROUP_INVITATION : creates
+    APP_USER |o--o{ GROUP_INVITATION : "is used by"
+    APP_USER ||--o{ TRANSFER : makes
+    CURRENCY ||--o{ TRANSFER : denominates
+    CURRENCY ||--o{ RECURRING_RULE : denominates
+    CATEGORY ||--o{ RECURRING_RULE : classifies
+    APP_USER |o--o{ RECURRING_RULE : "budgets (individual)"
+    FAMILY_GROUP |o--o{ RECURRING_RULE : "budgets (family)"
     ADVICE_DOCUMENT ||--o{ ADVICE_CHUNK : "is split into"
 ```
 
@@ -60,7 +77,8 @@ erDiagram
 
 Quién es el usuario, a qué grupo familiar pertenece, cómo entra al dashboard y cuánto consume
 del LLM. `ADVICE_DOCUMENT` y `ADVICE_CHUNK` son la base de conocimiento de la educación
-financiera, y no se relacionan con ningún usuario. `INDICATOR_VALUE`, `AUTH_THROTTLE` y
+financiera, y no se relacionan con ningún usuario; están diseñadas y todavía no tienen migración
+([3.2](#32-descripción-de-entidades-principales)). `INDICATOR_VALUE`, `AUTH_THROTTLE` y
 `ALLOWED_PHONE` no tienen relaciones: la primera guarda los indicadores de mercado que usan los
 consejos, la segunda cuenta intentos por teléfono o IP, no por usuario, y la tercera guarda qué
 números están habilitados para escribirle a Platita.
@@ -75,6 +93,9 @@ erDiagram
     APP_USER ||--o{ SESSION : "opens"
     APP_USER ||--o| DEV_ACCESS_LINK : "enters the demo with"
     APP_USER ||--o{ LLM_USAGE : "consumes"
+    CURRENCY ||--o{ APP_USER : "is primary for"
+    APP_USER ||--o{ GROUP_INVITATION : creates
+    APP_USER |o--o{ GROUP_INVITATION : "is used by"
     ADVICE_DOCUMENT ||--o{ ADVICE_CHUNK : "is split into"
 
     APP_USER {
@@ -238,6 +259,10 @@ erDiagram
     BUDGET ||--o{ SENT_ALERT : "was alerted"
     CURRENCY ||--o{ BUDGET_PERIOD : "denominates"
     CURRENCY ||--o{ EXCHANGE_RATE : "is quoted in"
+    CURRENCY ||--o{ TRANSACTION : denominates
+    APP_USER ||--o{ SENT_ALERT : receives
+    OUTBOUND_MESSAGE ||--o{ SENT_ALERT : carries
+    TRANSACTION |o--o{ TRANSACTION : "is duplicated, refunded or paired by"
 
     CURRENCY {
         string code PK "CHAR(3), ISO 4217, e.g. ARS, USD"
@@ -335,6 +360,12 @@ erDiagram
     APP_USER ||--o{ ACCOUNT : owns
     CURRENCY ||--o{ ACCOUNT : "denominates"
     ACCOUNT ||--o{ TRANSACTION : affects
+    APP_USER ||--o{ TRANSFER : makes
+    CURRENCY ||--o{ TRANSFER : denominates
+    CURRENCY ||--o{ RECURRING_RULE : denominates
+    CATEGORY ||--o{ RECURRING_RULE : classifies
+    APP_USER |o--o{ RECURRING_RULE : "budgets (individual)"
+    FAMILY_GROUP |o--o{ RECURRING_RULE : "budgets (family)"
 
     ACCOUNT {
         uuid id PK
@@ -420,7 +451,7 @@ erDiagram
     PENDING_BATCH ||--|{ PENDING_TRANSACTION : groups
     OUTBOUND_MESSAGE |o--o{ PENDING_BATCH : "asks about"
     OUTBOUND_MESSAGE |o--o{ PENDING_BATCH : "confirms"
-    PENDING_TRANSACTION ||--o| TRANSACTION : "becomes, once complete"
+    PENDING_TRANSACTION |o--o| TRANSACTION : "becomes, once complete"
     PENDING_TRANSACTION |o--o| TRANSFER : "becomes, once complete"
     PENDING_TRANSACTION |o--o| RECURRING_RULE : "becomes, once complete"
     APP_USER |o--o{ INBOUND_MESSAGE : sends

@@ -151,6 +151,11 @@ Las decisiones que salen de recorrer casos de usuarios reales sobre el diseño e
 corrida de la [validación por casos de uso](use-case-walkthrough.md#10-decisiones-pendientes-fase-3),
 con sus opciones y una recomendación. Las de esta lista son las que no salieron de ahí.
 
+- **Si la confirmación de un registro dice cuánto lleva usado el rubro.** El diagrama de
+  [1.3](01-producto.md#13-diseño-y-experiencia-de-usuario) la mostraba con "Llevás 71% del rubro",
+  pero ninguna especificación lo pide, y hoy la confirmación lista fecha, moneda, categoría y
+  presupuesto (FEAT-003). Se sacó del diagrama el 3 de noviembre de 2026, para que el diagrama
+  no prometa algo que no está decidido.
 - El grupo 9 (trazabilidad de origen) de [`reglas-de-dominio.md`](reglas-de-dominio.md) es un
   grupo de enlace, sin texto propio: su contenido normativo vive en el catálogo de
   funcionalidades de [1.2](01-producto.md#12-características-y-funcionalidades-principales) y no

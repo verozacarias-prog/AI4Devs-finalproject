@@ -49,7 +49,8 @@ Las funcionalidades están clasificadas por prioridad de entrega. El MVP comprom
 
 Se tomaron el 19/10/2026 sobre un clon limpio de `feature/entrega-2-VNZ`, levantado con
 `docker compose up --build`, con los usuarios de prueba y el modelo real. En la entrega 2 el
-chat del dashboard reemplaza a WhatsApp, que llega en la entrega final.
+chat del dashboard reemplaza a WhatsApp, que pasa a una segunda versión
+([hoja de ruta](hoja-de-ruta.md#alcance-de-la-entrega-final)).
 
 El recorrido de Lucía, en un GIF: arranca en Cuentas, con Mercado Pago en $80.000; en el chat
 registra tres gastos conversando y prueba uno en dólares; y vuelve a Cuentas, donde Mercado Pago
@@ -87,6 +88,10 @@ C1-11 de [FEAT-002](features/FEAT-002/spec.md).
 
 El flujo conversacional —que es la experiencia principal del producto y no se entiende bien con capturas sueltas— se documenta como diagrama de secuencia. Este es el caso más representativo: el usuario carga un gasto y le falta un dato obligatorio.
 
+Dibuja el producto completo. Hoy el mismo recorrido anda por el chat web, con un solo
+presupuesto posible; WhatsApp y la elección entre el presupuesto individual y el familiar son de
+una segunda versión.
+
 ```mermaid
 sequenceDiagram
     actor U as Usuario
@@ -101,25 +106,27 @@ sequenceDiagram
     API->>DB: guarda el mensaje
     API-->>WA: 200 recibido
     DB-->>W: mensaje pendiente
-    W->>LLM: interpretar mensaje
+    W->>DB: cuentas y categorías del usuario
+    W->>LLM: interpretar mensaje, con los nombres<br/>de sus cuentas y categorías
     LLM-->>W: monto 3500 · tipo gasto · categoría "Supermercado"
     Note over W: Aplica defaults derivables:<br/>fecha = hoy · moneda = primaria
-    W->>DB: ¿cuentas y presupuestos activos del usuario?
-    DB-->>W: 3 cuentas · presupuesto individual y familiar
+    W->>DB: ¿presupuestos que cubren la fecha?
+    DB-->>W: presupuesto individual y familiar
     Note over W: Falta la cuenta y falta confirmar<br/>el presupuesto: no se registra todavía
     W->>DB: guarda PENDING_TRANSACTION
-    W->>WA: "Entendí $3.500 en Supermercado, hoy. ¿Es correcto?<br/>¿De qué cuenta salió y a qué presupuesto va?"
+    W->>WA: "Para anotar el gasto de $3.500 en Supermercado me faltan unos datos:<br/>¿Con qué cuenta? Galicia, Mercado Pago o Efectivo.<br/>¿A qué presupuesto va? El tuyo o el de Familia."
+    Note over W,WA: La línea del presupuesto es diseño:<br/>hoy hay un solo presupuesto posible
     WA->>U: pregunta con opciones
-    U->>WA: "Sí, Galicia, el familiar"
+    U->>WA: "Galicia, el de Familia"
     WA->>API: webhook (respuesta, se guarda igual)
     DB-->>W: respuesta pendiente
-    Note over W: Monto confirmado, cuenta y<br/>presupuesto elegidos: recién ahora se promueve
+    Note over W: Cuenta y presupuesto elegidos:<br/>recién ahora se promueve
     W->>DB: completa y promueve a TRANSACTION
-    W->>WA: "Listo. $3.500 · Supermercado · Galicia ·<br/>presupuesto familiar de septiembre.<br/>Llevás 71% del rubro."
+    W->>WA: "¡Listo! Anoté un gasto de $3.500 en Galicia.<br/>Fecha: 15/9/2026 · Moneda: ARS · Categoría: Supermercado<br/>Presupuesto: el de Familia, del 1/9/2026 al 30/9/2026"
     WA->>U: confirmación explícita
 ```
 
-Tres decisiones de experiencia quedan visibles en este flujo: **el asistente no inventa lo que no puede deducir** (pregunta cuenta y presupuesto), **no descarta lo que ya entendió** (guarda el pendiente en vez de pedir el mensaje entero de nuevo), y **la confirmación final lista todo lo que asumió**, que es el punto donde el usuario corrige una fecha o una categoría con una respuesta corta.
+Tres decisiones de experiencia quedan visibles en este flujo: **el asistente no inventa lo que no puede deducir** (pregunta solo lo que falta: la cuenta y el presupuesto), **no descarta lo que ya entendió** (guarda el pendiente en vez de pedir el mensaje entero de nuevo), y **la confirmación final lista todo lo que asumió**, que es el punto donde el usuario corrige una fecha o una categoría con una respuesta corta.
 
 El mismo flujo visto por dentro, con los procesos y las tablas, y el resto del recorrido del usuario, están en [Recorrido completo](recorrido-completo.md).
 
