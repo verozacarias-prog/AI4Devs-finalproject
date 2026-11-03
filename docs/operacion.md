@@ -239,7 +239,9 @@ despliega cuando pasan sus controles.
    las extensiones y el rol `platita_app`.
 4. Se comprueba, una sola vez:
    - que `https://<servicio web>/readyz` responda `200`;
-   - que `curl -sI https://<servicio web>/app` redirija a una dirección con `https`;
+   - que `curl -sI https://<servicio web>/app` redirija a una dirección con `https`. En el primer
+     despliegue redirigió con `http`: está anotado en la issue #129, para resolverlo antes de
+     `production`;
    - en el *Shell* del servicio web, que
      `python -c "import os, sqlalchemy as s; print(s.create_engine(os.environ['DATABASE_URL']).connect().execute(s.text('select current_user')).scalar())"`
      imprima `platita_app`;
@@ -251,8 +253,10 @@ despliega cuando pasan sus controles.
    - `python -m app.adapters.inbound.operator_commands.regenerate_personal_link <etiqueta>`
      reemplaza uno perdido: el anterior deja de servir y sus sesiones se cierran.
 
-   Los dos devuelven solo `/app/#…`, y hay que anteponerle `https://<servicio web>`. El enlace no
-   se guarda en ningún lado: se copia y se manda en ese momento.
+   Los dos devuelven el enlace completo, armado con `PUBLIC_ROOT_URL`, que `render.yaml` fija en
+   la dirección del servicio web; si el servicio tiene otro nombre, hay que cambiarla ahí. Sin esa
+   variable, devuelven solo `/app/#…`. El enlace no se guarda en ningún lado: se copia y se manda
+   en ese momento.
 
 Un staging igual a producción no está al lanzamiento: duplicaría el costo, y el riesgo principal que cubriría, una
 migración que rompe, lo cubre la CI probando la migración desde el esquema de la versión
