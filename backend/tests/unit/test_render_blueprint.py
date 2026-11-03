@@ -1,4 +1,4 @@
-"""Cases 21 and 38 of issue #84: what the versioned Render configuration says (ADR 0029)."""
+"""Cases 21, 38 and 39 of issue #84: what the versioned Render configuration says (ADR 0029)."""
 
 from __future__ import annotations
 
@@ -54,3 +54,12 @@ def test_only_the_migration_receives_the_connection_of_the_owner() -> None:
     for name in OWNER_ONLY:
         assert f"-u {name}" in command, f"the web service starts with {name}"
     assert command.endswith("python -m app.adapters.inbound.api.main")
+
+
+def test_the_database_takes_no_connection_from_the_internet() -> None:
+    """Case 39: an empty allow list leaves only the connections from inside Render."""
+    databases = BLUEPRINT.read_text().split("\ndatabases:\n", 1)[1]
+
+    assert re.search(r"^\s+ipAllowList:\s*\[\]\s*$", databases, re.MULTILINE), (
+        "the database accepts connections from any address"
+    )
