@@ -57,5 +57,7 @@ databases:
     region: virginia
     plan: 0.1c-256mb
     postgresMajorVersion: "16"
+    # The smallest disk: without it Render gives this plan 15 GB, which cannot be made smaller later.
+    diskSizeGB: 1
     # Only the services inside Render connect: none from the internet, even with the password.
     ipAllowList: []

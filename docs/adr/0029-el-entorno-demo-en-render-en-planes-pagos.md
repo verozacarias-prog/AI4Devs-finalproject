@@ -43,9 +43,10 @@ Los límites del plan gratuito de Render, verificados en su
 2. **Plan pago y no gratuito.** El gratuito no tiene workers. Para usarlo habría que correr el
    worker dentro del servicio web, en contra del ADR 0010. Además, la primera respuesta de cada
    rato tardaría un minuto y la base podría vencer antes de la evaluación. Según la
-   [página de precios](https://render.com/pricing), vista el 2026-10-29, cuesta US$20 por mes:
-   US$7 por cada servicio y US$6 por la base, que incluye 1 GB de disco; cada GB más cuesta
-   US$0,30. Lo que se paga es el cómputo de cada pieza, no la cuenta: el workspace es el Hobby,
+   [página de precios](https://render.com/pricing), vista el 2026-10-29, cuesta US$20,30 por
+   mes: US$7 por cada servicio, US$6 por la base y US$0,30 por cada GB de su disco. La base
+   lleva 1 GB, el mínimo: sin fijarlo, Render le da 15 GB a esa instancia, que suman US$4,50, y
+   un disco se puede agrandar pero no achicar ([Blueprint](https://render.com/docs/blueprint-spec)). Lo que se paga es el cómputo de cada pieza, no la cuenta: el workspace es el Hobby,
    que no cobra nada aparte del cómputo e incluye la
    recuperación a un punto en el tiempo, el paso previo al despliegue y 500 minutos de
    compilación por mes. El tope del proveedor de LLM va aparte y no cambia
@@ -95,7 +96,7 @@ Los límites del plan gratuito de Render, verificados en su
 
 ### Negativas y costos asumidos
 
-- US$20 por mes durante la evaluación, que el plan gratuito no cobraría.
+- US$20,30 por mes durante la evaluación, que el plan gratuito no cobraría.
 - `demo` no tiene copia fuera de Render. Si se pierde la cuenta, se pierden los datos de prueba,
   y se vuelven a crear con los comandos de operación.
 - La recuperación a un punto en el tiempo de la base es la del workspace Hobby: 3 días.
