@@ -197,7 +197,7 @@ class AnswerMessage:
         try:
             return self._answer(message, notify, attempt)
         except StoreUnavailableError:
-            self._try_again_later(message)
+            self._try_again_later(message, attempt.paid)
             raise
         except Exception:
             self._fail(message, attempt.paid)
@@ -417,10 +417,12 @@ class AnswerMessage:
             unit_of_work.commit()
         return True
 
-    def _try_again_later(self, message: InboundMessage) -> bool:
-        """Another attempt with a growing wait, or, with them used up, failed and its notice."""
+    def _try_again_later(self, message: InboundMessage, paid: _PaidCall | None = None) -> bool:
+        """Another attempt with a growing wait, or, with them used up, failed and its notice. A
+        call to the model this attempt already paid for counts either way: the retry pays its own.
+        """
         if self._retries.is_last(message.attempts):
-            return self._fail(message)
+            return self._fail(message, paid)
         now = self._clock.now()
         next_attempt_at = now + self._retries.wait_after(message.attempts)
         with self._unit_of_work as unit_of_work:
@@ -428,6 +430,7 @@ class AnswerMessage:
                 message.id, message.attempts, next_attempt_at
             ):
                 return False
+            _count_paid(unit_of_work, paid)
             unit_of_work.commit()
         return True
 
@@ -464,8 +467,8 @@ def _count(
 
 
 def _count_paid(unit_of_work: UnitOfWorkPort, paid: _PaidCall | None) -> None:
-    """A message the model refused, or that failed after classifying, still counts against the
-    cap of the day.
+    """A message the model refused, or that failed or is retried after classifying, still counts
+    against the cap of the day.
     """
     if paid is not None:
         _count(unit_of_work, paid.usage, UsageCounter.CLASSIFICATION, paid.model)
