@@ -345,6 +345,33 @@ test('case C2-24: a send that fails is retried with the same key', async () => {
   expect(screen.getAllByText('gasté 3500 en el súper')).toHaveLength(1)
 })
 
+test('case 12 of #125: with too many messages waiting, it asks to wait and retries with the same key', async () => {
+  const keys: (string | null)[] = []
+  apiWithLuciaIn(
+    http.get(CHAT, () => conversation([], null)),
+    http.post(CHAT, ({ request }) => {
+      keys.push(request.headers.get('Idempotency-Key'))
+      if (keys.length === 1) return HttpResponse.json({ error: 'too_many_waiting_messages' }, { status: 429 })
+      return HttpResponse.json({ id: 'im1', status: 'pending' }, { status: 202 })
+    }),
+  )
+  await openChat()
+  const input = await screen.findByLabelText('Tu mensaje')
+  fireEvent.change(input, { target: { value: 'gasté 3500 en el súper' } })
+  fireEvent.keyDown(input, { key: 'Enter' })
+
+  await screen.findByText('No enviado')
+  screen.getByText('Tenés muchos mensajes esperando respuesta. Esperá a que te conteste y reintentá.')
+  fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }))
+
+  await waitFor(() => expect(keys).toHaveLength(2))
+  expect(keys[1]).toBe(keys[0])
+  await waitFor(() => expect(screen.queryByText('No enviado')).toBeNull())
+  expect(
+    screen.queryByText('Tenés muchos mensajes esperando respuesta. Esperá a que te conteste y reintentá.'),
+  ).toBeNull()
+})
+
 test('case C2-25: if a periodic read fails, the conversation stays', async () => {
   let polls = 0
   apiWithLuciaIn(

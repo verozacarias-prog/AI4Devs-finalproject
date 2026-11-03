@@ -229,3 +229,26 @@ def test_an_expense_that_cannot_be_registered_yet_uses_no_quota_of_registration(
 
     assert unit_of_work.llm_usage.counts[registration] == 10
     assert unit_of_work.llm_usage.counts[classification] == 1
+
+
+def test_a_message_whose_registration_fails_still_counts_against_the_cap() -> None:
+    # Case 1 of #125. The model answered and was paid for: an error of the code after it does not
+    # undo the count, and the tokens of that call are kept.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    unit_of_work.transactions.failure = RuntimeError("a mistake of the code")
+    message = lucia.message(SUPERMARKET_EXPENSE)
+
+    with pytest.raises(RuntimeError):
+        AnswerMessage(unit_of_work, FixedClock(NOW), FakeLLM(supermarket_expense())).execute(
+            message
+        )
+
+    assert unit_of_work.inbound_messages.failed == [message.id]
+    [reply] = unit_of_work.outbound_messages.added
+    assert reply.text == (
+        "Tuve un problema y no pude procesar tu mensaje. ¿Me lo mandás de nuevo en un rato?"
+    )
+    key = (lucia.id, OCTOBER_17, UsageCounter.CLASSIFICATION)
+    assert unit_of_work.llm_usage.counts[key] == 1
+    assert unit_of_work.llm_usage.tokens[key] == (812, 64)

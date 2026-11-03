@@ -422,11 +422,17 @@ class InMemoryLlmUsage:
     """The daily counters of each user, as (user, day, counter): what LLM_USAGE keeps."""
 
     def __init__(self) -> None:
+        # Committed. An add waits for the commit of its unit of work, as in the database, where
+        # leaving the block without a commit undoes it.
         self.counts: dict[tuple[uuid.UUID, date, UsageCounter], int] = {}
         self.tokens: dict[tuple[uuid.UUID, date, UsageCounter], tuple[int, int]] = {}
+        self.uncommitted: list[tuple[tuple[uuid.UUID, date, UsageCounter], int, int]] = []
 
     def count(self, user_id: uuid.UUID, day: date, counter: UsageCounter) -> int:
-        return self.counts.get((user_id, day, counter), 0)
+        # The transaction that added sees its own adds before committing them.
+        key = (user_id, day, counter)
+        pending = sum(1 for added, _, _ in self.uncommitted if added == key)
+        return self.counts.get(key, 0) + pending
 
     def add(
         self,
@@ -436,10 +442,14 @@ class InMemoryLlmUsage:
         input_tokens: int,
         output_tokens: int,
     ) -> None:
-        key = (user_id, day, counter)
-        self.counts[key] = self.counts.get(key, 0) + 1
-        stored_input, stored_output = self.tokens.get(key, (0, 0))
-        self.tokens[key] = (stored_input + input_tokens, stored_output + output_tokens)
+        self.uncommitted.append(((user_id, day, counter), input_tokens, output_tokens))
+
+    def commit(self) -> None:
+        for key, input_tokens, output_tokens in self.uncommitted:
+            self.counts[key] = self.counts.get(key, 0) + 1
+            stored_input, stored_output = self.tokens.get(key, (0, 0))
+            self.tokens[key] = (stored_input + input_tokens, stored_output + output_tokens)
+        self.uncommitted.clear()
 
 
 class InMemoryUnitOfWork:
@@ -474,10 +484,12 @@ class InMemoryUnitOfWork:
     ) -> None:
         # Leaving the block without a commit undoes what it did not commit.
         self.inbound_messages.marked_uncommitted.clear()
+        self.llm_usage.uncommitted.clear()
 
     def commit(self) -> None:
         self.commits += 1
         self.inbound_messages.commit()
+        self.llm_usage.commit()
 
 
 class InMemoryLlmCallLog:

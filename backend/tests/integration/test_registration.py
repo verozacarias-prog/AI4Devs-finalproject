@@ -1,8 +1,9 @@
 """Registering an expense and an income, against PostgreSQL (FEAT-003, its spec.md).
 
-Cases C1-01, C1-02, C1-05, C1-09, C1-10, C1-12, C1-13, C1-16 and C2-52. The worker runs whole
-rounds, the way its process does, with the model replaced by a double: no test reaches the
-provider. The double goes inside the wrapper that records each call, as the real adapter does.
+Cases C1-01, C1-02, C1-05, C1-09, C1-10, C1-12, C1-13, C1-16 and C2-52, and case 4 of #125. The
+worker runs whole rounds, the way its process does, with the model replaced by a double: no test
+reaches the provider. The double goes inside the wrapper that records each call, as the real
+adapter does.
 """
 
 from __future__ import annotations
@@ -349,3 +350,27 @@ def test_with_more_than_one_possible_period_the_expense_gets_its_text_and_is_not
         "Por ahora no lo anoto."
     )
     assert reply["response_kind"] == "fixed_text"
+
+
+def test_the_largest_amount_that_fits_is_registered(settings: Settings, engine: Engine) -> None:
+    # Case 4 of #125. 18 integer digits and two decimals: the most NUMERIC(20,2) holds.
+    message = inbound(
+        engine, "Lucía", "gasté 999999999999999999,99 en el súper con MP", sent_at=SENT_AT
+    )
+
+    _run_round(
+        settings,
+        FakeLLM(
+            Classification(
+                MessageClass.REGISTRATION,
+                registration_type=RegistrationType.EXPENSE,
+                amount=Decimal("999999999999999999.99"),
+                account="MP",
+                category="Supermercado",
+            )
+        ),
+    )
+
+    [movement] = _transactions(engine)
+    assert movement["amount"] == Decimal("999999999999999999.99")
+    assert status_of(engine, message)[0] == "processed"
