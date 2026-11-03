@@ -173,6 +173,9 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
       <p ref={statusLine} role="status" tabIndex={-1} className="text-sm text-muted-foreground outline-none empty:hidden">
         {statusText(view, working, problem, period)}
       </p>
+      {period && view.kind === 'editing' && (
+        <p className="text-sm">{fixed ? TEXT.confirmedStatus : TEXT.draftStatus}</p>
+      )}
       {view.kind === 'editing' && (
         <form onSubmit={submit} className="flex flex-col gap-4">
           <fieldset disabled={busy} className="flex flex-col gap-4">
@@ -262,7 +265,7 @@ export function BudgetPeriodFormPage({ periodId, onDone, onNoSession, timeoutMs 
           {problem && <ProblemAlert problem={problem} others={otherPeriods(periods ?? [], period)} onRetry={retry} />}
           <div className="flex flex-wrap gap-2">
             <Button type="submit" disabled={busy}>
-              {TEXT.save}
+              {fixed ? TEXT.saveChanges : TEXT.save}
             </Button>
             <Button type="button" variant="outline" disabled={busy} onClick={() => onDone(period?.id ?? null)}>
               {TEXT.back}
@@ -573,7 +576,7 @@ function statusText(view: View, working: Working | null, problem: Problem | null
   if (working === 'confirm') return TEXT.confirming
   if (problem !== null) return ''
   if (view.kind === 'loading') return TEXT.loading
-  if (view.kind === 'saved') return TEXT.savedNotice
+  if (view.kind === 'saved') return period?.status === 'confirmed' ? TEXT.changesSavedNotice : TEXT.savedNotice
   if (view.kind === 'confirmed' && period) return TEXT.confirmedNotice(formatDate(period.period_start))
   return ''
 }
