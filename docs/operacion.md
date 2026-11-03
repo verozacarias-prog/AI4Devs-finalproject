@@ -386,7 +386,7 @@ pasó, y el primero se hace antes del primer usuario real.
 Los datos de una cuenta borrada sobreviven en las copias hasta que vencen: con esta propuesta,
 hasta 35 días más la ventana de restauración del plan. Es la cifra que tiene que informar la
 [política de privacidad](terminos-y-privacidad.md), y confirmarla es un pendiente ya anotado en la
-[hoja de ruta](hoja-de-ruta.md#entrega-2).
+[hoja de ruta](hoja-de-ruta.md#pendientes).
 
 ## 6. Observabilidad
 

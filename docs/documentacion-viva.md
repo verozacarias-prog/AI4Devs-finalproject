@@ -17,8 +17,10 @@ código que describe, y algo automático se queja cuando se desactualiza.
 | Contrato para asistentes | [`AGENTS.md`](../AGENTS.md), con `CLAUDE.md` como enlace simbólico | Cualquier herramienta de IA |
 | Contexto para agentes | `llms.txt` en la raíz y en el portal | Agentes de IA externos |
 
-La documentación de la API y la del código todavía no existen: se generan desde el código, y el
-backend no está implementado. Ver la [hoja de ruta](hoja-de-ruta.md).
+La referencia de la API se genera desde el código: el contrato versionado está en
+[`frontend/src/api/openapi.json`](../frontend/src/api/openapi.json), y `/docs` lo muestra con la API
+corriendo. Falta publicarla en el portal. La documentación del código, con su generador, todavía no
+existe. Ver la [hoja de ruta](hoja-de-ruta.md#pendientes).
 
 ## 2. Una sola fuente
 

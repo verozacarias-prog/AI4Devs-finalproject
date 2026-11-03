@@ -119,7 +119,7 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 ### Límites y observabilidad — corte 3
 
 - **CA-29.** Con el tope diario total alcanzado, el mensaje no se clasifica y se procesa al día siguiente. El aviso de que llegó al límite sale una sola vez por día.
-- **CA-30.** Con la cuota de registro agotada, un gasto, un ingreso o la respuesta a un pendiente se demoran al día siguiente, con un texto fijo y sin otra llamada al modelo. Un mensaje demorado no traba a los siguientes y, al procesarse, conserva el día en que se escribió. Las cuotas de consultas y de consejos llegan con su código, en la entrega final: mientras tanto una consulta o un consejo reciben el texto fijo de C1-10 sin cobrar cuota ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-2)). Decidido por Vero el 18/10/2026.
+- **CA-30.** Con la cuota de registro agotada, un gasto, un ingreso o la respuesta a un pendiente se demoran al día siguiente, con un texto fijo y sin otra llamada al modelo. Un mensaje demorado no traba a los siguientes y, al procesarse, conserva el día en que se escribió. Las cuotas de consultas y de consejos llegan con su código, en la entrega final: mientras tanto una consulta o un consejo reciben el texto fijo de C1-10 sin cobrar cuota ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final)). Decidido por Vero el 18/10/2026.
 - **CA-46.** El tope diario total y la cuota de registro son configuración, en variables de entorno, con 100 y 50 por defecto: se cambian sin desplegar, reiniciando el worker. Decidido por Vero el 18/10/2026; resuelve la contradicción entre [2.5](../../02-arquitectura.md#25-seguridad) y las [reglas de dominio § 12](../../reglas-de-dominio.md#12-límites-de-uso-del-asistente).
 - **CA-47.** Cuando la validación en código rechaza algo que devolvió el modelo, la fila de su llamada en `LLM_CALL` pasa a `blocked` ([ADR 0023](../../adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md), punto 6). Sumado el 18/10/2026: el corte 2 valida la salida pero deja la fila en `ok`. Cuenta como rechazo tanto un nombre de categoría que no pasa la validación (CA-43) como algo que el modelo devuelve sin que esté escrito: una mención de la cuenta (CA-9), las palabras de la moneda (CA-39) o un nombre de categoría que nadie escribió (CA-45). Así la métrica de alucinaciones ve también lo que el modelo inventa. Decidido por Vero el 18/10/2026.
 - **CA-31.** Ninguna línea de los registros lleva el texto, el monto ni el teléfono.
@@ -1183,7 +1183,7 @@ Cómo se cuentan los límites, para leer los casos
 - Cuentan en la cuota de registro un gasto, un ingreso y la respuesta a un pendiente, también
   la que lo descarta. No cuentan un saludo, una consulta, un consejo ni un registro que recibe
   el texto fijo de C1-09, como una transferencia: ninguno tiene código detrás
-  ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-2)).
+  ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final)).
 - Un mensaje demorado vuelve a `pending` con `next_attempt_at` en el inicio del día siguiente
   del usuario, y con los mismos `attempts` que tenía antes de tomarlo: no es un fallo
   ([ADR 0010](../../adr/0010-webhook-asincrono-con-tabla-de-entrada.md), punto 4).
@@ -1491,7 +1491,7 @@ El monto va con punto de miles y, si tiene centavos, con coma: $3.500, $3.500,50
 como día/mes/año.
 
 Los textos fijos de lo que el asistente todavía no sabe hacer, los mismos de la
-[hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-2). Para un registro que no es un
+[hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final). Para un registro que no es un
 gasto ni un ingreso:
 
 > Eso todavía no lo sé anotar. Por ahora me manejo con gastos e ingresos.
