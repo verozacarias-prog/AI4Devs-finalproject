@@ -69,10 +69,16 @@ export async function enterWithLink(
   if (answer.kind !== 'answered') return answer
   if (answer.ok) return { kind: 'entered' }
   if (answer.status === HTTP_NOT_FOUND) return { kind: 'link-rejected' }
-  if (answer.status === HTTP_CONFLICT) {
-    return { kind: 'notice-required', version: (answer.body as TestNoticeRequired).notice_version }
-  }
+  const version = noticeVersion(answer.body)
+  if (answer.status === HTTP_CONFLICT && version !== null) return { kind: 'notice-required', version }
   return { kind: 'api-error' }
+}
+
+/** The version of the notice in a 409, or null when the answer is some other conflict. */
+function noticeVersion(body: unknown): string | null {
+  if (typeof body !== 'object' || body === null || !('notice_version' in body)) return null
+  const version: unknown = (body as Partial<TestNoticeRequired>).notice_version
+  return typeof version === 'string' && version !== '' ? version : null
 }
 
 /** Closes the session of this browser (POST /auth/logout). */
