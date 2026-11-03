@@ -1,6 +1,6 @@
 """The personal links of the demo environment (ADR 0016, docs/04-api.md, issue #84).
 
-Cases 1 to 18, 20, 30 to 32, 40 and 42 of the description of the pull request. Each test has a
+Cases 1 to 18, 20, 30 to 32 and 40 to 44 of the descriptions of the pull requests. Each test has a
 database of its own, runs the commands the way a person does and talks to the API the way the
 dashboard does.
 """
@@ -621,3 +621,31 @@ def test_regenerating_while_the_notice_is_accepted_closes_the_session_it_opened(
     [new_value] = regenerated
     assert _post(ana, access_token=new_value).status_code == 204
     assert ana.get("/me").json()["name"] == "Ana"
+
+
+def _both_commands(environ: dict[str, str]) -> list[str]:
+    """What creating and then regenerating the link of Ana print."""
+    outputs = [io.StringIO(), io.StringIO()]
+    assert create_personal_link(["Ana"], environ, outputs[0], io.StringIO()) == OK
+    assert regenerate_personal_link(["Ana"], environ, outputs[1], io.StringIO()) == OK
+    return [output.getvalue() for output in outputs]
+
+
+def test_with_the_public_address_the_commands_print_the_whole_link(
+    fresh_database_url: str,
+) -> None:
+    # Case 43. The address ends in a slash, which must not end up twice in the link.
+    environ = _environ(fresh_database_url) | {
+        "PUBLIC_BASE_URL": "https://platita-demo-web.onrender.com/"
+    }
+
+    for output in _both_commands(environ):
+        assert re.search(r"(?<!\S)https://platita-demo-web\.onrender\.com/app/#\S+", output), output
+
+
+def test_without_the_public_address_the_commands_print_the_path(
+    fresh_database_url: str,
+) -> None:
+    # Case 44.
+    for output in _both_commands(_environ(fresh_database_url)):
+        assert re.search(r"(?<!\S)/app/#\S+", output), output
