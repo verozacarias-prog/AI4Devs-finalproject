@@ -34,7 +34,7 @@
 
 *Criterios de aceptación:*
 
-- Puedo crear un período de presupuesto individual o familiar, eligiendo cadencia mensual o quincenal.
+- Puedo crear un período de presupuesto individual o familiar, eligiendo cadencia mensual, quincenal o personalizada.
 - Cargo el ingreso estimado del período y un tope por cada categoría que quiera controlar.
 - Mientras está en armado, el período figura como borrador y no se usa para calcular nada.
 - El borrador del próximo período se arma solo, copiando el ingreso estimado y los topes del período anterior. Lo cambio o armo uno nuevo desde el dashboard.
@@ -110,6 +110,8 @@
 - La alerta incluye un consejo relacionado, generado por el sistema de RAG a partir de la base de conocimiento curada por el producto.
 - No se envía más de una alerta por umbral, categoría y período para evitar spam: como mucho dos por categoría.
 - Si el presupuesto es familiar, la alerta me llega a mí y a los demás miembros, a cada uno que aceptó recibir avisos.
+
+*Pendiente de decidir:* qué pasa al quitar de un período un tope que ya tuvo alertas, y con el historial de esas alertas. La referencia de `sent_alert` a `budget` hoy impide borrarlo ([FEAT-005](features/FEAT-005/spec.md)).
 
 *Prioridad:* Media
 *Estimación:* 8 puntos

@@ -166,7 +166,7 @@ def _period_id(engine: Engine, user_id: uuid.UUID, day: date) -> uuid.UUID:
                 text(
                     "INSERT INTO budget_period (user_id, period_type, period_start, "
                     "period_end, primary_currency, status) "
-                    "SELECT :user_id, 'monthly', :day, :day, primary_currency, 'confirmed' "
+                    "SELECT :user_id, 'custom', :day, :day, primary_currency, 'confirmed' "
                     "FROM app_user WHERE id = :user_id RETURNING id"
                 ),
                 {"user_id": user_id, "day": day},

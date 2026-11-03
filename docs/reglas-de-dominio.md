@@ -9,6 +9,12 @@ la descripción del producto y se enlazan desde cada grupo.
 
 Antes de escribir código para cualquier ticket de dominio, leer este documento completo.
 
+**Lo primero es que los datos sean verdaderos y coherentes.** Lo que un dato dice tiene que ser lo
+que en realidad es: un período "mensual" dura un mes. Si un caso no entra en un valor, se modela
+con un valor que lo diga, y no se acepta el dato disfrazado. Ante una duda entre comodidad y
+veracidad, gana la veracidad; lo que se pueda imponer, se impone en el código y en la base.
+Decidido por Vero el 1 de noviembre de 2026.
+
 ---
 
 ## 1. Registro de un movimiento: qué se asume y qué se confirma
@@ -240,28 +246,49 @@ Ver también: [1.2](01-producto.md#12-características-y-funcionalidades-princip
 
 La regla de negocio es que, para un período mensual, tiene que estar en `confirmed` antes de que arranque el mes (`period_start`); el mismo criterio aplica a quincenal con su propio `period_start`. El sistema genera el borrador del próximo período con anticipación y manda un recordatorio proactivo por WhatsApp si sigue en `draft` cerca de la fecha límite — mismo mecanismo que ya dispara las alertas de [HU3](05-historias-de-usuario.md), aplicado a un caso distinto.
 
+**Un período que ya arrancó se puede armar y confirmar igual.** Confirmar antes del inicio es lo
+que el sistema busca con el recordatorio, no un bloqueo: si el usuario se olvidó, un borrador
+no recibe movimientos, y rechazar la confirmación lo dejaría sin dónde imputar los gastos de esas
+semanas. Decidido por Vero el 31 de octubre de 2026.
+
 **El primer período nace en el alta.** Al completar la parte obligatoria del alta (§ 11), el
 sistema crea el primer período individual del usuario, ya confirmado: mensual, en su moneda
 primaria, con ingreso estimado 0 y sin topes, desde el día del alta hasta el último día de ese
-mes. Es una de las dos excepciones a que un período se confirme antes de arrancar, porque ya
-arrancó; la otra es el primer período de un grupo, que nace igual al crearlo (§ 10). Así el
+mes. Es mensual si el alta es el día 1; si no, es personalizado, porque no dura un mes: el día del
+alta no tiene por qué ser el inicio de sus meses. Decidido por Vero el 1 de noviembre de 2026. Es uno de los dos períodos que nacen confirmados, porque ya arrancó; el otro es el primer
+período de un grupo, que nace igual al crearlo (§ 10). Así el
 primer gasto, incluido el que el usuario escribió antes de darse de alta, tiene dónde imputarse. Un período sin topes registra el gastado igual, pero no dispara alertas. El mensaje
 que cierra el alta le avisa que ese primer período existe y que puede ponerle ingreso y topes
 desde el dashboard.
 
 **Un período mensual puede empezar cualquier día.** Termina el día anterior al mismo día del mes
 siguiente: uno que empieza el 10 de octubre termina el 9 de noviembre. Si ese día no existe en el
-mes, como el 31, se usa el último día del mes, igual que en las reglas recurrentes (§ 8). El
-período siguiente empieza el día después de que termina el anterior. Para mover el día de
+mes, como el 31, se usa el último día del mes, igual que en las reglas recurrentes (§ 8): uno que
+empieza el 31 de enero termina el 27 de febrero, el día anterior al 28. Decidido por Vero el 29 de
+octubre de 2026. El período siguiente empieza el día después de que termina el anterior. Para mover el día de
 inicio, por ejemplo para alinearlo con el cobro, el usuario cambia las fechas de un borrador, y
-desde ahí los siguientes se calculan a partir de ese. El período de transición puede durar más o
-menos de un mes.
+desde ahí los siguientes se calculan a partir de ese.
+
+**Cada cadencia dice lo que el período dura.** Un período tiene una de tres:
+
+- **Mensual:** el fin siempre se calcula, con la regla de arriba. No acepta otro fin.
+- **Quincenal:** es la quincena de calendario. Empieza el día 1 y termina el 15, o empieza el 16 y
+  termina el último día del mes. No acepta otro inicio ni otro fin.
+- **Personalizado:** el usuario indica el fin, y puede durar lo que quiera mientras no termine antes
+  de empezar. Es el período de transición, para mover el día de inicio, y el de una quincena que no
+  coincide con el calendario.
+
+La base lo impone. Decidido por Vero el 1 de noviembre de 2026.
 
 **El borrador copia el período anterior.** Con anticipación al inicio de cada período, el sistema
 genera el borrador del siguiente para el mismo dueño, copiando del último período: la cadencia,
 la moneda, el ingreso estimado y cada tope. La anticipación con que se genera y la del
 recordatorio son configuración, igual que las cuotas de uso (§ 12). La sugerencia ajustada por
 inflación (could-have) reemplazará a la copia cuando exista, sin cambiar el resto de la regla.
+Mientras el borrador no se genera solo, que llega en una segunda versión, el dashboard ofrece la
+misma copia al armar un período nuevo: el formulario viene con la cadencia, la moneda, el ingreso
+estimado y los topes del último período del usuario, y con el inicio en el día después de que
+termina ese período, y el usuario cambia lo que quiera antes de guardar. Decidido por Vero el 29 de octubre de 2026. Si el último es personalizado, se sugiere mensual en vez de copiar esa cadencia. Decidido por Vero el 1 de noviembre de 2026.
 
 **Dónde se arma y dónde se confirma.**
 
@@ -275,7 +302,9 @@ inflación (could-have) reemplazará a la copia cuando exista, sin cambiar el re
   la cuota de registro.
 - **Armar o cambiar, en el dashboard.** Crear un período, cambiar sus fechas, el ingreso estimado
   o los topes, y confirmarlo, se hace en el dashboard; del ingreso estimado, también por WhatsApp
-  al confirmar (ver arriba). Por WhatsApp no se editan topes: el
+  al confirmar (ver arriba). Un borrador cambia sus fechas, su moneda, el ingreso estimado y los
+  topes. Un período confirmado cambia solo el ingreso estimado y los topes: sus fechas y su moneda
+  no se cambian. Decidido por Vero el 29 de octubre de 2026. Por WhatsApp no se editan topes: el
   recordatorio incluye el enlace para hacerlo.
 - **Sin confirmar al empezar.** Si un período empieza sin confirmar, lo que caiga en él queda
   pendiente como siempre. La pregunta de ese pendiente ofrece confirmar el borrador en el mismo

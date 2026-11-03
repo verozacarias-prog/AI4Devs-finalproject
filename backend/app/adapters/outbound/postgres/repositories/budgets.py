@@ -1,16 +1,27 @@
 from __future__ import annotations
 
 import uuid
+from dataclasses import asdict
 
 from sqlalchemy import Connection, Row, text
 
 from app.adapters.outbound.postgres import queries
+from app.adapters.outbound.postgres.rejections import execute_write
 from app.domain.entities.budget import Budget
 
 
 class PostgresBudgetRepository:
     def __init__(self, connection: Connection) -> None:
         self._connection = connection
+
+    def replace_for_period(self, period_id: uuid.UUID, budgets: list[Budget]) -> None:
+        execute_write(
+            self._connection,
+            queries.DELETE_BUDGETS_NOT_IN,
+            {"period_id": period_id, "ids": [budget.id for budget in budgets]},
+        )
+        for budget in budgets:
+            execute_write(self._connection, queries.UPSERT_BUDGET, asdict(budget))
 
     def list_by_period(self, period_id: uuid.UUID) -> list[Budget]:
         rows = self._connection.execute(

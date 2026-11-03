@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
+from datetime import date
 
 from app.domain.entities.budget import Budget
 from app.domain.entities.budget_period import BudgetPeriod
+from app.domain.entities.family_group import Membership
 from app.domain.errors import ErrorCode, NotFoundError
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
 from app.domain.services.budgets.period_access import can_edit, can_read, covers
@@ -27,6 +29,37 @@ class ReadablePeriod:
     # Whether it covers today, in the time zone of the user.
     is_current: bool
     budgets: list[BudgetLimit]
+
+
+def describe_period(
+    unit_of_work: UnitOfWorkPort,
+    period: BudgetPeriod,
+    user_id: uuid.UUID,
+    memberships: list[Membership],
+    today: date,
+) -> ReadablePeriod:
+    """One period as the list shows it, for a use case that has just written it."""
+    group_name = None
+    if period.family_group_id is not None:
+        group = unit_of_work.family_groups.find_by_id(period.family_group_id)
+        group_name = group.name if group is not None else None
+    budgets = unit_of_work.budgets.list_by_period(period.id)
+    category_names = {
+        category.id: category.name
+        for category in unit_of_work.categories.list_by_ids(
+            {budget.category_id for budget in budgets}
+        )
+    }
+    return ReadablePeriod(
+        period=period,
+        family_group_name=group_name,
+        can_edit=can_edit(period, user_id, memberships),
+        is_current=covers(period, today),
+        budgets=sorted(
+            (BudgetLimit(budget, category_names[budget.category_id]) for budget in budgets),
+            key=lambda limit: limit.category.casefold(),
+        ),
+    )
 
 
 class ListBudgetPeriods:

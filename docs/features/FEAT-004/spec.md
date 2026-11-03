@@ -754,7 +754,7 @@ para llegar a 3:1 contra el fondo de la barra, el mínimo de WCAG AA para un gr�
 - **Dado** los períodos de Lucía, con el resumen de C1-29, un detalle de Supermercado que falla una
   vez,
 - **cuando** se abre la pantalla, se abre Supermercado y falla,
-- **entonces** el selector "Período", el botón de Supermercado y Reintentar son controles nativos,
+- **entonces** el selector "Tus períodos existentes", el botón de Supermercado y Reintentar son controles nativos,
   habilitados y sin nada que los saque del orden de Tab; y después de reintentar, Volver también.
 - **Test:** `src/pages/BudgetPage.test.tsx` › "case C3-02: the controls have a name and are used with the keyboard"
 

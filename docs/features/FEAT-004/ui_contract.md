@@ -65,7 +65,7 @@ llega. Lo único que calcula es el estado de la barra, con los umbrales de `src/
 
 ## Accesibilidad
 
-- [x] Todo control tiene nombre accesible: el selector "Período", el botón de cada categoría con
+- [x] Todo control tiene nombre accesible: el selector "Tus períodos existentes", el botón de cada categoría con
   tope, Volver y Reintentar, todos nativos (C3-02).
 - [x] El contraste cumple el mínimo de WCAG AA: 4,5:1 para el texto y 3:1 para las barras. Se
   calculó cada color contra su fondo. El texto más bajo es el error en rojo sobre la tarjeta, con
@@ -88,7 +88,7 @@ Van en `frontend/src/messages.ts`, bajo `budget`, salvo los compartidos, bajo `c
 | `nav.budget` | Presupuesto |
 | `heading` | Tu presupuesto |
 | `loading` | Consultando tu presupuesto… |
-| `period` | Período |
+| `period` | Tus períodos existentes |
 | `personal` | Personal |
 | `periodRange` | del {inicio} al {fin} |
 | `draft` | Borrador |

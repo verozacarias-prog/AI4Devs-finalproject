@@ -17,11 +17,13 @@ export type Options = {
 }
 
 type Call = Options & {
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'PUT'
   /** Sent as JSON. A POST without it still declares JSON, which the API requires. */
   body?: unknown
   /** Headers the call needs besides the ones every call sends, such as Idempotency-Key. */
   headers?: Record<string, string>
+  /** What to do with the text of a JSON answer before parsing it. */
+  beforeParsing?: (text: string) => string
 }
 
 /**
@@ -31,7 +33,7 @@ type Call = Options & {
  */
 export async function request(
   path: string,
-  { method = 'GET', body, headers: extra = {}, timeoutMs = API_TIMEOUT_MS, signal }: Call = {},
+  { method = 'GET', body, headers: extra = {}, beforeParsing, timeoutMs = API_TIMEOUT_MS, signal }: Call = {},
 ): Promise<Answer> {
   const timeout = AbortSignal.timeout(timeoutMs)
   const stop = AbortSignal.any(signal ? [timeout, signal] : [timeout])
@@ -49,14 +51,15 @@ export async function request(
   }
 
   const headers: Record<string, string> = { ...extra, Accept: JSON_CONTENT_TYPE }
-  if (method === 'POST') headers['Content-Type'] = JSON_CONTENT_TYPE
+  const sendsBody = method !== 'GET'
+  if (sendsBody) headers['Content-Type'] = JSON_CONTENT_TYPE
 
   let response: Response
   try {
     response = await fetch(path, {
       method,
       headers,
-      body: method === 'POST' ? JSON.stringify(body ?? {}) : undefined,
+      body: sendsBody ? JSON.stringify(body ?? {}) : undefined,
       signal: stop,
     })
   } catch {
@@ -67,7 +70,8 @@ export async function request(
     return { kind: 'answered', status: response.status, ok: response.ok, body: null }
   }
   try {
-    const answered: unknown = await Promise.race([response.json(), stopped])
+    const text = await Promise.race([response.text(), stopped])
+    const answered: unknown = JSON.parse(beforeParsing ? beforeParsing(text) : text)
     return { kind: 'answered', status: response.status, ok: response.ok, body: answered }
   } catch {
     return interruption() ?? { kind: 'api-error' }

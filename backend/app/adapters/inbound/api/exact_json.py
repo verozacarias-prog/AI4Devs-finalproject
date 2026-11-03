@@ -9,15 +9,43 @@ from __future__ import annotations
 
 import json
 import uuid
+from collections.abc import Callable, Coroutine
 from datetime import date
 from decimal import Decimal
 from typing import Annotated
 
+from fastapi import Request, Response
 from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 from pydantic import WithJsonSchema
 
 # An amount travels as a JSON number with its exact digits, never as a string.
 ExactAmount = Annotated[Decimal, WithJsonSchema({"type": "number"})]
+
+# An amount a client sends: a JSON number or a decimal text, kept exact (docs/04-api.md).
+AmountInput = Annotated[
+    Decimal, WithJsonSchema({"anyOf": [{"type": "number"}, {"type": "string"}]})
+]
+
+
+class ExactJsonRequest(Request):
+    """A request whose JSON numbers with decimals are read as `Decimal`, never as a float."""
+
+    async def json(self) -> object:
+        return json.loads(await self.body(), parse_float=Decimal)
+
+
+class ExactJsonRoute(APIRoute):
+    """A route whose body keeps the exact digits of each amount, written as a number or a text."""
+
+    def get_route_handler(self) -> Callable[[Request], Coroutine[object, object, Response]]:
+        handler = super().get_route_handler()
+
+        async def exact(request: Request) -> Response:
+            return await handler(ExactJsonRequest(request.scope, request.receive))
+
+        return exact
+
 
 JsonValue = (
     Decimal

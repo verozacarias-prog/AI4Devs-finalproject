@@ -71,10 +71,27 @@ def test_the_template_creates_the_first_period_from_today_to_the_end_of_the_mont
     assert period.user_id == user.id
     assert period.family_group_id is None
     assert period.status == "confirmed"
-    assert period.period_type == "monthly"
+    assert period.period_type == "custom"
     assert period.primary_currency == "ARS"
     assert period.estimated_income == Decimal("0")
     assert (period.period_start, period.period_end) == (date(2026, 10, 12), date(2026, 10, 31))
+
+
+def test_the_first_period_is_monthly_if_the_signup_is_on_the_first_and_custom_otherwise() -> None:
+    # Case C2-58.
+    [first_of_the_month] = _create(datetime(2026, 11, 1, 15, tzinfo=UTC)).budget_periods.added
+    [any_other_day] = _create(datetime(2026, 11, 15, 15, tzinfo=UTC)).budget_periods.added
+
+    assert first_of_the_month.period_type == "monthly"
+    assert (first_of_the_month.period_start, first_of_the_month.period_end) == (
+        date(2026, 11, 1),
+        date(2026, 11, 30),
+    )
+    assert any_other_day.period_type == "custom"
+    assert (any_other_day.period_start, any_other_day.period_end) == (
+        date(2026, 11, 15),
+        date(2026, 11, 30),
+    )
 
 
 def test_today_is_the_day_in_the_time_zone_of_the_user() -> None:

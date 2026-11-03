@@ -37,7 +37,7 @@ def test_the_group_has_its_owner_its_member_and_its_first_confirmed_period() -> 
     ]
     assert period.user_id is None
     assert period.status == "confirmed"
-    assert period.period_type == "monthly"
+    assert period.period_type == "custom"
     assert period.primary_currency == users["Pablo"].primary_currency
     assert period.estimated_income == Decimal("0")
     assert (period.period_start, period.period_end) == (date(2026, 10, 12), date(2026, 10, 31))
