@@ -1,6 +1,6 @@
 """The personal links of the demo environment (ADR 0016, docs/04-api.md, issue #84).
 
-Cases 1 to 18, 20 and 30 to 32 of the description of the pull request. Each test has a database
+Cases 1 to 18, 20, 30 to 32 and 40 of the description of the pull request. Each test has a database
 of its own, runs the commands the way a person does and talks to the API the way the dashboard
 does.
 """
@@ -487,6 +487,33 @@ def test_only_outside_local_every_answer_demands_https(fresh_database_url: str) 
     for path in ("/healthz", "/a-route-that-does-not-exist"):
         assert "max-age=" in demo.get(path).headers["Strict-Transport-Security"]
         assert "Strict-Transport-Security" not in local.get(path).headers
+
+
+def test_production_and_an_unexpected_error_demand_https_too(fresh_database_url: str) -> None:
+    # Case 40.
+    production = TestClient(
+        create_app(
+            load_settings(
+                {"DATABASE_URL": fresh_database_url, "APP_ENV": "production", "APP_VERSION": "test"}
+            ),
+            log_stream=io.StringIO(),
+        ),
+        base_url=BASE_URL,
+    )
+    assert "max-age=" in production.get("/healthz").headers["Strict-Transport-Security"]
+
+    app = create_app(
+        load_settings(_environ(fresh_database_url) | {"APP_VERSION": "test"}),
+        log_stream=io.StringIO(),
+    )
+
+    @app.get("/boom")
+    def boom() -> None:
+        raise RuntimeError("an error nobody expected")
+
+    response = TestClient(app, base_url=BASE_URL, raise_server_exceptions=False).get("/boom")
+    assert response.status_code == 500
+    assert "max-age=" in response.headers["Strict-Transport-Security"]
 
 
 # Closing every session of a person
