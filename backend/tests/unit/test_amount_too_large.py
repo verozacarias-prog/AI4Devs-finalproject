@@ -25,7 +25,8 @@ from tests.support.doubles import FixedClock, InMemoryUnitOfWork
 from tests.support.fake_llm import FakeLLM
 from tests.support.registration_data import NOW, OCTOBER_17, Lucia
 
-ASK_AGAIN = "Ese monto es más grande de lo que puedo registrar. ¿Cuánto fue?"
+TOO_LARGE = "Ese monto es más grande de lo que puedo registrar."
+ASK_AMOUNT = "¿Cuánto fue?"
 
 
 def _answer(
@@ -72,7 +73,8 @@ def test_an_amount_that_does_not_fit_is_asked_again(amount: str) -> None:
     [pending] = unit_of_work.pendings.added
     assert pending.missing_fields == ("amount",)
     [reply] = unit_of_work.outbound_messages.added
-    assert reply.text.splitlines()[-1] == ASK_AGAIN
+    assert reply.text.splitlines()[0] == TOO_LARGE
+    assert reply.text.splitlines()[-1] == ASK_AMOUNT
     usage = unit_of_work.llm_usage
     assert usage.count(lucia.id, OCTOBER_17, UsageCounter.CLASSIFICATION) == 1
     assert usage.count(lucia.id, OCTOBER_17, UsageCounter.REGISTRATION) == 1
@@ -111,4 +113,6 @@ def test_a_reply_with_an_amount_that_does_not_fit_asks_again() -> None:
     [pending] = unit_of_work.pendings.added
     assert pending.status is PendingStatus.OPEN
     assert pending.missing_fields == ("amount",)
-    assert unit_of_work.outbound_messages.added[-1].text.splitlines()[-1] == ASK_AGAIN
+    lines = unit_of_work.outbound_messages.added[-1].text.splitlines()
+    assert lines[0] == TOO_LARGE
+    assert lines[-1] == ASK_AMOUNT
