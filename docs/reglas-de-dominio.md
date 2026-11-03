@@ -978,7 +978,8 @@ procesados, los fallidos y los de otros usuarios no cuentan. Hoy lo aplica el ch
 el usuario de WhatsApp está en la [hoja de ruta](hoja-de-ruta.md#decisiones-abiertas).
 
 **Un mensaje que falla después de clasificarse cuenta igual.** La clasificación ya se pagó, así
-que suma al tope diario total aunque el registro falle y el mensaje quede `failed`.
+que suma al tope diario total aunque el registro falle, quede el mensaje `failed` o se reintente.
+Cada reintento vuelve a clasificar y vuelve a sumar: cuenta cada clasificación pagada.
 
 **Un tope global mensual como corte de emergencia.** Además de las cuotas por usuario, la cuenta
 del proveedor de LLM tiene un límite de gasto mensual de 20 dólares, configurado en la consola

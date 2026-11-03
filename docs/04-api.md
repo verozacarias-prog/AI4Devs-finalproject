@@ -16,7 +16,7 @@
 | `409` | El pedido choca con el estado actual |
 | `413` | El cuerpo del pedido pasa el máximo. Responde `content_too_large` |
 | `422` | Falta un dato o viola una regla. También el pedido que no tiene la forma del contrato, que responde `invalid_request` |
-| `429` | Se alcanzó un límite de intentos |
+| `429` | Se alcanzó un límite de intentos, o de mensajes en espera de respuesta |
 | `500` | Un error que nadie previó. Responde `internal_error` y nada más |
 
 **Referencia de cada respuesta.** Toda respuesta, también la de un error, lleva el header `X-Request-Id` con el identificador del pedido. Es el mismo que queda en los registros ([Operación 6.3](operacion.md#63-registros)), y no dice nada del usuario ni del pedido.
