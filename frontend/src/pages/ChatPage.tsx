@@ -97,12 +97,20 @@ export function ChatPage({ onNoSession, outgoing, setOutgoing, timeoutMs }: Prop
       cursor.current = loaded.nextCursor
       shown.current = new Set(loaded.messages.map((message) => message.id))
       setMessages(loaded.messages)
-      // One sent while the chat was closed is in the conversation now: it shows only there.
-      setOutgoing((current) => current.filter((message) => message.id === undefined || !shown.current.has(message.id)))
       setState({ kind: 'ready' })
     })
     return () => abandon.abort()
-  }, [attempt, timeoutMs, onNoSession, setOutgoing])
+  }, [attempt, timeoutMs, onNoSession])
+
+  // A message written here is shown only in the conversation once the conversation brings it.
+  // Its send may answer after the chat was left and opened again (issue #125): whichever of the
+  // two arrives last, the read or the answer of the send, it ends here.
+  useEffect(() => {
+    const brought = new Set(messages.map((message) => message.id))
+    if (outgoing.some((message) => message.id !== undefined && brought.has(message.id))) {
+      setOutgoing((current) => current.filter((message) => message.id === undefined || !brought.has(message.id)))
+    }
+  }, [messages, outgoing, setOutgoing])
 
   const ready = state.kind === 'ready'
   const empty = ready && messages.length === 0 && outgoing.length === 0
