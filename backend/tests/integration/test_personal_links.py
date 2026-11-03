@@ -1,8 +1,8 @@
 """The personal links of the demo environment (ADR 0016, docs/04-api.md, issue #84).
 
-Cases 1 to 18, 20, 30 to 32 and 40 of the description of the pull request. Each test has a database
-of its own, runs the commands the way a person does and talks to the API the way the dashboard
-does.
+Cases 1 to 18, 20, 30 to 32, 40 and 42 of the description of the pull request. Each test has a
+database of its own, runs the commands the way a person does and talks to the API the way the
+dashboard does.
 """
 
 from __future__ import annotations
@@ -10,6 +10,7 @@ from __future__ import annotations
 import io
 import re
 import threading
+import time
 from collections.abc import Iterator
 
 import httpx2
@@ -571,3 +572,52 @@ def test_closing_every_session_without_a_session_is_not_authenticated(
 
     assert response.status_code == 401
     assert response.json() == {"error": "unauthorized"}
+
+
+def _wait_until_waiting_for_locks(engine: Engine, how_many: int) -> None:
+    """Asks PostgreSQL, not the clock, whether both requests are already held."""
+    deadline = time.monotonic() + 10
+    with engine.connect() as connection:
+        while time.monotonic() < deadline:
+            waiting = connection.execute(
+                text("SELECT count(*) FROM pg_locks WHERE NOT granted")
+            ).scalar_one()
+            if waiting >= how_many:
+                return
+            time.sleep(0.05)
+    pytest.fail(f"{how_many} requests never waited for a lock")
+
+
+def test_regenerating_while_the_notice_is_accepted_closes_the_session_it_opened(
+    fresh_database_url: str, engine: Engine
+) -> None:
+    # Case 42.
+    old_value = _create(fresh_database_url)
+    ana = _client(fresh_database_url)
+    accepted: list[httpx2.Response] = []
+    regenerated: list[str] = []
+
+    with engine.connect() as holder:
+        # Holds the creation of the user of Ana halfway, with her link already reserved.
+        holder.execute(text("LOCK TABLE app_user IN SHARE ROW EXCLUSIVE MODE"))
+        acceptance = threading.Thread(target=lambda: accepted.append(_accept(ana, old_value)))
+        acceptance.start()
+        _wait_until_waiting_for_locks(engine, 1)
+        regeneration = threading.Thread(
+            target=lambda: regenerated.append(_regenerate(fresh_database_url))
+        )
+        regeneration.start()
+        _wait_until_waiting_for_locks(engine, 2)
+        holder.rollback()
+
+    acceptance.join()
+    regeneration.join()
+
+    [response] = accepted
+    assert response.status_code == 204
+    old_session = response.cookies[COOKIE]
+    ana.cookies.clear()
+    assert ana.get("/me", cookies={COOKIE: old_session}).status_code == 401
+    [new_value] = regenerated
+    assert _post(ana, access_token=new_value).status_code == 204
+    assert ana.get("/me").json()["name"] == "Ana"
