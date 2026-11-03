@@ -160,6 +160,10 @@ desplegar ([FEAT-003](features/FEAT-003/spec.md), CA-46):
 - `LLM_DAILY_REGISTRATION_LIMIT`: la cuota de registro, cuántos movimientos se interpretan por
   día, 50 si no se define.
 
+`WAITING_MESSAGES_LIMIT` es cuántos mensajes puede tener un usuario esperando respuesta, 200 si
+no se define. La lee la API, que rechaza con `429` el mensaje del chat web que lo supera, y se
+cambia reiniciándola.
+
 El worker es el único proceso que llama al modelo, y lo hace con la clave de
 `OPENAI_API_KEY` ([ADR 0025](adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)). Sin ella, el
 worker no arranca y dice qué variable falta. La API no la usa: la lectura de la configuración
