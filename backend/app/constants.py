@@ -26,6 +26,7 @@ class EnvVar(StrEnum):
     DEV_ENTRY_ENABLED = "DEV_ENTRY_ENABLED"
     WEB_CHAT_ENABLED = "WEB_CHAT_ENABLED"
     SERVER_SECRET_KEY = "SERVER_SECRET_KEY"  # noqa: S105
+    PUBLIC_ROOT_URL = "PUBLIC_ROOT_URL"
     QUEUE_MAX_WAIT_MINUTES = "QUEUE_MAX_WAIT_MINUTES"
     WORKER_LOCK_SECONDS = "WORKER_LOCK_SECONDS"
     LLM_TIMEOUT_SECONDS = "LLM_TIMEOUT_SECONDS"
@@ -65,6 +66,8 @@ CONTRACT_EXPORT_ENVIRONMENT = Environment.LOCAL
 DATABASE_CONNECT_TIMEOUT_SECONDS = 3
 # The compiled dashboard is served under this prefix (ADR 0016). A personal link points here.
 DASHBOARD_PREFIX = "/app"
+# What separates the parts of an address, such as the end of PUBLIC_ROOT_URL.
+URL_PATH_SEPARATOR = "/"
 
 # Layout of the compiled dashboard, as the build tool leaves it.
 DASHBOARD_INDEX_FILE = "index.html"

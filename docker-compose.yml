@@ -50,6 +50,8 @@ services:
       DEV_ENTRY_ENABLED: ${DEV_ENTRY_ENABLED:-false}
       WEB_CHAT_ENABLED: ${WEB_CHAT_ENABLED:-false}
       SERVER_SECRET_KEY: ${SERVER_SECRET_KEY:-}
+      # The commands of the personal links print the whole link with it.
+      PUBLIC_ROOT_URL: ${PUBLIC_ROOT_URL:-http://localhost:${API_PORT:-8000}}
       # Empty means the default of the code (docs/operacion.md).
       QUEUE_MAX_WAIT_MINUTES: ${QUEUE_MAX_WAIT_MINUTES:-}
       # Checked here too: with a lock not longer than the call, no process starts (ADR 0010).

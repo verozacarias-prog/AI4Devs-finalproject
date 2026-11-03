@@ -14,10 +14,11 @@ from functools import partial
 from typing import TextIO
 
 from app import messages
+from app.adapters.inbound.operator_commands.create_personal_link import personal_link_output
 from app.adapters.inbound.operator_commands.runner import run_command
 from app.adapters.outbound.postgres.connection import create_db_engine
 from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
-from app.constants import DASHBOARD_PREFIX, EXIT_FAILED, LINE_END
+from app.constants import EXIT_FAILED, LINE_END
 from app.domain.use_cases.test_data.personal_links import RegeneratePersonalLink
 from app.settings import Settings
 from app.shared.clock import SystemClock
@@ -34,7 +35,7 @@ def _run(label: str, settings: Settings) -> str:
         ).execute(label)
     finally:
         engine.dispose()
-    return messages.PERSONAL_LINK_READY.format(path=f"{DASHBOARD_PREFIX}/#{value}")
+    return personal_link_output(value, settings)
 
 
 def main(

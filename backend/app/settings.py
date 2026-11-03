@@ -41,6 +41,9 @@ class Settings:
     dev_entry_enabled: bool = False
     # What the personal links are signed with (ADR 0016). Never logged.
     server_secret_key: str | None = field(default=None, repr=False)
+    # Where people open the environment, such as https://platita-demo-web.onrender.com. The
+    # commands of the personal links put it in front of the link; None prints only its path.
+    public_root_url: str | None = None
     # The chat of the dashboard, for development and demonstration (ADR 0002, ADR 0016).
     web_chat_enabled: bool = False
     # How long a pending message may wait before GET /queuez fails.
@@ -138,6 +141,7 @@ def load_settings(environ: Mapping[str, str]) -> Settings:
         dashboard_dir=Path(dashboard_dir) if dashboard_dir else None,
         dev_entry_enabled=dev_entry_enabled,
         server_secret_key=server_secret_key,
+        public_root_url=_read(environ, EnvVar.PUBLIC_ROOT_URL) or None,
         web_chat_enabled=web_chat_enabled,
         queue_max_wait_minutes=_read_positive_integer(
             environ, EnvVar.QUEUE_MAX_WAIT_MINUTES, DEFAULT_QUEUE_MAX_WAIT_MINUTES

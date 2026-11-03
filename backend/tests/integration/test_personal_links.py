@@ -636,7 +636,7 @@ def test_with_the_public_address_the_commands_print_the_whole_link(
 ) -> None:
     # Case 43. The address ends in a slash, which must not end up twice in the link.
     environ = _environ(fresh_database_url) | {
-        "PUBLIC_BASE_URL": "https://platita-demo-web.onrender.com/"
+        "PUBLIC_ROOT_URL": "https://platita-demo-web.onrender.com/"
     }
 
     for output in _both_commands(environ):
