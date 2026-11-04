@@ -4,6 +4,11 @@
 
 La arquitectura se documenta siguiendo el **modelo C4 de Simon Brown**, en tres niveles de zoom: contexto (quién usa el sistema y con qué se integra), contenedores (las piezas desplegables) y componentes (el interior del backend). Están escritos en Mermaid, según las [convenciones de documentación](08-convenciones-de-documentacion.md#82-diagramas).
 
+Los tres dibujan la arquitectura completa, a la que apunta el producto, y no solo lo construido.
+Lo que está diseñado pero todavía no existe va con **borde y flechas punteados**; cuándo llega
+cada pieza lo dice la [hoja de ruta](hoja-de-ruta.md). Hoy corren la API, que sirve el dashboard
+y el chat web, el worker de mensajes con el proveedor de LLM, y los comandos de operación.
+
 #### Nivel 1 — Contexto
 
 Quién usa Platita y de qué sistemas externos depende.
@@ -23,14 +28,17 @@ flowchart TB
 
     USER -->|"registra gastos por chat<br/>y revisa el dashboard"| PLATITA
     FAMILY -->|"comparte presupuesto"| PLATITA
-    PLATITA -->|"envía y recibe mensajes"| WACLOUD
+    PLATITA -.->|"envía y recibe mensajes"| WACLOUD
     PLATITA -->|"interpreta mensajes<br/>y genera respuestas"| LLM
-    PLATITA -->|"genera embeddings"| EMB
-    PLATITA -->|"consulta cotización"| FX
+    PLATITA -.->|"genera embeddings"| EMB
+    PLATITA -.->|"consulta cotización"| FX
     MAILBOX -.->|"movimientos detectados<br/>(no implementado en el MVP)"| PLATITA
 
     style PLATITA fill:#1f6feb,stroke:#0d419d,color:#fff
     style MAILBOX stroke-dasharray: 5 5
+    style WACLOUD stroke-dasharray: 5 5
+    style EMB stroke-dasharray: 5 5
+    style FX stroke-dasharray: 5 5
 ```
 
 #### Nivel 2 — Contenedores
@@ -57,21 +65,25 @@ flowchart TB
         DB[("<b>Base de datos</b><br/><i>[Contenedor: PostgreSQL + pgvector]</i><br/>Datos del usuario y base de<br/>conocimiento vectorizada")]
     end
 
-    USER -->|"mensajes"| WACLOUD
+    USER -.->|"mensajes"| WACLOUD
     USER -->|"HTTPS"| SPA
-    WACLOUD -->|"webhook<br/>(firma verificada)"| API
-    MSGW -->|"mensajes salientes"| WACLOUD
+    WACLOUD -.->|"webhook<br/>(firma verificada)"| API
+    MSGW -.->|"mensajes salientes"| WACLOUD
     SPA -->|"JSON/HTTPS,<br/>cookie de sesión"| API
     API -->|"SQL"| DB
     MSGW -->|"SQL: toma entrada,<br/>escribe salida"| DB
     MSGW -->|"API"| LLM
-    MSGW -->|"API"| EMB
-    WORKER -->|"SQL: alertas a la<br/>tabla de salida"| DB
-    WORKER -->|"cotizaciones"| FX
+    MSGW -.->|"API"| EMB
+    WORKER -.->|"SQL: alertas a la<br/>tabla de salida"| DB
+    WORKER -.->|"cotizaciones"| FX
 
     style API fill:#1f6feb,stroke:#0d419d,color:#fff
     style PLATITA fill:#f6f8fa,stroke:#8b949e
     style EXTERNOS fill:#f6f8fa,stroke:#8b949e
+    style WACLOUD stroke-dasharray: 5 5
+    style EMB stroke-dasharray: 5 5
+    style FX stroke-dasharray: 5 5
+    style WORKER stroke-dasharray: 5 5
 ```
 
 #### Nivel 3 — Componentes del backend
@@ -81,7 +93,8 @@ contenedores que comparten ese código: la API (routers y webhook handler), el w
 ([ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md)) y los procesos programados. Los
 tres son adaptadores de entrada con su propio punto de entrada, y los tres llegan a la base solo
 por los casos de uso y los repositorios. Los comandos de operación son un cuarto adaptador de
-entrada, que corre a pedido y no es un contenedor.
+entrada, que corre a pedido y no es un contenedor. Los procesos programados, el webhook y los
+adaptadores de WhatsApp, embeddings y cotizaciones están diseñados y todavía no construidos.
 
 ```mermaid
 flowchart TB
@@ -94,11 +107,11 @@ flowchart TB
     subgraph WORKERBOX["Adaptadores de entrada — worker, procesos programados y comandos de operación"]
         MSGWK["Worker de mensajes<br/><i>procesa lo guardado</i>"]
         SCHED["Procesos programados<br/><i>recurrentes, resúmenes,<br/>alertas, vencimientos</i>"]
-        CLI["Comandos de operación<br/><i>carga de la base de conocimiento,<br/>habilitar números, enlaces de prueba</i>"]
+        CLI["Comandos de operación<br/><i>datos de prueba y enlaces personales;<br/>después, carga de la base de conocimiento</i>"]
     end
 
     subgraph DOMAIN["Dominio — núcleo hexagonal"]
-        UC["<b>Casos de uso</b><br/>RegisterTransaction · GetBudgetStatus<br/>ListAccounts · GenerateAlert"]
+        UC["<b>Casos de uso</b><br/>AnswerMessage · GetBudgetStatus<br/>ListAccounts · UpdateBudgetPeriod<br/><i>por construir: GenerateAlert</i>"]
         ENT["<b>Entidades</b><br/>User · Account · Budget<br/>Transaction · Category"]
         PORTS["<b>Puertos</b><br/>interfaces que el dominio declara<br/>y no implementa"]
     end
@@ -107,6 +120,7 @@ flowchart TB
         REPO["Repositorios y unidad de trabajo<br/><i>SQLAlchemy</i>"]
         VECADAPT["Vector store<br/><i>pgvector</i>"]
         WACLIENT["Cliente WhatsApp"]
+        RECORDER["Registro de llamadas al LLM<br/><i>cada llamada, en LLM_CALL</i>"]
         LLMCLIENT["Cliente LLM<br/><i>clasificación, interpretación<br/>y respuestas</i>"]
         EMBCLIENT["Cliente de embeddings"]
         SPLIT["Particionador de texto"]
@@ -116,26 +130,34 @@ flowchart TB
     DB[("PostgreSQL<br/>+ pgvector")]
 
     ROUTERS --> UC
-    HOOK --> UC
+    HOOK -.-> UC
     MSGWK --> UC
-    SCHED --> UC
+    SCHED -.-> UC
     CLI --> UC
     PARSE -.-> UC
     UC --> ENT
     UC --> PORTS
     PORTS --> REPO --> DB
-    PORTS --> VECADAPT --> DB
-    PORTS --> WACLIENT
-    PORTS --> LLMCLIENT
-    PORTS --> EMBCLIENT
-    PORTS --> SPLIT
-    PORTS --> FXCLIENT
+    PORTS -.-> VECADAPT -.-> DB
+    PORTS -.-> WACLIENT
+    PORTS --> RECORDER --> LLMCLIENT
+    RECORDER --> REPO
+    PORTS -.-> EMBCLIENT
+    PORTS -.-> SPLIT
+    PORTS -.-> FXCLIENT
 
     style DOMAIN fill:#0d419d,stroke:#1f6feb,color:#fff
     style INBOUND fill:#f6f8fa,stroke:#8b949e
     style WORKERBOX fill:#f6f8fa,stroke:#8b949e
     style OUTBOUND fill:#f6f8fa,stroke:#8b949e
     style PARSE stroke-dasharray: 5 5
+    style HOOK stroke-dasharray: 5 5
+    style SCHED stroke-dasharray: 5 5
+    style VECADAPT stroke-dasharray: 5 5
+    style WACLIENT stroke-dasharray: 5 5
+    style EMBCLIENT stroke-dasharray: 5 5
+    style SPLIT stroke-dasharray: 5 5
+    style FXCLIENT stroke-dasharray: 5 5
 ```
 
 **Patrón elegido:** **arquitectura hexagonal (ports & adapters)**, con el dominio (entidades + casos de uso) aislado de los detalles de infraestructura detrás de puertos, y **backend y frontend desacoplados**, comunicados únicamente por API REST.
@@ -262,7 +284,7 @@ para que ninguno termine siendo un cajón de funciones sueltas.
 
 ### **2.4. Infraestructura y despliegue**
 
-`Propuesto para production, a confirmar contra su despliegue real:` Render para backend + PostgreSQL, por simplicidad de despliegue para un proyecto individual y porque pgvector está soportado como extensión estándar de su Postgres gestionado, sin depender de elegir la plantilla correcta como sí pasa en otras plataformas. El build del frontend lo sirve el mismo servicio web que la API, bajo `/app`, para que la cookie de sesión funcione sin un dominio propio ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). El entorno `demo` ya está decidido sobre esta topología, sin los procesos programados: Render, en sus planes pagos más chicos ([ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md)).
+`Propuesto para production, a confirmar contra su despliegue real:` Render para backend + PostgreSQL, por simplicidad de despliegue para un proyecto individual y porque pgvector está soportado como extensión estándar de su Postgres gestionado, sin depender de elegir la plantilla correcta como sí pasa en otras plataformas. El build del frontend lo sirve el mismo servicio web que la API, bajo `/app`, para que la cookie de sesión funcione sin un dominio propio ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). El entorno `demo` ya está decidido sobre esta topología, sin los procesos programados: Render, en sus planes pagos más chicos ([ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md)). El diagrama dibuja `production`; lo que todavía no está construido, como en [2.1](#21-diagrama-de-arquitectura), va punteado. El `demo` desplegado hoy tiene el servicio web, el worker y la base.
 
 ```mermaid
 flowchart TB
@@ -290,22 +312,27 @@ flowchart TB
         FXAPI["API de<br/>cotizaciones"]
     end
 
-    PHONE <--> WACLOUD
+    PHONE <-.-> WACLOUD
     BROWSER -->|"HTTPS, mismo origen<br/>dashboard y API"| WEBSVC
     DEV -.->|"deploy"| RENDER
-    WACLOUD -->|"webhook<br/>(HTTPS, firma verificada)"| WEBSVC
-    BGW -->|"mensajes salientes"| WACLOUD
+    WACLOUD -.->|"webhook<br/>(HTTPS, firma verificada)"| WEBSVC
+    BGW -.->|"mensajes salientes"| WACLOUD
     WEBSVC --> PG
     BGW --> PG
     BGW --> LLMAPI
-    BGW --> EMBAPI
-    CRON --> PG
-    CRON --> FXAPI
+    BGW -.-> EMBAPI
+    CRON -.-> PG
+    CRON -.-> FXAPI
 
     style WEBSVC fill:#1f6feb,stroke:#0d419d,color:#fff
     style RENDER fill:#f6f8fa,stroke:#8b949e
     style EXT fill:#f6f8fa,stroke:#8b949e
     style CLIENTES fill:#f6f8fa,stroke:#8b949e
+    style PHONE stroke-dasharray: 5 5
+    style WACLOUD stroke-dasharray: 5 5
+    style CRON stroke-dasharray: 5 5
+    style EMBAPI stroke-dasharray: 5 5
+    style FXAPI stroke-dasharray: 5 5
 ```
 
 **Límite de gasto en el proveedor de LLM:** la cuenta del proveedor se configura con un tope mensual de 20 dólares, como corte de emergencia además de las cuotas por usuario de [reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente).

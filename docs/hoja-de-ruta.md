@@ -7,74 +7,14 @@ código** y no se puede adelantar sin inventar.
 Los pendientes del registro de uso de IA —qué prompts falta documentar, el MCP de GitHub— viven
 en [`prompts.md`](../prompts.md), no acá.
 
-## Alcance de la entrega 2
-
-Qué se construye en la entrega 2 y qué queda para la entrega final. WhatsApp sigue siendo el
-canal del producto: en esta entrega el flujo conversacional se construye y se muestra por el
-chat web, que es un andamio ([ADR 0002](adr/0002-whatsapp-como-canal-principal.md)). Los consejos
-con RAG son parte del producto y llegan en la entrega final; por eso algunas de sus piezas
-quedan puestas desde ahora.
-
-El proveedor de LLM ya está elegido: GPT-5.4 mini, de OpenAI
-([ADR 0025](adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)). El de embeddings se elige
-antes de la rama de consejos, con la evaluación del
-[ADR 0019](adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md).
-
-| Entra en la entrega 2 | Dónde está la regla |
-|---|---|
-| Chat web dentro del dashboard, por el mismo camino asíncrono que WhatsApp | [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md), [la API](04-api.md) |
-| Entrada de desarrollo en `local`, que abre una sesión real sin código: se elige un usuario de prueba | [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md) |
-| Registro de gastos e ingresos con toda su conversación: lo que se resuelve solo a la vista, preguntar lo que falta, el pendiente y su continuación, y categoría nueva con confirmación | [Reglas de dominio § 1, § 4 y § 5](reglas-de-dominio.md) |
-| Pantalla de cuentas con el saldo calculado, donde se ve el efecto de cada movimiento | [Reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado), `GET /accounts` |
-| El paso de clasificación con las tres clases de mensaje, el tope diario total y las tres cuotas | [ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md) |
-| Desde la primera migración, la extensión pgvector; desde la migración del esquema, la columna del mensaje citado. El puerto de LLM, desde el primer caso de uso que lo usa; los de embeddings y de vector store, con la rama de consejos | [ADR 0019](adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md), [3. Modelo de datos](03-modelo-de-datos.md) |
-| Docker Compose que levanta la base, las migraciones, la API y el worker con un comando, y el pipeline de seis controles, cinco desde el primer commit de código y el análisis de seguridad después | [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) |
-| La tabla de llamadas al modelo con su envoltorio y el script de métricas, los registros en JSON con su filtro y su test, los eventos de seguridad y las tres rutas de salud | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) |
-| Datos de prueba: una plantilla de usuario con el alta completa, cuentas, su primer período confirmado y perfil financiero. En `local` el script de datos de prueba crea varios usuarios con ella, con el consentimiento registrado y al menos uno con un grupo | [Reglas de dominio § 3 y § 11](reglas-de-dominio.md) |
-
-Cuáles de estos tramos entran en la entrega final y cuáles pasan a una segunda versión lo dice
-la [línea de corte de la entrega final](#alcance-de-la-entrega-final).
-
-| Queda fuera de la entrega 2 | Por qué |
-|---|---|
-| El adaptador de WhatsApp, el login por código, los números habilitados y el alta conversacional | Dependen del canal real. El procesamiento ya queda probado por el chat web |
-| Preguntas sobre los propios datos y consejos con RAG, con la carga de la base de conocimiento y sus dos tablas | Son ramas aparte de la clasificación. La de consejos espera al modelo de embeddings |
-| Un gasto en otra moneda, reintegros vinculados, retiro y aporte del titular, y el aviso de duplicado entre miembros | Cada uno es un flujo con sus propios casos de error |
-| Transferencias, compras con tarjeta y reglas recurrentes | Las dos últimas dependen de los procesos programados |
-| Procesos programados: vencimiento y recordatorio de pendientes, alertas, recurrentes, cierres de resumen, cotizaciones | En la entrega 2 un pendiente sin responder queda abierto |
-| Varios movimientos en un mensaje, con respuestas por número, y elegir entre el presupuesto individual y el de un grupo | Son los dos últimos tramos de la conversación del registro ([reglas de dominio § 1 y § 5](reglas-de-dominio.md)). Se pasaron el 13 de octubre de 2026, porque la entrega 2 vence el 22 |
-| Corregir, borrar y restaurar un movimiento confirmado, con el botón de responder un mensaje | Es un flujo aparte, que parte de un movimiento ya registrado ([reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado)). Se pasó en la misma fecha |
-| El entorno `demo` y su despliegue: la entrada con un enlace personal, para que otra persona pueda probar siendo dueña de sus datos, los dos comandos que crean y regeneran el enlace, la pantalla del aviso de prueba y el usuario de prueba de cada persona | El proveedor y el plan seguían sin decidir, y la entrega 2 se prueba en `local` ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Para `demo` los decidió después el [ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md). Se pasó en la misma fecha |
-| La sección "Me deben" de la pantalla de cuentas, con cada persona y lo que debe | La pide [reglas de dominio § 16](reglas-de-dominio.md#16-reintegros-devoluciones-y-plata-que-te-deben). Las cuentas "Me deben" se crean al registrar un préstamo, que llega en la entrega final, así que en la entrega 2 la sección estaría siempre vacía. Mientras tanto la pantalla no las lista. Se decidió el 14 de octubre de 2026 |
-| Que la entrada de desarrollo avise cuando el navegador no guarda la sesión, en vez de volver a la lista sin decir nada | La cookie de la sesión es `Secure`, y sobre `http` en la propia máquina Safari no la guarda: la sesión se abre, el siguiente pedido llega sin ella, y la persona no sabe por qué no entró. El README ya avisa qué navegadores usar. Se decidió el 14 de octubre de 2026 |
-| La pantalla de presupuesto y `GET /budgets/{budget_id}`, y los formularios de carga del dashboard | La pantalla de cuentas ya muestra el efecto de un gasto. El reparto por ticket está en [6. Tickets](06-tickets.md) |
-
-**Un pendiente a la vez en la entrega 2.** Las [reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)
-suman al lote que espera respuesta un movimiento nuevo que llega mientras tanto, y reenvían la
-lista numerada. En la entrega 2 un lote tiene un solo pendiente: con uno esperando respuesta, el
-asistente pide terminar el anterior y no anota el nuevo
-([FEAT-003](features/FEAT-003/spec.md), CA-36). Sumarlo al lote llega con los varios
-movimientos en un mensaje, en la entrega final.
-
-**Lo que el asistente todavía no sabe hacer responde un texto fijo.** La clasificación reconoce las tres
-clases y todos los tipos de registro desde el inicio. Cuando el mensaje pide algo de la segunda
-tabla, el asistente no llama al modelo otra vez ni cobra cuota:
-
-- Un registro que no es un gasto ni un ingreso: "Eso todavía no lo sé anotar. Por ahora me
-  manejo con gastos e ingresos."
-- Una consulta o un consejo: "Todavía no sé responder preguntas. Por ahora anoto gastos e
-  ingresos, y tus saldos los ves en el dashboard."
-
-**Si el tiempo no alcanza, se cae lo último de esta lista y no lo primero:** el camino feliz de
-un gasto y de un ingreso con la pantalla de cuentas; y los pendientes y la categoría nueva.
-
 ## Alcance de la entrega final
 
 Decidido el 15 de octubre de 2026, a partir de la devolución de la entrega 1. El núcleo es el
 registro conversacional con confirmación, las cuentas con su saldo, el presupuesto y el
 dashboard, todo por el chat web. WhatsApp no entra: el chat web recorre el mismo camino
 ([ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md)), y el canal real depende de la
-configuración de Meta, que no suma a lo que se evalúa.
+configuración de Meta, que no suma a lo que se evalúa. Se construye sobre lo que ya tiene la
+[entrega 2](#alcance-de-la-entrega-2).
 
 | Entra en la entrega final, además de la entrega 2 | Dónde está la regla |
 |---|---|
@@ -108,35 +48,93 @@ login por código, los números habilitados y el alta conversacional; los consej
 base de conocimiento; los grupos familiares y la elección entre el presupuesto individual y el
 de un grupo; la multimoneda, los reintegros, las transferencias, las compras con tarjeta y las
 reglas recurrentes; los procesos programados, entre ellos las alertas y el vencimiento de los
-pendientes; y la sección "Me deben".
+pendientes; la sección "Me deben"; y que el contador de correcciones no cuente un valor asumido,
+como la fecha, que el usuario cambia al responder (FEAT-003, CA-41).
 
 El entorno `demo` llega en la entrega final. Se despliega desde la rama de la entrega y hace de
 entorno de pruebas: cada persona que prueba tiene su usuario y su enlace. Se aloja en Render, en
-sus planes pagos más chicos ([ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md)). En la entrega 2 Platita se prueba en `local`.
+sus planes pagos más chicos ([ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md)). En la entrega 2 Platita se probaba en `local`.
 
-## Entrega 2
+**Un pendiente a la vez, hasta que lleguen varios movimientos en un mensaje.** Las [reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)
+suman al lote que espera respuesta un movimiento nuevo que llega mientras tanto, y reenvían la
+lista numerada. Hoy un lote tiene un solo pendiente: con uno esperando respuesta, el
+asistente pide terminar el anterior y no anota el nuevo
+([FEAT-003](features/FEAT-003/spec.md), CA-36). Sumarlo al lote llega con los varios
+movimientos en un mensaje.
+
+**Lo que el asistente todavía no sabe hacer responde un texto fijo.** La clasificación reconoce las tres
+clases y todos los tipos de registro desde el inicio. Cuando el mensaje pide algo que todavía no
+tiene código, el asistente no llama al modelo otra vez ni cobra cuota:
+
+- Un registro que no es un gasto ni un ingreso: "Eso todavía no lo sé anotar. Por ahora me
+  manejo con gastos e ingresos."
+- Una consulta o un consejo: "Todavía no sé responder preguntas. Por ahora anoto gastos e
+  ingresos, y tus saldos los ves en el dashboard."
+
+## Alcance de la entrega 2
+
+Registro de lo que se construyó en la entrega 2 y lo que quedó afuera. Lo que está en curso es la
+[entrega final](#alcance-de-la-entrega-final). WhatsApp siguió siendo el canal del producto: en
+esa entrega el flujo conversacional se construyó y se mostró por el chat web, que es un andamio
+([ADR 0002](adr/0002-whatsapp-como-canal-principal.md)). Los consejos con RAG son parte del
+producto y pasaron después a una segunda versión; algunas de sus piezas quedaron puestas desde
+entonces.
+
+El proveedor de LLM ya está elegido: GPT-5.4 mini, de OpenAI
+([ADR 0025](adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)). El de embeddings se elige
+antes de la rama de consejos, con la evaluación del
+[ADR 0019](adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md).
+
+| Entró en la entrega 2 | Dónde está la regla |
+|---|---|
+| Chat web dentro del dashboard, por el mismo camino asíncrono que WhatsApp | [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md), [la API](04-api.md) |
+| Entrada de desarrollo en `local`, que abre una sesión real sin código: se elige un usuario de prueba | [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md) |
+| Registro de gastos e ingresos con toda su conversación: lo que se resuelve solo a la vista, preguntar lo que falta, el pendiente y su continuación, y categoría nueva con confirmación | [Reglas de dominio § 1, § 4 y § 5](reglas-de-dominio.md) |
+| Pantalla de cuentas con el saldo calculado, donde se ve el efecto de cada movimiento | [Reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado), `GET /accounts` |
+| El paso de clasificación con las tres clases de mensaje, el tope diario total y la cuota de registro | [ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md) |
+| Desde la primera migración, la extensión pgvector; desde la migración del esquema, la columna del mensaje citado. El puerto de LLM, desde el primer caso de uso que lo usa; los de embeddings y de vector store, con la rama de consejos | [ADR 0019](adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md), [3. Modelo de datos](03-modelo-de-datos.md) |
+| Docker Compose que levanta la base, las migraciones, la API y el worker con un comando, y el pipeline de seis controles, cinco desde el primer commit de código y el análisis de seguridad después | [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) |
+| La tabla de llamadas al modelo con su envoltorio y el script de métricas, los registros en JSON con su filtro y su test, los eventos de seguridad y las tres rutas de salud | [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md) |
+| Datos de prueba: una plantilla de usuario con el alta completa, cuentas, su primer período confirmado y perfil financiero. En `local` el script de datos de prueba crea varios usuarios con ella, con el consentimiento registrado y al menos uno con un grupo | [Reglas de dominio § 3 y § 11](reglas-de-dominio.md) |
+
+Cuáles de los tramos que siguen entran en la entrega final y cuáles pasan a una segunda versión lo dice
+la [línea de corte de la entrega final](#alcance-de-la-entrega-final).
+
+| Quedó fuera de la entrega 2 | Por qué |
+|---|---|
+| El adaptador de WhatsApp, el login por código, los números habilitados y el alta conversacional | Dependen del canal real. El procesamiento quedó probado por el chat web |
+| Preguntas sobre los propios datos y consejos con RAG, con la carga de la base de conocimiento y sus dos tablas | Son ramas aparte de la clasificación. La de consejos espera al modelo de embeddings |
+| Un gasto en otra moneda, reintegros vinculados, retiro y aporte del titular, y el aviso de duplicado entre miembros | Cada uno es un flujo con sus propios casos de error |
+| Transferencias, compras con tarjeta y reglas recurrentes | Las dos últimas dependen de los procesos programados |
+| Procesos programados: vencimiento y recordatorio de pendientes, alertas, recurrentes, cierres de resumen, cotizaciones | Un pendiente sin responder queda abierto |
+| Varios movimientos en un mensaje, con respuestas por número, y elegir entre el presupuesto individual y el de un grupo | Son los dos últimos tramos de la conversación del registro ([reglas de dominio § 1 y § 5](reglas-de-dominio.md)). Se pasaron el 13 de octubre de 2026, porque la entrega 2 vencía el 22 |
+| Corregir, borrar y restaurar un movimiento confirmado, con el botón de responder un mensaje | Es un flujo aparte, que parte de un movimiento ya registrado ([reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado)). Se pasó en la misma fecha |
+| El entorno `demo` y su despliegue: la entrada con un enlace personal, para que otra persona pueda probar siendo dueña de sus datos, los dos comandos que crean y regeneran el enlace, la pantalla del aviso de prueba y el usuario de prueba de cada persona | El proveedor y el plan seguían sin decidir, y la entrega 2 se probó en `local` ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Para `demo` los decidió después el [ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md). Se pasó en la misma fecha |
+| La sección "Me deben" de la pantalla de cuentas, con cada persona y lo que debe | La pide [reglas de dominio § 16](reglas-de-dominio.md#16-reintegros-devoluciones-y-plata-que-te-deben). Las cuentas "Me deben" se crean al registrar un préstamo, que todavía no existe, así que la sección estaría siempre vacía. Mientras tanto la pantalla no las lista. Se decidió el 14 de octubre de 2026 |
+| Que la entrada de desarrollo avise cuando el navegador no guarda la sesión, en vez de volver a la lista sin decir nada | La cookie de la sesión es `Secure`, y sobre `http` en la propia máquina Safari no la guarda: la sesión se abre, el siguiente pedido llega sin ella, y la persona no sabe por qué no entró. El README ya avisa qué navegadores usar. Se decidió el 14 de octubre de 2026 |
+| La pantalla de presupuesto y `GET /budgets/{budget_id}`, y los formularios de carga del dashboard | La pantalla de cuentas ya muestra el efecto de un gasto. El reparto por ticket está en [6. Tickets](06-tickets.md) |
+
+## Pendientes
 
 | Qué | Se desbloquea cuando | Por qué importa |
 |---|---|---|
-| Documentar los tokens del Design System aparte de los componentes | Haya diseño del dashboard | Para que la app móvil los reutilice en vez de reconstruirlos leyendo código. Hoy viven en `frontend/src/design-tokens.css` ([ADR 0026](adr/0026-react-typescript-y-vite-para-el-dashboard.md)), sin un documento propio |
-| Revisar que la redirección de `/app` a `/app/` salga con `https` detrás del proxy del proveedor | Haya un primer despliegue | El servidor arma esa dirección desde el pedido que recibe. Si no confía en los headers del proxy, puede salir con `http` |
+| Documentar los tokens del Design System aparte de los componentes | Ya se puede: el dashboard existe | Para que la app móvil los reutilice en vez de reconstruirlos leyendo código. Hoy viven en `frontend/src/design-tokens.css` ([ADR 0026](adr/0026-react-typescript-y-vite-para-el-dashboard.md)), sin un documento propio |
+| Que la redirección de `/app` a `/app/` salga con `https` detrás del proxy del proveedor | Antes de `production` | El servidor arma esa dirección desde el pedido que recibe, y no confía en los headers del proxy. En el primer despliegue de `demo` redirigió con `http` (issue #129) |
 | Rellenar el [`ui_contract.md`](features/TEMPLATE/ui_contract.md) del estado del sistema | La entrega final | Las pantallas de cuentas, del chat y de la entrada ya tienen el suyo |
-| El hook que corre los tests unitarios después de cada edición del asistente en `backend/` | Exista el scaffold | Avisa enseguida si una edición rompió algo. Informa y no bloquea, porque en la fase en rojo los tests fallan a propósito ([ADR 0024](adr/0024-tests-primero-en-el-backend.md)) |
-| Que un error que no pasa por los registros tampoco salga crudo: uno que ocurre antes de configurar el filtro, uno en un hilo propio, y los del servicio de migraciones | Exista el worker | Hoy esos errores salen como texto por la salida de errores, con el host y el usuario de la base, sin la contraseña. El worker es el primer proceso con hilos propios y con datos de usuarios |
-| El puerto de LLM, y después los de embeddings y de vector store | Se escriba el primer caso de uso que usa cada uno: el registro de un gasto y la rama de consejos | El scaffold no los trae: su forma depende de los casos de uso, y declararlos antes sería adivinarla ([ADR 0019](adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md)) |
-| `scripts/llm_metrics.sql` | Exista la tabla `LLM_CALL` | Las cuatro métricas del [ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md). Sin la tabla no hay contra qué probar las consultas |
+| El hook que corre los tests unitarios después de cada edición del asistente en `backend/` | Ya se puede: el scaffold existe | Avisa enseguida si una edición rompió algo. Informa y no bloquea, porque en la fase en rojo los tests fallan a propósito ([ADR 0024](adr/0024-tests-primero-en-el-backend.md)) |
+| Que un error que no pasa por los registros tampoco salga crudo: uno que ocurre antes de configurar el filtro, uno en un hilo propio, y los del servicio de migraciones | Ya se puede: el worker existe | Hoy esos errores salen como texto por la salida de errores, con el host y el usuario de la base, sin la contraseña. El worker es el primer proceso con hilos propios y con datos de usuarios |
+| Los puertos de embeddings y de vector store | Se escriba la rama de consejos, el primer caso de uso que los usa | El scaffold no los trae: su forma depende de los casos de uso, y declararlos antes sería adivinarla ([ADR 0019](adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md)) |
 | Sentry, el monitor externo y las dos alertas críticas | Haya un primer despliegue de `production` | Al sumar Sentry se verifican en su sitio el plan y la retención, y se completa la fila de [términos y privacidad](terminos-y-privacidad.md) |
-| Correr `/security-audit` | Exista el backend, y antes de cada entrega | Audita el código contra las dos listas de OWASP. El cruce de diseño ya está en [seguridad de la capa de IA](seguridad-llm.md) |
-| Publicar la referencia de la API en el portal | Corra FastAPI | El OpenAPI lo genera el framework; falta exponerlo como consola navegable y enlazarlo desde [`llms.txt`](../llms.txt), que hoy no puede describir endpoints que no existen |
-| Documentación del código, con docstrings y su generador | Exista el backend | Es la capa que falta de las cuatro de [documentación viva](documentacion-viva.md#1-las-cuatro-capas). El equivalente en Python de lo que el módulo 5 propone con TypeDoc |
+| Correr `/security-audit` | Antes de cada entrega | Audita el código contra las dos listas de OWASP. El cruce de diseño ya está en [seguridad de la capa de IA](seguridad-llm.md) |
+| Publicar la referencia de la API en el portal | Ya se puede: FastAPI corre y el contrato está versionado | El OpenAPI lo genera el framework y `/docs` lo muestra solo con la API corriendo; falta exponerlo como consola navegable en el portal y enlazarlo desde [`llms.txt`](../llms.txt) |
+| Documentación del código, con docstrings y su generador | Ya se puede: el backend existe | Es la capa que falta de las cuatro de [documentación viva](documentacion-viva.md#1-las-cuatro-capas). El equivalente en Python de lo que el módulo 5 propone con TypeDoc |
 | Verificar las copias de respaldo del plan de base de datos: cuántos días retiene y si permite restaurar a un punto en el tiempo | Se contrate el plan de PostgreSQL en Render | Los datos de una cuenta borrada siguen en las copias hasta que vencen, y la política de privacidad tiene que decir cuánto tardan ([términos y privacidad](terminos-y-privacidad.md)). Restaurar a un punto en el tiempo es lo que permite volver atrás si una migración o un error rompen datos |
 | Revisar los índices del [Ticket 3](06-tickets.md) contra las consultas reales | Haya datos y consultas medibles | `pending_transaction (batch_id)` sobra, porque lo cubre `UNIQUE (batch_id, position)`; los índices de saldo y de presupuesto conviene hacerlos parciales o que cubran las columnas que suman, contemplando `duplicate_of` y `deleted_at`; y el de duplicados sirve a una función que todavía no existe. Con pocos usuarios no se nota |
 | Que el campo `endpoint` de los registros conserve el prefijo de un router incluido con `prefix=` | Se incluya el primer router con prefijo | Hoy toda ruta se declara completa en `routes.py`. Con un prefijo dado al incluir, la línea `http.request` registraría la ruta sin él, y dejaría de ser "la ruta como está declarada" ([Operación 6.3](operacion.md#63-registros)) |
 | Decidir si la referencia de la API, `/docs` y `/openapi.json`, queda abierta en `production` | Haya un primer despliegue | Hoy está abierta en todo entorno. No expone datos de nadie, pero sí qué endpoints existen. Lo habitual es apagarla en producción o dejarla solo en `local` y `demo` |
 | Sumar al verificador de arquitectura el nombre del SDK del proveedor de embeddings | Se elija ese proveedor | El dominio no conoce ninguna librería de IA ([ADR 0020](adr/0020-sin-framework-de-orquestacion-de-ia.md)), y el verificador solo frena las que tiene en su lista. El del LLM, `openai`, ya está |
-| Revisar las dependencias que trae `langchain-text-splitters` y que ninguna envíe datos por su cuenta | Se instale, con la carga de la base de conocimiento | Lo pide el [ADR 0020](adr/0020-sin-framework-de-orquestacion-de-ia.md). Es para la entrega final |
-| Política de acceso central y tests de aislamiento entre usuarios | Exista el scaffold | La regla ya está en la [API](04-api.md): el usuario sale de la sesión y un recurso ajeno responde `404`. Lo que falta es aplicarla en un solo lugar del dominio, incluida la visibilidad por intervalos de membresía de los grupos familiares y las respuestas por WhatsApp que citan un lote, y probarla en cada endpoint y en el worker. Implementada caso por caso, alguno se escapa |
-| Cambiar la rama por defecto del fork al abrir la rama de la entrega final | Exista esa rama | El portal se publica desde ahí, si el entorno `github-pages` la tiene autorizada, Dependabot abre ahí sus pull requests, y los enlaces del portal a GitHub apuntan a la rama por defecto. En la entrega 2 ya se hizo. Detalle en [documentación viva](documentacion-viva.md#7-el-modelo-de-ramas) |
+| Revisar las dependencias que trae `langchain-text-splitters` y que ninguna envíe datos por su cuenta | Se instale, con la carga de la base de conocimiento | Lo pide el [ADR 0020](adr/0020-sin-framework-de-orquestacion-de-ia.md). Es para una segunda versión, con los consejos |
+| Política de acceso central y tests de aislamiento entre usuarios | Ya se puede: el scaffold existe | La regla ya está en la [API](04-api.md): el usuario sale de la sesión y un recurso ajeno responde `404`. Hoy `domain/services/budgets/period_access.py` la resuelve solo para los períodos. Lo que falta es aplicarla en un solo lugar del dominio, incluida la visibilidad por intervalos de membresía de los grupos familiares y las respuestas por WhatsApp que citan un lote, y probarla en cada endpoint y en el worker. Implementada caso por caso, alguno se escapa |
 | Decidir si se guarda el día de inicio elegido de un ciclo mensual, para que un ciclo del 31 vuelva al 31 después de febrero | Llegue el borrador que se arma solo | Sin eso el inicio queda corrido: un período del 31 de enero termina el 27 de febrero, el siguiente empieza el 28 y desde ahí el ciclo sigue el 28 ([reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)). Se aceptó así el 29 de octubre de 2026 |
 | Pasar al backend la regla de con qué arranca un período nuevo: la copia del último, la sugerencia de mensual después de un personalizado y el día de inicio, con un endpoint que devuelva la propuesta y un dashboard que solo la muestre | Llegue el borrador que se arma solo | Hoy vive solo en el dashboard, como permite la [regla § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio); con el borrador automático quedaría escrita dos veces y podría decir cosas distintas |
 
@@ -154,6 +152,11 @@ Las decisiones que salen de recorrer casos de usuarios reales sobre el diseño e
 corrida de la [validación por casos de uso](use-case-walkthrough.md#10-decisiones-pendientes-fase-3),
 con sus opciones y una recomendación. Las de esta lista son las que no salieron de ahí.
 
+- **Si la confirmación de un registro dice cuánto lleva usado el rubro.** El diagrama de
+  [1.3](01-producto.md#13-diseño-y-experiencia-de-usuario) la mostraba con "Llevás 71% del rubro",
+  pero ninguna especificación lo pide, y hoy la confirmación lista fecha, moneda, categoría y
+  presupuesto (FEAT-003). Se sacó del diagrama el 3 de noviembre de 2026, para que el diagrama
+  no prometa algo que no está decidido.
 - El grupo 9 (trazabilidad de origen) de [`reglas-de-dominio.md`](reglas-de-dominio.md) es un
   grupo de enlace, sin texto propio: su contenido normativo vive en el catálogo de
   funcionalidades de [1.2](01-producto.md#12-características-y-funcionalidades-principales) y no
@@ -234,8 +237,9 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   textos fijos de arriba cubren un registro que no es gasto ni ingreso, y una consulta o un
   consejo. Un mensaje con varios movimientos recibe el de un registro que no es gasto ni
   ingreso, decidido el 17 de octubre de 2026 ([FEAT-003](features/FEAT-003/spec.md), C2-35).
-  Quedan para la entrega final un usuario con un período individual y uno de grupo para la misma
-  fecha, y una respuesta que cita una confirmación para corregirla o borrarla.
+  Un usuario con un período individual y uno de grupo para la misma fecha recibe el texto de C2-52,
+  y elegir entre los dos pasa a una segunda versión. Queda para la entrega final una respuesta que
+  cita una confirmación para corregirla o borrarla.
 - **La memoria de la clasificación: sin decidir.** El [ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md),
   punto 9, dice que la clasificación recibe el último intercambio. El código le manda solo el
   mensaje y, si hay uno esperando respuesta, el estado del pendiente. Falta decidir si se suma
@@ -246,7 +250,7 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   usuario confirma. [FEAT-003](features/FEAT-003/spec.md) ofrece las cuentas candidatas sin
   proponer una, que es una regla determinista (CA-19 y CA-20). Falta decidir cuál de las dos
   queda, y escribirlo en la otra.
-- **Un movimiento roto bloquea todos los saldos: a revisar después de la entrega 2.** Si un
+- **Un movimiento roto bloquea todos los saldos: a revisar.** Si un
   movimiento en otra moneda llegara sin cotización, el cálculo se detiene y la pantalla de
   cuentas muestra el error, sin el saldo de ninguna cuenta (caso C2-12 de
   [FEAT-001](features/FEAT-001/spec.md)). Hoy no puede pasar, porque la base rechaza ese
@@ -259,7 +263,7 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   persona que todavía no es usuario no la tiene. Falta decidir cómo entra. La candidata es que el
   login del andamio deje pasar a un número habilitado, muestre los términos y, al aceptarlos,
   cree el usuario y la sesión. El modelo de datos sirve tanto para eso como para dejar el alta
-  solo en WhatsApp. Se decide en la entrega final. El enlace personal del entorno de pruebas no
+  solo en WhatsApp. Se decide con el alta conversacional, en una segunda versión. El enlace personal del entorno de pruebas no
   lo resuelve: da una cuenta de prueba ya armada, sin pasar por el alta
   ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 - **Deshabilitar el número de un usuario ya dado de alta: sin decidir.** Habilitar un número
@@ -273,7 +277,7 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
 - **La tasa de plazo fijo como dato descargado: a revisar.** Hoy los datos de mercado que
   Platita descarga son las cotizaciones, la inflación mensual y la tasa promedio de plazo fijo
   ([reglas de dominio § 18](reglas-de-dominio.md#18-alcance-de-los-consejos)). La autora duda de
-  mantener la tercera. No afecta la entrega 2.
+  mantener la tercera. No afecta la entrega final.
 - **Cuotas en YAML versionado o ajustables sin desplegar: decidido el 18 de octubre de 2026.**
   Manda [reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente): el tope
   diario total y las cuotas se leen de variables de entorno, y se bajan reiniciando el proceso,

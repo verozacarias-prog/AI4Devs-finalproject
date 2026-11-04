@@ -17,8 +17,10 @@ código que describe, y algo automático se queja cuando se desactualiza.
 | Contrato para asistentes | [`AGENTS.md`](../AGENTS.md), con `CLAUDE.md` como enlace simbólico | Cualquier herramienta de IA |
 | Contexto para agentes | `llms.txt` en la raíz y en el portal | Agentes de IA externos |
 
-La documentación de la API y la del código todavía no existen: se generan desde el código, y el
-backend no está implementado. Ver la [hoja de ruta](hoja-de-ruta.md).
+La referencia de la API se genera desde el código: el contrato versionado está en
+[`frontend/src/api/openapi.json`](../frontend/src/api/openapi.json), y `/docs` lo muestra con la API
+corriendo. Falta publicarla en el portal. La documentación del código, con su generador, todavía no
+existe. Ver la [hoja de ruta](hoja-de-ruta.md#pendientes).
 
 ## 2. Una sola fuente
 
@@ -70,14 +72,21 @@ diagrama desde la estructura del código, o pasa una limpieza de formato. Lo que
 qué merece documentarse, ni dar por buena la semántica de lo que generó.
 
 Cuando la especificación y el código difieren, un asistente no elige un lado: reporta la
-divergencia. El procedimiento completo está en [AGENTS.md](../AGENTS.md) sección 10, y el command
-[`/spec-drift`](../.claude/commands/spec-drift.md) existe para correrlo antes de cada entrega.
+divergencia. El procedimiento completo está en [AGENTS.md](../AGENTS.md) sección 10. El command
+[`/spec-drift`](../.claude/commands/spec-drift.md) lo corre en dos modos: `corte`, antes del
+último commit de un corte, y `proyecto`, antes de cada entrega. Cada hallazgo termina corregido o
+en una issue que aprueba una persona, para que no quede solo en la conversación.
 
 ## 5. La documentación viaja en el commit del código
 
 Un pull request que cambia un endpoint, el esquema de la base de datos o una regla de negocio
 actualiza el documento que lo describe **en ese mismo pull request**, no después. Esa es la única
 forma de que la documentación no se desactualice: si el cambio se aplaza, no ocurre.
+
+Vale también para los documentos que no son el principal. Una regla o un caso que cambia suele
+estar citado en varios lugares: la especificación de otra funcionalidad, la hoja de ruta,
+`AGENTS.md` o el `README`. El pull request los busca y los actualiza a todos, y `pr-reviewer`
+lo revisa.
 
 La lista completa está en la sección Documentación del
 [Definition of Done](07-pull-requests.md#definition-of-done). Se verifica leyendo, con la
@@ -139,7 +148,8 @@ GitHub condicionan el modelo y no son evidentes:
   github-pages`.
 
 **Abrir una entrega** son tres pasos: la rama nueva desde `main`, ponerla como rama por defecto
-y protegerla. **Cerrarla** es correr `/security-audit` y `/spec-drift` sobre todo el proyecto,
+y protegerla. **Cerrarla** es correr `/security-audit` y `/spec-drift proyecto`, repasar la hoja
+de ruta fila por fila,
 dejar al día `prompts.md` e integrar la rama a `main` por pull request.
 
 Que los controles impidan un merge depende, además, de proteger la rama de la entrega con esos

@@ -25,7 +25,8 @@ Lo que ya está decidido acota la solución:
 - La llamada al modelo ocurre fuera de toda transacción, y la transacción final del worker se
   deshace entera si otro worker tomó el mensaje
   ([ADR 0010](0010-webhook-asincrono-con-tabla-de-entrada.md)).
-- Los consejos con la base de conocimiento son parte del producto y llegan en la entrega final.
+- Los consejos con la base de conocimiento son parte del producto y llegan en una segunda
+  versión ([hoja de ruta](../hoja-de-ruta.md#alcance-de-la-entrega-final)).
   Lo que se construya antes no puede obligar a rediseñar para sumarlos
   ([ADR 0019](0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md)).
 

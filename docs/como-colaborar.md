@@ -69,7 +69,10 @@ cd site && npm install                # solo para ver o regenerar el portal
    [README](../README.md#documentación) y a la barra lateral de `site/astro.config.mjs`.
 8. **Escribir cada commit** con el [formato de mensaje](convenciones-de-desarrollo.md#1-cortes-verticales)
    `tipo(alcance): qué cambia`, en español.
-9. **Cerrar el corte** con `/spec-drift`, y con `/ui-states` si tiene pantalla.
+9. **Cerrar el corte** con `/spec-drift corte`, y con `/ui-states` si tiene pantalla. Lo que
+   encuentren se corrige en la rama o queda en una issue que aprueba una persona. Al cerrar el
+   último corte de una historia, se repasan las filas de la [hoja de ruta](hoja-de-ruta.md) que
+   esa historia resolvió o desbloqueó.
 10. **Probar el corte a mano,** en local y como lo usaría una persona: `docker compose up
    --build`, los datos de prueba y la pantalla o el chat. Lo que la aplicación todavía no deja
    cargar sale de un script de `scripts/`, como `budget_test_data.sql` para el presupuesto. Lo
@@ -88,7 +91,8 @@ cd site && npm install                # solo para ver o regenerar el portal
 - **Abrir:** crear `feature/entrega-<N>-VNZ`, o `final-project-VNZ` para la final, desde `main`;
   ponerla como rama por defecto del repositorio, porque de ahí se publica el portal y ahí abre
   Dependabot sus pull requests; y protegerla, con los controles como obligatorios.
-- **Cerrar:** correr `/security-audit` y `/spec-drift` sobre todo el proyecto, registrar los
+- **Cerrar:** correr `/security-audit` y `/spec-drift proyecto`, repasar la
+  [hoja de ruta](hoja-de-ruta.md) fila por fila, registrar los
   prompts en el [registro completo](registro-ia.md), y los que cambiaron una decisión también en
   [`prompts.md`](../prompts.md), con hasta tres por sección, y abrir el pull request de la rama de
   la entrega a `main`.

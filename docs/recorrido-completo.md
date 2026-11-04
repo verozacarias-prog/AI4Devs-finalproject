@@ -6,6 +6,10 @@ escriben. No agrega reglas: las reglas están en [reglas de dominio](reglas-de-d
 tablas en el [modelo de datos](03-modelo-de-datos.md) y los contratos en [la API](04-api.md).
 Cuando un paso no está especificado, el diagrama lo marca en vez de completarlo.
 
+Dibuja el producto completo, no solo lo construido: lo que falta es el diseño al que se apunta, y
+se mantiene acá como referencia para especificarlo. Cada sección dice al principio qué está
+construido; cuándo llega lo demás lo dice la [hoja de ruta](hoja-de-ruta.md).
+
 ## 1. Cómo se habla cada pieza
 
 Hay dos formas de llamada y ninguna más:
@@ -28,6 +32,11 @@ las mismas dos tablas: la API guarda lo que el usuario escribe y lee lo que el w
 ## 2. Vista general
 
 Las seis etapas y quién actúa en cada una. Las flechas continuas son HTTPS y las punteadas, SQL.
+Las piezas con borde punteado están diseñadas y todavía no construidas.
+
+**Estado:** hoy corren el servicio web, el worker y la base, y el chat web hace de WhatsApp.
+Meta, los procesos programados, las cotizaciones y la base de conocimiento son de una segunda
+versión.
 
 ```mermaid
 flowchart TB
@@ -48,7 +57,7 @@ flowchart TB
         USUARIO[("APP_USER · ACCOUNT<br/>CATEGORY · FINANCIAL_PROFILE")]
         PRESU[("BUDGET_PERIOD · BUDGET")]
         MOV[("PENDING_BATCH · PENDING_TRANSACTION<br/>TRANSACTION · TRANSFER<br/>RECURRING_RULE · CARD_STATEMENT")]
-        APOYO[("EXCHANGE_RATE · SENT_ALERT<br/>ADVICE_DOCUMENT · ADVICE_CHUNK<br/>LLM_USAGE")]
+        APOYO[("EXCHANGE_RATE · SENT_ALERT<br/>ADVICE_DOCUMENT · ADVICE_CHUNK<br/>LLM_USAGE · LLM_CALL")]
         ACCESO[("LOGIN_CODE · SESSION<br/>AUTH_THROTTLE")]
     end
 
@@ -62,18 +71,23 @@ flowchart TB
 
     API -.->|"guarda el mensaje"| COLAS
     API -.->|"login y lecturas"| ACCESO
+    API -.->|"cuentas y categorías"| USUARIO
     API -.-> PRESU
     API -.-> MOV
     WK -.->|"toma mensajes,<br/>encola respuestas"| COLAS
-    WK -.->|"alta y cuentas"| USUARIO
+    WK -.->|"alta, cuentas y categorías"| USUARIO
+    WK -.->|"confirma el período"| PRESU
     WK -.->|"pendientes y movimientos"| MOV
-    WK -.->|"cuotas y RAG"| APOYO
+    WK -.->|"cuotas, llamadas al LLM y RAG"| APOYO
     SCH -.->|"recurrentes y resúmenes"| MOV
     SCH -.->|"alertas y cotizaciones"| APOYO
     SCH -.->|"avisos"| COLAS
 
     style BACKEND fill:#f6f8fa,stroke:#8b949e
     style DB fill:#f6f8fa,stroke:#8b949e
+    style META stroke-dasharray: 5 5
+    style FX stroke-dasharray: 5 5
+    style SCH stroke-dasharray: 5 5
 ```
 
 | Etapa | Por dónde entra | Quién la procesa | Qué escribe | Detalle |
@@ -87,6 +101,8 @@ flowchart TB
 | Corregir, borrar o restaurar | WhatsApp o dashboard | Worker o API | `PENDING_TRANSACTION` de tipo cambio, luego el movimiento corregido | [§ 11](#11-corregir-o-borrar-por-whatsapp) |
 
 ## 3. Alta
+
+**Estado:** diseño, para una segunda versión. Hoy un número sin usuario recibe un texto fijo, y los usuarios de prueba se crean con los comandos de operación.
 
 El primer contacto de un número habilitado que todavía no es usuario. Hasta que acepta los
 términos, solo existe su mensaje en `INBOUND_MESSAGE`, y no se procesa con IA
@@ -133,6 +149,8 @@ sequenceDiagram
 
 ## 4. Presupuesto del período
 
+**Estado:** construido en parte. Armar, editar y confirmar un período desde el dashboard ya anda (`POST`, `PUT` y `/confirm` de `/budget-periods`), y un borrador también se confirma con el "sí" a la pregunta de un pendiente. El borrador que arman los procesos programados, la confirmación con un mensaje suelto por WhatsApp y los montos recurrentes son de una segunda versión.
+
 Los períodos siguientes al primero. El borrador se genera solo y se confirma por WhatsApp tal
 cual, o se arma y se confirma en el dashboard. En un período familiar, todo eso lo hace solo el
 dueño del grupo ([reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)).
@@ -167,13 +185,15 @@ sequenceDiagram
     else Cambia topes o fechas en el dashboard
         N->>API: HTTPS PUT /budget-periods/id con la cookie
         API->>DB: SQL valida dueño y solapes, reemplaza BUDGET_PERIOD y BUDGET
-        N->>API: HTTPS POST /budget-periods/id/confirm<br/>con los montos de las reglas variables
-        API->>DB: SQL UPDATE BUDGET_PERIOD y RECURRING_RULE
+        N->>API: HTTPS POST /budget-periods/id/confirm<br/>hoy sin cuerpo, y los montos de las reglas variables,<br/>en una segunda versión
+        API->>DB: SQL UPDATE BUDGET_PERIOD, y RECURRING_RULE<br/>en una segunda versión
     end
     Note over U,DB: Si empieza sin confirmar, la pregunta del primer<br/>pendiente ofrece confirmar el borrador en el mismo mensaje
 ```
 
 ## 5. Registro de un movimiento por WhatsApp
+
+**Estado:** el registro de un gasto o un ingreso está construido, por el [chat web](#por-el-chat-web). El webhook y el envío por WhatsApp, elegir entre un presupuesto individual y uno familiar, las transferencias y las reglas recurrentes son de una segunda versión.
 
 El camino más frecuente. La versión centrada en la experiencia está en
 [1.3](01-producto.md#13-diseño-y-experiencia-de-usuario); esta muestra procesos y tablas.
@@ -192,34 +212,34 @@ sequenceDiagram
     API->>DB: SQL INSERT INBOUND_MESSAGE, único por wamid
     API-->>M: 200, sin procesar
     W->>DB: SQL claim corto: status processing,<br/>attempts + 1, locked_until
-    W->>DB: SQL lee LLM_USAGE, tope diario total
+    W->>DB: SQL lee LLM_USAGE, tope diario total,<br/>ACCOUNT, CATEGORY y el pendiente abierto
     W->>L: HTTPS clasifica e interpreta en una sola llamada,<br/>con nombres de cuentas y categorías y sin identificadores
     L-->>W: clase registro: monto, tipo, categoría candidata
     rect rgb(240, 246, 252)
         Note over W,DB: Una sola transacción SQL
-        W->>DB: UPDATE INBOUND_MESSAGE processed<br/>solo si attempts no cambió
         W->>DB: lee LLM_USAGE, cuota de registro
-        W->>DB: lee ACCOUNT, CATEGORY y BUDGET_PERIOD candidatos
+        W->>DB: UPDATE INBOUND_MESSAGE processed<br/>solo si attempts no cambió
+        W->>DB: lee BUDGET_PERIOD candidatos
         W->>DB: INSERT PENDING_BATCH y PENDING_TRANSACTION
         W->>DB: INSERT OUTBOUND_MESSAGE con la pregunta
         W->>DB: UPDATE LLM_USAGE
     end
     W->>M: HTTPS envía la pregunta
     W->>DB: SQL UPDATE OUTBOUND_MESSAGE sent
-    M->>U: "¿De qué cuenta salió y a qué presupuesto va?"
-    U->>M: "Galicia, el familiar"
+    M->>U: "Para anotar el gasto de $3.500 en Supermercado<br/>me faltan unos datos: ¿Con qué cuenta? …<br/>¿A qué presupuesto va? …"
+    U->>M: "Galicia, el de Familia"
     M->>API: HTTPS POST /webhook/whatsapp
     API->>DB: SQL INSERT INBOUND_MESSAGE
     W->>L: HTTPS clasifica e interpreta la respuesta,<br/>con el último intercambio y el pendiente abierto
     rect rgb(240, 246, 252)
         Note over W,DB: Una sola transacción SQL
-        W->>DB: UPDATE INBOUND_MESSAGE processed, con el mismo fencing
-        W->>DB: INSERT TRANSACTION, o TRANSFER, o RECURRING_RULE<br/>si es una compra con tarjeta
+        W->>DB: UPDATE INBOUND_MESSAGE processed, con el mismo fencing,<br/>y UPDATE LLM_USAGE
+        W->>DB: INSERT TRANSACTION, o TRANSFER, o RECURRING_RULE<br/>si es una compra con tarjeta (hoy, solo TRANSACTION)
         W->>DB: UPDATE PENDING_TRANSACTION promoted<br/>y cierra el PENDING_BATCH
         W->>DB: INSERT OUTBOUND_MESSAGE con la confirmación
     end
     W->>M: HTTPS envía la confirmación
-    M->>U: "Listo. $3.500 · Supermercado · Galicia · familiar"
+    M->>U: "¡Listo! Anoté un gasto de $3.500 en Galicia."<br/>con fecha, moneda, categoría y presupuesto
 ```
 
 Si la cuota de registro está agotada, o el tope diario total alcanzado, no hay efectos: el
@@ -274,6 +294,8 @@ sequenceDiagram
 
 ## 6. Recurrentes y cuotas de tarjeta
 
+**Estado:** diseño, para una segunda versión.
+
 Lo que genera un proceso programado sin que el usuario escriba nada
 ([reglas de dominio § 8](reglas-de-dominio.md#8-movimientos-recurrentes-la-excepción-a-la-confirmación)).
 Las reglas sobre una tarjeta no se generan en su fecha: esperan al cierre del resumen (§ 7).
@@ -306,6 +328,8 @@ sequenceDiagram
 ```
 
 ## 7. Cierre y conciliación de un resumen
+
+**Estado:** diseño, para una segunda versión.
 
 La tarjeta es una cuenta, cada compra es una regla y pagar el resumen es una transferencia
 ([reglas de dominio § 13](reglas-de-dominio.md#13-tarjetas-de-crédito-y-transferencias)).
@@ -352,6 +376,8 @@ sequenceDiagram
 
 ## 8. Alertas y contraste mensual de saldos
 
+**Estado:** diseño, para una segunda versión.
+
 Dos avisos que inicia Platita, solo si el usuario dio permiso
 ([reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos)).
 
@@ -386,6 +412,8 @@ sequenceDiagram
 ```
 
 ## 9. Dashboard
+
+**Estado:** construido, salvo el login por código, que es de una segunda versión: en `demo` se entra con el enlace personal.
 
 El dashboard es una aplicación que el servicio web sirve bajo `/app`, en el mismo origen que la
 API. No tiene acceso a la base: todo lo que muestra lo pide por HTTPS
@@ -426,6 +454,8 @@ sequenceDiagram
 
 ## 10. Consejo por WhatsApp
 
+**Estado:** diseño, para una segunda versión. Hoy una consulta o un pedido de consejo recibe un texto fijo.
+
 Una pregunta financiera usa la cuota diaria de consejos y la base de conocimiento
 ([reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente)). El modelo nunca
 consulta la base: recibe solo lo que el caso de uso le envía
@@ -465,6 +495,8 @@ sequenceDiagram
 ```
 
 ## 11. Corregir o borrar por WhatsApp
+
+**Estado:** entra en la entrega final, por el chat web, y todavía no tiene código.
 
 Un movimiento confirmado se señala citando su confirmación o describiéndolo. Por el chat web es
 igual, y la cita se hace con el botón de responder. Nunca por ser el último ([reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado)).
@@ -514,6 +546,8 @@ sequenceDiagram
 ```
 
 ## 12. Pregunta sobre los propios datos
+
+**Estado:** entra en la entrega final, por el chat web, y todavía no tiene código. Es lo primero que se cae si no alcanza el tiempo.
 
 El modelo no consulta la base: pide datos a funciones de solo lectura, que el caso de uso ejecuta
 filtrando por el usuario del mensaje. La misma llamada que clasifica el mensaje ya trae los

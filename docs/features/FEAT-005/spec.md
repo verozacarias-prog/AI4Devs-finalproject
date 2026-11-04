@@ -1388,7 +1388,7 @@ Quedan sin resolver estas cosas, que no cambian ningún dato:
    La regla de § 3 admitía también el 28 de febrero, y se aclaró con este ejemplo (C1-03).
    Se acepta el corrimiento que dan las reglas: el período siguiente termina el 27 de marzo y
    el ciclo sigue el 28, porque no se guarda el día de inicio elegido. Decidido el 29 de octubre
-   de 2026; si se guarda queda en la [hoja de ruta](../../hoja-de-ruta.md#entrega-2), para cuando
+   de 2026; si se guarda queda en la [hoja de ruta](../../hoja-de-ruta.md#pendientes), para cuando
    llegue el borrador que se arma solo.
 3. ~~Cuánto dura un período quincenal.~~ Resuelta el 29 de octubre de 2026: su fin no se
    calcula, y el pedido lo trae siempre (CA-11). Sin él responde `422` con

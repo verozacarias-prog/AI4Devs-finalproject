@@ -137,7 +137,8 @@ expira. Si entra junto con el camino feliz, se recorta. Con sus propios commits,
 **Gate para cerrar un corte:** compila, el commit de los tests está antes que el de la
 implementación, los tests pasan, el linter pasa, no hay strings visibles
 al usuario escritos en el código, ninguna invariante de [`AGENTS.md`](../AGENTS.md) quedó
-violada, y `/spec-drift` no reporta diferencias sobre lo que tocaste. Todo eso **antes** del
+violada, y `/spec-drift corte` no deja diferencias sin resolver sobre lo que tocaste: cada una
+se corrigió o quedó en una issue que aprobó una persona. Todo eso **antes** del
 último commit del corte, no después.
 
 ## 2. Los cuatro estados de una pantalla

@@ -94,7 +94,8 @@ desde [`features/TEMPLATE/pr.md`](features/TEMPLATE/pr.md).
 - [ ] Si el pull request cambia un endpoint o el contrato de uno —ruta, método, campos de entrada o de salida, códigos de error—, [`04-api.md`](04-api.md) va actualizado **en este mismo pull request**.
 - [ ] Si el pull request cambia el esquema de la base de datos, [`03-modelo-de-datos.md`](03-modelo-de-datos.md) va actualizado en este mismo pull request.
 - [ ] Si el pull request cambia una regla de negocio, [`reglas-de-dominio.md`](reglas-de-dominio.md) va actualizado en este mismo pull request.
-- [ ] `/spec-drift` corrió antes del último commit del corte y no quedó ninguna divergencia sin reportar.
+- [ ] Si el pull request cambia una regla, un caso o un comportamiento, todo documento de `docs/`, `AGENTS.md` y `README.md` que lo menciona va actualizado en este mismo pull request, no solo el principal. Los diagramas también: el de entidad-relación si cambia el esquema, el de arquitectura si cambia un proceso o una capa, y el de secuencia del recorrido que cambió.
+- [ ] `/spec-drift corte` corrió antes del último commit del corte. Cada divergencia se corrigió en el pull request o quedó en una issue que aprobó una persona.
 - [ ] Si el comportamiento cambió respecto de lo documentado, la divergencia se resolvió según [`AGENTS.md`](../AGENTS.md) sección 10, no ajustando la documentación al código.
 
 ### Revisión

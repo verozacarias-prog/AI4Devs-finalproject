@@ -53,15 +53,21 @@ se esconde.
 Implementá lo mínimo para que pasen y corré todos los controles de la
 [sección 11 de `AGENTS.md`](../../AGENTS.md#11-comandos-de-verificación) que el cambio toca. Si un test
 parece mal, frená y mostralo: no se modifica sin aprobación. La documentación que el cambio
-afecta entra en la misma rama.
+afecta entra en la misma rama. Si el corte cambió una regla, un caso o un comportamiento, buscá
+con `grep` en `docs/`, `AGENTS.md` y `README.md` todo lo que lo menciona, y actualizalo también:
+una decisión se propaga en el mismo pull request, no después.
 
 **Pausa.** El commit `feat(alcance): …`, y los `docs(alcance): …` de la documentación, solo si
 la persona los pide. Si cambió `docs/`, antes `cd site && npm run build`.
 
 ## 6. Cerrar el corte
 
-**Pausa.** Preguntá si corrés `/spec-drift`, y `/ui-states` si el cambio tiene pantalla. Lo que
-encuentren se resuelve con la persona.
+**Pausa.** Preguntá si corrés `/spec-drift corte`, y `/ui-states` si el cambio tiene pantalla.
+Lo que encuentren se resuelve con la persona: se corrige en la rama, o queda en una issue que ella
+aprueba.
+
+Si es el último corte de una historia, repasá con la persona las filas de la
+[hoja de ruta](../../docs/hoja-de-ruta.md) que la historia resolvió o desbloqueó.
 
 ## 7. Probar a mano
 

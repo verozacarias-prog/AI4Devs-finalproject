@@ -31,7 +31,8 @@ Platita es un asistente financiero personal y familiar que funciona por WhatsApp
 
 ### 0.4. URL del proyecto:
 
-Pendiente: llega con el despliegue del entorno `demo`, en la entrega final.
+https://platita-demo-web.onrender.com/app/, el entorno `demo`. Se entra con un enlace personal, que da
+la autora: cada persona que prueba tiene su usuario y sus datos ([operación](docs/operacion.md)).
 
 ### 0.5. URL o archivo comprimido del repositorio
 
@@ -71,7 +72,7 @@ integre. La IA no escribe un test sin casos aprobados, y nunca integra.
 | [Convenciones de desarrollo](docs/convenciones-de-desarrollo.md) | Cortes verticales y los cuatro estados de una pantalla. |
 | [Términos y privacidad](docs/terminos-y-privacidad.md) | Qué tienen que cubrir los términos y la política de privacidad, antes de redactarlos. |
 | [Validación por casos de uso](docs/use-case-walkthrough.md) | Registro, no especificación: 51 casos cotidianos de usuarios argentinos recorridos sobre el diseño, las decisiones pendientes que dejan y los escenarios para las pruebas. |
-| [Hoja de ruta](docs/hoja-de-ruta.md) | Qué entra en la entrega 2, qué en la final y qué en una segunda versión, y por qué. |
+| [Hoja de ruta](docs/hoja-de-ruta.md) | Qué entra en la entrega final, qué entró en la 2 y qué pasa a una segunda versión, y por qué. |
 | [Operación](docs/operacion.md) | Entornos, pipeline, despliegue, copias de respaldo y observabilidad, con lo decidido separado de lo que sigue como propuesta. |
 | [Seguridad de la capa de IA](docs/seguridad-llm.md) | Platita contra el OWASP Top 10 para aplicaciones LLM: qué cubre cada riesgo y qué falta. |
 | [Flujo de trabajo con IA](docs/flujo-de-trabajo-con-ia.md) | Contratos, skill, commands, agente revisor, verificadores y hooks. |
