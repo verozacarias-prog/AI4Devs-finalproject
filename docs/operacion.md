@@ -116,8 +116,8 @@ que le dan a ese rol en cada `alembic upgrade head`. Esa contraseña solo admite
 `_` y `-`, porque va dentro de `DATABASE_URL`; con otro carácter, las migraciones fallan. Fuera
 del entorno local tiene que ser larga y generada al azar. En Render, `DATABASE_URL` y
 `APPLICATION_DB_PASSWORD` se cargan por separado, y la contraseña dentro de la dirección tiene que
-ser la misma. El dueño necesita permiso para crear el rol y cambiarle la contraseña; en una base
-administrada hay que comprobarlo en el primer despliegue. Una migración que crea una tabla le da
+ser la misma. El dueño necesita permiso para crear el rol y cambiarle la contraseña; en Render Postgres
+lo tiene, comprobado en el primer despliegue de `demo` ([ADR 0030](adr/0030-rol-de-la-aplicacion-en-la-base.md)). Una migración que crea una tabla le da
 sus permisos a `platita_app`.
 
 La entrada de desarrollo se enciende con `DEV_ENTRY_ENABLED=true`, y el chat web con

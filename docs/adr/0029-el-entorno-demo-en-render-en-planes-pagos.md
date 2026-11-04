@@ -107,11 +107,23 @@ Los límites del plan gratuito de Render, verificados en su
   y el daño es un mensaje que falla, no un dato roto. La otra salida, desplegar el worker a mano
   después del servicio web, suma un paso a cada despliegue, y olvidarlo deja el worker anterior
   contra el esquema nuevo.
-- Quedan por verificar en el primer despliegue:
-  - Que 512 MB de memoria alcancen para la API y para el worker.
-  - Que la migración del esquema pueda crear el rol `platita_app` en la base gestionada
-    ([ADR 0015](0015-borrado-logico-de-movimientos.md)).
-  - Que la redirección de `/app` a `/app/` salga con `https` detrás del proxy de Render.
+- La redirección de `/app` a `/app/` sale con `http` detrás del proxy de Render: el servidor no
+  confía en los headers que dicen que el pedido llegó por `https`. El navegador igual termina en
+  `https`, porque la respuesta lleva HSTS. Se corrige antes de `production`, en la issue #129.
+
+### Comprobado en el primer despliegue
+
+El 3/11/2026, en el primer despliegue de `demo`, con los pasos de
+[operación](../operacion.md#2-entornos):
+
+- **Los 512 MB alcanzan.** El servicio web ronda el 15% de la memoria, unos 75 MB, con un pico
+  del 20%, unos 100 MB, justo después de desplegar. El worker se mantiene entre el 15 y el 17%,
+  unos 80 MB. Queda más del 80% libre en los dos.
+- **La migración crea el rol en la base gestionada.** El paso previo creó `platita_app`, y la
+  API se conecta con ese rol ([ADR 0030](0030-rol-de-la-aplicacion-en-la-base.md)).
+- **HSTS no se duplica.** En `/healthz`, en `/app/` y en una dirección que no existe, la
+  respuesta lleva un solo `strict-transport-security: max-age=31536000`: Render no agrega otro.
+- **La redirección de `/app` sale con `http`**, como se dice arriba.
 
 ## Alternativas descartadas
 

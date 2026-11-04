@@ -63,12 +63,19 @@ cualquier fila. La prohibición existía en la base pero no protegía nada. Lo s
   conserva. Si existiera alguno, quien ejecute código ahí podría borrar tablas. En `demo` se
   acepta, porque los datos son de prueba. Llevar la migración a un servicio aparte cuesta
   US$7 por mes, y que esa migración falle no frena el despliegue del servicio web.
-- Quedan por verificar en el primer despliegue:
-  - Que el usuario por defecto de Render Postgres pueda crear el rol y cambiarle la contraseña.
-  - Que el paso previo al despliegue reciba las variables del servicio, y que la API arranque
-    sin la conexión del dueño.
-  - Que `DATABASE_URL` use el rol: con la conexión del dueño, todo funcionaría y la prohibición de
-    `DELETE` no protegería nada.
+
+### Comprobado en el primer despliegue
+
+El 3/11/2026, en el primer despliegue de `demo` en Render
+([ADR 0029](0029-el-entorno-demo-en-render-en-planes-pagos.md)):
+
+- **El usuario por defecto de Render Postgres crea el rol y le cambia la contraseña.** La
+  migración del paso previo terminó bien y dejó a `platita_app` habilitado.
+- **El paso previo recibe las variables del servicio web, y la API arranca sin la conexión del
+  dueño.** La migración corrió con `MIGRATIONS_DATABASE_URL`, y la API arrancó con
+  `env -u MIGRATIONS_DATABASE_URL -u APPLICATION_DB_PASSWORD`.
+- **`DATABASE_URL` usa el rol.** En el *Shell* del servicio web, `select current_user` devolvió
+  `platita_app`, así que la prohibición de `DELETE` protege de verdad.
 
 ## Alternativas descartadas
 
