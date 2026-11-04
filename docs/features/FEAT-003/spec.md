@@ -1648,7 +1648,8 @@ Los dos textos los aprobó Vero el 18/10/2026.
   las consultas y los consejos. En el corte 3 una salida rechazada solo marca su fila en
   `LLM_CALL` (CA-47).
 - El contador de correcciones sigue contando una fecha asumida que la respuesta cambia (CA-41):
-  que el modelo devuelva qué corrigió el usuario es de la entrega final.
+  que el modelo devuelva qué corrigió el usuario es de una segunda versión. Decidido por Vero el
+  3 de noviembre de 2026.
 - La descripción del movimiento: queda nula. Ninguna pantalla de la entrega 2 la muestra.
 - El webhook de WhatsApp.
 

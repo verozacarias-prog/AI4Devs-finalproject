@@ -48,7 +48,8 @@ login por código, los números habilitados y el alta conversacional; los consej
 base de conocimiento; los grupos familiares y la elección entre el presupuesto individual y el
 de un grupo; la multimoneda, los reintegros, las transferencias, las compras con tarjeta y las
 reglas recurrentes; los procesos programados, entre ellos las alertas y el vencimiento de los
-pendientes; y la sección "Me deben".
+pendientes; la sección "Me deben"; y que el contador de correcciones no cuente un valor asumido,
+como la fecha, que el usuario cambia al responder (FEAT-003, CA-41).
 
 El entorno `demo` llega en la entrega final. Se despliega desde la rama de la entrega y hace de
 entorno de pruebas: cada persona que prueba tiene su usuario y su enlace. Se aloja en Render, en
