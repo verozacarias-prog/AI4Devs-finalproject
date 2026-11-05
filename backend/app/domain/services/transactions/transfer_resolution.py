@@ -15,14 +15,17 @@ from decimal import Decimal
 from app.domain.entities.account import Account
 from app.domain.entities.classification import Classification
 from app.domain.services.dates.local_date import local_today
-from app.domain.services.transactions.account_resolution import AccountWords, named_account
+from app.domain.services.transactions.account_resolution import (
+    AccountWords,
+    account_words,
+    named_account,
+    verified_currency,
+)
 from app.domain.services.transactions.movement_resolution import (
     ParsedKey,
-    account_words,
     fits,
     movement_date,
     rounded,
-    verified_currency,
 )
 
 

@@ -451,7 +451,8 @@ class AnswerMessage:
 def _counts_as_registration(classification: Classification, continuing: bool) -> bool:
     """Whether the message uses the quota of registration (domain rules, § 12).
 
-    An expense or an income to register, and the reply that completes or discards a pending.
+    An expense, an income or a transfer to register, and the reply that completes or discards a
+    pending.
     What gets a fixed text because it has no code yet uses none (docs/hoja-de-ruta.md).
     """
     if continuing:
@@ -494,8 +495,8 @@ def _count_paid(unit_of_work: UnitOfWorkPort, paid: _PaidCall | None) -> None:
 def _answer_new(
     unit_of_work: UnitOfWorkPort, context: _Context, classification: Classification
 ) -> bool:
-    """A message with no pending to continue. True if it was interpreted as a movement: it
-    uses the quota of registration (domain rules, § 12).
+    """A message with no pending to continue. True if it was interpreted as a movement, or as
+    a transfer that is registered: it uses the quota of registration (domain rules, § 12).
     """
     registration = classification.message_class is MessageClass.REGISTRATION
     if registration and _is_transfer(classification) and not classification.several_movements:

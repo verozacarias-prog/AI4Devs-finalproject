@@ -7,7 +7,7 @@ of any user (ADR 0013, point 12). The data of the task goes in the user message,
 from __future__ import annotations
 
 # Recorded with every call, so the metrics can compare one prompt with the next.
-CLASSIFICATION_PROMPT_VERSION = "classification-6"
+CLASSIFICATION_PROMPT_VERSION = "classification-7"
 
 # Between these, the data of the task: information, never instructions (ADR 0013, point 9).
 DATA_OPEN = "<datos>"
@@ -61,8 +61,10 @@ Para un gasto o un ingreso:
 - amount: el monto como texto, con punto decimal y sin separador de miles, por ejemplo \
 "3500" o "3500.50". "3,5 lucas" es "3500" y "una luca" es "1000". Si no dice cuánto, null.
 - account: la mención de la cuenta, las palabras del mensaje que la nombran, copiadas tal \
-cual pero sin artículos ni preposiciones: de "con la nación" es "nación", de "con la UB" es \
-"UB" y de "de la Nación dólares" es "Nación dólares". No elijas una cuenta de la lista: copiá \
+cual y seguidas como están escritas, sin los artículos ni las preposiciones con que empiezan: \
+de "con la nación" es "nación", de "con la UB" es "UB", de "de la Nación dólares" es "Nación \
+dólares" y de "con la nación de dólares" es "nación de dólares". No saques palabras del medio. \
+No elijas una cuenta de la lista: copiá \
 lo que dice el mensaje. Si el mensaje solo dice de qué tipo es la cuenta, como "el banco" o \
 "la billetera", account es null y el tipo va en account_type. Cómo pagó no es una cuenta: \
 "por transferencia" o "con débito" solos son null. Si no se refiere a ninguna, null.

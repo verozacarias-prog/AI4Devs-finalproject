@@ -90,8 +90,8 @@ CANNOT_REGISTER_YET = (
     "Eso todavía no lo sé anotar. Por ahora me manejo con gastos, ingresos y transferencias."
 )
 CANNOT_ANSWER_YET = (
-    "Todavía no sé responder preguntas. Por ahora anoto gastos e ingresos, y tus saldos los ves "
-    "en el dashboard."
+    "Todavía no sé responder preguntas. Por ahora anoto gastos, ingresos y transferencias, y tus "
+    "saldos los ves en el dashboard."
 )
 # A message of no class: a greeting, or anything the model cannot place.
 ASK_FOR_DETAILS = (

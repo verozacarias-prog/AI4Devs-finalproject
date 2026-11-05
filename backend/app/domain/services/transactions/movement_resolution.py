@@ -25,8 +25,10 @@ from app.domain.services.dates.local_date import local_today
 from app.domain.services.transactions.account_resolution import (
     AccountWords,
     account_candidates,
+    account_words,
     is_unwritten,
     is_written,
+    verified_currency,
     verified_type,
 )
 
@@ -360,16 +362,6 @@ def _missing_fields(
     return tuple(field for field in MissingField if lacks[field])
 
 
-def verified_currency(classification: Classification, text: str) -> str | None:
-    """The currency the message says: none if the words the model gave are not in it (CA-39).
-
-    Without words, the currency counts as the model gave it: Vero decided so on 17/10/2026.
-    """
-    if is_unwritten(classification.currency_words, text):
-        return None
-    return classification.currency
-
-
 def fits(amount: Decimal) -> bool:
     """Whether the amount, rounded to cents, is more than 0 and fits where it is stored."""
     return SMALLEST_AMOUNT <= amount < TOO_LARGE_AMOUNT
@@ -440,13 +432,15 @@ def rejects_output(
 
     The same checks that decide what is used, so the metric of hallucinations says what the
     code did: a mention of an account, or words of its type or of the currency, that the
-    message does not write (CA-9, CA-39), a name of category that does not pass its check
-    (CA-43), and, in a reply to a pending, a name nobody offered nor wrote (CA-45).
+    message does not write (CA-9, CA-39), a type without words that say it (C3-25), a name of
+    category that does not pass its check (CA-43), and, in a reply to a pending, a name nobody
+    offered nor wrote (CA-45).
     """
     proposed = classification.proposed_category
     return (
         is_unwritten(classification.account, text)
         or is_unwritten(classification.account_type_words, text)
+        or (classification.account_type is not None and classification.account_type_words is None)
         or is_unwritten(classification.to_account, text)
         or is_unwritten(classification.to_account_type_words, text)
         or is_unwritten(classification.currency_words, text)
@@ -486,18 +480,6 @@ def _named(
     if len(candidates) > 1:
         return None, classification.account, verified_type(words.type, words.type_words, text)
     return None, None, None
-
-
-def account_words(classification: Classification, text: str) -> AccountWords:
-    """How the message names the account of an expense or an income, or the one a transfer
-    leaves: with the currency only if the message writes it.
-    """
-    return AccountWords(
-        classification.account,
-        classification.account_type,
-        classification.account_type_words,
-        verified_currency(classification, text),
-    )
 
 
 def _chosen(

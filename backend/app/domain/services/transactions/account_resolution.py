@@ -14,6 +14,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from app.domain.entities.account import Account, AccountType
+from app.domain.entities.classification import Classification
 
 _WORD = re.compile(r"[a-z0-9]+")
 # A name of more words than this can be named by its initials, as "MP" for Mercado Pago.
@@ -71,6 +72,28 @@ def account_candidates(
         # 5. Only those in the currency the message says.
         candidates = [account for account in candidates if account.currency == words.currency]
     return candidates
+
+
+def account_words(classification: Classification, text: str) -> AccountWords:
+    """How the message names the account of an expense or an income, or the one a transfer
+    leaves: with the currency only if the message writes it.
+    """
+    return AccountWords(
+        classification.account,
+        classification.account_type,
+        classification.account_type_words,
+        verified_currency(classification, text),
+    )
+
+
+def verified_currency(classification: Classification, text: str) -> str | None:
+    """The currency the message says: none if the words the model gave are not in it (CA-39).
+
+    Without words, the currency counts as the model gave it: Vero decided so on 17/10/2026.
+    """
+    if is_unwritten(classification.currency_words, text):
+        return None
+    return classification.currency
 
 
 def verified_type(
