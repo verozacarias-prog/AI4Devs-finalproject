@@ -23,9 +23,11 @@ from app.domain.entities.classification import Classification, RegistrationType
 from app.domain.entities.transaction import TransactionType
 from app.domain.services.dates.local_date import local_today
 from app.domain.services.transactions.account_resolution import (
+    AccountWords,
     account_candidates,
     is_unwritten,
     is_written,
+    verified_type,
 )
 
 _TRANSACTION_TYPES = {
@@ -69,6 +71,8 @@ class ParsedKey(StrEnum):
     # The words of an account that named several: only those are offered.
     ACCOUNT_MENTION = "account_mention"
     CATEGORY = "category"
+    # The account a transfer reaches; ACCOUNT is the one it leaves.
+    TO_ACCOUNT = "to_account"
     PROPOSED_CATEGORY = "proposed_category"
     TRANSACTION_DATE = "transaction_date"
 
@@ -185,16 +189,25 @@ def continue_interpretation(
     account, mention = previous.account, previous.account_mention
     # What the reply says replaces what the first message said (CA-48).
     currency = verified_currency(classification, text) or previous.currency
-    if classification.account is not None or (currency is not None and mention is not None):
+    said = AccountWords(
+        classification.account,
+        classification.account_type,
+        classification.account_type_words,
+        currency,
+    )
+    names_an_account = classification.account is not None or (
+        verified_type(said.type, said.type_words, text) is not None
+    )
+    if names_an_account or (currency is not None and mention is not None):
         offered = (
-            account_candidates(mention, mention, None, movement_accounts)
+            account_candidates(mention, AccountWords(mention), movement_accounts)
             if mention is not None
             else movement_accounts
         )
-        chosen = _chosen(text, classification.account, currency, movement_accounts, offered)
+        chosen = _chosen(text, said, movement_accounts, offered)
         if chosen is not None:
             account, mention = chosen.name, None
-        elif len(account_candidates(text, classification.account, currency, movement_accounts)) > 1:
+        elif len(account_candidates(text, said, movement_accounts)) > 1:
             # The reply names several: they are offered, and none is kept (CA-20).
             account, mention = None, classification.account
     registration_type = classification.registration_type
@@ -415,13 +428,16 @@ def rejects_output(
     """Whether the checks in code drop something the model returned (ADR 0023, CA-47).
 
     The same checks that decide what is used, so the metric of hallucinations says what the
-    code did: a mention of the account or words of the currency the message does not write
-    (CA-9, CA-39), a name of category that does not pass its check (CA-43), and, in a reply to
-    a pending, a name nobody offered nor wrote (CA-45).
+    code did: a mention of an account, or words of its type or of the currency, that the
+    message does not write (CA-9, CA-39), a name of category that does not pass its check
+    (CA-43), and, in a reply to a pending, a name nobody offered nor wrote (CA-45).
     """
     proposed = classification.proposed_category
     return (
         is_unwritten(classification.account, text)
+        or is_unwritten(classification.account_type_words, text)
+        or is_unwritten(classification.to_account, text)
+        or is_unwritten(classification.to_account_type_words, text)
         or is_unwritten(classification.currency_words, text)
         or (proposed is not None and _valid_proposal(proposed) is None)
         or (previous is not None and proposes_an_unwritten_name(previous, classification, text))
@@ -452,9 +468,7 @@ def _named(
     text: str, classification: Classification, accounts: Sequence[Account]
 ) -> tuple[str | None, str | None]:
     """The account the message names, or the mention that named several of them."""
-    candidates = account_candidates(
-        text, classification.account, verified_currency(classification, text), accounts
-    )
+    candidates = account_candidates(text, account_words(classification, text), accounts)
     if len(candidates) == 1:
         return candidates[0].name, None
     if len(candidates) > 1:
@@ -462,15 +476,24 @@ def _named(
     return None, None
 
 
+def account_words(classification: Classification, text: str) -> AccountWords:
+    """How the message names the account of an expense or an income, or the one a transfer
+    leaves: with the currency only if the message writes it.
+    """
+    return AccountWords(
+        classification.account,
+        classification.account_type,
+        classification.account_type_words,
+        verified_currency(classification, text),
+    )
+
+
 def _chosen(
-    text: str,
-    mention: str | None,
-    currency: str | None,
-    accounts: Sequence[Account],
-    offered: Sequence[Account],
+    text: str, said: AccountWords, accounts: Sequence[Account], offered: Sequence[Account]
 ) -> Account | None:
     """The account a reply chooses: by its name, or by its currency among those offered."""
-    named = account_candidates(text, mention, currency, accounts)
+    currency = said.currency
+    named = account_candidates(text, said, accounts)
     if len(named) == 1:
         return named[0]
     offered_ids = {account.id for account in offered}
@@ -494,7 +517,7 @@ def _options(
     mention = interpretation.account_mention
     offered = list(accounts)
     if mention is not None:
-        named = account_candidates(mention, mention, None, accounts)
+        named = account_candidates(mention, AccountWords(mention), accounts)
         if len(named) > 1:
             offered = named
     return tuple(

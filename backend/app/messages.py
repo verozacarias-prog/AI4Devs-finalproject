@@ -60,6 +60,11 @@ ERROR_REFERENCE = "Reference: {reference}"
 # (domain rules, § 1; FEAT-003).
 REGISTERED_EXPENSE = "¡Listo! Anoté un gasto de {amount} en {account}."
 REGISTERED_INCOME = "¡Listo! Anoté un ingreso de {amount} en {account}."
+# The confirmation of a registered transfer (domain rules, § 13; FEAT-006).
+REGISTERED_TRANSFER = (
+    "¡Listo! Anoté una transferencia de {amount} de {from_account} a {to_account}."
+)
+TRANSFER_IS_NOT_AN_EXPENSE = "No cuenta como gasto."
 CONFIRMATION_DATE = "Fecha: {date}"
 CONFIRMATION_CURRENCY = "Moneda: {currency}"
 CONFIRMATION_CATEGORY = "Categoría: {category}"
@@ -81,7 +86,9 @@ DECIMAL_SEPARATOR = ","
 CURRENCY_SYMBOLS: Mapping[str, str] = {"ARS": "$", "USD": "US$"}
 
 # What the assistant cannot do yet answers a fixed text (ADR 0018; roadmap, entrega 2).
-CANNOT_REGISTER_YET = "Eso todavía no lo sé anotar. Por ahora me manejo con gastos e ingresos."
+CANNOT_REGISTER_YET = (
+    "Eso todavía no lo sé anotar. Por ahora me manejo con gastos, ingresos y transferencias."
+)
 CANNOT_ANSWER_YET = (
     "Todavía no sé responder preguntas. Por ahora anoto gastos e ingresos, y tus saldos los ves "
     "en el dashboard."

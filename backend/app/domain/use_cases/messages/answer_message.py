@@ -18,6 +18,7 @@ from app.domain.entities.classification import (
     ModelUsage,
     OpenPending,
     PendingReply,
+    RegistrationType,
 )
 from app.domain.entities.inbound_message import InboundMessage, RetryPolicy
 from app.domain.entities.llm_usage import UsageCounter, UsageLimits
@@ -31,6 +32,7 @@ from app.domain.entities.pending_transaction import (
     PendingTransaction,
 )
 from app.domain.entities.transaction import Transaction, TransactionSource, TransactionType
+from app.domain.entities.transfer import Transfer
 from app.domain.entities.user import User
 from app.domain.errors import ModelCallFailedError, ModelRefusedError, StoreUnavailableError
 from app.domain.ports.llm_call_log_port import LlmCallLogPort
@@ -59,6 +61,12 @@ from app.domain.services.transactions.pending_question import question_text
 from app.domain.services.transactions.registration_confirmation import (
     before_opening_text,
     confirmation_text,
+    transfer_confirmation_text,
+)
+from app.domain.services.transactions.transfer_resolution import (
+    ResolvedTransfer,
+    resolve_transfer,
+    transfer_parsed_data,
 )
 from app.shared.clock import Clock
 
@@ -445,9 +453,13 @@ def _counts_as_registration(classification: Classification, continuing: bool) ->
         return classification.pending_reply in (PendingReply.CONTINUES, PendingReply.DISCARDS)
     return (
         classification.message_class is MessageClass.REGISTRATION
-        and is_movement(classification)
+        and (is_movement(classification) or _is_transfer(classification))
         and not classification.several_movements
     )
+
+
+def _is_transfer(classification: Classification) -> bool:
+    return classification.registration_type is RegistrationType.TRANSFER
 
 
 def _count(
@@ -480,7 +492,10 @@ def _answer_new(
     """A message with no pending to continue. True if it was interpreted as a movement: it
     uses the quota of registration (domain rules, § 12).
     """
-    if classification.message_class is MessageClass.REGISTRATION and is_movement(classification):
+    registration = classification.message_class is MessageClass.REGISTRATION
+    if registration and _is_transfer(classification) and not classification.several_movements:
+        return _settle_transfer(unit_of_work, context, classification)
+    if registration and is_movement(classification):
         if classification.several_movements:
             # Several movements in a message belong to the final delivery (CA-16).
             _add_reply(unit_of_work, context, messages.CANNOT_REGISTER_YET, ResponseKind.FIXED_TEXT)
@@ -802,6 +817,89 @@ def _register(
     unit_of_work.pendings.add_batch(batch)
     unit_of_work.pendings.add(
         _pending(context, batch, parsed, (), PendingStatus.PROMOTED, transaction.id, user_id)
+    )
+
+
+def _settle_transfer(
+    unit_of_work: UnitOfWorkPort, context: _Context, classification: Classification
+) -> bool:
+    """Registers a transfer whose amount and two accounts are in sight (FEAT-006, corte 1).
+
+    One that is not gets the fixed text and uses no quota (§ 12): asking what it lacks comes
+    with the next cut.
+    """
+    transfer = resolve_transfer(
+        classification,
+        context.message.text,
+        context.accounts,
+        context.today,
+        context.user.time_zone,
+    )
+    if transfer is None:
+        _add_reply(unit_of_work, context, messages.CANNOT_REGISTER_YET, ResponseKind.FIXED_TEXT)
+        return False
+    _register_transfer(unit_of_work, context, transfer)
+    return True
+
+
+def _register_transfer(
+    unit_of_work: UnitOfWorkPort, context: _Context, resolved: ResolvedTransfer
+) -> None:
+    """The transfer and its confirmation, through a batch of one, closed at once (§ 5)."""
+    user_id = context.user.id
+    currency = resolved.from_account.currency
+    transfer = Transfer(
+        id=uuid.uuid4(),
+        user_id=user_id,
+        from_account_id=resolved.from_account.id,
+        from_amount=resolved.amount,
+        from_currency=currency,
+        to_account_id=resolved.to_account.id,
+        to_amount=resolved.amount,
+        to_currency=resolved.to_account.currency,
+        # Both sides in the same currency: there is no rate (§ 13).
+        exchange_rate=None,
+        transfer_date=resolved.transfer_date,
+        source=TransactionSource.MANUAL,
+    )
+    unit_of_work.transfers.add(transfer)
+    confirmation = _add_reply(
+        unit_of_work,
+        context,
+        transfer_confirmation_text(
+            amount=resolved.amount,
+            currency=currency,
+            from_account_name=resolved.from_account.name,
+            to_account_name=resolved.to_account.name,
+            transfer_date=resolved.transfer_date,
+        ),
+        ResponseKind.REGISTRATION,
+    )
+    batch = PendingBatch(
+        id=uuid.uuid4(),
+        user_id=user_id,
+        source=PendingSource.MANUAL,
+        awaiting_reply=False,
+        question_message_id=None,
+        confirmation_message_id=confirmation.id,
+        status=BatchStatus.CLOSED,
+        created_at=context.now,
+    )
+    unit_of_work.pendings.add_batch(batch)
+    unit_of_work.pendings.add(
+        replace(
+            _pending(
+                context,
+                batch,
+                transfer_parsed_data(resolved),
+                (),
+                PendingStatus.PROMOTED,
+                None,
+                user_id,
+            ),
+            intent=PendingIntent.TRANSFER,
+            resulting_transfer_id=transfer.id,
+        )
     )
 
 

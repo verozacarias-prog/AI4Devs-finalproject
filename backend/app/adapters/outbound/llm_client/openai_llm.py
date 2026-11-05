@@ -34,6 +34,7 @@ from app.constants import (
     LLM_SDK_RETRIES,
     MESSAGE_CURRENCIES,
 )
+from app.domain.entities.account import AccountType
 from app.domain.entities.classification import (
     Classification,
     ClassificationRequest,
@@ -49,6 +50,11 @@ from app.domain.errors import ModelCallFailedError, ModelRefusedError
 _SCHEMA_NAME = "classification"
 _NULLABLE_TEXT = {"type": ["string", "null"]}
 _BOOLEAN = {"type": "boolean"}
+# Only a type of the catalog of ACCOUNT.type, or none.
+_ACCOUNT_TYPE = {
+    "type": ["string", "null"],
+    "enum": [*(value.value for value in AccountType), None],
+}
 # How the Responses API says the answer did not finish.
 _INCOMPLETE = "incomplete"
 # Strict structured output: every field present, nothing else (ADR 0025).
@@ -60,6 +66,11 @@ _CLASSIFICATION_SCHEMA: dict[str, object] = {
         "registration_type",
         "amount",
         "account",
+        "account_type",
+        "account_type_words",
+        "to_account",
+        "to_account_type",
+        "to_account_type_words",
         "category",
         "currency",
         "currency_words",
@@ -78,6 +89,11 @@ _CLASSIFICATION_SCHEMA: dict[str, object] = {
         # Text, so that an amount never goes through float.
         "amount": {"type": ["string", "null"], "pattern": r"^\d+(\.\d{1,2})?$"},
         "account": _NULLABLE_TEXT,
+        "account_type": _ACCOUNT_TYPE,
+        "account_type_words": _NULLABLE_TEXT,
+        "to_account": _NULLABLE_TEXT,
+        "to_account_type": _ACCOUNT_TYPE,
+        "to_account_type_words": _NULLABLE_TEXT,
         "category": _NULLABLE_TEXT,
         "currency": {"type": ["string", "null"], "enum": [*MESSAGE_CURRENCIES, None]},
         "currency_words": _NULLABLE_TEXT,
@@ -111,6 +127,11 @@ class _ClassificationOutput(BaseModel):
     account: str | None
     category: str | None
     # Absent from an answer of an earlier schema, which did not have them.
+    account_type: AccountType | None = None
+    account_type_words: str | None = None
+    to_account: str | None = None
+    to_account_type: AccountType | None = None
+    to_account_type_words: str | None = None
     currency: str | None = None
     currency_words: str | None = None
     transaction_date: date | None
@@ -179,6 +200,11 @@ class OpenAILLM:
             registration_type=output.registration_type,
             amount=output.amount,
             account=output.account,
+            account_type=output.account_type,
+            account_type_words=output.account_type_words,
+            to_account=output.to_account,
+            to_account_type=output.to_account_type,
+            to_account_type_words=output.to_account_type_words,
             category=output.category,
             currency=output.currency,
             currency_words=output.currency_words,

@@ -140,9 +140,19 @@ SELECT_TRANSACTIONS_BY_IDS = TRANSACTION_COLUMNS + "WHERE id = ANY(:ids)"
 
 SELECT_TRANSFERS_BY_USER = """
     SELECT id, user_id, from_account_id, from_amount, from_currency, to_account_id, to_amount,
-           to_currency, exchange_rate, transfer_date, deleted_at
+           to_currency, exchange_rate, transfer_date, source, deleted_at
     FROM transfer
     WHERE user_id = :user_id
+"""
+
+INSERT_TRANSFER = """
+    INSERT INTO transfer (
+        id, user_id, from_account_id, from_amount, from_currency, to_account_id, to_amount,
+        to_currency, exchange_rate, transfer_date, source
+    ) VALUES (
+        :id, :user_id, :from_account_id, :from_amount, :from_currency, :to_account_id,
+        :to_amount, :to_currency, :exchange_rate, :transfer_date, :source
+    )
 """
 
 INSERT_TRANSACTION = """
@@ -263,12 +273,12 @@ INSERT_PENDING_BATCH = """
 INSERT_PENDING_TRANSACTION = """
     INSERT INTO pending_transaction (
         id, user_id, intent, parsed_data, missing_fields, source, batch_id, position,
-        resulting_transaction_id, status, resolved_by, expires_at, created_at,
-        corrected_fields_count
+        resulting_transaction_id, resulting_transfer_id, status, resolved_by, expires_at,
+        created_at, corrected_fields_count
     ) VALUES (
         :id, :user_id, :intent, CAST(:parsed_data AS jsonb), :missing_fields, :source,
-        :batch_id, :position, :resulting_transaction_id, :status, :resolved_by, :expires_at,
-        :created_at, :corrected_fields_count
+        :batch_id, :position, :resulting_transaction_id, :resulting_transfer_id, :status,
+        :resolved_by, :expires_at, :created_at, :corrected_fields_count
     )
 """
 
@@ -278,8 +288,8 @@ SELECT_AWAITING_PENDING = """
            b.awaiting_reply, b.question_message_id, b.confirmation_message_id,
            b.status AS batch_status, b.created_at AS batch_created_at,
            p.id, p.user_id, p.intent, p.parsed_data, p.missing_fields, p.source, p.batch_id,
-           p.position, p.resulting_transaction_id, p.status, p.resolved_by, p.expires_at,
-           p.created_at, p.corrected_fields_count
+           p.position, p.resulting_transaction_id, p.resulting_transfer_id, p.status,
+           p.resolved_by, p.expires_at, p.created_at, p.corrected_fields_count
       FROM pending_batch b
       JOIN pending_transaction p ON p.batch_id = b.id
      WHERE b.user_id = :user_id AND b.awaiting_reply
@@ -290,7 +300,8 @@ SELECT_AWAITING_PENDING = """
 UPDATE_PENDING_TRANSACTION = """
     UPDATE pending_transaction
        SET parsed_data = CAST(:parsed_data AS jsonb), missing_fields = :missing_fields,
-           resulting_transaction_id = :resulting_transaction_id, status = :status,
+           resulting_transaction_id = :resulting_transaction_id,
+           resulting_transfer_id = :resulting_transfer_id, status = :status,
            resolved_by = :resolved_by, corrected_fields_count = :corrected_fields_count
      WHERE id = :id
 """

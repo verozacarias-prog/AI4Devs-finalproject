@@ -1,7 +1,7 @@
-"""The confirmation of a registered movement (domain rules, § 1; FEAT-003).
+"""The confirmation of a registered movement (domain rules, § 1; FEAT-003 and FEAT-006).
 
 It says what was registered, and lists the date, the currency and the category, which may have
-been assumed, together with the budget it went to.
+been assumed, together with the budget it went to. A transfer has no category and no budget.
 """
 
 from __future__ import annotations
@@ -44,6 +44,28 @@ def confirmation_text(
         messages.CONFIRMATION_CURRENCY.format(currency=currency),
         messages.CONFIRMATION_CATEGORY.format(category=category_name),
         budget,
+    )
+    return LINE_END.join(lines)
+
+
+def transfer_confirmation_text(
+    *,
+    amount: Decimal,
+    currency: str,
+    from_account_name: str,
+    to_account_name: str,
+    transfer_date: date,
+) -> str:
+    """A transfer is in no budget, so it says it does not count as an expense (§ 13)."""
+    lines = (
+        messages.REGISTERED_TRANSFER.format(
+            amount=written_amount(amount, currency),
+            from_account=from_account_name,
+            to_account=to_account_name,
+        ),
+        messages.TRANSFER_IS_NOT_AN_EXPENSE,
+        messages.CONFIRMATION_DATE.format(date=written_day(transfer_date)),
+        messages.CONFIRMATION_CURRENCY.format(currency=currency),
     )
     return LINE_END.join(lines)
 

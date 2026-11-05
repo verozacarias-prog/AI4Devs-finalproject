@@ -73,3 +73,5 @@ class PendingTransaction:
     # How many fields the model had interpreted the user changed before it was confirmed: it
     # changes nothing the user sees, and only the quality metric reads it (domain rules, § 5).
     corrected_fields_count: int = 0
+    # The transfer it became, when its intent is a transfer.
+    resulting_transfer_id: uuid.UUID | None = None

@@ -7,6 +7,8 @@ from datetime import date
 from decimal import Decimal
 from enum import StrEnum
 
+from app.domain.entities.account import AccountType
+
 
 class MessageClass(StrEnum):
     """What a message asks for: the first thing the model decides (ADR 0018)."""
@@ -19,7 +21,7 @@ class MessageClass(StrEnum):
 
 
 class RegistrationType(StrEnum):
-    """What a registration wants to register. Only an expense and an income have code yet."""
+    """What a registration wants to register. An expense, an income and a transfer have code."""
 
     EXPENSE = "expense"
     INCOME = "income"
@@ -87,8 +89,16 @@ class Classification:
     message_class: MessageClass
     registration_type: RegistrationType | None = None
     amount: Decimal | None = None
-    # How the message names the account, in its own words: the code decides which it is.
+    # How the message names the account, in its own words: the code decides which it is. In a
+    # transfer, the account the money leaves.
     account: str | None = None
+    # The type of account the message says, and the words that say it: the code checks them.
+    account_type: AccountType | None = None
+    account_type_words: str | None = None
+    # In a transfer, the account the money goes to, said the same way as the other one.
+    to_account: str | None = None
+    to_account_type: AccountType | None = None
+    to_account_type_words: str | None = None
     category: str | None = None
     # Only when the message says it, as "pesos", "lucas" or "dólares": an ISO code.
     currency: str | None = None
