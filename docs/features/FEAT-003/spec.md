@@ -119,7 +119,7 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 ### Límites y observabilidad — corte 3
 
 - **CA-29.** Con el tope diario total alcanzado, el mensaje no se clasifica y se procesa al día siguiente. El aviso de que llegó al límite sale una sola vez por día.
-- **CA-30.** Con la cuota de registro agotada, un gasto, un ingreso o la respuesta a un pendiente se demoran al día siguiente, con un texto fijo y sin otra llamada al modelo. Un mensaje demorado no traba a los siguientes y, al procesarse, conserva el día en que se escribió. La cuota de consultas llega con su código, en la entrega final, y la de consejos en una segunda versión, con los consejos: mientras tanto una consulta o un consejo reciben el texto fijo de C1-10 sin cobrar cuota ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final)). Decidido por Vero el 18/10/2026.
+- **CA-30.** Con la cuota de registro agotada, un gasto, un ingreso, una transferencia o la respuesta a un pendiente se demoran al día siguiente, con un texto fijo y sin otra llamada al modelo. Un mensaje demorado no traba a los siguientes y, al procesarse, conserva el día en que se escribió. La cuota de consultas llega con su código, en la entrega final, y la de consejos en una segunda versión, con los consejos: mientras tanto una consulta o un consejo reciben el texto fijo de C1-10 sin cobrar cuota ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final)). Decidido por Vero el 18/10/2026. La transferencia se suma el 5/11/2026, con [FEAT-006](../FEAT-006/spec.md).
 - **CA-46.** El tope diario total y la cuota de registro son configuración, en variables de entorno, con 100 y 50 por defecto: se cambian sin desplegar, reiniciando el worker. Decidido por Vero el 18/10/2026; resuelve la contradicción entre [2.5](../../02-arquitectura.md#25-seguridad) y las [reglas de dominio § 12](../../reglas-de-dominio.md#12-límites-de-uso-del-asistente).
 - **CA-47.** Cuando la validación en código rechaza algo que devolvió el modelo, la fila de su llamada en `LLM_CALL` pasa a `blocked` ([ADR 0023](../../adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md), punto 6). Sumado el 18/10/2026: el corte 2 valida la salida pero deja la fila en `ok`. Cuenta como rechazo tanto un nombre de categoría que no pasa la validación (CA-43) como algo que el modelo devuelve sin que esté escrito: una mención de la cuenta (CA-9), las palabras de la moneda (CA-39) o un nombre de categoría que nadie escribió (CA-45). Así la métrica de alucinaciones ve también lo que el modelo inventa. Decidido por Vero el 18/10/2026. Desde el 5/11/2026 cuentan también las palabras del tipo de una cuenta, como "el banco", y la mención de la cuenta de destino de una transferencia ([FEAT-006](../FEAT-006/spec.md)), cuando el mensaje no las escribe.
 - **CA-31.** Ninguna línea de los registros lleva el texto, el monto ni el teléfono.
@@ -1194,7 +1194,9 @@ defecto.
 - **C3-21, cambiado con la revisión de `pr-reviewer` del corte 3:** Veronica Zacarias 18/10/2026
 - **C2-31 cambiado y C3-23 sumado, con la revisión de `pr-reviewer` del corte 3:** Veronica Zacarias 18/10/2026
 - **C3-24, sumado con el `/spec-drift` del proyecto:** Veronica Zacarias 19/10/2026
-- **Total:** 24 casos, 9 unitarios y 15 de integración.
+- **C3-25, sumado con la revisión de `pr-reviewer` del corte 1 de [FEAT-006](../FEAT-006/spec.md):** Veronica Zacarias 05/11/2026
+- **C3-06 cambiado, con las transferencias de [FEAT-006](../FEAT-006/spec.md):** Veronica Zacarias 05/11/2026
+- **Total:** 25 casos, 10 unitarios y 15 de integración.
 
 Cómo se cuentan los límites, para leer los casos
 ([reglas de dominio § 12](../../reglas-de-dominio.md#12-límites-de-uso-del-asistente) y
@@ -1207,8 +1209,8 @@ Cómo se cuentan los límites, para leer los casos
   El contador `registration` es la cuota de registro.
 - El día es el del momento en que el mensaje se procesa, en la zona horaria del usuario. La
   fecha de un movimiento, en cambio, sigue siendo el día en que se escribió (§ 1).
-- Cuentan en la cuota de registro un gasto, un ingreso y la respuesta a un pendiente, también
-  la que lo descarta. No cuentan un saludo, una consulta, un consejo ni un registro que recibe
+- Cuentan en la cuota de registro un gasto, un ingreso, una transferencia que se anota
+  ([FEAT-006](../FEAT-006/spec.md)) y la respuesta a un pendiente, también la que lo descarta. No cuentan un saludo, una consulta, un consejo ni un registro que recibe
   el texto fijo de C1-09, como una compra con tarjeta: ninguno tiene código detrás
   ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final)).
 - Un mensaje demorado vuelve a `pending` con `next_attempt_at` en el inicio del día siguiente
@@ -1243,6 +1245,7 @@ Cómo se cuentan los límites, para leer los casos
 | C3-22 | Un mensaje demorado con aviso queda como respondido, y uno demorado en silencio no | Integración | CA-29, CA-30 y CA-31 |
 | C3-23 | La métrica de alucinaciones no cuenta las negativas, que tienen su propia cifra | Integración | CA-35 y CA-40 |
 | C3-24 | Un gasto que recibe un texto fijo porque todavía no se puede anotar no gasta la cuota de registro | Unitario | CA-30 |
+| C3-25 | Un destino o un tipo que el mensaje no escribe deja la llamada `blocked` | Unitario | CA-47 |
 
 #### C3-01 · Con el tope diario alcanzado, el mensaje no se clasifica y se demora
 
@@ -1499,6 +1502,17 @@ Cómo se cuentan los límites, para leer los casos
   el mensaje se clasificó.
 - **Test:** `tests/unit/test_usage_limits.py::test_an_expense_that_cannot_be_registered_yet_uses_no_quota_of_registration`
 
+#### C3-25 · Un destino o un tipo que el mensaje no escribe deja la llamada `blocked`
+
+- **Sale de:** CA-47 · **Tipo:** unitario
+- **Dado** el envoltorio con un registro de llamadas doble, y por separado cada una de estas
+  salidas del modelo: para "saqué 20 lucas de la Galicia pesos", una transferencia de 20000
+  desde "Galicia pesos" hacia "Efectivo"; y para "gasté 5 mil en la carnicería", un gasto de
+  5000 con el tipo banco dicho con "el banco",
+- **cuando** se procesa el mensaje,
+- **entonces** en cada una la fila de la llamada se marca `blocked`, y no se registra nada.
+- **Test:** `tests/unit/test_llm_calls.py::test_a_destination_or_a_type_the_message_does_not_write_leaves_the_call_blocked`
+
 ## Mensajes al usuario
 
 Van en `backend/app/messages.py`, en español rioplatense, como habla alguien de acá: con voseo
@@ -1642,7 +1656,7 @@ Los dos textos los aprobó Vero el 18/10/2026.
 ## Costos asumidos
 
 - Con la cuota de registro agotada, un gasto que igual recibiría un texto fijo, como uno en otra
-  moneda o con más de un período posible, se demora al día siguiente con el aviso de la cuota.
+  moneda o con más de un período posible, o una transferencia a la que le falta algo, se demora al día siguiente con el aviso de la cuota.
   La cuota se mira antes de interpretar el movimiento, y recién al interpretarlo se sabe que no
   la gastaría (C3-24). Al día siguiente recibe su texto fijo.
 
