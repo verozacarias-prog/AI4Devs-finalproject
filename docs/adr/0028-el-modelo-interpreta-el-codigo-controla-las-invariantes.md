@@ -31,8 +31,12 @@ puede equivocar, y un mensaje armado puede manipularlo
    la salida estructurada que el modelo devuelve, no con una regla de código para esa forma.
 2. **El código controla las invariantes y valida la salida del modelo.** Solo esto lleva reglas de
    código, con sus casos de prueba:
-   - Una cuenta se usa solo si el mensaje la escribe y nombra una sola, y nunca por defecto
+   - Una cuenta se usa solo si el mensaje la escribe, por su nombre o con palabras que dicen su
+     tipo, y nombra una sola, y nunca por defecto
      ([reglas de dominio § 1](../reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma)).
+     Qué palabras dicen un tipo, como "del cajero" por efectivo, lo decide el modelo, que
+     devuelve el tipo y esas palabras; el código comprueba que estén escritas y no tiene una
+     lista de palabras. Decidido por Vero el 4/11/2026.
    - Un movimiento se imputa a un período solo si es el único posible y está confirmado, o si el
      usuario confirmó el que se le mostró (§ 1 y § 3).
    - Una categoría nueva se crea solo con un sí a la que se le ofreció (§ 4).

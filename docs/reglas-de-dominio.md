@@ -62,26 +62,39 @@ usuario. Si el nombre coincide con más de una cuenta, como "la Galicia" con "Ga
 La moneda sigue a la vista en la confirmación, donde se corrige como cualquier default.
 
 **Qué cuenta como nombrar una cuenta.** El modelo entiende el lenguaje, y el código decide la
-cuenta. El modelo devuelve la mención, que son las palabras con que el mensaje se refiere a la
-cuenta, como "galicia", "MP" o "el banco", y la moneda, solo si el mensaje la dice de alguna
-forma: "pesos", "lucas", "mangos" o "$" son pesos, y "dólares", "verdes" o "USD", dólares. Un
-número solo, como "2000", no dice ninguna moneda. Con eso, el código sigue una regla fija:
+cuenta. El modelo devuelve, si el mensaje los dice:
 
-1. La mención tiene que estar escrita en el mensaje. Una cuenta que el modelo deduce, por
-   ejemplo de "por transferencia", no cuenta como nombrada.
+- **La mención:** las palabras del mensaje que nombran la cuenta, sin artículos ni
+  preposiciones, como "galicia", "MP" o "galicia pesos".
+- **El tipo de cuenta**, del catálogo de tipos, y las palabras que lo dicen: "el banco" dice
+  banco, "la billetera" dice billetera, y "efectivo" o "del cajero" dicen efectivo.
+- **La moneda**, de cualquier forma en que la diga: "pesos", "lucas", "mangos" o "$" son pesos,
+  y "dólares", "verdes" o "USD", dólares. Un número solo, como "2000", no dice ninguna moneda.
+
+Qué palabras dicen un tipo o una moneda lo decide el modelo: el código no tiene una lista de
+palabras. Con eso, el código sigue una regla fija:
+
+1. Las palabras de la mención, y las que dicen el tipo, tienen que estar escritas en el mensaje.
+   Una cuenta o un tipo que el modelo deduce sin palabras que lo digan, por ejemplo de "por
+   transferencia", no cuenta como nombrado.
 2. Si la mención tiene todas las palabras del nombre de una sola cuenta, como "galicia pesos",
    es esa. Se mira la mención y no el resto del mensaje: en "con MP porque no tenía efectivo",
    la cuenta es Mercado Pago, no Efectivo.
-3. Si no, las candidatas son las cuentas que la mención nombra por una palabra de su nombre,
-   como "galicia", por sus iniciales, como "MP" por Mercado Pago, o por su tipo, como "el
-   banco", "la billetera" o "efectivo".
-4. Si el mensaje dice la moneda, quedan solo las candidatas en esa moneda.
-5. Con exactamente una candidata, el movimiento va a esa cuenta. Con ninguna o con más de una,
+3. Si no, las candidatas son las cuentas de las que la mención es una parte del nombre, porque
+   cada palabra de la mención está en el nombre, como "galicia", o sus iniciales, como "MP" por
+   Mercado Pago.
+4. Si el mensaje dice el tipo, quedan solo las candidatas de ese tipo; y sin mención, las
+   candidatas son todas las cuentas de ese tipo.
+5. Si el mensaje dice la moneda, quedan solo las candidatas en esa moneda.
+6. Con exactamente una candidata, el movimiento va a esa cuenta. Con ninguna o con más de una,
    se pregunta (§ 5).
 
 Así, "gasté 2000 mangos con galicia" va a Galicia pesos, y "gasté 2000 con galicia" pregunta si
-es Galicia pesos o Galicia USD. Un apodo que el usuario le da a una cuenta, como "la naranja",
-no se reconoce: se pregunta.
+es Galicia pesos o Galicia USD. "Retiré 20 lucas del cajero" va a la cuenta de efectivo si el
+usuario tiene una sola. Un apodo que el usuario le da a una cuenta, como "la naranja", no se
+reconoce: se pregunta. La misma regla resuelve cada lado de una transferencia, el de origen y el
+de destino (§ 13). Decidido por Vero el 4 de noviembre de 2026, para que reconocer una cuenta no
+dependa de una lista de palabras en el código.
 
 **Un movimiento, un presupuesto.** Todo gasto o ingreso se imputa entero a un solo período,
 aunque el usuario lo use para más de un fin, como un celular que sirve para la actividad y para lo

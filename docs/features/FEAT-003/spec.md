@@ -75,7 +75,7 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 - **CA-6.** La fecha es el día en que el usuario escribió, en su zona horaria, salvo que el mensaje diga otra.
 - **CA-7.** La moneda es la de la cuenta que nombra el mensaje.
 - **CA-8.** La cuenta y la categoría se reconocen por su nombre sin distinguir mayúsculas.
-- **CA-9.** La cuenta la decide el código, con la mención y la moneda que devuelve el modelo: la mención tiene que estar escrita en el mensaje; una mención con todas las palabras del nombre de una sola cuenta la nombra; si no, la nombran una palabra de su nombre, sus iniciales o su tipo, y una moneda dicha deja solo las cuentas en esa moneda; con exactamente una candidata se usa esa, y con ninguna o varias no se registra ([reglas de dominio § 1](../../reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma)).
+- **CA-9.** La cuenta la decide el código, con la mención, el tipo de cuenta y la moneda que devuelve el modelo: la mención y las palabras que dicen el tipo tienen que estar escritas en el mensaje; una mención con todas las palabras del nombre de una sola cuenta la nombra; si no, son candidatas las cuentas de cuyo nombre la mención es una parte, o cuyas iniciales son la mención; un tipo dicho deja solo las candidatas de ese tipo, o todas las de ese tipo si no hay mención; una moneda dicha deja solo las de esa moneda; con exactamente una candidata se usa esa, y con ninguna o varias no se registra. El código no tiene una lista de palabras: qué palabras dicen un tipo lo decide el modelo. Cambiado por Vero el 4/11/2026, con [FEAT-006](../FEAT-006/spec.md) ([reglas de dominio § 1](../../reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma)).
 - **CA-10.** Un gasto o un ingreso con fecha anterior al alta de su cuenta no se registra, y la respuesta explica que la cuenta registra desde su alta y que eso ya está en el saldo con que se dio de alta ([reglas de dominio § 2](../../reglas-de-dominio.md#2-cuentas-y-saldo-calculado)).
 - **CA-11.** El movimiento queda con `source = 'manual'`.
 - **CA-12.** La confirmación dice si fue un gasto o un ingreso, el monto y la cuenta, y lista la fecha, la moneda, la categoría y el presupuesto.
@@ -85,7 +85,7 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 
 ### Lo que el asistente todavía no sabe hacer
 
-- **CA-16.** Un registro que no es un gasto ni un ingreso recibe un texto fijo, no registra nada y no vuelve a llamar al modelo.
+- **CA-16.** Un registro que no es un gasto, un ingreso ni una transferencia recibe un texto fijo, no registra nada y no vuelve a llamar al modelo.
 - **CA-17.** Una consulta o un consejo recibe un texto fijo y no vuelve a llamar al modelo.
 - **CA-18.** Un mensaje que no es de ninguna clase, como un saludo, recibe un texto fijo que pide una aclaración.
 
@@ -154,7 +154,8 @@ de 2026, 2026-10-17T18:00:00Z.
 - **C1-17 a C1-23, sumados con la prueba contra el modelo real, que registró dos gastos en una cuenta que el mensaje no decía:** Veronica Zacarias 17/10/2026
 - **C1-24, el motivo de un gasto anterior al alta de su cuenta, sumado con la prueba contra el modelo real:** Veronica Zacarias 17/10/2026
 - **C1-25, el nombre de otra cuenta fuera de la mención, sumado con la segunda revisión de pr-reviewer:** Veronica Zacarias 17/10/2026
-- **Total:** 25 casos, 17 unitarios y 8 de integración.
+- **C1-09, C1-21 y C1-22 cambiados, y C1-26 sumado, con las transferencias de [FEAT-006](../FEAT-006/spec.md):** pendiente
+- **Total:** 26 casos, 18 unitarios y 8 de integración.
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
@@ -166,7 +167,7 @@ de 2026, 2026-10-17T18:00:00Z.
 | C1-06 | La fecha es el día en que escribió, no el día en que se procesa | Unitario | CA-6 |
 | C1-07 | Una fecha que el mensaje indica se respeta | Unitario | CA-6 |
 | C1-08 | La cuenta y la categoría se reconocen sin distinguir mayúsculas | Unitario | CA-8 |
-| C1-09 | Una transferencia recibe el texto fijo y no registra nada | Integración | CA-16 |
+| C1-09 | Una compra con tarjeta recibe el texto fijo y no registra nada | Integración | CA-16 |
 | C1-10 | Una consulta recibe el texto fijo | Integración | CA-17 |
 | C1-11 | Un consejo recibe el texto fijo | Unitario | CA-17 |
 | C1-12 | Un saludo recibe el pedido de aclaración | Integración | CA-18 |
@@ -183,6 +184,7 @@ de 2026, 2026-10-17T18:00:00Z.
 | C1-23 | El adaptador devuelve la moneda que dice el mensaje | Unitario | CA-9 |
 | C1-24 | Un gasto anterior al alta de su cuenta explica por qué no se anota | Unitario | CA-10 |
 | C1-25 | El nombre de otra cuenta fuera de la mención no cambia la cuenta | Unitario | CA-9 |
+| C1-26 | Una mención con una palabra que no está en el nombre no lo nombra | Unitario | CA-9 |
 
 #### C1-01 · Un gasto que nombra la cuenta queda registrado
 
@@ -280,16 +282,18 @@ de 2026, 2026-10-17T18:00:00Z.
   la confirmación los nombra como están guardados: "Mercado Pago" y "Supermercado".
 - **Test:** `tests/unit/test_answer_message.py::test_the_account_and_the_category_are_recognized_whatever_their_case`
 
-#### C1-09 · Una transferencia recibe el texto fijo y no registra nada
+#### C1-09 · Una compra con tarjeta recibe el texto fijo y no registra nada
 
 - **Sale de:** CA-16 · **Tipo:** integración
-- **Dado** un mensaje web de Lucía, "pasé 20000 de Galicia pesos a Mercado Pago", pendiente, y
-  el modelo responde que es un registro de tipo transferencia,
+- **Dado** un mensaje web de Lucía, "compré una heladera en 6 cuotas con la visa", pendiente,
+  y el modelo responde que es un registro de tipo compra con tarjeta,
 - **cuando** el worker hace una ronda,
 - **entonces** `TRANSACTION` y `TRANSFER` siguen vacías, el modelo recibió una sola llamada, el
   mensaje queda `processed`, y la respuesta es "Eso todavía no lo sé anotar. Por ahora me
-  manejo con gastos e ingresos.", con `response_kind = 'fixed_text'`.
-- **Test:** `tests/integration/test_registration.py::test_a_transfer_gets_the_fixed_text_and_registers_nothing`
+  manejo con gastos, ingresos y transferencias.", con `response_kind = 'fixed_text'`. Hasta
+  [FEAT-006](../FEAT-006/spec.md) el caso era una transferencia, y el texto decía "con gastos e
+  ingresos"; Vero aprobó el cambio el 4/11/2026.
+- **Test:** `tests/integration/test_registration.py::test_a_card_purchase_gets_the_fixed_text_and_registers_nothing`
 
 #### C1-10 · Una consulta recibe el texto fijo
 
@@ -421,7 +425,8 @@ de 2026, 2026-10-17T18:00:00Z.
 
 - **Sale de:** CA-9 · **Tipo:** unitario
 - **Dado** un mensaje de Lucía, "gasté 5 mil pesos en la carnicería con el banco", y el modelo
-  responde un gasto de 5000, con cuenta "el banco", categoría "Supermercado" y moneda ARS,
+  responde un gasto de 5000, sin cuenta, con el tipo banco dicho con "el banco", categoría
+  "Supermercado" y moneda ARS,
 - **cuando** se procesa,
 - **entonces** el movimiento queda en Galicia pesos, la única cuenta de banco en pesos.
 - **Test:** `tests/unit/test_answer_message.py::test_the_type_and_the_currency_name_an_account`
@@ -430,7 +435,8 @@ de 2026, 2026-10-17T18:00:00Z.
 
 - **Sale de:** CA-9 · **Tipo:** unitario
 - **Dado** un mensaje de Lucía, "gasté 5 mil en la carnicería con el banco", y el modelo responde
-  un gasto de 5000, con cuenta "el banco", categoría "Supermercado" y sin moneda,
+  un gasto de 5000, sin cuenta, con el tipo banco dicho con "el banco", categoría
+  "Supermercado" y sin moneda,
 - **cuando** se procesa,
 - **entonces** no se registra ningún movimiento: Lucía tiene dos cuentas de banco.
 - **Test:** `tests/unit/test_answer_message.py::test_the_type_without_a_currency_does_not_choose_between_two_accounts`
@@ -467,6 +473,16 @@ de 2026, 2026-10-17T18:00:00Z.
 - **entonces** el movimiento queda en Mercado Pago, y no en Efectivo, aunque "efectivo" es el
   nombre completo de una cuenta y está en el mensaje.
 - **Test:** `tests/unit/test_answer_message.py::test_the_name_of_another_account_outside_the_mention_does_not_change_the_account`
+
+#### C1-26 · Una mención con una palabra que no está en el nombre no lo nombra
+
+- **Sale de:** CA-9 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía, "gasté 2000 en la verdulería con la galicia nueva", y el modelo
+  responde un gasto de 2000, con cuenta "galicia nueva", categoría "Supermercado" y sin moneda,
+- **cuando** se procesa,
+- **entonces** no se registra ningún movimiento, y la pregunta por la cuenta ofrece las cuatro
+  cuentas de Lucía: "nueva" no está en el nombre de Galicia pesos ni en el de Galicia USD.
+- **Test:** `tests/unit/test_answer_message.py::test_a_mention_with_a_word_that_is_not_in_the_name_does_not_name_it`
 
 ### Corte 2 — errores y lo que exige confirmación
 
@@ -586,7 +602,9 @@ defecto.
 
 - **Sale de:** CA-20 · **Tipo:** unitario
 - **Dado** un mensaje de Lucía, "gasté 2000 en la verdulería con la Galicia", y el modelo
-  responde un gasto de 2000, con cuenta "la Galicia", categoría "Supermercado" y sin moneda,
+  responde un gasto de 2000, con cuenta "Galicia", categoría "Supermercado" y sin moneda. Hasta
+  [FEAT-006](../FEAT-006/spec.md) el modelo devolvía "la Galicia"; el prompt pide ahora la
+  mención sin artículos,
 - **cuando** se procesa,
 - **entonces** queda un pendiente con `missing_fields = ['account_id']`, y la segunda línea de
   la pregunta es "¿Con qué cuenta? Galicia pesos o Galicia USD.".
@@ -1182,7 +1200,7 @@ Cómo se cuentan los límites, para leer los casos
   fecha de un movimiento, en cambio, sigue siendo el día en que se escribió (§ 1).
 - Cuentan en la cuota de registro un gasto, un ingreso y la respuesta a un pendiente, también
   la que lo descarta. No cuentan un saludo, una consulta, un consejo ni un registro que recibe
-  el texto fijo de C1-09, como una transferencia: ninguno tiene código detrás
+  el texto fijo de C1-09, como una compra con tarjeta: ninguno tiene código detrás
   ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final)).
 - Un mensaje demorado vuelve a `pending` con `next_attempt_at` en el inicio del día siguiente
   del usuario, y con los mismos `attempts` que tenía antes de tomarlo: no es un fallo
@@ -1278,7 +1296,7 @@ Cómo se cuentan los límites, para leer los casos
 - **Dado** que Lucía tiene 10 registros el 17/10/2026,
 - **cuando** se procesa, por separado, cada uno de estos mensajes: el gasto de C1-01, el
   ingreso de C1-02, el gasto sin cuenta de C2-01, la respuesta "con MP" de C2-07, el descarte
-  de C2-13, la transferencia de C1-09, la consulta de C1-10 y el saludo de C1-12,
+  de C2-13, la compra con tarjeta de C1-09, la consulta de C1-10 y el saludo de C1-12,
 - **entonces** los cinco primeros dejan el contador `registration` en 11, y los tres últimos
   lo dejan en 10.
 - **Test:** `tests/unit/test_usage_limits.py::test_what_counts_against_the_quota_of_registration_and_what_does_not`
@@ -1492,9 +1510,9 @@ como día/mes/año.
 
 Los textos fijos de lo que el asistente todavía no sabe hacer, los mismos de la
 [hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final). Para un registro que no es un
-gasto ni un ingreso:
+gasto, un ingreso ni una transferencia:
 
-> Eso todavía no lo sé anotar. Por ahora me manejo con gastos e ingresos.
+> Eso todavía no lo sé anotar. Por ahora me manejo con gastos, ingresos y transferencias.
 
 Para una consulta o un consejo:
 
