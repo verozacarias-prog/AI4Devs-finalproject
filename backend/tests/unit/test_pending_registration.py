@@ -1,7 +1,7 @@
 """What the registration asks, and how a reply continues it, with the model replaced (FEAT-003).
 
 Cases C2-02 to C2-06, C2-08 to C2-13, C2-15, C2-17, C2-18, C2-20, C2-35, C2-37, C2-38, C2-44,
-C2-45, C2-46, C2-47, C2-48 to C2-51 and C2-53 of its spec.md.
+C2-45, C2-46, C2-47, C2-48 to C2-51, C2-53 and C2-54 of its spec.md.
 Each case that starts from an open pending gets it the way a user does: a first message that
 leaves it pending, and then the reply. The database is in memory; the integration tests check
 the same use case against PostgreSQL.
@@ -17,6 +17,7 @@ from decimal import Decimal
 
 import pytest
 
+from app.domain.entities.account import AccountType
 from app.domain.entities.budget import Budget
 from app.domain.entities.budget_period import BudgetPeriod, PeriodStatus, PeriodType
 from app.domain.entities.classification import (
@@ -149,7 +150,6 @@ def test_the_question_for_the_account_offers_the_accounts_of_the_user() -> None:
 
     assert unit_of_work.transactions.added == []
     assert _last_reply(unit_of_work).splitlines() == [
-        "Para anotar el gasto de $3.500 en Supermercado me falta un dato:",
         ALL_ACCOUNTS,
     ]
 
@@ -164,7 +164,7 @@ def test_an_account_that_matches_two_offers_only_those_two() -> None:
     [pending] = unit_of_work.pendings.added
     assert pending.missing_fields == ("account_id",)
     assert (
-        _last_reply(unit_of_work).splitlines()[1] == "¿Con qué cuenta? Galicia pesos o Galicia USD."
+        _last_reply(unit_of_work).splitlines()[0] == "¿Con qué cuenta? Galicia pesos o Galicia USD."
     )
 
 
@@ -184,7 +184,6 @@ def test_an_expense_without_an_amount_asks_how_much_it_was() -> None:
     assert pending.missing_fields == ("amount",)
     assert pending.parsed_data["account"] == "Mercado Pago"
     assert _last_reply(unit_of_work).splitlines() == [
-        "Para anotar el gasto en Transporte con Mercado Pago me falta un dato:",
         "¿Cuánto fue?",
     ]
 
@@ -204,7 +203,6 @@ def test_a_message_that_does_not_say_expense_or_income_asks_it() -> None:
     [pending] = unit_of_work.pendings.added
     assert pending.missing_fields == ("type",)
     assert _last_reply(unit_of_work).splitlines() == [
-        "Para anotar el movimiento de $15.000 con Efectivo me falta un dato:",
         "¿Fue un gasto o un ingreso?",
     ]
 
@@ -227,7 +225,6 @@ def test_what_is_missing_is_asked_in_one_message_and_what_was_interpreted_is_kep
     assert pending.parsed_data["transaction_date"] == "2026-10-16"
     [reply] = unit_of_work.outbound_messages.added
     assert reply.text.splitlines() == [
-        "Para anotar el gasto en Supermercado me faltan unos datos:",
         "¿Cuánto fue?",
         ALL_ACCOUNTS,
     ]
@@ -291,7 +288,6 @@ def test_a_reply_that_completes_half_asks_only_what_is_still_missing() -> None:
     assert pending.missing_fields == ("account_id",)
     assert pending.parsed_data["amount"] == "12000"
     assert _last_reply(unit_of_work).splitlines() == [
-        "Para anotar el gasto de $12.000 en Supermercado me falta un dato:",
         ALL_ACCOUNTS,
     ]
 
@@ -367,9 +363,8 @@ def test_with_an_open_pending_another_movement_is_not_registered() -> None:
     assert pending.status is PendingStatus.OPEN
     reply = unit_of_work.outbound_messages.added[-1]
     assert reply.text.splitlines() == [
-        "No anoté tu último mensaje: primero terminemos con lo anterior, "
+        "No anoté tu último mensaje: primero terminemos con el gasto de $3.500 en Supermercado, "
         "y después mandámelo de nuevo.",
-        "Para anotar el gasto de $3.500 en Supermercado me falta un dato:",
         ALL_ACCOUNTS,
     ]
     [batch] = unit_of_work.pendings.batches
@@ -407,7 +402,6 @@ def test_if_no_category_fits_one_is_proposed_and_not_created() -> None:
     assert pending.missing_fields == ("category_id",)
     assert pending.parsed_data["proposed_category"] == "Peluquería"
     assert _last_reply(unit_of_work).splitlines() == [
-        "Para anotar el gasto de $9.000 con Mercado Pago me falta un dato:",
         "No encaja en ninguna de tus categorías. ¿Creo «Peluquería», o va en otra de las tuyas?",
     ]
 
@@ -480,7 +474,6 @@ def test_a_single_draft_period_offers_to_confirm_it_with_its_summary() -> None:
     [pending] = unit_of_work.pendings.added
     assert pending.missing_fields == ("budget_period_id",)
     assert _last_reply(unit_of_work).splitlines() == [
-        "Para anotar el gasto de $3.500 en Supermercado con Mercado Pago me falta un dato:",
         "Tu presupuesto del 1/11/2026 al 30/11/2026 todavía no está confirmado. Ingreso "
         "estimado: $1.200.000. Topes: Supermercado $300.000. ¿Lo confirmo así?",
     ]
@@ -495,7 +488,7 @@ def test_without_any_period_for_the_date_it_points_to_the_dashboard() -> None:
 
     [pending] = unit_of_work.pendings.added
     assert pending.missing_fields == ("budget_period_id",)
-    assert _last_reply(unit_of_work).splitlines()[1] == (
+    assert _last_reply(unit_of_work).splitlines()[0] == (
         "No tenés un presupuesto para el 1/11/2026. Armalo en el dashboard y después avisame."
     )
 
@@ -544,7 +537,7 @@ def test_a_proposed_category_with_the_name_of_an_existing_one_offers_that_one() 
     assert unit_of_work.categories.added == categories_before
     [pending] = unit_of_work.pendings.added
     assert pending.missing_fields == ("category_id",)
-    assert _last_reply(unit_of_work).splitlines()[1] == (
+    assert _last_reply(unit_of_work).splitlines()[0] == (
         "Ya tenés la categoría «Salud». ¿La uso, o preferís otro nombre?"
     )
 
@@ -593,7 +586,7 @@ def test_a_category_name_with_a_link_is_neither_shown_nor_stored() -> None:
 
     question = _last_reply(unit_of_work)
     assert "sitio-falso" not in question
-    assert question.splitlines()[1] == ASK_CATEGORY
+    assert question.splitlines()[0] == ASK_CATEGORY
     [pending] = unit_of_work.pendings.added
     assert pending.parsed_data["proposed_category"] is None
 
@@ -623,7 +616,7 @@ def test_a_category_name_too_long_or_with_signs_not_allowed_is_not_proposed(
         if is_proposed
         else ASK_CATEGORY
     )
-    assert _last_reply(unit_of_work).splitlines()[1] == expected
+    assert _last_reply(unit_of_work).splitlines()[0] == expected
 
 
 def test_a_yes_confirms_only_the_draft_the_question_showed() -> None:
@@ -695,7 +688,7 @@ def test_a_yes_creates_the_offered_category_or_the_one_the_reply_writes_and_no_o
     [pending] = unit_of_work.pendings.added
     assert pending.status is PendingStatus.OPEN
     assert pending.missing_fields == ("category_id",)
-    assert _last_reply(unit_of_work).splitlines()[1] == (
+    assert _last_reply(unit_of_work).splitlines()[0] == (
         "No encaja en ninguna de tus categorías. ¿Creo «Peluquería», o va en otra de las tuyas?"
     )
 
@@ -785,7 +778,7 @@ def test_the_currency_said_stays_in_the_pending_and_chooses_the_account_of_the_r
             amount="3500", category="Supermercado", currency="ARS", currency_words="pesos"
         ),
     )
-    assert _last_reply(unit_of_work).splitlines()[1] == ALL_ACCOUNTS
+    assert _last_reply(unit_of_work).splitlines()[0] == ALL_ACCOUNTS
 
     _answer(
         unit_of_work,
@@ -812,6 +805,31 @@ def test_a_reply_that_names_two_accounts_without_a_currency_asks_which() -> None
         lucia,
         "con la galicia",
         _reply(PendingReply.CONTINUES, account="galicia"),
+        now=NOW + timedelta(minutes=1),
+    )
+
+    assert unit_of_work.transactions.added == []
+    [pending] = unit_of_work.pendings.added
+    assert pending.status is PendingStatus.OPEN
+    assert "¿Con qué cuenta? Galicia pesos o Galicia USD." in _last_reply(unit_of_work).splitlines()
+
+
+def test_a_reply_that_says_only_the_type_offers_the_accounts_of_that_type() -> None:
+    # Case C2-54. Of her four accounts, Galicia pesos and Galicia USD are the bank ones.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    _supermarket_without_account(unit_of_work, lucia)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "con el banco",
+        Classification(
+            MessageClass.REGISTRATION,
+            pending_reply=PendingReply.CONTINUES,
+            account_type=AccountType.BANK_ACCOUNT,
+            account_type_words="el banco",
+        ),
         now=NOW + timedelta(minutes=1),
     )
 

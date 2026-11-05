@@ -155,7 +155,6 @@ def test_an_account_the_message_does_not_write_is_not_used() -> None:
     [reply] = unit_of_work.outbound_messages.added
     # Since cut 2 the account is asked, instead of the provisional fixed text (CA-19).
     assert reply.text.splitlines() == [
-        "Para anotar el gasto de $26.000 en Impuestos y trámites me falta un dato:",
         "¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD.",
     ]
     assert reply.response_kind is ResponseKind.REGISTRATION
@@ -220,7 +219,7 @@ def test_the_type_and_the_currency_name_an_account() -> None:
 
 
 def test_the_type_without_a_currency_does_not_choose_between_two_accounts() -> None:
-    # Case C1-22. She has two bank accounts.
+    # Case C1-22. She has two bank accounts, and only those are offered.
     unit_of_work = InMemoryUnitOfWork()
     lucia = Lucia(unit_of_work)
     llm = _expense_by_type("5000", AccountType.BANK_ACCOUNT, "el banco", None)
@@ -230,6 +229,8 @@ def test_the_type_without_a_currency_does_not_choose_between_two_accounts() -> N
     )
 
     assert unit_of_work.transactions.added == []
+    [reply] = unit_of_work.outbound_messages.added
+    assert reply.text.splitlines() == ["¿Con qué cuenta? Galicia pesos o Galicia USD."]
 
 
 def test_an_expense_before_its_account_was_opened_says_why_it_is_not_registered() -> None:
@@ -292,7 +293,7 @@ def test_a_mention_with_a_word_that_is_not_in_the_name_does_not_name_it() -> Non
 
     assert unit_of_work.transactions.added == []
     [reply] = unit_of_work.outbound_messages.added
-    assert reply.text.splitlines()[1] == (
+    assert reply.text.splitlines()[0] == (
         "¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD."
     )
 
@@ -319,7 +320,7 @@ def test_a_currency_the_message_does_not_write_does_not_choose_the_account() -> 
 
     assert unit_of_work.transactions.added == []
     [reply] = unit_of_work.outbound_messages.added
-    assert reply.text.splitlines()[1] == "¿Con qué cuenta? Galicia pesos o Galicia USD."
+    assert reply.text.splitlines()[0] == "¿Con qué cuenta? Galicia pesos o Galicia USD."
 
 
 def test_the_amount_is_rounded_to_two_decimals_before_it_is_stored() -> None:
