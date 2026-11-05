@@ -1,7 +1,7 @@
 # Especificación — FEAT-006 · Registro de una transferencia entre cuentas propias
 
 - **Historia de usuario:** [HU3](../../05-historias-de-usuario.md)
-- **Estado:** borrador
+- **Estado:** aprobada
 - **Fecha:** 2026-11-04
 
 ## Alcance

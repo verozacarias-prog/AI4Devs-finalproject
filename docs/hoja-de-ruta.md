@@ -69,8 +69,8 @@ tiene código, el asistente no llama al modelo otra vez ni cobra cuota:
 
 - Un registro que no es un gasto, un ingreso ni una transferencia: "Eso todavía no lo sé
   anotar. Por ahora me manejo con gastos, ingresos y transferencias."
-- Una consulta o un consejo: "Todavía no sé responder preguntas. Por ahora anoto gastos e
-  ingresos, y tus saldos los ves en el dashboard."
+- Una consulta o un consejo: "Todavía no sé responder preguntas. Por ahora anoto gastos,
+  ingresos y transferencias, y tus saldos los ves en el dashboard."
 
 ## Alcance de la entrega 2
 

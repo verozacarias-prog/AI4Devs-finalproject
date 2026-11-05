@@ -155,6 +155,7 @@ de 2026, 2026-10-17T18:00:00Z.
 - **C1-24, el motivo de un gasto anterior al alta de su cuenta, sumado con la prueba contra el modelo real:** Veronica Zacarias 17/10/2026
 - **C1-25, el nombre de otra cuenta fuera de la mención, sumado con la segunda revisión de pr-reviewer:** Veronica Zacarias 17/10/2026
 - **C1-09, C1-21 y C1-22 cambiados, y C1-26 sumado, con las transferencias de [FEAT-006](../FEAT-006/spec.md):** Veronica Zacarias 5/11/2026
+- **C1-10 y C1-11 cambiados, con el texto fijo que nombra las transferencias de [FEAT-006](../FEAT-006/spec.md):** Veronica Zacarias 5/11/2026
 - **C1-17 cambiado, con la pregunta que va directa (CA-22):** Veronica Zacarias 5/11/2026
 - **Total:** 26 casos, 18 unitarios y 8 de integración.
 
@@ -303,8 +304,8 @@ de 2026, 2026-10-17T18:00:00Z.
   que es una consulta,
 - **cuando** el worker hace una ronda,
 - **entonces** el modelo recibió una sola llamada, el mensaje queda `processed`, y la respuesta
-  es "Todavía no sé responder preguntas. Por ahora anoto gastos e ingresos, y tus saldos los
-  ves en el dashboard.", con `response_kind = 'fixed_text'`.
+  es "Todavía no sé responder preguntas. Por ahora anoto gastos, ingresos y transferencias, y
+  tus saldos los ves en el dashboard.", con `response_kind = 'fixed_text'`.
 - **Test:** `tests/integration/test_registration.py::test_a_query_gets_the_fixed_text`
 
 #### C1-11 · Un consejo recibe el texto fijo
@@ -608,7 +609,7 @@ defecto.
 - **Dado** un mensaje de Lucía, "gasté 2000 en la verdulería con la Galicia", y el modelo
   responde un gasto de 2000, con cuenta "Galicia", categoría "Supermercado" y sin moneda. Hasta
   [FEAT-006](../FEAT-006/spec.md) el modelo devolvía "la Galicia"; el prompt pide ahora la
-  mención sin artículos,
+  mención sin el artículo del principio,
 - **cuando** se procesa,
 - **entonces** queda un pendiente con `missing_fields = ['account_id']`, y la pregunta es
   "¿Con qué cuenta? Galicia pesos o Galicia USD.".
@@ -1196,6 +1197,7 @@ defecto.
 - **C3-24, sumado con el `/spec-drift` del proyecto:** Veronica Zacarias 19/10/2026
 - **C3-25, sumado con la revisión de `pr-reviewer` del corte 1 de [FEAT-006](../FEAT-006/spec.md):** Veronica Zacarias 05/11/2026
 - **C3-06 cambiado, con las transferencias de [FEAT-006](../FEAT-006/spec.md):** Veronica Zacarias 05/11/2026
+- **C3-25 cambiado, con el tipo que el modelo devuelve sin palabras:** Veronica Zacarias 05/11/2026
 - **Total:** 25 casos, 10 unitarios y 15 de integración.
 
 Cómo se cuentan los límites, para leer los casos
@@ -1507,8 +1509,9 @@ Cómo se cuentan los límites, para leer los casos
 - **Sale de:** CA-47 · **Tipo:** unitario
 - **Dado** el envoltorio con un registro de llamadas doble, y por separado cada una de estas
   salidas del modelo: para "saqué 20 lucas de la Galicia pesos", una transferencia de 20000
-  desde "Galicia pesos" hacia "Efectivo"; y para "gasté 5 mil en la carnicería", un gasto de
-  5000 con el tipo banco dicho con "el banco",
+  desde "Galicia pesos" hacia "Efectivo"; para "gasté 5 mil en la carnicería", un gasto de
+  5000 con el tipo banco dicho con "el banco"; y para el mismo mensaje, un gasto de 5000 con el
+  tipo banco y sin palabras que lo digan,
 - **cuando** se procesa el mensaje,
 - **entonces** en cada una la fila de la llamada se marca `blocked`, y no se registra nada.
 - **Test:** `tests/unit/test_llm_calls.py::test_a_destination_or_a_type_the_message_does_not_write_leaves_the_call_blocked`
@@ -1539,8 +1542,8 @@ gasto, un ingreso ni una transferencia:
 
 Para una consulta o un consejo:
 
-> Todavía no sé responder preguntas. Por ahora anoto gastos e ingresos, y tus saldos los ves en
-> el dashboard.
+> Todavía no sé responder preguntas. Por ahora anoto gastos, ingresos y transferencias, y tus
+> saldos los ves en el dashboard.
 
 Un gasto o un ingreso anterior al alta de su cuenta, con el nombre de la cuenta y el día de su
 alta:

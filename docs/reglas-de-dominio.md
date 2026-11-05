@@ -64,8 +64,9 @@ La moneda sigue a la vista en la confirmación, donde se corrige como cualquier 
 **Qué cuenta como nombrar una cuenta.** El modelo entiende el lenguaje, y el código decide la
 cuenta. El modelo devuelve, si el mensaje los dice:
 
-- **La mención:** las palabras del mensaje que nombran la cuenta, sin artículos ni
-  preposiciones, como "galicia", "MP" o "galicia pesos".
+- **La mención:** las palabras del mensaje que nombran la cuenta, seguidas como están escritas
+  y sin los artículos ni las preposiciones con que empiezan, como "galicia", "MP", "galicia
+  pesos" o, de "con la galicia de pesos", "galicia de pesos".
 - **El tipo de cuenta**, del catálogo de tipos, y las palabras que lo dicen: "el banco" dice
   banco, "la billetera" dice billetera, y "efectivo" o "del cajero" dicen efectivo.
 - **La moneda**, de cualquier forma en que la diga: "pesos", "lucas", "mangos" o "$" son pesos,
