@@ -202,12 +202,22 @@ def _answer_recorded(
                 category="Supermercado",
             ),
         ),
+        (
+            "gasté 5 mil en la carnicería",
+            Classification(
+                MessageClass.REGISTRATION,
+                registration_type=RegistrationType.EXPENSE,
+                amount=Decimal("5000"),
+                account_type=AccountType.BANK_ACCOUNT,
+                category="Supermercado",
+            ),
+        ),
     ],
 )
 def test_a_destination_or_a_type_the_message_does_not_write_leaves_the_call_blocked(
     text: str, classification: Classification
 ) -> None:
-    # Case C3-25.
+    # Case C3-25. The last one says a type without words that say it.
     unit_of_work = InMemoryUnitOfWork()
     lucia = Lucia(unit_of_work)
     calls = InMemoryLlmCallLog()
