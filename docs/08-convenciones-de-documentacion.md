@@ -103,6 +103,10 @@ El `name` de un skill tiene que ser el de su directorio, y el de un agente, el d
 command no se carga y el skill pierde todos sus campos, cayendo al nombre del directorio y a la
 primera línea del cuerpo. Los avisos no frenan nada; los errores sí.
 
+La comparación de texto duplicado no mira la línea "Test:" de un caso de una spec: es la ruta
+del test que lo cubre, y dos tests del mismo archivo con nombres parecidos no son una
+repetición.
+
 Un enlace a un directorio cubre su contenido: alcanza con que el `README.md` enlace
 `docs/adr/` o `docs/features/` para que sus archivos no cuenten como huérfanos.
 

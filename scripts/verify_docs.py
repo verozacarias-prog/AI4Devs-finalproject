@@ -93,8 +93,14 @@ def strip_code(text):
     return re.sub(r'```.*?```', '', text, flags=re.S)
 
 
+# La línea que dice qué test cubre un caso de una spec. Es una ruta, no texto de la
+# especificación: dos tests del mismo archivo con nombres parecidos no son una repetición.
+TEST_LINE = re.compile(r'^\s*- \*\*Test:\*\*.*$', re.M)
+
+
 def sentences(path):
     t = strip_code(read(path))
+    t = TEST_LINE.sub('', t)
     t = re.sub(r'\[([^\]]*)\]\([^)]*\)', r'\1', t)   # enlaces -> sólo el texto
     t = re.sub(r'[*`>#|]', ' ', t)
     out = []
