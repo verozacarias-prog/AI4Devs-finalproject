@@ -1,7 +1,8 @@
 """The OpenAI adapter, with the HTTP transport of the SDK replaced (FEAT-003, its spec.md).
 
 Cases C1-14, C1-15 and C1-23: what the adapter sends, and how it reads the amount and the
-currency back. Case C2-32: an answer the provider cut. Case C2-39: a call that fails, recorded.
+currency back. Case C1-08 of FEAT-006: both sides of a transfer. Case C2-32: an answer the
+provider cut. Case C2-39: a call that fails, recorded.
 Case C3-13: the system prompt is the same for every user. Case C3-14: no identifier reaches
 the provider.
 Outside the spec, T-1: every key of the data is one the system prompt names. T-2: the
@@ -23,6 +24,7 @@ import pytest
 from app.adapters.observability.llm_calls import RecordedLLM
 from app.adapters.outbound.llm_client import prompts
 from app.adapters.outbound.llm_client.openai_llm import OpenAILLM
+from app.domain.entities.account import AccountType
 from app.domain.entities.classification import (
     Classification,
     ClassificationRequest,
@@ -215,6 +217,43 @@ def test_the_adapter_returns_the_currency_the_message_says() -> None:
     assert "currency" in cast(list[str], schema["required"])
     properties = cast(dict[str, dict[str, object]], schema["properties"])
     assert set(cast(list[str | None], properties["currency"]["enum"])) == {"ARS", "USD", None}
+
+
+def test_the_adapter_returns_both_sides_of_a_transfer() -> None:
+    # Case C1-08 of FEAT-006.
+    transport = FakeTransport(
+        {
+            "message_class": "registration",
+            "registration_type": "transfer",
+            "amount": "20000",
+            "account": "Galicia pesos",
+            "account_type": None,
+            "account_type_words": None,
+            "to_account": None,
+            "to_account_type": "cash",
+            "to_account_type_words": "del cajero",
+            "category": None,
+            "transaction_date": None,
+        }
+    )
+
+    classification = _adapter(transport).classify(REQUEST)
+
+    assert classification.registration_type is RegistrationType.TRANSFER
+    assert classification.amount == Decimal("20000")
+    assert classification.account == "Galicia pesos"
+    assert classification.account_type is None
+    assert classification.to_account is None
+    assert classification.to_account_type is AccountType.CASH
+    assert classification.to_account_type_words == "del cajero"
+    [sent] = transport.received
+    output_format = cast(dict[str, dict[str, object]], sent["text"])["format"]
+    schema = cast(dict[str, object], output_format["schema"])
+    properties = cast(dict[str, dict[str, object]], schema["properties"])
+    catalog = {*(account_type.value for account_type in AccountType), None}
+    for field in ("account_type", "to_account_type"):
+        assert field in cast(list[str], schema["required"])
+        assert set(cast(list[str | None], properties[field]["enum"])) == catalog
 
 
 def test_a_cut_answer_is_treated_as_a_model_that_is_down() -> None:

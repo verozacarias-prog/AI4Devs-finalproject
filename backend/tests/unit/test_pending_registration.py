@@ -32,7 +32,9 @@ from tests.support.fake_llm import FakeLLM
 from tests.support.registration_data import NOW, OCTOBER_16, Lucia
 
 ALL_ACCOUNTS = "¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD."
-CANNOT_REGISTER = "Eso todavía no lo sé anotar. Por ahora me manejo con gastos e ingresos."
+CANNOT_REGISTER = (
+    "Eso todavía no lo sé anotar. Por ahora me manejo con gastos, ingresos y transferencias."
+)
 # Sunday 1 November 2026, 15:00 in Buenos Aires.
 NOVEMBER_1_NOW = datetime(2026, 11, 1, 18, 0, 0, tzinfo=UTC)
 UUID_PATTERN = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
@@ -116,12 +118,15 @@ def _supermarket_without_account(unit_of_work: InMemoryUnitOfWork, lucia: Lucia)
 
 
 def _verdulería_with_la_galicia(unit_of_work: InMemoryUnitOfWork, lucia: Lucia) -> None:
-    """The pending of C2-03: "la Galicia" names Galicia pesos and Galicia USD."""
+    """The pending of C2-03: "Galicia" names Galicia pesos and Galicia USD.
+
+    Since FEAT-006 the model gives the mention without its article, as the prompt asks.
+    """
     _answer(
         unit_of_work,
         lucia,
         "gasté 2000 en la verdulería con la Galicia",
-        _registration(amount="2000", account="la Galicia", category="Supermercado"),
+        _registration(amount="2000", account="Galicia", category="Supermercado"),
     )
 
 

@@ -149,11 +149,9 @@ def _reply_to_the_pending(text: str, classification: Classification) -> _Send:
         pytest.param(
             False,
             _new_message(
-                "pasé 20000 de Galicia pesos a Mercado Pago",
+                "compré una heladera en 6 cuotas con la visa",
                 Classification(
-                    MessageClass.REGISTRATION,
-                    registration_type=RegistrationType.TRANSFER,
-                    amount=Decimal("20000"),
+                    MessageClass.REGISTRATION, registration_type=RegistrationType.CARD_PURCHASE
                 ),
             ),
             False,
