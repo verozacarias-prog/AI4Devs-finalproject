@@ -226,7 +226,7 @@ sequenceDiagram
     end
     W->>M: HTTPS envía la pregunta
     W->>DB: SQL UPDATE OUTBOUND_MESSAGE sent
-    M->>U: "Para anotar el gasto de $3.500 en Supermercado<br/>me faltan unos datos: ¿Con qué cuenta? …<br/>¿A qué presupuesto va? …"
+    M->>U: "¿Con qué cuenta? …<br/>¿A qué presupuesto va? …"
     U->>M: "Galicia, el de Familia"
     M->>API: HTTPS POST /webhook/whatsapp
     API->>DB: SQL INSERT INBOUND_MESSAGE

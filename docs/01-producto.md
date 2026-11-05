@@ -114,7 +114,7 @@ sequenceDiagram
     DB-->>W: presupuesto individual y familiar
     Note over W: Falta la cuenta y falta confirmar<br/>el presupuesto: no se registra todavía
     W->>DB: guarda PENDING_TRANSACTION
-    W->>WA: "Para anotar el gasto de $3.500 en Supermercado me faltan unos datos:<br/>¿Con qué cuenta? Galicia, Mercado Pago o Efectivo.<br/>¿A qué presupuesto va? El tuyo o el de Familia."
+    W->>WA: "¿Con qué cuenta? Galicia, Mercado Pago o Efectivo.<br/>¿A qué presupuesto va? El tuyo o el de Familia."
     Note over W,WA: La línea del presupuesto es diseño:<br/>hoy hay un solo presupuesto posible
     WA->>U: pregunta con opciones
     U->>WA: "Galicia, el de Familia"

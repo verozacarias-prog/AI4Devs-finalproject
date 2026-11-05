@@ -94,14 +94,14 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 - **CA-19.** Un gasto o un ingreso sin cuenta no usa ninguna por defecto: queda pendiente y el asistente pregunta, ofreciendo las cuentas del usuario. Las ofrece sin proponer una como la más probable, aunque las [reglas de dominio § 1](../../reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma) digan que el asistente propone lo más probable: es la divergencia 10 del `/spec-drift` del 17/10/2026, anotada en la [hoja de ruta](../../hoja-de-ruta.md#decisiones-abiertas).
 - **CA-20.** Una cuenta nombrada que coincide con más de una, como "la Galicia", se pregunta ofreciendo las que coinciden.
 - **CA-21.** Un mensaje sin monto, o que no deja claro si es gasto o ingreso, queda pendiente y se pregunta.
-- **CA-22.** Cuando falta más de un dato, se preguntan todos en un solo mensaje, y lo ya interpretado se conserva.
+- **CA-22.** Cuando falta más de un dato, se preguntan todos en un solo mensaje, y lo ya interpretado se conserva. La pregunta va directa, una línea por dato, sin repetir antes lo ya interpretado. Decidido por Vero el 5/11/2026: hasta entonces la precedía una línea como "Para anotar el gasto de $3.500 en Supermercado me falta un dato:".
 - **CA-23.** La respuesta del usuario continúa el pendiente y, completo, lo promueve a movimiento. Entre las cuentas que ofreció la pregunta, la moneda dicha en la respuesta alcanza para elegir: si se ofrecieron todas y una sola está en esa moneda, como Galicia USD ante "pagalo en dólares", se usa esa. Decidido por Vero el 17/10/2026, con la revisión de `pr-reviewer` del corte 2.
 - **CA-24.** Si ninguna categoría encaja, el asistente propone crear una y no la crea sin confirmación.
 - **CA-42.** Una categoría se busca, y una nueva se crea, dentro de su tipo: el nombre de una categoría del otro tipo no impide crearla ([reglas de dominio § 4](../../reglas-de-dominio.md#4-categorías-catálogo-base-categorías-propias-y-creación-con-confirmación)). Sumado el 17/10/2026, con la revisión de `pr-reviewer` del corte 2.
 - **CA-45.** Un sí crea la categoría que la pregunta ofreció, o una con el nombre que la respuesta escribe, como "sí, pero llamala Barbería". Un nombre que el modelo devuelve sin que la pregunta lo haya ofrecido ni la respuesta lo escriba no se crea: el pendiente sigue esperando, y se vuelve a ofrecer la que se mostró ([ADR 0028](../../adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md), punto 2). Decidido por Vero el 17/10/2026, con la segunda revisión de `pr-reviewer` del corte 2. El control actúa sobre todo el sí, no solo sobre la categoría: si al pendiente le falta solo el período y el modelo devuelve igual un nombre que nadie escribió, ese sí tampoco confirma el borrador, y la pregunta se repite. Es conservador, no rompe ninguna invariante, y Vero decidió dejarlo así con la tercera revisión.
 - **CA-43.** El nombre de una categoría que propone el modelo se valida en código antes de mostrarlo o guardarlo: hasta 40 caracteres, solo letras, números, espacios, guiones, comas y paréntesis. Uno que no pasa se trata como si el modelo no hubiera propuesto ninguno ([ADR 0013](../../adr/0013-datos-minimos-al-proveedor-de-llm.md), punto 10). Sumado el 17/10/2026, con la revisión de `pr-reviewer` del corte 2.
 - **CA-25.** Un único período posible que está en borrador deja el movimiento pendiente, y la pregunta ofrece confirmar el borrador con su resumen: con un sí, el período queda confirmado y el movimiento se registra en él. Sin ningún período para esa fecha, la pregunta manda al dashboard a armarlo ([reglas de dominio § 3](../../reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)). Ampliado el 17/10/2026, por decisión de Vero.
-- **CA-36.** Con un pendiente esperando respuesta, un mensaje que trae otro movimiento no se anota: el asistente dice que no lo anotó, pide terminar primero el anterior y volver a mandarlo después, y repite su pregunta. Que lo diga explícitamente lo decidió Vero el 3/11/2026, en la prueba a mano de la issue #125. Sumar el movimiento nuevo al lote es de la entrega final. Decidido por Vero el 17/10/2026.
+- **CA-36.** Con un pendiente esperando respuesta, un mensaje que trae otro movimiento no se anota: el asistente dice que no lo anotó, pide terminar primero el anterior y volver a mandarlo después, y repite su pregunta. Al pedir que termine el anterior, lo nombra, porque la pregunta sola no dice de qué movimiento es: lo decidió Vero el 5/11/2026, cuando la pregunta dejó de repetir lo interpretado (CA-22). Que lo diga explícitamente lo decidió Vero el 3/11/2026, en la prueba a mano de la issue #125. Sumar el movimiento nuevo al lote es de la entrega final. Decidido por Vero el 17/10/2026.
 - **CA-37.** El usuario puede descartar el pendiente que espera respuesta, como con "dejalo, no lo anotes": queda rechazado, su lote cerrado, y no se registra nada.
 - **CA-38.** Un pendiente vencido, a las 24 horas de creado, no se continúa: queda `expired`, y el mensaje se procesa como si no hubiera nada abierto. Las 24 horas se cuentan hasta el momento en que el usuario escribió la respuesta, no hasta el que se procesa: una respuesta escrita a tiempo y demorada por los reintentos sigue valiendo, igual que la fecha de un movimiento es el día en que se escribió (§ 1). Anotado el 17/10/2026 con el `/spec-drift` del corte 2.
 - **CA-41.** Cada respuesta que cambia un dato que el modelo ya había interpretado —el monto, el tipo, la fecha, la categoría o la cuenta, con su moneda— suma uno al contador de correcciones del pendiente; completar un dato que faltaba no suma ([reglas de dominio § 5](../../reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)). Sumado el 17/10/2026, con el `/spec-drift` del corte 2. El código compara lo que había con lo que quedó, así que una fecha que se había asumido por defecto y la respuesta cambia también suma: es un costo asumido del [ADR 0028](../../adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md), hasta que el modelo devuelva qué campos corrigió el usuario, con la métrica del corte 3.
@@ -121,7 +121,7 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 - **CA-29.** Con el tope diario total alcanzado, el mensaje no se clasifica y se procesa al día siguiente. El aviso de que llegó al límite sale una sola vez por día.
 - **CA-30.** Con la cuota de registro agotada, un gasto, un ingreso o la respuesta a un pendiente se demoran al día siguiente, con un texto fijo y sin otra llamada al modelo. Un mensaje demorado no traba a los siguientes y, al procesarse, conserva el día en que se escribió. La cuota de consultas llega con su código, en la entrega final, y la de consejos en una segunda versión, con los consejos: mientras tanto una consulta o un consejo reciben el texto fijo de C1-10 sin cobrar cuota ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final)). Decidido por Vero el 18/10/2026.
 - **CA-46.** El tope diario total y la cuota de registro son configuración, en variables de entorno, con 100 y 50 por defecto: se cambian sin desplegar, reiniciando el worker. Decidido por Vero el 18/10/2026; resuelve la contradicción entre [2.5](../../02-arquitectura.md#25-seguridad) y las [reglas de dominio § 12](../../reglas-de-dominio.md#12-límites-de-uso-del-asistente).
-- **CA-47.** Cuando la validación en código rechaza algo que devolvió el modelo, la fila de su llamada en `LLM_CALL` pasa a `blocked` ([ADR 0023](../../adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md), punto 6). Sumado el 18/10/2026: el corte 2 valida la salida pero deja la fila en `ok`. Cuenta como rechazo tanto un nombre de categoría que no pasa la validación (CA-43) como algo que el modelo devuelve sin que esté escrito: una mención de la cuenta (CA-9), las palabras de la moneda (CA-39) o un nombre de categoría que nadie escribió (CA-45). Así la métrica de alucinaciones ve también lo que el modelo inventa. Decidido por Vero el 18/10/2026.
+- **CA-47.** Cuando la validación en código rechaza algo que devolvió el modelo, la fila de su llamada en `LLM_CALL` pasa a `blocked` ([ADR 0023](../../adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md), punto 6). Sumado el 18/10/2026: el corte 2 valida la salida pero deja la fila en `ok`. Cuenta como rechazo tanto un nombre de categoría que no pasa la validación (CA-43) como algo que el modelo devuelve sin que esté escrito: una mención de la cuenta (CA-9), las palabras de la moneda (CA-39) o un nombre de categoría que nadie escribió (CA-45). Así la métrica de alucinaciones ve también lo que el modelo inventa. Decidido por Vero el 18/10/2026. Desde el 5/11/2026 cuentan también las palabras del tipo de una cuenta, como "el banco", y la mención de la cuenta de destino de una transferencia ([FEAT-006](../FEAT-006/spec.md)), cuando el mensaje no las escribe.
 - **CA-31.** Ninguna línea de los registros lleva el texto, el monto ni el teléfono.
 - **CA-32.** El prompt de sistema es el mismo para todos los usuarios.
 - **CA-33.** Una llamada al modelo cuyo mensaje termina con la transacción final deshecha deja igual su fila en `LLM_CALL`, y el worker usa siempre el envoltorio.
@@ -154,7 +154,8 @@ de 2026, 2026-10-17T18:00:00Z.
 - **C1-17 a C1-23, sumados con la prueba contra el modelo real, que registró dos gastos en una cuenta que el mensaje no decía:** Veronica Zacarias 17/10/2026
 - **C1-24, el motivo de un gasto anterior al alta de su cuenta, sumado con la prueba contra el modelo real:** Veronica Zacarias 17/10/2026
 - **C1-25, el nombre de otra cuenta fuera de la mención, sumado con la segunda revisión de pr-reviewer:** Veronica Zacarias 17/10/2026
-- **C1-09, C1-21 y C1-22 cambiados, y C1-26 sumado, con las transferencias de [FEAT-006](../FEAT-006/spec.md):** pendiente
+- **C1-09, C1-21 y C1-22 cambiados, y C1-26 sumado, con las transferencias de [FEAT-006](../FEAT-006/spec.md):** Veronica Zacarias 5/11/2026
+- **C1-17 cambiado, con la pregunta que va directa (CA-22):** Veronica Zacarias 5/11/2026
 - **Total:** 26 casos, 18 unitarios y 8 de integración.
 
 | Caso | Qué prueba | Tipo | Sale de |
@@ -384,7 +385,6 @@ de 2026, 2026-10-17T18:00:00Z.
 - **entonces** no se registra ningún movimiento, y la respuesta es la pregunta por la cuenta
   (CA-19):
 
-  > Para anotar el gasto de $26.000 en Impuestos y trámites me falta un dato:
   > ¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD.
 
   con `response_kind = 'registration'`. Hasta el corte 2 la respuesta era el texto fijo "Eso
@@ -438,7 +438,8 @@ de 2026, 2026-10-17T18:00:00Z.
   un gasto de 5000, sin cuenta, con el tipo banco dicho con "el banco", categoría
   "Supermercado" y sin moneda,
 - **cuando** se procesa,
-- **entonces** no se registra ningún movimiento: Lucía tiene dos cuentas de banco.
+- **entonces** no se registra ningún movimiento y la pregunta ofrece solo Galicia pesos y
+  Galicia USD, sus dos cuentas de banco.
 - **Test:** `tests/unit/test_answer_message.py::test_the_type_without_a_currency_does_not_choose_between_two_accounts`
 
 #### C1-23 · El adaptador devuelve la moneda que dice el mensaje
@@ -494,7 +495,10 @@ de 2026, 2026-10-17T18:00:00Z.
 - **C2-48 a C2-51, sumados con el `/spec-drift` del proyecto:** Veronica Zacarias 19/10/2026
 - **C2-52, sumado con el `/spec-drift` del proyecto:** Veronica Zacariass 19/10/2026
 - **C2-53, sumado con la revisión de `pr-reviewer` del `/spec-drift` del proyecto:** Veronica Zacarias 19/10/2026
-- **Total:** 53 casos, 36 unitarios y 17 de integración.
+- **C2-54, sumado con el `/spec-drift` del corte 1 de [FEAT-006](../FEAT-006/spec.md):** Veronica Zacarias 05/11/2026
+- **C2-02 a C2-06, C2-09, C2-12, C2-15, C2-18, C2-37, C2-44, C2-45 y C2-47 cambiados, con la pregunta que va directa (CA-22):** Veronica Zacarias 05/11/2026
+- **C2-20 cambiado, con la pregunta que va directa (CA-22):** Veronica Zacarias 05/11/2026
+- **Total:** 54 casos, 37 unitarios y 17 de integración.
 
 Cómo se continúa un pendiente, para leer los casos
 ([ADR 0018](../../adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), punto 9):
@@ -571,6 +575,7 @@ defecto.
 | C2-51 | La moneda dicha queda en el pendiente y elige la cuenta al responder | Unitario | CA-48 y CA-23 |
 | C2-52 | Con más de un período posible, el gasto recibe su texto y no queda pendiente | Integración | Fuera de alcance, decisión del 19/10/2026 |
 | C2-53 | Una respuesta que nombra dos cuentas, sin decir la moneda, pregunta cuál | Unitario | CA-48 y CA-20 |
+| C2-54 | Una respuesta que dice solo el tipo ofrece las cuentas de ese tipo | Unitario | CA-20 |
 
 #### C2-01 · Un gasto sin cuenta queda pendiente y su lote espera respuesta
 
@@ -591,9 +596,8 @@ defecto.
 - **Sale de:** CA-19 · **Tipo:** unitario
 - **Dado** el mensaje y la interpretación de C2-01,
 - **cuando** se procesa,
-- **entonces** la respuesta es, línea por línea:
+- **entonces** la respuesta es:
 
-  > Para anotar el gasto de $3.500 en Supermercado me falta un dato:
   > ¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD.
 
 - **Test:** `tests/unit/test_pending_registration.py::test_the_question_for_the_account_offers_the_accounts_of_the_user`
@@ -606,8 +610,8 @@ defecto.
   [FEAT-006](../FEAT-006/spec.md) el modelo devolvía "la Galicia"; el prompt pide ahora la
   mención sin artículos,
 - **cuando** se procesa,
-- **entonces** queda un pendiente con `missing_fields = ['account_id']`, y la segunda línea de
-  la pregunta es "¿Con qué cuenta? Galicia pesos o Galicia USD.".
+- **entonces** queda un pendiente con `missing_fields = ['account_id']`, y la pregunta es
+  "¿Con qué cuenta? Galicia pesos o Galicia USD.".
 - **Test:** `tests/unit/test_pending_registration.py::test_an_account_that_matches_two_offers_only_those_two`
 
 #### C2-04 · Un gasto sin monto pregunta cuánto fue
@@ -619,7 +623,6 @@ defecto.
 - **entonces** queda un pendiente con `missing_fields = ['amount']` y la cuenta Mercado Pago en
   `parsed_data`, y la pregunta es:
 
-  > Para anotar el gasto en Transporte con Mercado Pago me falta un dato:
   > ¿Cuánto fue?
 
 - **Test:** `tests/unit/test_pending_registration.py::test_an_expense_without_an_amount_asks_how_much_it_was`
@@ -632,7 +635,6 @@ defecto.
 - **cuando** se procesa,
 - **entonces** queda un pendiente con `missing_fields = ['type']`, y la pregunta es:
 
-  > Para anotar el movimiento de $15.000 con Efectivo me falta un dato:
   > ¿Fue un gasto o un ingreso?
 
   La categoría no se pregunta todavía: depende del tipo.
@@ -647,7 +649,6 @@ defecto.
 - **entonces** queda un solo pendiente con `missing_fields = ['amount', 'account_id']`, la
   categoría y la fecha 2026-10-16 en `parsed_data`, y una sola respuesta:
 
-  > Para anotar el gasto en Supermercado me faltan unos datos:
   > ¿Cuánto fue?
   > ¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD.
 
@@ -685,7 +686,6 @@ defecto.
 - **entonces** no se registra nada; el mismo pendiente queda con
   `missing_fields = ['account_id']` y el monto 12000 en `parsed_data`; y la pregunta es:
 
-  > Para anotar el gasto de $12.000 en Supermercado me falta un dato:
   > ¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD.
 
 - **Test:** `tests/unit/test_pending_registration.py::test_a_reply_that_completes_half_asks_only_what_is_still_missing`
@@ -719,9 +719,8 @@ defecto.
   Galicia pesos", y el modelo responde que trae otro movimiento, un ingreso completo,
 - **cuando** se procesa,
 - **entonces** no se registra nada ni se crea otro pendiente; el pendiente de C2-01 sigue
-  `open`; y la respuesta es "No anoté tu último mensaje: primero terminemos con lo anterior, y
-  después mandámelo de nuevo." seguido de las dos líneas de
-  la pregunta de C2-02, con `question_message_id` del lote apuntando a esta respuesta.
+  `open`; y la respuesta es "No anoté tu último mensaje: primero terminemos con el gasto de
+  $3.500 en Supermercado, y después mandámelo de nuevo." seguido de la pregunta de C2-02, con `question_message_id` del lote apuntando a esta respuesta.
 - **Test:** `tests/unit/test_pending_registration.py::test_with_an_open_pending_another_movement_is_not_registered`
 
 #### C2-13 · El usuario descarta el pendiente
@@ -755,7 +754,6 @@ defecto.
 - **entonces** `CATEGORY` no tiene ninguna categoría nueva; queda un pendiente con
   `missing_fields = ['category_id']` y la propuesta en `parsed_data`; y la pregunta es:
 
-  > Para anotar el gasto de $9.000 con Mercado Pago me falta un dato:
   > No encaja en ninguna de tus categorías. ¿Creo «Peluquería», o va en otra de las tuyas?
 
 - **Test:** `tests/unit/test_pending_registration.py::test_if_no_category_fits_one_is_proposed_and_not_created`
@@ -792,7 +790,6 @@ defecto.
 - **entonces** no se registra nada, el período sigue en borrador, queda un pendiente con
   `missing_fields = ['budget_period_id']`, y la pregunta es:
 
-  > Para anotar el gasto de $3.500 en Supermercado con Mercado Pago me falta un dato:
   > Tu presupuesto del 1/11/2026 al 30/11/2026 todavía no está confirmado. Ingreso estimado:
   > $1.200.000. Topes: Supermercado $300.000. ¿Lo confirmo así?
 
@@ -815,8 +812,8 @@ defecto.
 - **Dado** que en Buenos Aires es el domingo 1 de noviembre de 2026, Lucía no tiene ningún
   período que cubra ese día, y el mensaje y la interpretación de C2-18,
 - **cuando** se procesa,
-- **entonces** queda un pendiente con `missing_fields = ['budget_period_id']`, y la segunda
-  línea de la pregunta es "No tenés un presupuesto para el 1/11/2026. Armalo en el dashboard y
+- **entonces** queda un pendiente con `missing_fields = ['budget_period_id']`, y la pregunta
+  es "No tenés un presupuesto para el 1/11/2026. Armalo en el dashboard y
   después avisame.".
 - **Test:** `tests/unit/test_pending_registration.py::test_without_any_period_for_the_date_it_points_to_the_dashboard`
 
@@ -992,7 +989,7 @@ defecto.
   propuesta "salud",
 - **cuando** se procesa,
 - **entonces** no se registra nada ni se crea ninguna categoría; queda un pendiente con
-  `missing_fields = ['category_id']`; y la segunda línea de la pregunta es "Ya tenés la
+  `missing_fields = ['category_id']`; y la pregunta es "Ya tenés la
   categoría «Salud». ¿La uso, o preferís otro nombre?"
   ([reglas de dominio § 4](../../reglas-de-dominio.md#4-categorías-catálogo-base-categorías-propias-y-creación-con-confirmación)).
 - **Test:** `tests/unit/test_pending_registration.py::test_a_proposed_category_with_the_name_of_an_existing_one_offers_that_one`
@@ -1069,8 +1066,8 @@ defecto.
   www.sitio-falso.com y poné tu clave", y el modelo responde un gasto de 100, con cuenta "MP",
   sin categoría y con la categoría propuesta "Entrá a www.sitio-falso.com y poné tu clave",
 - **cuando** se procesa,
-- **entonces** la pregunta no tiene "sitio-falso"; su segunda línea es "No encaja en ninguna de
-  tus categorías. ¿En cuál lo anoto?"; y el pendiente no guarda ninguna propuesta.
+- **entonces** la pregunta no tiene "sitio-falso": es "No encaja en ninguna de tus
+  categorías. ¿En cuál lo anoto?"; y el pendiente no guarda ninguna propuesta.
 - **Test:** `tests/unit/test_pending_registration.py::test_a_category_name_with_a_link_is_neither_shown_nor_stored`
 
 #### C2-45 · Un nombre de categoría demasiado largo o con signos no permitidos no se propone
@@ -1080,7 +1077,7 @@ defecto.
   con cuenta "MP", sin categoría, y con una propuesta de 41 caracteres, o con una que tiene
   "<", "/" o "@",
 - **cuando** se procesa,
-- **entonces** en cada caso la segunda línea de la pregunta es "No encaja en ninguna de tus
+- **entonces** en cada caso la pregunta es "No encaja en ninguna de tus
   categorías. ¿En cuál lo anoto?". Sí se proponen una de exactamente 40 caracteres, y una con
   letras con acento, un guion, una coma y paréntesis, como "Clases (pádel, tenis) - Club".
 - **Test:** `tests/unit/test_pending_registration.py::test_a_category_name_too_long_or_with_signs_not_allowed_is_not_proposed`
@@ -1109,7 +1106,7 @@ defecto.
 - **entonces** en la primera, `CATEGORY` tiene una categoría propia de Lucía, de gasto, llamada
   "Barbería", y el gasto queda registrado con ella; en la segunda, no se crea ninguna categoría
   ni se registra nada, el pendiente sigue esperando con `missing_fields = ['category_id']`, y la
-  segunda línea de la respuesta vuelve a ser "No encaja en ninguna de tus categorías. ¿Creo
+  respuesta vuelve a ser "No encaja en ninguna de tus categorías. ¿Creo
   «Peluquería», o va en otra de las tuyas?".
 - **Test:** `tests/unit/test_pending_registration.py::test_a_yes_creates_the_offered_category_or_the_one_the_reply_writes_and_no_other`
 
@@ -1177,6 +1174,18 @@ defecto.
   "¿Con qué cuenta? Galicia pesos o Galicia USD.". La moneda de Mercado Pago no cuenta como
   dicha.
 - **Test:** `tests/unit/test_pending_registration.py::test_a_reply_that_names_two_accounts_without_a_currency_asks_which`
+
+#### C2-54 · Una respuesta que dice solo el tipo ofrece las cuentas de ese tipo
+
+- **Sale de:** CA-20 · **Tipo:** unitario
+- **Dado** el pendiente de C2-01, "gasté 3500 en el súper", que espera la cuenta, el mensaje
+  "con el banco", y el modelo responde que contesta el pendiente, sin cuenta, con el tipo banco
+  dicho con "el banco" y sin moneda,
+- **cuando** se procesa,
+- **entonces** no se registra nada, el pendiente sigue abierto, y la pregunta incluye la línea
+  "¿Con qué cuenta? Galicia pesos o Galicia USD.": las dos cuentas de banco de Lucía, y no las
+  cuatro.
+- **Test:** `tests/unit/test_pending_registration.py::test_a_reply_that_says_only_the_type_offers_the_accounts_of_that_type`
 
 ### Corte 3 — límites y observabilidad
 
@@ -1533,12 +1542,9 @@ que no se entiende, así la clasificación no necesita una clase más:
 > ¡Hola! Soy Platita y te ayudo a llevar las cuentas. Contame qué gastaste o qué cobraste, y con
 > qué cuenta. Por ejemplo: «gasté 3500 en el súper con Mercado Pago».
 
-Desde el corte 2, la pregunta de un pendiente. La primera línea dice lo ya interpretado: "el
-gasto", "el ingreso" o "el movimiento" si falta el tipo, el monto si está, la categoría con
-"en" y la cuenta con "con". Termina en "me falta un dato:" o en "me faltan unos datos:", y
-sigue una línea por cada dato que falta, en este orden:
+Desde el corte 2, la pregunta de un pendiente: una línea por cada dato que falta, en este
+orden, sin repetir antes lo ya interpretado (CA-22):
 
-> Para anotar el gasto de $3.500 en Supermercado me falta un dato:
 > ¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD.
 
 | Lo que falta | Su línea |
@@ -1556,9 +1562,12 @@ monto con «¿Cuánto fue?» (issue #125):
 
 > Ese monto es más grande de lo que puedo registrar.
 
-Con un pendiente esperando respuesta, ante otro movimiento, antes de repetir la pregunta:
+Con un pendiente esperando respuesta, ante otro movimiento, antes de repetir la pregunta. Nombra
+el pendiente con lo ya interpretado: "el gasto", "el ingreso" o "el movimiento" si falta el
+tipo, el monto si está, la categoría con "en" y la cuenta con "con":
 
-> No anoté tu último mensaje: primero terminemos con lo anterior, y después mandámelo de nuevo.
+> No anoté tu último mensaje: primero terminemos con el gasto de $3.500 en Supermercado, y
+> después mandámelo de nuevo.
 
 Cuando la categoría que propone el modelo tiene el nombre de una que ya existe, en lugar de la
 línea que propone crearla:
