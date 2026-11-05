@@ -70,6 +70,8 @@ class ParsedKey(StrEnum):
     ACCOUNT = "account"
     # The words of an account that named several: only those are offered.
     ACCOUNT_MENTION = "account_mention"
+    # The type of account the messages say, when it named several: only those are offered.
+    ACCOUNT_TYPE = "account_type"
     CATEGORY = "category"
     # The account a transfer reaches; ACCOUNT is the one it leaves.
     TO_ACCOUNT = "to_account"
@@ -94,6 +96,9 @@ class Interpretation:
     transaction_date: date
     # The currency the messages say, as an ISO code: the one of the movement (CA-48).
     currency: str | None = None
+    # The type of account the messages say, while no account is chosen: only those are offered
+    # (CA-20).
+    account_type: AccountType | None = None
 
 
 @dataclass(frozen=True)
@@ -163,7 +168,7 @@ def interpret(
     classification: Classification, text: str, accounts: Sequence[Account], today: date
 ) -> Interpretation:
     """What the first message of a movement says."""
-    account, mention = _named(text, classification, _movement_accounts(accounts))
+    account, mention, account_type = _named(text, classification, _movement_accounts(accounts))
     return Interpretation(
         type=_TRANSACTION_TYPES.get(classification.registration_type)
         if classification.registration_type is not None
@@ -175,6 +180,7 @@ def interpret(
         proposed_category=_valid_proposal(classification.proposed_category),
         transaction_date=movement_date(classification, today),
         currency=verified_currency(classification, text),
+        account_type=account_type,
     )
 
 
@@ -186,7 +192,11 @@ def continue_interpretation(
 ) -> Interpretation:
     """What a reply adds to the pending: what it says replaces what was understood."""
     movement_accounts = _movement_accounts(accounts)
-    account, mention = previous.account, previous.account_mention
+    account, mention, account_type = (
+        previous.account,
+        previous.account_mention,
+        previous.account_type,
+    )
     # What the reply says replaces what the first message said (CA-48).
     currency = verified_currency(classification, text) or previous.currency
     said = AccountWords(
@@ -199,17 +209,14 @@ def continue_interpretation(
         verified_type(said.type, said.type_words, text) is not None
     )
     if names_an_account or (currency is not None and mention is not None):
-        offered = (
-            account_candidates(mention, AccountWords(mention), movement_accounts)
-            if mention is not None
-            else movement_accounts
-        )
+        offered = _offered(mention, account_type, movement_accounts)
         chosen = _chosen(text, said, movement_accounts, offered)
         if chosen is not None:
-            account, mention = chosen.name, None
+            account, mention, account_type = chosen.name, None, None
         elif len(account_candidates(text, said, movement_accounts)) > 1:
             # The reply names several: they are offered, and none is kept (CA-20).
             account, mention = None, classification.account
+            account_type = verified_type(said.type, said.type_words, text)
     registration_type = classification.registration_type
     return replace(
         previous,
@@ -223,6 +230,7 @@ def continue_interpretation(
         proposed_category=_written_proposal(classification, text) or previous.proposed_category,
         transaction_date=classification.transaction_date or previous.transaction_date,
         currency=currency,
+        account_type=account_type,
     )
 
 
@@ -385,6 +393,7 @@ def to_parsed_data(interpretation: Interpretation, currency: str | None) -> dict
         ParsedKey.CURRENCY: currency,
         ParsedKey.ACCOUNT: interpretation.account,
         ParsedKey.ACCOUNT_MENTION: interpretation.account_mention,
+        ParsedKey.ACCOUNT_TYPE: interpretation.account_type,
         ParsedKey.CATEGORY: interpretation.category,
         ParsedKey.PROPOSED_CATEGORY: interpretation.proposed_category,
         ParsedKey.TRANSACTION_DATE: interpretation.transaction_date.isoformat(),
@@ -396,6 +405,7 @@ def from_parsed_data(parsed: Mapping[str, str | None], today: date) -> Interpret
     kept_type = parsed.get(ParsedKey.TYPE)
     kept_amount = parsed.get(ParsedKey.AMOUNT)
     kept_date = parsed.get(ParsedKey.TRANSACTION_DATE)
+    kept_account_type = parsed.get(ParsedKey.ACCOUNT_TYPE)
     return Interpretation(
         type=None if kept_type is None else TransactionType(kept_type),
         amount=None if kept_amount is None else Decimal(kept_amount),
@@ -405,6 +415,7 @@ def from_parsed_data(parsed: Mapping[str, str | None], today: date) -> Interpret
         proposed_category=parsed.get(ParsedKey.PROPOSED_CATEGORY),
         transaction_date=today if kept_date is None else date.fromisoformat(kept_date),
         currency=parsed.get(ParsedKey.CURRENCY),
+        account_type=None if kept_account_type is None else AccountType(kept_account_type),
     )
 
 
@@ -466,14 +477,15 @@ def same_name(stored: str, written: str | None) -> bool:
 
 def _named(
     text: str, classification: Classification, accounts: Sequence[Account]
-) -> tuple[str | None, str | None]:
-    """The account the message names, or the mention that named several of them."""
-    candidates = account_candidates(text, account_words(classification, text), accounts)
+) -> tuple[str | None, str | None, AccountType | None]:
+    """The account the message names, or the mention and the type that named several of them."""
+    words = account_words(classification, text)
+    candidates = account_candidates(text, words, accounts)
     if len(candidates) == 1:
-        return candidates[0].name, None
+        return candidates[0].name, None, None
     if len(candidates) > 1:
-        return None, classification.account
-    return None, None
+        return None, classification.account, verified_type(words.type, words.type_words, text)
+    return None, None, None
 
 
 def account_words(classification: Classification, text: str) -> AccountWords:
@@ -510,16 +522,11 @@ def _chosen(
 def _options(
     interpretation: Interpretation, accounts: Sequence[Account], primary_currency: str
 ) -> tuple[Account, ...]:
-    """The ones the mention named, or else all: first those in the primary currency of the
-    user, and within each currency the bank, the wallet and the cash, so the order never
+    """The ones the mention and the type named, or else all: first those in the primary currency
+    of the user, and within each currency the bank, the wallet and the cash, so the order never
     changes.
     """
-    mention = interpretation.account_mention
-    offered = list(accounts)
-    if mention is not None:
-        named = account_candidates(mention, AccountWords(mention), accounts)
-        if len(named) > 1:
-            offered = named
+    offered = _offered(interpretation.account_mention, interpretation.account_type, accounts)
     return tuple(
         sorted(
             offered,
@@ -530,6 +537,20 @@ def _options(
             ),
         )
     )
+
+
+def _offered(
+    mention: str | None, account_type: AccountType | None, accounts: Sequence[Account]
+) -> list[Account]:
+    """The accounts the mention and the type said name, when they are more than one; or else
+    all of them (CA-20).
+    """
+    named = list(accounts)
+    if mention is not None:
+        named = account_candidates(mention, AccountWords(mention), named)
+    if account_type is not None:
+        named = [account for account in named if account.type is account_type]
+    return named if len(named) > 1 else list(accounts)
 
 
 def _movement_accounts(accounts: Sequence[Account]) -> list[Account]:

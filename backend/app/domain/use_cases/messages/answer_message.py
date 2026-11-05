@@ -57,7 +57,10 @@ from app.domain.services.transactions.movement_resolution import (
     same_name,
     to_parsed_data,
 )
-from app.domain.services.transactions.pending_question import question_text
+from app.domain.services.transactions.pending_question import (
+    finish_the_pending_first_text,
+    question_text,
+)
 from app.domain.services.transactions.registration_confirmation import (
     before_opening_text,
     confirmation_text,
@@ -274,7 +277,9 @@ class AnswerMessage:
                 open_pending = OpenPending(
                     interpreted=dict(awaiting[1].parsed_data),
                     missing=awaiting[1].missing_fields,
-                    question=_question_of(unit_of_work, context, awaiting[1]),
+                    question=_question(
+                        unit_of_work, context, _missing_of(unit_of_work, context, awaiting[1])
+                    ),
                 )
             return _Loaded(
                 usage=usage,
@@ -525,11 +530,16 @@ def _continue(
             return True
         case PendingReply.OTHER_MOVEMENT:
             # One at a time in delivery 2: the new one is not registered (CA-36).
-            question = _question_of(unit_of_work, context, pending)
+            missing = _missing_of(unit_of_work, context, pending)
             reply = _add_reply(
                 unit_of_work,
                 context,
-                LINE_END.join((messages.FINISH_THE_PENDING_FIRST, question)),
+                LINE_END.join(
+                    (
+                        finish_the_pending_first_text(missing, _amount_currency(context, missing)),
+                        _question(unit_of_work, context, missing),
+                    )
+                ),
                 ResponseKind.REGISTRATION,
             )
             unit_of_work.pendings.update_batch(replace(batch, question_message_id=reply.id))
@@ -700,10 +710,12 @@ def _ask(
     )
 
 
+def _amount_currency(context: _Context, missing: Missing) -> str:
+    """The currency its amount is in: the one of its account, or else the primary one."""
+    return context.user.primary_currency if missing.account is None else missing.account.currency
+
+
 def _question(unit_of_work: UnitOfWorkPort, context: _Context, missing: Missing) -> str:
-    currency = (
-        context.user.primary_currency if missing.account is None else missing.account.currency
-    )
     limits: list[tuple[str, Decimal]] = []
     if missing.draft is not None:
         names = {category.id: category.name for category in context.categories}
@@ -712,13 +724,13 @@ def _question(unit_of_work: UnitOfWorkPort, context: _Context, missing: Missing)
             for budget in unit_of_work.budgets.list_by_period(missing.draft.id)
             if budget.category_id in names
         )
-    return question_text(missing, currency, limits)
+    return question_text(missing, limits)
 
 
-def _question_of(
+def _missing_of(
     unit_of_work: UnitOfWorkPort, context: _Context, pending: PendingTransaction
-) -> str:
-    """The question of an open pending, as it was asked: from what it kept, the same way."""
+) -> Missing:
+    """What an open pending lacks, as it was asked: from what it kept, the same way."""
     interpretation = from_parsed_data(pending.parsed_data, context.today)
     resolution = _resolve(unit_of_work, context, interpretation)
     if not isinstance(resolution, Missing):
@@ -732,7 +744,7 @@ def _question_of(
             account_options=(),
             draft=None,
         )
-    return _question(unit_of_work, context, resolution)
+    return resolution
 
 
 def _register(

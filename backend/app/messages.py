@@ -99,10 +99,9 @@ ASK_FOR_DETAILS = (
     "con qué cuenta. Por ejemplo: «gasté 3500 en el súper con Mercado Pago»."
 )
 
-# The question of a pending: what was understood, then one line for each thing that is missing,
-# in this order (domain rules, § 5; FEAT-003).
-QUESTION_ONE_MISSING = "Para anotar {movement} me falta un dato:"
-QUESTION_SEVERAL_MISSING = "Para anotar {movement} me faltan unos datos:"
+# The question of a pending: one line for each thing that is missing, in this order, without
+# what was understood before it (domain rules, § 5; FEAT-003, CA-22).
+# A pending, by what was understood of it, as the text that repeats its question says it.
 QUESTION_EXPENSE = "el gasto"
 QUESTION_INCOME = "el ingreso"
 QUESTION_MOVEMENT = "el movimiento"
@@ -133,8 +132,9 @@ DRAFT_LIMIT = "{category} {amount}"
 DRAFT_WITHOUT_LIMITS = "Sin topes."
 NO_PERIOD = "No tenés un presupuesto para el {date}. Armalo en el dashboard y después avisame."
 # Another movement while a pending awaits its reply: one at a time in delivery 2 (CA-36).
+# It names the pending: its question alone does not say which movement it is about (CA-36).
 FINISH_THE_PENDING_FIRST = (
-    "No anoté tu último mensaje: primero terminemos con lo anterior, y después mandámelo de nuevo."
+    "No anoté tu último mensaje: primero terminemos con {movement}, y después mandámelo de nuevo."
 )
 PENDING_DISCARDED = "Listo, no lo anoto."
 # The model refused to interpret the message: it is not tried again (CA-40).
