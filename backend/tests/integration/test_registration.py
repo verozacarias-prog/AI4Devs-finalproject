@@ -49,8 +49,8 @@ CANNOT_REGISTER = (
     "Eso todavía no lo sé anotar. Por ahora me manejo con gastos, ingresos y transferencias."
 )
 CANNOT_ANSWER = (
-    "Todavía no sé responder preguntas. Por ahora anoto gastos e ingresos, y tus saldos los ves "
-    "en el dashboard."
+    "Todavía no sé responder preguntas. Por ahora anoto gastos, ingresos y transferencias, y tus "
+    "saldos los ves en el dashboard."
 )
 
 

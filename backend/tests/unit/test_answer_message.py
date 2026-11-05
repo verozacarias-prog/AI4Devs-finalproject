@@ -105,8 +105,8 @@ def test_an_advice_gets_the_fixed_text() -> None:
     assert unit_of_work.transactions.added == []
     [reply] = unit_of_work.outbound_messages.added
     assert reply.text == (
-        "Todavía no sé responder preguntas. Por ahora anoto gastos e ingresos, y tus saldos "
-        "los ves en el dashboard."
+        "Todavía no sé responder preguntas. Por ahora anoto gastos, ingresos y transferencias, "
+        "y tus saldos los ves en el dashboard."
     )
     assert reply.response_kind is ResponseKind.FIXED_TEXT
 
