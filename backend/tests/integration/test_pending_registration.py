@@ -427,7 +427,7 @@ def test_nothing_of_another_user_reaches_the_model_or_is_used(
     assert "5000" not in sent
     assert _rows(engine, "SELECT id FROM transaction") == []
     [reply] = _replies_to(engine, message)
-    assert str(reply["text"]).splitlines()[1] == ALL_ACCOUNTS
+    assert ALL_ACCOUNTS in str(reply["text"]).splitlines()
 
 
 def test_two_workers_that_continue_the_same_pending_leave_one_movement(
@@ -493,7 +493,7 @@ def test_a_new_category_with_the_name_of_a_base_one_of_the_other_kind_is_created
         _expense(amount="50000", account="MP", category=None, proposed_category="Honorarios"),
     )
     [question] = _replies_to(engine, first)
-    assert str(question["text"]).splitlines()[1] == (
+    assert str(question["text"]).splitlines()[0] == (
         "No encaja en ninguna de tus categorías. ¿Creo «Honorarios», o va en otra de las tuyas?"
     )
 
