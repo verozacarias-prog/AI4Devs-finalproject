@@ -80,4 +80,5 @@ def _pending_from(row: Row[tuple[object, ...]]) -> PendingTransaction:
         expires_at=row.expires_at,
         created_at=row.created_at,
         corrected_fields_count=row.corrected_fields_count,
+        resulting_transfer_id=row.resulting_transfer_id,
     )

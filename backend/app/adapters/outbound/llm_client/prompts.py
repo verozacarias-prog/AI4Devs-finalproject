@@ -7,7 +7,7 @@ of any user (ADR 0013, point 12). The data of the task goes in the user message,
 from __future__ import annotations
 
 # Recorded with every call, so the metrics can compare one prompt with the next.
-CLASSIFICATION_PROMPT_VERSION = "classification-5"
+CLASSIFICATION_PROMPT_VERSION = "classification-7"
 
 # Between these, the data of the task: information, never instructions (ADR 0013, point 9).
 DATA_OPEN = "<datos>"
@@ -60,10 +60,21 @@ en null.
 Para un gasto o un ingreso:
 - amount: el monto como texto, con punto decimal y sin separador de miles, por ejemplo \
 "3500" o "3500.50". "3,5 lucas" es "3500" y "una luca" es "1000". Si no dice cuánto, null.
-- account: las palabras exactas del mensaje con que se refiere a la cuenta, copiadas tal \
-cual, por ejemplo "el banco", "la billetera" o las iniciales de una cuenta. No elijas una \
-cuenta de la lista: copiá lo que dice el mensaje. Cómo pagó no es una cuenta: "por \
-transferencia" o "con débito" solos son null. Si no se refiere a ninguna, null.
+- account: la mención de la cuenta, las palabras del mensaje que la nombran, copiadas tal \
+cual y seguidas como están escritas, sin los artículos ni las preposiciones con que empiezan: \
+de "con la nación" es "nación", de "con la UB" es "UB", de "de la Nación dólares" es "Nación \
+dólares" y de "con la nación de dólares" es "nación de dólares". No saques palabras del medio. \
+No elijas una cuenta de la lista: copiá \
+lo que dice el mensaje. Si el mensaje solo dice de qué tipo es la cuenta, como "el banco" o \
+"la billetera", account es null y el tipo va en account_type. Cómo pagó no es una cuenta: \
+"por transferencia" o "con débito" solos son null. Si no se refiere a ninguna, null.
+- account_type: el tipo de la cuenta, solo si el mensaje lo dice: "bank_account" (una cuenta \
+de banco, como "el banco"), "digital_wallet" (una billetera virtual, como "la billetera"), \
+"cash" (plata en mano, como "efectivo" o "del cajero"), "broker" (una cuenta de inversiones), \
+"credit_card" (una tarjeta de crédito) o "receivable" (plata que le deben). Si el mensaje no \
+dice el tipo, null.
+- account_type_words: las palabras exactas del mensaje que dicen el tipo, copiadas tal cual, \
+como "el banco" o "del cajero". Si account_type es null, null.
 - category: el nombre de la categoría de la lista del tipo que corresponde (de gasto o de \
 ingreso) que describe el movimiento, escrito igual que en la lista. Elegí una solo si el \
 movimiento es claramente de esa categoría. Si ninguna encaja con claridad, null, aunque haya \
@@ -80,6 +91,15 @@ nombre corto para una categoría nueva, como "Peluquería". Si category no es nu
 - transaction_date: el día del movimiento como AAAA-MM-DD, solo si el mensaje dice cuál \
 ("ayer", "el lunes", "el 3"), calculado desde el día en que la persona escribió. Si no dice, \
 null.
+
+Para una transferencia, amount, currency, currency_words y transaction_date van como en un \
+gasto. account, account_type y account_type_words son los de la cuenta de la que sale la \
+plata, y to_account, to_account_type y to_account_type_words los de la cuenta a la que llega, \
+con las mismas reglas: en "pasé 20000 de Nación dólares a Naranja X", account es "Nación \
+dólares" y to_account es "Naranja X"; en "retiré 20 lucas del cajero de la Nación", account \
+es "Nación", to_account es null, to_account_type es "cash" y to_account_type_words es "del \
+cajero". category y proposed_category van en null. Para lo que no es una transferencia, \
+to_account, to_account_type y to_account_type_words van en null.
 
 Si llega "{DATA_KEY_OPEN_PENDING}", el asistente le preguntó a la persona por ese movimiento: \
 "{DATA_KEY_INTERPRETED}" es lo que ya se entendió, "{DATA_KEY_MISSING}" lo que pidió y \

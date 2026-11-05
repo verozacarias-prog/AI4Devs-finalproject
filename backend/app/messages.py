@@ -60,6 +60,11 @@ ERROR_REFERENCE = "Reference: {reference}"
 # (domain rules, § 1; FEAT-003).
 REGISTERED_EXPENSE = "¡Listo! Anoté un gasto de {amount} en {account}."
 REGISTERED_INCOME = "¡Listo! Anoté un ingreso de {amount} en {account}."
+# The confirmation of a registered transfer (domain rules, § 13; FEAT-006).
+REGISTERED_TRANSFER = (
+    "¡Listo! Anoté una transferencia de {amount} de {from_account} a {to_account}."
+)
+TRANSFER_IS_NOT_AN_EXPENSE = "No cuenta como gasto."
 CONFIRMATION_DATE = "Fecha: {date}"
 CONFIRMATION_CURRENCY = "Moneda: {currency}"
 CONFIRMATION_CATEGORY = "Categoría: {category}"
@@ -81,10 +86,12 @@ DECIMAL_SEPARATOR = ","
 CURRENCY_SYMBOLS: Mapping[str, str] = {"ARS": "$", "USD": "US$"}
 
 # What the assistant cannot do yet answers a fixed text (ADR 0018; roadmap, entrega 2).
-CANNOT_REGISTER_YET = "Eso todavía no lo sé anotar. Por ahora me manejo con gastos e ingresos."
+CANNOT_REGISTER_YET = (
+    "Eso todavía no lo sé anotar. Por ahora me manejo con gastos, ingresos y transferencias."
+)
 CANNOT_ANSWER_YET = (
-    "Todavía no sé responder preguntas. Por ahora anoto gastos e ingresos, y tus saldos los ves "
-    "en el dashboard."
+    "Todavía no sé responder preguntas. Por ahora anoto gastos, ingresos y transferencias, y tus "
+    "saldos los ves en el dashboard."
 )
 # A message of no class: a greeting, or anything the model cannot place.
 ASK_FOR_DETAILS = (
@@ -92,10 +99,9 @@ ASK_FOR_DETAILS = (
     "con qué cuenta. Por ejemplo: «gasté 3500 en el súper con Mercado Pago»."
 )
 
-# The question of a pending: what was understood, then one line for each thing that is missing,
-# in this order (domain rules, § 5; FEAT-003).
-QUESTION_ONE_MISSING = "Para anotar {movement} me falta un dato:"
-QUESTION_SEVERAL_MISSING = "Para anotar {movement} me faltan unos datos:"
+# The question of a pending: one line for each thing that is missing, in this order, without
+# what was understood before it (domain rules, § 5; FEAT-003, CA-22).
+# A pending, by what was understood of it, as the text that repeats its question says it.
 QUESTION_EXPENSE = "el gasto"
 QUESTION_INCOME = "el ingreso"
 QUESTION_MOVEMENT = "el movimiento"
@@ -126,8 +132,9 @@ DRAFT_LIMIT = "{category} {amount}"
 DRAFT_WITHOUT_LIMITS = "Sin topes."
 NO_PERIOD = "No tenés un presupuesto para el {date}. Armalo en el dashboard y después avisame."
 # Another movement while a pending awaits its reply: one at a time in delivery 2 (CA-36).
+# It names the pending: its question alone does not say which movement it is about (CA-36).
 FINISH_THE_PENDING_FIRST = (
-    "No anoté tu último mensaje: primero terminemos con lo anterior, y después mandámelo de nuevo."
+    "No anoté tu último mensaje: primero terminemos con {movement}, y después mandámelo de nuevo."
 )
 PENDING_DISCARDED = "Listo, no lo anoto."
 # The model refused to interpret the message: it is not tried again (CA-40).

@@ -1,8 +1,9 @@
 """The record of each call to the model, with the ports replaced (FEAT-003, its spec.md).
 
 Case C3-16: the worker always gets the wrapper that records the calls (ADR 0023, point 3).
-Case C3-18: what the validation in code rejects leaves its call `blocked` (CA-47). The database
-is in memory and nothing reaches the provider.
+Case C3-18: what the validation in code rejects leaves its call `blocked` (CA-47). Case C3-25: so
+does a destination account or the words of a type the message does not write. The database is
+in memory and nothing reaches the provider.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ import pytest
 from app.adapters.inbound.message_worker.worker import create_worker
 from app.adapters.observability.llm_calls import RecordedLLM
 from app.adapters.outbound.llm_client.openai_llm import OpenAILLM
+from app.domain.entities.account import AccountType
 from app.domain.entities.classification import (
     Classification,
     MessageClass,
@@ -174,3 +176,55 @@ def _answer_recorded(
     AnswerMessage(unit_of_work, FixedClock(now), llm, calls=calls).execute(
         lucia.message(text, sent_at=now - timedelta(seconds=5))
     )
+
+
+@pytest.mark.parametrize(
+    ("text", "classification"),
+    [
+        (
+            "saqué 20 lucas de la Galicia pesos",
+            Classification(
+                MessageClass.REGISTRATION,
+                registration_type=RegistrationType.TRANSFER,
+                amount=Decimal("20000"),
+                account="Galicia pesos",
+                to_account="Efectivo",
+            ),
+        ),
+        (
+            "gasté 5 mil en la carnicería",
+            Classification(
+                MessageClass.REGISTRATION,
+                registration_type=RegistrationType.EXPENSE,
+                amount=Decimal("5000"),
+                account_type=AccountType.BANK_ACCOUNT,
+                account_type_words="el banco",
+                category="Supermercado",
+            ),
+        ),
+        (
+            "gasté 5 mil en la carnicería",
+            Classification(
+                MessageClass.REGISTRATION,
+                registration_type=RegistrationType.EXPENSE,
+                amount=Decimal("5000"),
+                account_type=AccountType.BANK_ACCOUNT,
+                category="Supermercado",
+            ),
+        ),
+    ],
+)
+def test_a_destination_or_a_type_the_message_does_not_write_leaves_the_call_blocked(
+    text: str, classification: Classification
+) -> None:
+    # Case C3-25. The last one says a type without words that say it.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    calls = InMemoryLlmCallLog()
+
+    _answer_recorded(unit_of_work, lucia, calls, text, classification, 0)
+
+    [call] = calls.recorded
+    assert calls.blocked == [call.id]
+    assert unit_of_work.transactions.added == []
+    assert unit_of_work.transfers.added == []

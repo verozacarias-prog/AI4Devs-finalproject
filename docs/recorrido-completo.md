@@ -193,7 +193,7 @@ sequenceDiagram
 
 ## 5. Registro de un movimiento por WhatsApp
 
-**Estado:** el registro de un gasto o un ingreso está construido, por el [chat web](#por-el-chat-web). El webhook y el envío por WhatsApp, elegir entre un presupuesto individual y uno familiar, las transferencias y las reglas recurrentes son de una segunda versión.
+**Estado:** el registro de un gasto, un ingreso o una transferencia completa entre cuentas propias en la misma moneda está construido, por el [chat web](#por-el-chat-web). Preguntar lo que le falta a una transferencia es el corte 2 de [FEAT-006](features/FEAT-006/spec.md). El webhook y el envío por WhatsApp, elegir entre un presupuesto individual y uno familiar, las transferencias entre monedas distintas y las reglas recurrentes son de una segunda versión.
 
 El camino más frecuente. La versión centrada en la experiencia está en
 [1.3](01-producto.md#13-diseño-y-experiencia-de-usuario); esta muestra procesos y tablas.
@@ -226,7 +226,7 @@ sequenceDiagram
     end
     W->>M: HTTPS envía la pregunta
     W->>DB: SQL UPDATE OUTBOUND_MESSAGE sent
-    M->>U: "Para anotar el gasto de $3.500 en Supermercado<br/>me faltan unos datos: ¿Con qué cuenta? …<br/>¿A qué presupuesto va? …"
+    M->>U: "¿Con qué cuenta? …<br/>¿A qué presupuesto va? …"
     U->>M: "Galicia, el de Familia"
     M->>API: HTTPS POST /webhook/whatsapp
     API->>DB: SQL INSERT INBOUND_MESSAGE

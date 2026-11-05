@@ -1,0 +1,268 @@
+# Especificación — FEAT-006 · Registro de una transferencia entre cuentas propias
+
+- **Historia de usuario:** [HU3](../../05-historias-de-usuario.md)
+- **Estado:** aprobada
+- **Fecha:** 2026-11-04
+
+## Alcance
+
+Una transferencia escrita en el chat, como "pasé 20000 de Galicia pesos a Mercado Pago" o
+"retiré 20 lucas del cajero de la Galicia pesos", queda registrada en `TRANSFER` y su efecto se
+ve en el saldo de las dos cuentas, en la pantalla de cuentas de [FEAT-001](../FEAT-001/spec.md).
+Reemplaza el texto fijo con que el asistente respondía una transferencia desde
+[FEAT-003](../FEAT-003/spec.md) (C1-09).
+
+Entra en la entrega final por decisión de Vero del 4 de noviembre de 2026
+([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final)), con este alcance:
+
+- **Entra:** la transferencia entre dos cuentas del usuario en la misma moneda, por el chat.
+- **No entra, y responde un texto fijo:** la transferencia entre cuentas de distinta moneda,
+  que necesita la cotización de [§ 6](../../reglas-de-dominio.md#6-multimoneda-y-cotización).
+- **No entra:** la comisión como gasto aparte, porque con un solo monto no hay comisión
+  ([§ 13](../../reglas-de-dominio.md#13-tarjetas-de-crédito-y-transferencias)); la carga desde
+  el dashboard con `POST /transfers`; las cuentas "Me deben" (§ 16); y corregir el tipo de un
+  pendiente con "no, era un gasto", que llega con
+  [corregir un movimiento](../../reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado).
+
+Con esta funcionalidad, una cuenta también se reconoce por su tipo sin una lista de palabras en
+el código: el modelo devuelve el tipo de cuenta que el mensaje dice y las palabras que lo dicen,
+y el código comprueba que esas palabras estén escritas
+([reglas de dominio § 1](../../reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma),
+[ADR 0028](../../adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md)). Vale
+igual para un gasto, un ingreso y los dos lados de una transferencia, así que cambia también
+CA-9 de [FEAT-003](../FEAT-003/spec.md).
+
+Partida en los tres cortes de las
+[convenciones de desarrollo](../../convenciones-de-desarrollo.md#1-cortes-verticales):
+
+1. **Camino feliz.** Una transferencia con las dos cuentas y el monto a la vista queda
+   registrada en un solo mensaje, y la cuenta se reconoce también por su tipo.
+2. **Errores y lo que exige confirmación.** Preguntar la cuenta que falta, las dos cuentas que
+   resultan la misma, el texto fijo de las monedas distintas y la fecha anterior al alta.
+3. **Observabilidad.** Lo que registran los registros y la fila de `LLM_CALL` de una
+   transferencia, sin montos ni nombres.
+
+No hay pantalla nueva.
+
+## Reglas de dominio que aplican
+
+- [§ 1 — Registro de un movimiento](../../reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma),
+  en qué cuenta nombra un mensaje y en la confirmación, que dice el tipo y su efecto.
+- [§ 2 — Cuentas y saldo calculado](../../reglas-de-dominio.md#2-cuentas-y-saldo-calculado),
+  en lo que una transferencia suma y resta, y en que nada se registra antes del alta.
+- [§ 5 — PENDING_TRANSACTION](../../reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración),
+  en el pendiente con `intent = 'transfer'` y el lote de uno.
+- [§ 12 — Límites de uso del asistente](../../reglas-de-dominio.md#12-límites-de-uso-del-asistente),
+  en la cuota de registro.
+- [§ 13 — Tarjetas de crédito y transferencias](../../reglas-de-dominio.md#13-tarjetas-de-crédito-y-transferencias)
+
+## Criterios de aceptación
+
+### Interpretar una transferencia
+
+- **CA-1.** Si el mensaje es una transferencia, el modelo devuelve el monto y, por cada lado, el
+  de origen y el de destino, las palabras con que el mensaje nombra la cuenta y, si el mensaje
+  dice de qué tipo es la cuenta, el tipo y las palabras que lo dicen.
+- **CA-2.** Cada lado se resuelve con la regla de CA-9 de [FEAT-003](../FEAT-003/spec.md): la
+  cuenta la decide el código, y una palabra que el mensaje no escribe nunca se usa.
+
+### Registrar una transferencia
+
+- **CA-3.** Una transferencia que dice el monto y nombra dos cuentas distintas del usuario, una
+  sola por lado y las dos en la misma moneda, queda registrada sin preguntar nada.
+- **CA-4.** La transferencia va en la moneda de sus cuentas, con el mismo monto en cada lado y
+  sin cotización.
+- **CA-5.** La fecha se resuelve igual que la de un gasto, con CA-6 de
+  [FEAT-003](../FEAT-003/spec.md).
+- **CA-6.** Una transferencia no se imputa a ningún período y no cambia el gastado ni el
+  ingreso de ningún presupuesto.
+- **CA-7.** La transferencia queda con `source = 'manual'`.
+- **CA-8.** La confirmación dice que es una transferencia, el monto, la cuenta de origen y la de
+  destino, que no cuenta como gasto, y lista la fecha y la moneda.
+- **CA-9.** Una transferencia completa también pasa por un lote de uno: su pendiente, con
+  `intent = 'transfer'`, queda promovido, con `resulting_transfer_id` igual a la transferencia,
+  y el lote cerrado, con la confirmación como `confirmation_message_id`.
+- **CA-10.** Registrar una transferencia es una sola operación de base de datos, como la de
+  CA-14 de [FEAT-003](../FEAT-003/spec.md): si algo falla, no queda ni la transferencia ni su
+  pendiente.
+- **CA-11.** El saldo de las dos cuentas, en la pantalla de cuentas, ya incluye la
+  transferencia: baja el de origen y sube el de destino.
+
+### Preguntar lo que falta — corte 2
+
+- **CA-12.** Una transferencia sin monto, o con un lado que no nombra exactamente una cuenta,
+  queda pendiente y se pregunta lo que falta en un solo mensaje, ofreciendo las cuentas del
+  usuario.
+- **CA-13.** Si los dos lados nombran la misma cuenta, no se registra nada y se preguntan las
+  dos, origen y destino: el asistente no sabe cuál de las dos menciones está mal. Decidido por
+  Vero el 4/11/2026.
+- **CA-14.** Una transferencia entre cuentas de distinta moneda no se registra y recibe un
+  texto fijo, sin otra llamada al modelo. Decidido por Vero el 4/11/2026.
+- **CA-15.** Una transferencia con fecha anterior al alta de cualquiera de sus dos cuentas no se
+  registra, y la respuesta lo explica como en CA-10 de [FEAT-003](../FEAT-003/spec.md).
+
+### Observabilidad — corte 3
+
+- **CA-16.** Los registros de una transferencia no tienen el monto, el texto del mensaje ni el
+  nombre de una cuenta.
+
+## Casos de prueba
+
+Los tipos de caso, qué se reemplaza en cada uno y los datos de partida son los de
+[FEAT-003](../FEAT-003/spec.md#casos-de-prueba). De esos datos importa además el tipo de cada
+cuenta: Galicia pesos y Galicia USD son de banco, Mercado Pago es una billetera y Efectivo es de
+efectivo.
+
+### Corte 1 — camino feliz
+
+- **Aprobado por:** Veronica Zacarias 5/11/2026
+- **Total:** 8 casos, 5 unitarios y 3 de integración.
+
+| Caso | Qué prueba | Tipo | Sale de |
+|---|---|---|---|
+| C1-01 | Una transferencia que nombra las dos cuentas queda registrada | Integración | CA-3, CA-4, CA-7, CA-9 y CA-10 |
+| C1-02 | La confirmación dice que es una transferencia y que no cuenta como gasto | Unitario | CA-8 |
+| C1-03 | El saldo de las dos cuentas ya incluye la transferencia | Integración | CA-11 |
+| C1-04 | Una transferencia no cambia el gastado del período | Integración | CA-6 |
+| C1-05 | El tipo de cuenta que dice el mensaje elige el destino | Unitario | CA-1 y CA-2 |
+| C1-06 | Un tipo dicho con palabras que el mensaje no escribe no se usa | Unitario | CA-2 |
+| C1-07 | Una fecha que el mensaje indica se respeta | Unitario | CA-5 |
+| C1-08 | El adaptador devuelve los dos lados de la transferencia | Unitario | CA-1 |
+
+#### C1-01 · Una transferencia que nombra las dos cuentas queda registrada
+
+- **Sale de:** CA-3, CA-4, CA-7, CA-9 y CA-10 · **Tipo:** integración
+- **Dado** un mensaje web de Lucía, "pasé 20000 de Galicia pesos a Mercado Pago", pendiente, con
+  `sent_at` 2026-10-17T17:59:55Z, y el modelo responde que es un registro de tipo transferencia,
+  con monto 20000, cuenta de origen "Galicia pesos" y cuenta de destino "Mercado Pago", sin tipo
+  de cuenta, sin moneda y sin fecha,
+- **cuando** el worker hace una ronda,
+- **entonces** `TRANSFER` tiene una sola fila, de Lucía, con origen Galicia pesos,
+  `from_amount = 20000.00`, `from_currency = 'ARS'`, destino Mercado Pago,
+  `to_amount = 20000.00`, `to_currency = 'ARS'`, `exchange_rate` nulo,
+  `transfer_date = 2026-10-17` y `source = 'manual'`; `TRANSACTION` sigue vacía; `PENDING_BATCH`
+  tiene un solo lote de Lucía, manual, `closed`, con `awaiting_reply` falso;
+  `PENDING_TRANSACTION` tiene un solo pendiente en ese lote, en la posición 1, `promoted`, con
+  `intent = 'transfer'`, `missing_fields` vacío, `resulting_transfer_id` igual a la
+  transferencia y `resulting_transaction_id` nulo; el mensaje queda `processed`; y la
+  confirmación es la única respuesta a ese mensaje, de tipo `registration`, y el lote la guarda
+  como `confirmation_message_id`.
+- **Test:** `tests/integration/test_registration.py::test_a_transfer_that_names_both_accounts_is_registered`
+
+#### C1-02 · La confirmación dice que es una transferencia y que no cuenta como gasto
+
+- **Sale de:** CA-8 · **Tipo:** unitario
+- **Dado** la transferencia de C1-01 ya resuelta: $20.000, de Galicia pesos a Mercado Pago,
+  17/10/2026, ARS,
+- **cuando** se arma la confirmación,
+- **entonces** el texto es, línea por línea:
+
+  > ¡Listo! Anoté una transferencia de $20.000 de Galicia pesos a Mercado Pago.
+  > No cuenta como gasto.
+  > Fecha: 17/10/2026
+  > Moneda: ARS
+
+- **Test:** `tests/unit/test_registration_confirmation.py::test_the_confirmation_says_it_is_a_transfer_and_does_not_count_as_an_expense`
+
+#### C1-03 · El saldo de las dos cuentas ya incluye la transferencia
+
+- **Sale de:** CA-11 · **Tipo:** integración
+- **Dado** la transferencia de C1-01 ya procesada, y ningún otro movimiento de Lucía,
+- **cuando** Lucía pide `GET /accounts`,
+- **entonces** Galicia pesos tiene saldo `330000.00`, que es 350.000 − 20.000, Mercado Pago
+  `100000.00`, que es 80.000 + 20.000, y Efectivo y Galicia USD conservan su saldo inicial.
+- **Test:** `tests/integration/test_registration.py::test_the_balance_of_both_accounts_already_includes_the_transfer`
+
+#### C1-04 · Una transferencia no cambia el gastado del período
+
+- **Sale de:** CA-6 · **Tipo:** integración
+- **Dado** la transferencia de C1-01 ya procesada, y ningún otro movimiento de Lucía,
+- **cuando** Lucía pide `GET /budget-periods/{period_id}/summary` de su período de octubre,
+- **entonces** el total gastado es `0.00` y el ingreso real es `0.00`.
+- **Test:** `tests/integration/test_registration.py::test_a_transfer_does_not_change_what_the_period_spent`
+
+#### C1-05 · El tipo de cuenta que dice el mensaje elige el destino
+
+- **Sale de:** CA-1 y CA-2 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía, "retiré 20 lucas del cajero de la Galicia pesos", y el modelo
+  responde una transferencia de 20000, con cuenta de origen "Galicia pesos", y de destino sin
+  palabras de nombre, con el tipo efectivo dicho con "del cajero",
+- **cuando** se procesa,
+- **entonces** la transferencia queda de Galicia pesos a Efectivo, la única cuenta de tipo
+  efectivo, por $20.000.
+- **Test:** `tests/unit/test_answer_message.py::test_the_type_of_account_the_message_says_chooses_the_destination`
+
+#### C1-06 · Un tipo dicho con palabras que el mensaje no escribe no se usa
+
+- **Sale de:** CA-2 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía, "saqué 20 lucas de la Galicia pesos", y el modelo responde una
+  transferencia de 20000, con cuenta de origen "Galicia pesos", y de destino sin palabras de
+  nombre, con el tipo efectivo dicho con "efectivo",
+- **cuando** se procesa,
+- **entonces** no se registra ninguna transferencia: "efectivo" no está escrito en el mensaje.
+- **Test:** `tests/unit/test_answer_message.py::test_a_type_said_with_words_the_message_does_not_write_is_not_used`
+
+#### C1-07 · Una fecha que el mensaje indica se respeta
+
+- **Sale de:** CA-5 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía, "ayer pasé 20000 de Galicia pesos a Mercado Pago", y el modelo
+  responde la transferencia de C1-01 con fecha 2026-10-16,
+- **cuando** se procesa,
+- **entonces** la transferencia queda con `transfer_date = 2026-10-16`, y la confirmación dice
+  "Fecha: 16/10/2026".
+- **Test:** `tests/unit/test_answer_message.py::test_a_date_the_message_gives_for_a_transfer_is_kept`
+
+#### C1-08 · El adaptador devuelve los dos lados de la transferencia
+
+- **Sale de:** CA-1 · **Tipo:** unitario
+- **Dado** el transporte HTTP del SDK, que responde la salida estructurada de una transferencia
+  de "20000", con cuenta de origen "Galicia pesos", cuenta de destino nula, tipo de destino
+  `cash` y sus palabras "del cajero",
+- **cuando** el adaptador clasifica el mensaje,
+- **entonces** la clasificación tiene `registration_type` transferencia, monto
+  `Decimal("20000")`, cuenta de origen "Galicia pesos", sin tipo de origen, cuenta de destino
+  nula, tipo de destino efectivo y palabras de destino "del cajero"; y el esquema que se le pidió
+  al modelo solo acepta como tipo de cuenta los del catálogo de `ACCOUNT.type` o nulo.
+- **Test:** `tests/unit/test_openai_llm.py::test_the_adapter_returns_both_sides_of_a_transfer`
+
+### Corte 2 — errores y lo que exige confirmación
+
+- **Aprobado por:** pendiente
+
+Se escriben antes de empezar el corte, con CA-12 a CA-15.
+
+### Corte 3 — observabilidad
+
+- **Aprobado por:** pendiente
+
+Se escriben antes de empezar el corte, con CA-16.
+
+## Mensajes al usuario
+
+| Situación | Texto |
+|---|---|
+| Transferencia registrada | La confirmación de C1-02 |
+| Transferencia entre monedas distintas (corte 2) | "Todavía no sé anotar una transferencia entre cuentas de distinta moneda. Por ahora, solo entre cuentas de la misma moneda." |
+
+## Reglas de dominio bajo prueba
+
+| Regla | Caso que la cubre |
+|---|---|
+| Nunca una cuenta por defecto (§ 1) | C1-06, y los del corte 2 |
+| Una transferencia no se imputa a ningún período (§ 13) | C1-01 y C1-04 |
+| Montos en `Decimal`, con la moneda al lado | C1-01 y C1-08 |
+| El saldo se calcula, no se guarda (§ 2) | C1-03 |
+
+## Sin cubrir
+
+- Lo que el modelo decide, como que "del cajero" dice efectivo, no lo prueba ningún test: se
+  prueba a mano con el modelo real
+  ([ADR 0028](../../adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md)).
+
+## Fuera de alcance
+
+Lo listado en [Alcance](#alcance) como "No entra".
+
+## Preguntas abiertas
+
+Ninguna.

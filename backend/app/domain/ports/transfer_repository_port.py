@@ -7,6 +7,8 @@ from app.domain.entities.transfer import Transfer
 
 
 class TransferRepositoryPort(Protocol):
+    def add(self, transfer: Transfer) -> None: ...
+
     def list_by_user(self, user_id: uuid.UUID) -> list[Transfer]:
         """Every transfer of the user, deleted ones included."""
         ...

@@ -1,8 +1,9 @@
-"""The question of a pending: what was understood, and what the user has to say (§ 5; FEAT-003).
+"""The question of a pending: what the user has to say (§ 5; FEAT-003).
 
-The first line says the movement as far as it is known, after a line that says why when the
-amount given does not fit where it is stored; then one line for each thing that is missing, in
-the order of MissingField, with what can be chosen.
+One line for each thing that is missing, in the order of MissingField, with what can be chosen,
+after a line that says why when the amount given does not fit where it is stored. It does not
+repeat what was understood (CA-22): only the text that repeats it for another movement names
+the pending (CA-36).
 """
 
 from __future__ import annotations
@@ -29,10 +30,26 @@ _MOVEMENT = {
 }
 
 
-def question_text(
-    missing: Missing, currency: str, limits: Sequence[tuple[str, Decimal]] = ()
-) -> str:
-    """`currency` is the one its amount is in; `limits`, those of the draft, by category."""
+def question_text(missing: Missing, limits: Sequence[tuple[str, Decimal]] = ()) -> str:
+    """`limits` are those of the draft, by category."""
+    lines = [_line(field, missing, limits) for field in missing.fields]
+    amount = missing.interpretation.amount
+    if amount is not None and too_large(amount):
+        # Why the amount it gave is asked again, before the question (domain rules, § 5).
+        lines.insert(0, messages.AMOUNT_TOO_LARGE)
+    return LINE_END.join(lines)
+
+
+def finish_the_pending_first_text(missing: Missing, currency: str) -> str:
+    """What precedes its question when another movement comes: it names the pending (CA-36).
+
+    `currency` is the one its amount is in.
+    """
+    return messages.FINISH_THE_PENDING_FIRST.format(movement=_movement(missing, currency))
+
+
+def _movement(missing: Missing, currency: str) -> str:
+    """The pending as far as it is known: "el gasto de $3.500 en Supermercado"."""
     interpretation = missing.interpretation
     movement = (
         messages.QUESTION_MOVEMENT
@@ -47,18 +64,7 @@ def question_text(
         movement += messages.QUESTION_CATEGORY_PART.format(category=missing.category.name)
     if missing.account is not None:
         movement += messages.QUESTION_ACCOUNT_PART.format(account=missing.account.name)
-    first = (
-        messages.QUESTION_ONE_MISSING
-        if len(missing.fields) == 1
-        else messages.QUESTION_SEVERAL_MISSING
-    )
-    lines = [first.format(movement=movement)]
-    amount = interpretation.amount
-    if amount is not None and too_large(amount):
-        # Why the amount it gave is asked again, before the question (domain rules, § 5).
-        lines.insert(0, messages.AMOUNT_TOO_LARGE)
-    lines.extend(_line(field, missing, limits) for field in missing.fields)
-    return LINE_END.join(lines)
+    return movement
 
 
 def _line(field: MissingField, missing: Missing, limits: Sequence[tuple[str, Decimal]]) -> str:

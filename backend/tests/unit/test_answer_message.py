@@ -3,8 +3,11 @@
 Cases C1-06, C1-07, C1-08 and C1-11: the date of a movement, the names of the account and the
 category, and the fixed text of an advice. Cases C1-17 to C1-22: which account the message
 names, decided by the code and not by the model. Case C1-24: a movement before the account was
-opened. Case C1-25: another account named outside the mention. Cases C2-22 and C2-23: a currency
-the message does not write, and the rounding of the amount. The database is in memory; the
+opened. Case C1-25: another account named outside the mention. Case C1-26: a word of the mention
+that is not in the name. Cases C2-22 and C2-23: a currency
+the message does not write, and the rounding of the amount. Cases C1-05 to C1-07 of FEAT-006:
+the type of account that chooses the destination of a transfer, a type said with words the
+message does not write, and the date of a transfer. The database is in memory; the
 integration tests check the same use case against PostgreSQL.
 """
 
@@ -14,6 +17,7 @@ from dataclasses import replace
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
+from app.domain.entities.account import AccountType
 from app.domain.entities.classification import Classification, MessageClass, RegistrationType
 from app.domain.entities.outbound_message import ResponseKind
 from app.domain.use_cases.messages.answer_message import AnswerMessage
@@ -101,10 +105,27 @@ def test_an_advice_gets_the_fixed_text() -> None:
     assert unit_of_work.transactions.added == []
     [reply] = unit_of_work.outbound_messages.added
     assert reply.text == (
-        "Todavía no sé responder preguntas. Por ahora anoto gastos e ingresos, y tus saldos "
-        "los ves en el dashboard."
+        "Todavía no sé responder preguntas. Por ahora anoto gastos, ingresos y transferencias, "
+        "y tus saldos los ves en el dashboard."
     )
     assert reply.response_kind is ResponseKind.FIXED_TEXT
+
+
+def _expense_by_type(
+    amount: str, account_type: AccountType, type_words: str, currency: str | None
+) -> FakeLLM:
+    """An expense whose account the message says only by its type."""
+    return FakeLLM(
+        Classification(
+            MessageClass.REGISTRATION,
+            registration_type=RegistrationType.EXPENSE,
+            amount=Decimal(amount),
+            account_type=account_type,
+            account_type_words=type_words,
+            category="Supermercado",
+            currency=currency,
+        )
+    )
 
 
 def _expense(amount: str, account: str, category: str, currency: str | None) -> FakeLLM:
@@ -134,7 +155,6 @@ def test_an_account_the_message_does_not_write_is_not_used() -> None:
     [reply] = unit_of_work.outbound_messages.added
     # Since cut 2 the account is asked, instead of the provisional fixed text (CA-19).
     assert reply.text.splitlines() == [
-        "Para anotar el gasto de $26.000 en Impuestos y trámites me falta un dato:",
         "¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD.",
     ]
     assert reply.response_kind is ResponseKind.REGISTRATION
@@ -184,10 +204,11 @@ def test_the_initials_name_an_account() -> None:
 
 
 def test_the_type_and_the_currency_name_an_account() -> None:
-    # Case C1-21. Galicia pesos is her only bank account in pesos.
+    # Case C1-21. Galicia pesos is her only bank account in pesos. Since FEAT-006 the model
+    # says the type, and the words that say it, instead of the code knowing the word "banco".
     unit_of_work = InMemoryUnitOfWork()
     lucia = Lucia(unit_of_work)
-    llm = _expense("5000", "el banco", "Supermercado", "ARS")
+    llm = _expense_by_type("5000", AccountType.BANK_ACCOUNT, "el banco", "ARS")
 
     AnswerMessage(unit_of_work, FixedClock(NOW), llm).execute(
         lucia.message("gasté 5 mil pesos en la carnicería con el banco")
@@ -198,16 +219,18 @@ def test_the_type_and_the_currency_name_an_account() -> None:
 
 
 def test_the_type_without_a_currency_does_not_choose_between_two_accounts() -> None:
-    # Case C1-22. She has two bank accounts.
+    # Case C1-22. She has two bank accounts, and only those are offered.
     unit_of_work = InMemoryUnitOfWork()
     lucia = Lucia(unit_of_work)
-    llm = _expense("5000", "el banco", "Supermercado", None)
+    llm = _expense_by_type("5000", AccountType.BANK_ACCOUNT, "el banco", None)
 
     AnswerMessage(unit_of_work, FixedClock(NOW), llm).execute(
         lucia.message("gasté 5 mil en la carnicería con el banco")
     )
 
     assert unit_of_work.transactions.added == []
+    [reply] = unit_of_work.outbound_messages.added
+    assert reply.text.splitlines() == ["¿Con qué cuenta? Galicia pesos o Galicia USD."]
 
 
 def test_an_expense_before_its_account_was_opened_says_why_it_is_not_registered() -> None:
@@ -258,6 +281,23 @@ def test_the_name_of_another_account_outside_the_mention_does_not_change_the_acc
     assert transaction.account_id == lucia.accounts["Mercado Pago"]
 
 
+def test_a_mention_with_a_word_that_is_not_in_the_name_does_not_name_it() -> None:
+    # Case C1-26. "nueva" is in the name of neither Galicia account.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    llm = _expense("2000", "galicia nueva", "Supermercado", None)
+
+    AnswerMessage(unit_of_work, FixedClock(NOW), llm).execute(
+        lucia.message("gasté 2000 en la verdulería con la galicia nueva")
+    )
+
+    assert unit_of_work.transactions.added == []
+    [reply] = unit_of_work.outbound_messages.added
+    assert reply.text.splitlines()[0] == (
+        "¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD."
+    )
+
+
 def test_a_currency_the_message_does_not_write_does_not_choose_the_account() -> None:
     # Case C2-22. The model says "pesos", which the message never wrote.
     unit_of_work = InMemoryUnitOfWork()
@@ -280,7 +320,7 @@ def test_a_currency_the_message_does_not_write_does_not_choose_the_account() -> 
 
     assert unit_of_work.transactions.added == []
     [reply] = unit_of_work.outbound_messages.added
-    assert reply.text.splitlines()[1] == "¿Con qué cuenta? Galicia pesos o Galicia USD."
+    assert reply.text.splitlines()[0] == "¿Con qué cuenta? Galicia pesos o Galicia USD."
 
 
 def test_the_amount_is_rounded_to_two_decimals_before_it_is_stored() -> None:
@@ -293,3 +333,78 @@ def test_the_amount_is_rounded_to_two_decimals_before_it_is_stored() -> None:
 
     [transaction] = unit_of_work.transactions.added
     assert transaction.amount == Decimal("3500.56")
+
+
+def test_the_type_of_account_the_message_says_chooses_the_destination() -> None:
+    # Case C1-05 of FEAT-006. Efectivo is her only cash account.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    llm = FakeLLM(
+        Classification(
+            MessageClass.REGISTRATION,
+            registration_type=RegistrationType.TRANSFER,
+            amount=Decimal("20000"),
+            account="Galicia pesos",
+            to_account_type=AccountType.CASH,
+            to_account_type_words="del cajero",
+        )
+    )
+
+    AnswerMessage(unit_of_work, FixedClock(NOW), llm).execute(
+        lucia.message("retiré 20 lucas del cajero de la Galicia pesos")
+    )
+
+    [transfer] = unit_of_work.transfers.added
+    assert transfer.from_account_id == lucia.accounts["Galicia pesos"]
+    assert transfer.to_account_id == lucia.accounts["Efectivo"]
+    assert transfer.from_amount == Decimal("20000.00")
+    assert transfer.to_amount == Decimal("20000.00")
+    assert unit_of_work.transactions.added == []
+
+
+def test_a_type_said_with_words_the_message_does_not_write_is_not_used() -> None:
+    # Case C1-06 of FEAT-006. "efectivo" is not in the message.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    llm = FakeLLM(
+        Classification(
+            MessageClass.REGISTRATION,
+            registration_type=RegistrationType.TRANSFER,
+            amount=Decimal("20000"),
+            account="Galicia pesos",
+            to_account_type=AccountType.CASH,
+            to_account_type_words="efectivo",
+        )
+    )
+
+    AnswerMessage(unit_of_work, FixedClock(NOW), llm).execute(
+        lucia.message("saqué 20 lucas de la Galicia pesos")
+    )
+
+    assert unit_of_work.transfers.added == []
+    assert unit_of_work.transactions.added == []
+
+
+def test_a_date_the_message_gives_for_a_transfer_is_kept() -> None:
+    # Case C1-07 of FEAT-006.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    llm = FakeLLM(
+        Classification(
+            MessageClass.REGISTRATION,
+            registration_type=RegistrationType.TRANSFER,
+            amount=Decimal("20000"),
+            account="Galicia pesos",
+            to_account="Mercado Pago",
+            transaction_date=OCTOBER_16,
+        )
+    )
+
+    AnswerMessage(unit_of_work, FixedClock(NOW), llm).execute(
+        lucia.message("ayer pasé 20000 de Galicia pesos a Mercado Pago")
+    )
+
+    [transfer] = unit_of_work.transfers.added
+    assert transfer.transfer_date == OCTOBER_16
+    [reply] = unit_of_work.outbound_messages.added
+    assert "Fecha: 16/10/2026" in reply.text.splitlines()

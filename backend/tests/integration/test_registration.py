@@ -1,6 +1,7 @@
-"""Registering an expense and an income, against PostgreSQL (FEAT-003, its spec.md).
+"""Registering an expense, an income and a transfer, against PostgreSQL (FEAT-003 and FEAT-006).
 
-Cases C1-01, C1-02, C1-05, C1-09, C1-10, C1-12, C1-13, C1-16 and C2-52, and case 4 of #125. The
+Cases C1-01, C1-02, C1-05, C1-09, C1-10, C1-12, C1-13, C1-16 and C2-52 of FEAT-003, cases C1-01,
+C1-03 and C1-04 of FEAT-006, and case 4 of #125. The
 worker runs whole rounds, the way its process does, with the model replaced by a double: no test
 reaches the provider. The double goes inside the wrapper that records each call, as the real
 adapter does.
@@ -44,10 +45,12 @@ pytestmark = pytest.mark.integration
 BASE_URL = "https://testserver"
 SAME_ORIGIN = {"Origin": BASE_URL}
 SENT_AT = NOW - timedelta(seconds=5)
-CANNOT_REGISTER = "Eso todavía no lo sé anotar. Por ahora me manejo con gastos e ingresos."
+CANNOT_REGISTER = (
+    "Eso todavía no lo sé anotar. Por ahora me manejo con gastos, ingresos y transferencias."
+)
 CANNOT_ANSWER = (
-    "Todavía no sé responder preguntas. Por ahora anoto gastos e ingresos, y tus saldos los ves "
-    "en el dashboard."
+    "Todavía no sé responder preguntas. Por ahora anoto gastos, ingresos y transferencias, y tus "
+    "saldos los ves en el dashboard."
 )
 
 
@@ -221,15 +224,15 @@ def test_the_balance_of_the_account_already_includes_the_expense(
     }
 
 
-def test_a_transfer_gets_the_fixed_text_and_registers_nothing(
+def test_a_card_purchase_gets_the_fixed_text_and_registers_nothing(
     settings: Settings, engine: Engine
 ) -> None:
-    # Case C1-09.
+    # Case C1-09. Until FEAT-006 the case was a transfer, which now has code behind it.
     message = inbound(
-        engine, "Lucía", "pasé 20000 de Galicia pesos a Mercado Pago", sent_at=SENT_AT
+        engine, "Lucía", "compré una heladera en 6 cuotas con la visa", sent_at=SENT_AT
     )
     llm = FakeLLM(
-        Classification(MessageClass.REGISTRATION, registration_type=RegistrationType.TRANSFER)
+        Classification(MessageClass.REGISTRATION, registration_type=RegistrationType.CARD_PURCHASE)
     )
 
     _run_round(settings, llm)
@@ -241,6 +244,131 @@ def test_a_transfer_gets_the_fixed_text_and_registers_nothing(
     [reply] = _replies_to(engine, message)
     assert reply["text"] == CANNOT_REGISTER
     assert reply["response_kind"] == "fixed_text"
+
+
+TRANSFER_TO_MERCADO_PAGO = "pasé 20000 de Galicia pesos a Mercado Pago"
+
+
+def _transfer_to_mercado_pago() -> FakeLLM:
+    """What the model answers for the transfer of C1-01 of FEAT-006."""
+    return FakeLLM(
+        Classification(
+            MessageClass.REGISTRATION,
+            registration_type=RegistrationType.TRANSFER,
+            amount=Decimal("20000"),
+            account="Galicia pesos",
+            to_account="Mercado Pago",
+        )
+    )
+
+
+def _transfers(engine: Engine) -> list[dict[str, object]]:
+    with engine.connect() as connection:
+        rows = connection.execute(
+            text(
+                "SELECT t.id, t.user_id, t.from_amount, t.from_currency, t.to_amount, "
+                "t.to_currency, t.exchange_rate, t.transfer_date, t.source, "
+                "f.name AS from_account, d.name AS to_account FROM transfer t "
+                "JOIN account f ON f.id = t.from_account_id "
+                "JOIN account d ON d.id = t.to_account_id"
+            )
+        ).all()
+    return [dict(row._mapping) for row in rows]
+
+
+def test_a_transfer_that_names_both_accounts_is_registered(
+    settings: Settings, engine: Engine
+) -> None:
+    # Case C1-01 of FEAT-006.
+    message = inbound(engine, "Lucía", TRANSFER_TO_MERCADO_PAGO, sent_at=SENT_AT)
+    lucia = user_id(engine, "Lucía")
+
+    _run_round(settings, _transfer_to_mercado_pago())
+
+    [transfer] = _transfers(engine)
+    assert transfer["user_id"] == lucia
+    assert transfer["from_account"] == "Galicia pesos"
+    assert transfer["from_amount"] == Decimal("20000.00")
+    assert transfer["from_currency"] == "ARS"
+    assert transfer["to_account"] == "Mercado Pago"
+    assert transfer["to_amount"] == Decimal("20000.00")
+    assert transfer["to_currency"] == "ARS"
+    assert transfer["exchange_rate"] is None
+    assert transfer["transfer_date"] == OCTOBER_17
+    assert transfer["source"] == "manual"
+    assert _count(engine, "SELECT count(*) FROM transaction") == 0
+    with engine.connect() as connection:
+        batches = connection.execute(
+            text(
+                "SELECT id, user_id, source, status, awaiting_reply, confirmation_message_id "
+                "FROM pending_batch"
+            )
+        ).all()
+        pendings = connection.execute(
+            text(
+                "SELECT batch_id, position, status, intent, missing_fields, "
+                "resulting_transfer_id, resulting_transaction_id FROM pending_transaction"
+            )
+        ).all()
+    [batch] = batches
+    assert batch.user_id == lucia
+    assert batch.source == "manual"
+    assert batch.status == "closed"
+    assert batch.awaiting_reply is False
+    [pending] = pendings
+    assert pending.batch_id == batch.id
+    assert pending.position == 1
+    assert pending.status == "promoted"
+    assert pending.intent == "transfer"
+    assert pending.missing_fields == []
+    assert pending.resulting_transfer_id == transfer["id"]
+    assert pending.resulting_transaction_id is None
+    assert status_of(engine, message)[0] == "processed"
+    [reply] = _replies_to(engine, message)
+    assert reply["response_kind"] == "registration"
+    assert batch.confirmation_message_id == reply["id"]
+
+
+def test_the_balance_of_both_accounts_already_includes_the_transfer(
+    settings: Settings, engine: Engine, client: TestClient
+) -> None:
+    # Case C1-03 of FEAT-006.
+    inbound(engine, "Lucía", TRANSFER_TO_MERCADO_PAGO, sent_at=SENT_AT)
+    _run_round(settings, _transfer_to_mercado_pago())
+    _enter_as(client, "Lucía")
+
+    response = client.get("/accounts")
+
+    assert response.status_code == 200
+    accounts = json.loads(response.text, parse_float=Decimal)["accounts"]
+    assert {account["name"]: account["balance"] for account in accounts} == {
+        "Galicia pesos": Decimal("330000.00"),
+        "Mercado Pago": Decimal("100000.00"),
+        "Efectivo": Decimal("25000.00"),
+        "Galicia USD": Decimal("500.00"),
+    }
+
+
+def test_a_transfer_does_not_change_what_the_period_spent(
+    settings: Settings, engine: Engine, client: TestClient
+) -> None:
+    # Case C1-04 of FEAT-006.
+    inbound(engine, "Lucía", TRANSFER_TO_MERCADO_PAGO, sent_at=SENT_AT)
+    _run_round(settings, _transfer_to_mercado_pago())
+    assert _count(engine, "SELECT count(*) FROM transfer") == 1
+    with engine.connect() as connection:
+        period = connection.execute(
+            text("SELECT id FROM budget_period WHERE user_id = :user"),
+            {"user": user_id(engine, "Lucía")},
+        ).scalar_one()
+    _enter_as(client, "Lucía")
+
+    response = client.get(f"/budget-periods/{period}/summary")
+
+    assert response.status_code == 200
+    summary = json.loads(response.text, parse_float=Decimal)
+    assert summary["total_spent"] == Decimal("0.00")
+    assert summary["actual_income"] == Decimal("0.00")
 
 
 def test_a_query_gets_the_fixed_text(settings: Settings, engine: Engine) -> None:

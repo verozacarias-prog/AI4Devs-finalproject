@@ -21,6 +21,7 @@ configuración de Meta, que no suma a lo que se evalúa. Se construye sobre lo q
 | El entorno `demo` desplegado, con el enlace personal de cada persona y el aviso de prueba | [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md) |
 | La pantalla de presupuesto: el resumen del período con cada categoría con tope y las sin tope que tuvieron movimientos, el detalle de una categoría con sus movimientos, y un selector que abre el período que cubre hoy. Sale de `GET /budget-periods/{period_id}/summary`, `GET /budgets/{budget_id}` y la lectura de `GET /budget-periods`, que se adelanta de la HU2. Decidido el 24 de octubre de 2026, porque sin el resumen la pantalla mostraba una sola categoría y no tenía de dónde sacar su id | [HU4](05-historias-de-usuario.md), [la API](04-api.md) |
 | Armar y confirmar el presupuesto de un período individual desde el dashboard: cadencia, día de inicio, ingreso estimado y tope por categoría, en borrador hasta confirmarlo | [HU2](05-historias-de-usuario.md), [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio), [la API](04-api.md) |
+| Transferencias entre cuentas propias en la misma moneda, por el chat: sacar efectivo, pasar de un banco a una billetera o pagar la tarjeta. Entre monedas distintas responden un texto fijo. Decidido por Vero el 4 de noviembre de 2026, para poder registrar un período completo | [FEAT-006](features/FEAT-006/spec.md), [reglas de dominio § 13](reglas-de-dominio.md#13-tarjetas-de-crédito-y-transferencias) |
 | Varios movimientos en un mensaje, con respuestas por número | [Reglas de dominio § 1 y § 5](reglas-de-dominio.md) |
 | Corregir, borrar y restaurar un movimiento confirmado, con el botón de responder un mensaje | [Reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado) |
 | Preguntas sobre los propios datos | [Reglas de dominio § 17](reglas-de-dominio.md#17-preguntas-sobre-los-propios-datos) |
@@ -46,8 +47,8 @@ se va a poder elegir ahí; todavía no tiene fecha. Decidido por Vero el 1 de no
 Pasa a una segunda versión, con su diseño ya escrito en `docs/`: el adaptador de WhatsApp, el
 login por código, los números habilitados y el alta conversacional; los consejos con RAG y la
 base de conocimiento; los grupos familiares y la elección entre el presupuesto individual y el
-de un grupo; la multimoneda, los reintegros, las transferencias, las compras con tarjeta y las
-reglas recurrentes; los procesos programados, entre ellos las alertas y el vencimiento de los
+de un grupo; la multimoneda, los reintegros, las transferencias entre monedas distintas y su comisión, las
+compras con tarjeta y las reglas recurrentes; los procesos programados, entre ellos las alertas y el vencimiento de los
 pendientes; la sección "Me deben"; y que el contador de correcciones no cuente un valor asumido,
 como la fecha, que el usuario cambia al responder (FEAT-003, CA-41).
 
@@ -66,10 +67,10 @@ movimientos en un mensaje.
 clases y todos los tipos de registro desde el inicio. Cuando el mensaje pide algo que todavía no
 tiene código, el asistente no llama al modelo otra vez ni cobra cuota:
 
-- Un registro que no es un gasto ni un ingreso: "Eso todavía no lo sé anotar. Por ahora me
-  manejo con gastos e ingresos."
-- Una consulta o un consejo: "Todavía no sé responder preguntas. Por ahora anoto gastos e
-  ingresos, y tus saldos los ves en el dashboard."
+- Un registro que no es un gasto, un ingreso ni una transferencia: "Eso todavía no lo sé
+  anotar. Por ahora me manejo con gastos, ingresos y transferencias."
+- Una consulta o un consejo: "Todavía no sé responder preguntas. Por ahora anoto gastos,
+  ingresos y transferencias, y tus saldos los ves en el dashboard."
 
 ## Alcance de la entrega 2
 
