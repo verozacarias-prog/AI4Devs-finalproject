@@ -2,6 +2,7 @@
 
 Case C3-12: no line carries the text, the amount or the phone (ADR 0023, point 2). Case C3-20:
 a message left for another attempt is not logged as answered, and its failure leaves a line.
+Case C3-01 of FEAT-006: neither does a transfer carry its amount, its text or an account.
 The worker writes its lines in a stream the test reads.
 """
 
@@ -41,6 +42,8 @@ pytestmark = pytest.mark.integration
 # What no line may carry: the amount in both ways, the words, the account, the name and the
 # phone of Lucía.
 PERSONAL_DATA = ("3500", "3.500", "súper", "con MP", "Mercado Pago", "Lucía", "000000000001")
+# The same for a transfer: its amount, its words and its two accounts.
+TRANSFER_DATA = ("20000", "20.000", "pasé", "Galicia", "Mercado Pago", "Lucía", "000000000001")
 
 
 @pytest.fixture
@@ -142,3 +145,49 @@ def test_a_message_left_for_another_attempt_is_not_logged_as_answered(
     assert error["message_id"] == str(message)
     for data in PERSONAL_DATA:
         assert data not in _free_text_of(stream), data
+
+
+def test_no_log_line_of_a_transfer_carries_the_amount_the_text_or_an_account(
+    settings: Settings, engine: Engine
+) -> None:
+    # Case C3-01 of FEAT-006. The first message stays pending; the reply registers it.
+    stream = io.StringIO()
+    first = inbound(
+        engine, "Lucía", "pasé 20000 de Galicia pesos", sent_at=NOW - timedelta(seconds=5)
+    )
+    _run_round(
+        settings,
+        FakeLLM(
+            Classification(
+                MessageClass.REGISTRATION,
+                registration_type=RegistrationType.TRANSFER,
+                amount=Decimal("20000"),
+                account="Galicia pesos",
+            )
+        ),
+        NOW,
+        stream,
+    )
+    reply_at = NOW + timedelta(minutes=1)
+    reply = inbound(engine, "Lucía", "a Mercado Pago", sent_at=reply_at - timedelta(seconds=5))
+
+    _run_round(
+        settings,
+        FakeLLM(
+            Classification(
+                MessageClass.REGISTRATION,
+                to_account="Mercado Pago",
+                pending_reply=PendingReply.CONTINUES,
+            )
+        ),
+        reply_at,
+        stream,
+    )
+
+    assert status_of(engine, first)[0] == "processed"
+    assert status_of(engine, reply)[0] == "processed"
+    assert len(events_of(stream, "message.answered")) == 2
+    free_text = _free_text_of(stream)
+    for data in TRANSFER_DATA:
+        assert data not in free_text, data
+    assert "000000000001" not in stream.getvalue()

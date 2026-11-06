@@ -1,6 +1,6 @@
 """A transfer that lacks something, and how a reply continues it, with the model replaced.
 
-Cases C2-02, C2-03, C2-05 to C2-07, C2-09 and C2-10 to C2-15 of
+Cases C2-02, C2-03, C2-05 to C2-07, C2-09, C2-10 to C2-15, C3-03 and C3-04 of
 docs/features/FEAT-006/spec.md. Each case that starts from an open pending gets it the way a
 user does: a first message that leaves it pending, and then the reply. The database is in
 memory; the integration tests check the same use case against PostgreSQL.
@@ -22,6 +22,7 @@ from app.domain.entities.classification import (
 )
 from app.domain.entities.outbound_message import ResponseKind
 from app.domain.entities.pending_transaction import BatchStatus, PendingIntent, PendingStatus
+from app.domain.entities.transfer import Transfer
 from app.domain.use_cases.messages.answer_message import AnswerMessage
 from tests.support.doubles import FixedClock, InMemoryUnitOfWork
 from tests.support.fake_llm import FakeLLM
@@ -449,3 +450,61 @@ def test_without_accounts_the_amount_of_the_pending_transfer_is_named_in_the_cur
         "No anoté tu último mensaje: primero terminemos con la transferencia de US$100, y "
         "después mandámelo de nuevo."
     )
+
+
+def _accounts_of(unit_of_work: InMemoryUnitOfWork, transfer: Transfer) -> tuple[str, str]:
+    """The names of the two accounts of a transfer, from its origin to its destination."""
+    names = {account.id: account.name for account in unit_of_work.accounts.added}
+    return names[transfer.from_account_id], names[transfer.to_account_id]
+
+
+def test_changing_both_accounts_adds_a_single_correction() -> None:
+    # Case C3-03. Both accounts changed, and they count as one field; the amount was missing.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    _answer(
+        unit_of_work,
+        lucia,
+        "pasé plata de Galicia pesos a Mercado Pago",
+        _transfer(amount=None, account="Galicia pesos", to_account="Mercado Pago"),
+    )
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "fueron 20000, de Efectivo a Galicia pesos",
+        _reply(amount="20000", account="Efectivo", to_account="Galicia pesos"),
+        now=NOW + timedelta(minutes=1),
+    )
+
+    [transfer] = unit_of_work.transfers.added
+    assert _accounts_of(unit_of_work, transfer) == ("Efectivo", "Galicia pesos")
+    [pending] = unit_of_work.pendings.added
+    assert pending.status is PendingStatus.PROMOTED
+    assert pending.corrected_fields_count == 1
+
+
+def test_choosing_among_the_offered_accounts_adds_no_correction() -> None:
+    # Case C3-04. The origin was missing: choosing it among the offered ones completes it.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    _answer(
+        unit_of_work,
+        lucia,
+        "pasé 20000 de galicia a Mercado Pago",
+        _transfer(account="galicia", to_account="Mercado Pago"),
+    )
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "de Galicia pesos",
+        _reply(account="Galicia pesos"),
+        now=NOW + timedelta(minutes=1),
+    )
+
+    [transfer] = unit_of_work.transfers.added
+    assert _accounts_of(unit_of_work, transfer) == ("Galicia pesos", "Mercado Pago")
+    [pending] = unit_of_work.pendings.added
+    assert pending.status is PendingStatus.PROMOTED
+    assert pending.corrected_fields_count == 0
