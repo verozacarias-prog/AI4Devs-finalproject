@@ -97,7 +97,10 @@ No hay pantalla nueva.
   dos, origen y destino: el asistente no sabe cuál de las dos menciones está mal. Decidido por
   Vero el 4/11/2026.
 - **CA-14.** Una transferencia entre cuentas de distinta moneda no se registra y recibe un
-  texto fijo, sin otra llamada al modelo. Decidido por Vero el 4/11/2026.
+  texto fijo, sin otra llamada al modelo. Decidido por Vero el 4/11/2026. Lo mismo vale si el
+  mensaje dice una moneda que no es la de una de sus cuentas, como "pasé 100 dólares de Galicia
+  pesos a Mercado Pago": anotarla en la moneda de las cuentas guardaría otro monto que el
+  dicho, y convertirla necesita la cotización. Decidido por Vero el 5/11/2026.
 - **CA-15.** Una transferencia con fecha anterior al alta de cualquiera de sus dos cuentas no se
   registra, y la respuesta lo explica como en CA-10 de [FEAT-003](../FEAT-003/spec.md).
 
@@ -228,10 +231,12 @@ efectivo.
 ### Corte 2 — errores y lo que exige confirmación
 
 - **Aprobado por:** Veronica Zacarias 05/11/2026
-- **Total:** 13 casos, 10 unitarios y 3 de integración.
+- **C2-14, sumado al ver que la moneda dicha no frenaba una transferencia:** Veronica Zacarias 05/11/2026
+- **Total:** 14 casos, 11 unitarios y 3 de integración.
 
-Las cuentas se ofrecen en el orden en que se dieron de alta: Galicia pesos, Mercado Pago,
-Efectivo y Galicia USD. Cuando falta un lado, la pregunta ofrece las cuentas que nombra su
+Las cuentas se ofrecen en el mismo orden que en la pregunta de un gasto: primero las de la moneda
+primaria del usuario y, en cada moneda, banco, billetera y efectivo, antes que el resto, y por
+nombre. Para Lucía es Galicia pesos, Mercado Pago, Efectivo y Galicia USD. Cuando falta un lado, la pregunta ofrece las cuentas que nombra su
 mención, o todas si no hay mención, menos la del otro lado, que ya se sabe. Igual pregunta,
 aunque quede una sola: ofrecer no es elegir. Decidido por Vero el 5/11/2026. Lo que falta de una
 transferencia se nombra por su campo en `TRANSFER`: `amount`, `from_account_id` y
@@ -253,6 +258,7 @@ de registro, como un gasto pendiente; una que recibe el texto fijo de CA-14 no l
 | C2-11 | Con fecha anterior al alta solo del destino, la respuesta nombra el destino | Unitario | CA-15 |
 | C2-12 | Con una transferencia pendiente, otro movimiento no se anota y la respuesta la nombra | Unitario | CA-12 |
 | C2-13 | Un monto que no entra se vuelve a preguntar, diciendo por qué | Unitario | CA-12 |
+| C2-14 | Una moneda dicha que no es la de las cuentas recibe el texto fijo | Unitario | CA-14 |
 
 #### C2-01 · Una transferencia sin destino queda pendiente y pregunta a qué cuenta fue
 
@@ -422,6 +428,18 @@ de registro, como un gasto pendiente; una que recibe el texto fijo de CA-14 no l
 
 - **Test:** `tests/unit/test_pending_transfer.py::test_an_amount_that_does_not_fit_is_asked_again_saying_why`
 
+#### C2-14 · Una moneda dicha que no es la de las cuentas recibe el texto fijo
+
+- **Sale de:** CA-14 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía, "pasé 100 dólares de Galicia pesos a Mercado Pago", y el modelo
+  responde una transferencia de 100, con moneda USD dicha con "dólares", cuenta de origen
+  "Galicia pesos" y de destino "Mercado Pago", las dos en ARS,
+- **cuando** se procesa,
+- **entonces** no se registra ninguna transferencia ni queda ningún pendiente, y la respuesta es
+  "Todavía no sé anotar una transferencia en otra moneda que la de sus cuentas. Por ahora, solo
+  en la moneda de las dos cuentas.", con `response_kind = 'fixed_text'`.
+- **Test:** `tests/unit/test_pending_transfer.py::test_a_currency_said_that_is_not_the_one_of_the_accounts_gets_the_fixed_text`
+
 ### Corte 3 — observabilidad
 
 - **Aprobado por:** pendiente
@@ -438,6 +456,7 @@ Se escriben antes de empezar el corte, con CA-16.
 | Falta la cuenta de destino (corte 2) | "¿A qué cuenta fue? {cuentas}." |
 | Las dos cuentas son la misma (corte 2) | "La cuenta de origen y la de destino no pueden ser la misma.", antes de las dos preguntas |
 | Transferencia entre monedas distintas (corte 2) | "Todavía no sé anotar una transferencia entre cuentas de distinta moneda. Por ahora, solo entre cuentas de la misma moneda." |
+| Transferencia en otra moneda que la de sus cuentas (corte 2) | "Todavía no sé anotar una transferencia en otra moneda que la de sus cuentas. Por ahora, solo en la moneda de las dos cuentas." |
 | Fecha anterior al alta de una de sus cuentas (corte 2) | El texto de CA-10 de [FEAT-003](../FEAT-003/spec.md), con "transferiste", y la cuenta de origen si la fecha es anterior al alta de las dos |
 | Otro movimiento con una transferencia pendiente (corte 2) | El texto de CA-36 de [FEAT-003](../FEAT-003/spec.md), que la nombra como "la transferencia de {monto} de {origen} a {destino}", con lo que se sabe |
 

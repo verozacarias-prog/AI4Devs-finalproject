@@ -71,6 +71,11 @@ tiene código, el asistente no llama al modelo otra vez ni cobra cuota:
   anotar. Por ahora me manejo con gastos, ingresos y transferencias."
 - Una consulta o un consejo: "Todavía no sé responder preguntas. Por ahora anoto gastos,
   ingresos y transferencias, y tus saldos los ves en el dashboard."
+- Una transferencia entre cuentas de distinta moneda: "Todavía no sé anotar una transferencia
+  entre cuentas de distinta moneda. Por ahora, solo entre cuentas de la misma moneda."
+  Y una en otra moneda que la de sus cuentas: "Todavía no sé anotar una transferencia en otra
+  moneda que la de sus cuentas. Por ahora, solo en la moneda de las dos cuentas."
+  ([FEAT-006](features/FEAT-006/spec.md), CA-14).
 
 ## Alcance de la entrega 2
 
