@@ -63,7 +63,9 @@ Lo que ya está decidido acota la solución:
 9. **Retención.** Las filas no se borran por plazo, porque no tienen contenido. Cuando se borra
    una cuenta, sus filas pierden el vínculo con el mensaje y conservan el resto.
 10. **Un contador de correcciones en el pendiente.** `PENDING_TRANSACTION` cuenta cuántos campos
-    interpretados por el modelo cambió el usuario antes de confirmar. Qué cuenta como corrección
+    que ya tenían un valor cambió el usuario antes de confirmar, los haya interpretado el modelo o
+    completado el sistema por defecto: estima cuántos registros no salieron bien del primer
+    mensaje, sin buscar quién se equivocó. Qué cuenta como corrección
     está en las [reglas de dominio § 5](../reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración).
 11. **Las métricas salen de consultas SQL en un script del repositorio,** no de código de la
     aplicación. Son cuatro:

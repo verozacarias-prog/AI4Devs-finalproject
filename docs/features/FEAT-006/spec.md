@@ -112,8 +112,9 @@ No hay pantalla nueva.
 - **CA-17.** Un pendiente de transferencia cuenta las correcciones de la respuesta como uno de
   gasto ([reglas de dominio § 5](../../reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)):
   cambiar el monto suma uno, cambiar la fecha suma uno, y cambiar una cuenta, o las dos, suma
-  uno. Completar un lado que faltaba, o elegir entre las cuentas ofrecidas, no suma. Decidido
-  por Vero el 6/11/2026; resuelve la issue #146.
+  uno. Completar un lado que faltaba, o elegir entre las cuentas ofrecidas, no suma, y tampoco
+  completar un monto que no se podía guardar. Decidido por Vero el 6/11/2026; resuelve la issue
+  #146.
 - **CA-18.** La fila de `LLM_CALL` de una clasificación que resulta una transferencia dice qué
   campos de la transferencia vinieron vacíos, como CA-34 de [FEAT-003](../FEAT-003/spec.md): los
   de un gasto menos la categoría, que una transferencia no lleva, y más la cuenta de destino,
@@ -471,7 +472,8 @@ un gasto; una que recibe el texto fijo de CA-14 no la gasta.
 ### Corte 3 — observabilidad
 
 - **Aprobado por:** Veronica Zacarias 6/11/2026
-- **Total:** 5 casos, 2 unitarios y 3 de integración.
+- **C3-06, sumado con el `/spec-drift` del corte 3:** Veronica Zacarias 6/11/2026
+- **Total:** 6 casos, 3 unitarios y 3 de integración.
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
@@ -480,6 +482,7 @@ un gasto; una que recibe el texto fijo de CA-14 no la gasta.
 | C3-03 | Cambiar las dos cuentas suma una sola corrección | Unitario | CA-17 |
 | C3-04 | Elegir entre las cuentas ofrecidas no suma una corrección | Unitario | CA-17 |
 | C3-05 | La fila de la clasificación de una transferencia dice qué campos vinieron vacíos | Integración | CA-18 |
+| C3-06 | Completar un monto que no se podía guardar no suma una corrección | Unitario | CA-17 |
 
 #### C3-01 · Ninguna línea de los registros de una transferencia lleva el monto, el texto ni una cuenta
 
@@ -542,6 +545,19 @@ un gasto; una que recibe el texto fijo de CA-14 no la gasta.
   `transaction_date`, sin `category` y sin ningún valor de la salida.
 - **Test:** `tests/integration/test_llm_calls.py::test_the_row_of_a_transfer_says_which_of_its_fields_came_empty`
 
+#### C3-06 · Completar un monto que no se podía guardar no suma una corrección
+
+- **Sale de:** CA-17 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía, "pasé 100000000000000000000 de Galicia pesos a Mercado Pago",
+  que queda pendiente porque el modelo responde una transferencia de 100000000000000000000, con
+  cuenta de origen "Galicia pesos" y de destino "Mercado Pago", y ese monto no se puede guardar;
+  y la respuesta "fueron 20000", que continúa el pendiente con monto 20000,
+- **cuando** se procesa la respuesta,
+- **entonces** se registra la transferencia de $20.000 de Galicia pesos a Mercado Pago, y el
+  pendiente queda `promoted` con `corrected_fields_count = 0`: el monto faltaba, y completarlo
+  no es una corrección.
+- **Test:** `tests/unit/test_pending_transfer.py::test_completing_an_amount_that_could_not_be_stored_adds_no_correction`
+
 ## Mensajes al usuario
 
 | Situación | Texto |
@@ -566,7 +582,7 @@ un gasto; una que recibe el texto fijo de CA-14 no la gasta.
 | Una transferencia no se imputa a ningún período (§ 13) | C1-01 y C1-04 |
 | Montos en `Decimal`, con la moneda al lado | C1-01 y C1-08 |
 | El saldo se calcula, no se guarda (§ 2) | C1-03 |
-| Qué cuenta como corrección (§ 5) | C3-02, C3-03 y C3-04 |
+| Qué cuenta como corrección (§ 5) | C3-02, C3-03, C3-04 y C3-06 |
 
 ## Sin cubrir
 

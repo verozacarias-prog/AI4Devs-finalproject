@@ -1,7 +1,7 @@
 # Especificación — FEAT-003 · Registro de un gasto y de un ingreso
 
 - **Historia de usuario:** [HU3](../../05-historias-de-usuario.md)
-- **Estado:** aprobada para los tres cortes: C1-01 a C1-25, C2-01 a C2-53 y C3-01 a C3-24
+- **Estado:** aprobada para los tres cortes: C1-01 a C1-25, C2-01 a C2-55 y C3-01 a C3-25
 - **Fecha:** 2026-10-16
 
 ## Alcance
@@ -104,7 +104,7 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 - **CA-36.** Con un pendiente esperando respuesta, un mensaje que trae otro movimiento no se anota: el asistente dice que no lo anotó, pide terminar primero el anterior y volver a mandarlo después, y repite su pregunta. Al pedir que termine el anterior, lo nombra, porque la pregunta sola no dice de qué movimiento es: lo decidió Vero el 5/11/2026, cuando la pregunta dejó de repetir lo interpretado (CA-22). Que lo diga explícitamente lo decidió Vero el 3/11/2026, en la prueba a mano de la issue #125. Sumar el movimiento nuevo al lote es de la entrega final. Decidido por Vero el 17/10/2026.
 - **CA-37.** El usuario puede descartar el pendiente que espera respuesta, como con "dejalo, no lo anotes": queda rechazado, su lote cerrado, y no se registra nada.
 - **CA-38.** Un pendiente vencido, a las 24 horas de creado, no se continúa: queda `expired`, y el mensaje se procesa como si no hubiera nada abierto. Las 24 horas se cuentan hasta el momento en que el usuario escribió la respuesta, no hasta el que se procesa: una respuesta escrita a tiempo y demorada por los reintentos sigue valiendo, igual que la fecha de un movimiento es el día en que se escribió (§ 1). Anotado el 17/10/2026 con el `/spec-drift` del corte 2.
-- **CA-41.** Cada respuesta que cambia un dato que el modelo ya había interpretado —el monto, el tipo, la fecha, la categoría o la cuenta, con su moneda— suma uno al contador de correcciones del pendiente; completar un dato que faltaba no suma ([reglas de dominio § 5](../../reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)). Sumado el 17/10/2026, con el `/spec-drift` del corte 2. El código compara lo que había con lo que quedó, así que una fecha que se había asumido por defecto y la respuesta cambia también suma: es un costo asumido del [ADR 0028](../../adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md), hasta que el modelo devuelva qué campos corrigió el usuario, con la métrica del corte 3.
+- **CA-41.** Cada respuesta que cambia un dato que el modelo ya había interpretado —el monto, el tipo, la fecha, la categoría o la cuenta, con su moneda— suma uno al contador de correcciones del pendiente; completar un dato que faltaba no suma ([reglas de dominio § 5](../../reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)). Sumado el 17/10/2026, con el `/spec-drift` del corte 2. Una fecha que se había asumido por defecto y la respuesta cambia también suma, y un monto que no se podía guardar y la respuesta completa no suma: la regla es la de § 5, que estima cuántos registros no salieron bien del primer mensaje sin buscar quién se equivocó. Decidido por Vero el 6/11/2026, con el `/spec-drift` del corte 3 de [FEAT-006](../FEAT-006/spec.md).
 - **CA-39.** Si el modelo devuelve las palabras que dicen la moneda y no están escritas en el mensaje, la moneda no cuenta, igual que una mención de la cuenta que no está escrita. Si devuelve la moneda sin sus palabras, cuenta como la dio: así lo decidió Vero el 17/10/2026, para no cambiar C1-23, sabiendo que un modelo que no devuelve las palabras se saltea la verificación. Es la opción B que eligió Vero en el corte 1.
 - **CA-48.** La moneda que dice el mensaje es la del movimiento, y queda guardada en el pendiente para la respuesta. Si no es la del período, o no es la de la cuenta nombrada, el movimiento recibe enseguida el texto fijo de C1-09, sin preguntar lo que falte: la multimoneda no entra en la entrega 2 ([reglas de dominio § 1](../../reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma)). Una mención con el nombre completo de una cuenta la elige aunque la moneda dicha sea otra. Sumado el 19/10/2026 con el `/spec-drift` del proyecto, que encontró un gasto en dólares registrado como pesos.
 
@@ -497,9 +497,10 @@ de 2026, 2026-10-17T18:00:00Z.
 - **C2-52, sumado con el `/spec-drift` del proyecto:** Veronica Zacariass 19/10/2026
 - **C2-53, sumado con la revisión de `pr-reviewer` del `/spec-drift` del proyecto:** Veronica Zacarias 19/10/2026
 - **C2-54, sumado con el `/spec-drift` del corte 1 de [FEAT-006](../FEAT-006/spec.md):** Veronica Zacarias 05/11/2026
+- **C2-55, sumado con el `/spec-drift` del corte 3 de [FEAT-006](../FEAT-006/spec.md):** Veronica Zacarias 06/11/2026
 - **C2-02 a C2-06, C2-09, C2-12, C2-15, C2-18, C2-37, C2-44, C2-45 y C2-47 cambiados, con la pregunta que va directa (CA-22):** Veronica Zacarias 05/11/2026
 - **C2-20 cambiado, con la pregunta que va directa (CA-22):** Veronica Zacarias 05/11/2026
-- **Total:** 54 casos, 37 unitarios y 17 de integración.
+- **Total:** 55 casos, 38 unitarios y 17 de integración.
 
 Cómo se continúa un pendiente, para leer los casos
 ([ADR 0018](../../adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), punto 9):
@@ -577,6 +578,7 @@ defecto.
 | C2-52 | Con más de un período posible, el gasto recibe su texto y no queda pendiente | Integración | Fuera de alcance, decisión del 19/10/2026 |
 | C2-53 | Una respuesta que nombra dos cuentas, sin decir la moneda, pregunta cuál | Unitario | CA-48 y CA-20 |
 | C2-54 | Una respuesta que dice solo el tipo ofrece las cuentas de ese tipo | Unitario | CA-20 |
+| C2-55 | Completar un monto que no se podía guardar no suma una corrección | Unitario | CA-41 |
 
 #### C2-01 · Un gasto sin cuenta queda pendiente y su lote espera respuesta
 
@@ -1187,6 +1189,18 @@ defecto.
   "¿Con qué cuenta? Galicia pesos o Galicia USD.": las dos cuentas de banco de Lucía, y no las
   cuatro.
 - **Test:** `tests/unit/test_pending_registration.py::test_a_reply_that_says_only_the_type_offers_the_accounts_of_that_type`
+
+#### C2-55 · Completar un monto que no se podía guardar no suma una corrección
+
+- **Sale de:** CA-41 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía, "gasté 100000000000000000000 en el súper con Galicia pesos",
+  que queda pendiente porque el modelo responde un gasto de 100000000000000000000, con cuenta
+  "Galicia pesos" y categoría "Supermercado", y ese monto no se puede guardar; y la respuesta
+  "fueron 20000", que continúa el pendiente con monto 20000,
+- **cuando** se procesa la respuesta,
+- **entonces** se registra el gasto de $20.000, y el pendiente queda `promoted` con
+  `corrected_fields_count = 0`: el monto faltaba, y completarlo no es una corrección (§ 5).
+- **Test:** `tests/unit/test_pending_registration.py::test_completing_an_amount_that_could_not_be_stored_adds_no_correction`
 
 ### Corte 3 — límites y observabilidad
 
