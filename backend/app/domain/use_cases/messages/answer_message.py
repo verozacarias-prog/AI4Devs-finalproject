@@ -974,9 +974,14 @@ def _transfer_missing_of(context: _Context, pending: PendingTransaction) -> Miss
 
 
 def _transfer_currency(context: _Context, missing: MissingTransfer) -> str:
-    """The currency its amount is in: the one of an account it names, or else the primary."""
+    """The currency its amount is in: the one of an account it names, or else the one the
+    messages say, or else the primary (C2-15). With an account, the one said is the same:
+    another one gets the fixed text of CA-14.
+    """
     account = missing.from_account or missing.to_account
-    return context.user.primary_currency if account is None else account.currency
+    if account is not None:
+        return account.currency
+    return missing.interpretation.currency or context.user.primary_currency
 
 
 def _pending_question(
