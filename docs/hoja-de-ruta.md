@@ -241,8 +241,10 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   llamadas al modelo ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
 - **Qué responde el asistente ante lo que pasó a la entrega final: decidido en parte.** Los
   textos fijos de arriba cubren un registro que no es gasto ni ingreso, y una consulta o un
-  consejo. Un mensaje con varios movimientos recibe el de un registro que no es gasto ni
+  consejo. Un mensaje con varios movimientos recibía el de un registro que no es gasto ni
   ingreso, decidido el 17 de octubre de 2026 ([FEAT-003](features/FEAT-003/spec.md), C2-35).
+  Desde el corte 1 de [FEAT-007](features/FEAT-007/spec.md) los registra en un lote cuando están
+  todos completos; si a alguno le falta un dato, recibe todavía ese texto, hasta el corte 2.
   Un usuario con un período individual y uno de grupo para la misma fecha recibe el texto de C2-52,
   y elegir entre los dos pasa a una segunda versión. Queda para la entrega final una respuesta que
   cita una confirmación para corregirla o borrarla.

@@ -558,7 +558,7 @@ defecto.
 | C2-32 | Una respuesta cortada se trata como un modelo caído | Unitario | CA-40 |
 | C2-33 | Dos workers que continúan el mismo pendiente dejan un solo movimiento | Integración | CA-27 |
 | C2-34 | Con el lock no mayor que el tiempo de la llamada, ningún proceso arranca | Unitario | CA-28 |
-| C2-35 | Un mensaje con varios movimientos recibe el texto fijo y no queda pendiente | Unitario | CA-16 |
+| C2-35 | Un mensaje con varios movimientos recibe el texto fijo y no queda pendiente. Reemplazado por [FEAT-007](../FEAT-007/spec.md) | Unitario | CA-16 |
 | C2-36 | Una respuesta que cambia un dato interpretado suma una corrección | Integración | CA-41 |
 | C2-37 | Una categoría propuesta con el nombre de una que ya existe ofrece usar esa | Unitario | CA-24 |
 | C2-38 | Con un sí, se usa la categoría que ya existe y no se crea ninguna | Unitario | CA-24 |
@@ -970,7 +970,9 @@ defecto.
 - **entonces** no se registra nada ni queda ningún pendiente, y la respuesta es el texto fijo de
   C1-09. Varios movimientos en un mensaje son de la entrega final; por decisión de Vero del
   17/10/2026, mientras tanto reciben ese texto.
-- **Test:** `tests/unit/test_pending_registration.py::test_a_message_with_several_movements_gets_the_fixed_text_and_stays_not_pending`
+- **Reemplazado por [FEAT-007](../FEAT-007/spec.md):** desde su corte 1, un mensaje con varios
+  movimientos los registra en un lote. El test se borró el 6/11/2026, por decisión de Vero.
+- **Test:** —
 
 #### C2-36 · Una respuesta que cambia un dato interpretado suma una corrección
 
@@ -1683,8 +1685,9 @@ Los dos textos los aprobó Vero el 18/10/2026.
   el presupuesto individual y el de un grupo: una segunda versión
   ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final)). Qué responde el asistente
   ante cada uno se decide cuando se construya, salvo los varios movimientos en un mensaje, que
-  reciben el texto fijo de C1-09, por decisión de Vero del 17/10/2026, y el gasto con más de un
-  período posible, que recibe el texto de C2-52, por decisión de Vero del 19/10/2026.
+  recibían el texto fijo de C1-09, por decisión de Vero del 17/10/2026, hasta que llegaron con
+  [FEAT-007](../FEAT-007/spec.md), y el gasto con más de un período posible, que recibe el texto
+  de C2-52, por decisión de Vero del 19/10/2026.
 - Un lote de más de un pendiente: con uno esperando respuesta, otro movimiento no se suma, y se
   pide terminar el anterior (CA-36).
 - El recordatorio de un pendiente antes de vencer: es un proceso programado. Un pendiente
@@ -1720,8 +1723,9 @@ Los dos textos los aprobó Vero el 18/10/2026.
    individual y uno de grupo para la misma fecha, y una respuesta que cita una confirmación
    ([hoja de ruta](../../hoja-de-ruta.md#decisiones-abiertas)). Pasó a la entrega final, por
    decisión de Vero del 17/10/2026; la elección entre los dos períodos pasó después a una
-   segunda versión. Varios movimientos en un mensaje reciben el texto fijo de
-   C1-09, y un período individual y uno de grupo para la misma fecha, el texto de C2-52.
+   segunda versión. Varios movimientos en un mensaje recibían el texto fijo de
+   C1-09, hasta [FEAT-007](../FEAT-007/spec.md), y un período individual y uno de grupo para la
+   misma fecha, el texto de C2-52.
 3. **Qué responde ante un gasto en una cuenta o en una moneda distinta de la del período.**
    Resuelta por "Fuera de alcance": recibe el texto fijo de C1-09, también cuando la cuenta se
    elige al contestar un pendiente (C2-11).
