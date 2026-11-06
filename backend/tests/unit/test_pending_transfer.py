@@ -1,6 +1,6 @@
 """A transfer that lacks something, and how a reply continues it, with the model replaced.
 
-Cases C2-02, C2-03, C2-05 to C2-07, C2-09, C2-10 to C2-15, C3-03 and C3-04 of
+Cases C2-02, C2-03, C2-05 to C2-07, C2-09, C2-10 to C2-15, C3-03, C3-04 and C3-06 of
 docs/features/FEAT-006/spec.md. Each case that starts from an open pending gets it the way a
 user does: a first message that leaves it pending, and then the reply. The database is in
 memory; the integration tests check the same use case against PostgreSQL.
@@ -504,6 +504,35 @@ def test_choosing_among_the_offered_accounts_adds_no_correction() -> None:
     )
 
     [transfer] = unit_of_work.transfers.added
+    assert _accounts_of(unit_of_work, transfer) == ("Galicia pesos", "Mercado Pago")
+    [pending] = unit_of_work.pendings.added
+    assert pending.status is PendingStatus.PROMOTED
+    assert pending.corrected_fields_count == 0
+
+
+def test_completing_an_amount_that_could_not_be_stored_adds_no_correction() -> None:
+    # Case C3-06. The amount does not fit the column, so it was missing, not interpreted.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    _answer(
+        unit_of_work,
+        lucia,
+        "pasé 100000000000000000000 de Galicia pesos a Mercado Pago",
+        _transfer(
+            amount="100000000000000000000", account="Galicia pesos", to_account="Mercado Pago"
+        ),
+    )
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "fueron 20000",
+        _reply(amount="20000"),
+        now=NOW + timedelta(minutes=1),
+    )
+
+    [transfer] = unit_of_work.transfers.added
+    assert transfer.from_amount == Decimal("20000")
     assert _accounts_of(unit_of_work, transfer) == ("Galicia pesos", "Mercado Pago")
     [pending] = unit_of_work.pendings.added
     assert pending.status is PendingStatus.PROMOTED
