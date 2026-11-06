@@ -234,7 +234,7 @@ sequenceDiagram
     rect rgb(240, 246, 252)
         Note over W,DB: Una sola transacción SQL
         W->>DB: UPDATE INBOUND_MESSAGE processed, con el mismo fencing,<br/>y UPDATE LLM_USAGE
-        W->>DB: INSERT TRANSACTION, o TRANSFER, o RECURRING_RULE<br/>si es una compra con tarjeta (hoy, solo TRANSACTION)
+        W->>DB: INSERT TRANSACTION, o TRANSFER, o RECURRING_RULE<br/>si es una compra con tarjeta (hoy, TRANSACTION o TRANSFER)
         W->>DB: UPDATE PENDING_TRANSACTION promoted<br/>y cierra el PENDING_BATCH
         W->>DB: INSERT OUTBOUND_MESSAGE con la confirmación
     end
