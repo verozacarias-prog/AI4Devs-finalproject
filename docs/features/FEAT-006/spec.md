@@ -119,7 +119,11 @@ No hay pantalla nueva.
   campos de la transferencia vinieron vacíos, como CA-34 de [FEAT-003](../FEAT-003/spec.md): los
   de un gasto menos la categoría, que una transferencia no lleva, y más la cuenta de destino,
   `to_account`. Decidido por Vero el 6/11/2026. Necesita una migración nueva, porque el `CHECK`
-  de `empty_fields` no admite `to_account`.
+  de `empty_fields` no admite `to_account`. Cubre la clasificación que abre la transferencia: en
+  la respuesta a una transferencia pendiente el modelo devuelve solo lo que agrega, el tipo puede
+  venir vacío, y la fila sigue la regla de un gasto. Que la respuesta use también los campos de
+  una transferencia queda para otra issue. Decidido por Vero el 6/11/2026, con la revisión de
+  `pr-reviewer` del corte 3.
 
 ## Casos de prueba
 
