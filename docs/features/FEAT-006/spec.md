@@ -92,7 +92,8 @@ No hay pantalla nueva.
 
 - **CA-12.** Una transferencia sin monto, o con un lado que no nombra exactamente una cuenta,
   queda pendiente y se pregunta lo que falta en un solo mensaje, ofreciendo las cuentas del
-  usuario.
+  usuario: las que nombra la mención de ese lado, o todas, sin la cuenta del otro lado. Igual
+  pregunta aunque quede una sola. Decidido por Vero el 5/11/2026.
 - **CA-13.** Si los dos lados nombran la misma cuenta, no se registra nada y se preguntan las
   dos, origen y destino: el asistente no sabe cuál de las dos menciones está mal. Decidido por
   Vero el 4/11/2026.
