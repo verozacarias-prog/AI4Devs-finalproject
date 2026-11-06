@@ -32,6 +32,8 @@ class OutputField(StrEnum):
     REGISTRATION_TYPE = "registration_type"
     AMOUNT = "amount"
     ACCOUNT = "account"
+    # In a transfer, the account the money goes to.
+    TO_ACCOUNT = "to_account"
     CATEGORY = "category"
     CURRENCY = "currency"
     TRANSACTION_DATE = "transaction_date"
