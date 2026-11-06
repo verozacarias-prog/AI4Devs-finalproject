@@ -246,12 +246,13 @@ def continue_interpretation(
 
 
 def corrections(previous: Interpretation, current: Interpretation) -> int:
-    """How many fields already interpreted a reply changed: completing a missing one does not
-    count (domain rules, § 5). The currency goes with the account, so it counts with it.
+    """How many fields that already had a value a reply changed: completing a missing one does
+    not count (domain rules, § 5). An amount that could not be stored was missing. The currency
+    goes with the account, so it counts with it.
     """
     kept = (
         (previous.type, current.type),
-        (previous.amount, current.amount),
+        (stored_amount(previous.amount), current.amount),
         (previous.transaction_date, current.transaction_date),
         (previous.category, current.category),
         (previous.account, current.account),
@@ -379,6 +380,11 @@ def _missing_fields(
 def fits(amount: Decimal) -> bool:
     """Whether the amount, rounded to cents, is more than 0 and fits where it is stored."""
     return SMALLEST_AMOUNT <= amount < TOO_LARGE_AMOUNT
+
+
+def stored_amount(amount: Decimal | None) -> Decimal | None:
+    """The amount, or None when it could not be stored and is therefore still missing."""
+    return amount if amount is not None and fits(amount) else None
 
 
 def too_large(amount: Decimal) -> bool:

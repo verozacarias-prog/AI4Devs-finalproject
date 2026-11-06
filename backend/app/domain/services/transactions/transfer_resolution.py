@@ -33,6 +33,7 @@ from app.domain.services.transactions.movement_resolution import (
     movement_date,
     rounded,
     same_name,
+    stored_amount,
 )
 
 
@@ -209,9 +210,10 @@ def continue_transfer(
 
 
 def transfer_corrections(previous: TransferInterpretation, current: TransferInterpretation) -> int:
-    """How many fields already interpreted a reply changed (domain rules, § 5): the amount, the
-    date, and the accounts, which count as one field however many of them changed. Completing a
-    side that was missing, or choosing among the accounts offered for it, does not count.
+    """How many fields that already had a value a reply changed (domain rules, § 5): the amount,
+    the date, and the accounts, which count as one field however many of them changed. Completing
+    a side that was missing, an amount that could not be stored, or choosing among the accounts
+    offered for a side, does not count.
     """
     accounts_changed = any(
         before.account is not None and not same_name(before.account, after.account)
@@ -220,7 +222,9 @@ def transfer_corrections(previous: TransferInterpretation, current: TransferInte
             (previous.destination, current.destination),
         )
     )
-    amount_changed = previous.amount is not None and previous.amount != current.amount
+    amount_changed = (
+        stored_amount(previous.amount) is not None and previous.amount != current.amount
+    )
     date_changed = previous.transfer_date != current.transfer_date
     return sum((amount_changed, date_changed, accounts_changed))
 
