@@ -7,7 +7,7 @@ of any user (ADR 0013, point 12). The data of the task goes in the user message,
 from __future__ import annotations
 
 # Recorded with every call, so the metrics can compare one prompt with the next.
-CLASSIFICATION_PROMPT_VERSION = "classification-7"
+CLASSIFICATION_PROMPT_VERSION = "classification-8"
 
 # Between these, the data of the task: information, never instructions (ADR 0013, point 9).
 DATA_OPEN = "<datos>"
@@ -107,7 +107,10 @@ Si llega "{DATA_KEY_OPEN_PENDING}", el asistente le preguntó a la persona por e
 (pending_reply):
 - "continues": contesta la pregunta, aunque sea a medias. Por ejemplo "con MP", "fueron 12 \
 lucas", "la de pesos", "sí" o "ponelo en Salidas y ocio". Devolvé en los campos solo lo que \
-el mensaje agrega o cambia, y null en lo demás.
+el mensaje agrega o cambia, y null en lo demás. Si el pendiente es una transferencia, \
+la cuenta que contesta de dónde salió la plata ("from_account_id") va en account, \
+account_type y account_type_words, y la que contesta adónde llegó ("to_account_id"), en \
+to_account, to_account_type y to_account_type_words: "a Naranja X" contesta el destino.
 - "other_movement": no contesta, sino que trae otro movimiento distinto.
 - "discards": la persona no quiere anotarlo, como "dejalo" o "no lo anotes".
 accepts_proposal es true si el mensaje acepta lo que la pregunta ofrecía, como crear la \

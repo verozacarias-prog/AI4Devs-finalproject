@@ -23,6 +23,10 @@ from app.domain.services.transactions.registration_confirmation import (
     written_amount,
     written_day,
 )
+from app.domain.services.transactions.transfer_resolution import (
+    MissingTransfer,
+    TransferField,
+)
 
 _MOVEMENT = {
     TransactionType.EXPENSE: messages.QUESTION_EXPENSE,
@@ -46,6 +50,46 @@ def finish_the_pending_first_text(missing: Missing, currency: str) -> str:
     `currency` is the one its amount is in.
     """
     return messages.FINISH_THE_PENDING_FIRST.format(movement=_movement(missing, currency))
+
+
+def transfer_question_text(missing: MissingTransfer) -> str:
+    """One line for each thing a transfer lacks, after the one that says why both accounts are
+    asked when they were the same (CA-13), or why the amount is asked again (§ 5).
+    """
+    lines = [_transfer_line(field, missing) for field in missing.fields]
+    if missing.same_account:
+        lines.insert(0, messages.SAME_ACCOUNT_ON_BOTH_SIDES)
+    amount = missing.interpretation.amount
+    if amount is not None and too_large(amount):
+        lines.insert(0, messages.AMOUNT_TOO_LARGE)
+    return LINE_END.join(lines)
+
+
+def finish_the_transfer_first_text(missing: MissingTransfer, currency: str) -> str:
+    """What precedes its question when another movement comes: it names the pending transfer,
+    as "la transferencia de $20.000 de Galicia pesos" (CA-36 of FEAT-003).
+    """
+    transfer = messages.QUESTION_TRANSFER
+    amount = missing.interpretation.amount
+    if amount is not None and TransferField.AMOUNT not in missing.fields:
+        transfer += messages.QUESTION_AMOUNT_PART.format(amount=written_amount(amount, currency))
+    if missing.from_account is not None:
+        transfer += messages.QUESTION_FROM_ACCOUNT_PART.format(account=missing.from_account.name)
+    if missing.to_account is not None:
+        transfer += messages.QUESTION_TO_ACCOUNT_PART.format(account=missing.to_account.name)
+    return messages.FINISH_THE_PENDING_FIRST.format(movement=transfer)
+
+
+def _transfer_line(field: TransferField, missing: MissingTransfer) -> str:
+    match field:
+        case TransferField.AMOUNT:
+            return messages.ASK_AMOUNT
+        case TransferField.FROM_ACCOUNT:
+            names = [account.name for account in missing.from_options]
+            return messages.ASK_FROM_ACCOUNT.format(options=_options(names))
+        case TransferField.TO_ACCOUNT:
+            names = [account.name for account in missing.to_options]
+            return messages.ASK_TO_ACCOUNT.format(options=_options(names))
 
 
 def _movement(missing: Missing, currency: str) -> str:

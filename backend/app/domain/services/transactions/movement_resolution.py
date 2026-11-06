@@ -26,8 +26,12 @@ from app.domain.services.transactions.account_resolution import (
     AccountWords,
     account_candidates,
     account_words,
+    chosen_account,
+    in_offer_order,
     is_unwritten,
     is_written,
+    named_or_mentioned,
+    offered_accounts,
     verified_currency,
     verified_type,
 )
@@ -75,8 +79,11 @@ class ParsedKey(StrEnum):
     # The type of account the messages say, when it named several: only those are offered.
     ACCOUNT_TYPE = "account_type"
     CATEGORY = "category"
-    # The account a transfer reaches; ACCOUNT is the one it leaves.
+    # The account a transfer reaches; ACCOUNT is the one it leaves. Its mention and its type
+    # are kept as those of ACCOUNT.
     TO_ACCOUNT = "to_account"
+    TO_ACCOUNT_MENTION = "to_account_mention"
+    TO_ACCOUNT_TYPE = "to_account_type"
     PROPOSED_CATEGORY = "proposed_category"
     TRANSACTION_DATE = "transaction_date"
 
@@ -170,7 +177,9 @@ def interpret(
     classification: Classification, text: str, accounts: Sequence[Account], today: date
 ) -> Interpretation:
     """What the first message of a movement says."""
-    account, mention, account_type = _named(text, classification, _movement_accounts(accounts))
+    account, mention, account_type = named_or_mentioned(
+        text, account_words(classification, text), _movement_accounts(accounts)
+    )
     return Interpretation(
         type=_TRANSACTION_TYPES.get(classification.registration_type)
         if classification.registration_type is not None
@@ -211,8 +220,8 @@ def continue_interpretation(
         verified_type(said.type, said.type_words, text) is not None
     )
     if names_an_account or (currency is not None and mention is not None):
-        offered = _offered(mention, account_type, movement_accounts)
-        chosen = _chosen(text, said, movement_accounts, offered)
+        offered = offered_accounts(mention, account_type, movement_accounts)
+        chosen = chosen_account(text, said, movement_accounts, offered)
         if chosen is not None:
             account, mention, account_type = chosen.name, None, None
         elif len(account_candidates(text, said, movement_accounts)) > 1:
@@ -296,7 +305,12 @@ def resolve(
             account=account,
             category=category,
             # Each one only when its field is asked: the question says nothing else of them.
-            account_options=_options(interpretation, movement_accounts, primary_currency)
+            account_options=in_offer_order(
+                offered_accounts(
+                    interpretation.account_mention, interpretation.account_type, movement_accounts
+                ),
+                primary_currency,
+            )
             if MissingField.ACCOUNT in missing
             else (),
             draft=period,
@@ -467,72 +481,6 @@ def _valid_proposal(name: str | None) -> str | None:
 
 def same_name(stored: str, written: str | None) -> bool:
     return written is not None and stored.casefold() == written.strip().casefold()
-
-
-def _named(
-    text: str, classification: Classification, accounts: Sequence[Account]
-) -> tuple[str | None, str | None, AccountType | None]:
-    """The account the message names, or the mention and the type that named several of them."""
-    words = account_words(classification, text)
-    candidates = account_candidates(text, words, accounts)
-    if len(candidates) == 1:
-        return candidates[0].name, None, None
-    if len(candidates) > 1:
-        return None, classification.account, verified_type(words.type, words.type_words, text)
-    return None, None, None
-
-
-def _chosen(
-    text: str, said: AccountWords, accounts: Sequence[Account], offered: Sequence[Account]
-) -> Account | None:
-    """The account a reply chooses: by its name, or by its currency among those offered."""
-    currency = said.currency
-    named = account_candidates(text, said, accounts)
-    if len(named) == 1:
-        return named[0]
-    offered_ids = {account.id for account in offered}
-    among_offered = [account for account in named if account.id in offered_ids]
-    if len(among_offered) == 1:
-        return among_offered[0]
-    if currency is not None:
-        in_currency = [account for account in offered if account.currency == currency]
-        if len(in_currency) == 1:
-            return in_currency[0]
-    return None
-
-
-def _options(
-    interpretation: Interpretation, accounts: Sequence[Account], primary_currency: str
-) -> tuple[Account, ...]:
-    """The ones the mention and the type named, or else all: first those in the primary currency
-    of the user, and within each currency the bank, the wallet and the cash, so the order never
-    changes.
-    """
-    offered = _offered(interpretation.account_mention, interpretation.account_type, accounts)
-    return tuple(
-        sorted(
-            offered,
-            key=lambda account: (
-                account.currency != primary_currency,
-                _ACCOUNT_TYPES_FOR_MOVEMENTS.index(account.type),
-                account.name,
-            ),
-        )
-    )
-
-
-def _offered(
-    mention: str | None, account_type: AccountType | None, accounts: Sequence[Account]
-) -> list[Account]:
-    """The accounts the mention and the type said name, when they are more than one; or else
-    all of them (CA-20).
-    """
-    named = list(accounts)
-    if mention is not None:
-        named = account_candidates(mention, AccountWords(mention), named)
-    if account_type is not None:
-        named = [account for account in named if account.type is account_type]
-    return named if len(named) > 1 else list(accounts)
 
 
 def _movement_accounts(accounts: Sequence[Account]) -> list[Account]:

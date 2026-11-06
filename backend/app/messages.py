@@ -78,6 +78,7 @@ BEFORE_ACCOUNT_OPENING = (
 )
 SPENT_BEFORE = "gastaste"
 RECEIVED_BEFORE = "cobraste"
+TRANSFERRED_BEFORE = "transferiste"
 # How a day is written in a message: 17/10/2026, and 1/10/2026 without a leading zero.
 DAY_FORMAT = "{day}/{month}/{year}"
 # How an amount is written: $3.500, and $3.500,50 when it has cents.
@@ -105,6 +106,9 @@ ASK_FOR_DETAILS = (
 QUESTION_EXPENSE = "el gasto"
 QUESTION_INCOME = "el ingreso"
 QUESTION_MOVEMENT = "el movimiento"
+QUESTION_TRANSFER = "la transferencia"
+QUESTION_FROM_ACCOUNT_PART = " de {account}"
+QUESTION_TO_ACCOUNT_PART = " a {account}"
 QUESTION_AMOUNT_PART = " de {amount}"
 QUESTION_CATEGORY_PART = " en {category}"
 QUESTION_ACCOUNT_PART = " con {account}"
@@ -113,6 +117,18 @@ ASK_AMOUNT = "¿Cuánto fue?"
 # Before the question, when the amount does not fit where it is stored (domain rules, § 5).
 AMOUNT_TOO_LARGE = "Ese monto es más grande de lo que puedo registrar."
 ASK_ACCOUNT = "¿Con qué cuenta? {options}."
+# What a transfer may lack (FEAT-006).
+ASK_FROM_ACCOUNT = "¿De qué cuenta salió? {options}."
+ASK_TO_ACCOUNT = "¿A qué cuenta fue? {options}."
+SAME_ACCOUNT_ON_BOTH_SIDES = "La cuenta de origen y la de destino no pueden ser la misma."
+TRANSFER_IN_DIFFERENT_CURRENCIES = (
+    "Todavía no sé anotar una transferencia entre cuentas de distinta moneda. Por ahora, solo "
+    "entre cuentas de la misma moneda."
+)
+TRANSFER_IN_ANOTHER_CURRENCY = (
+    "Todavía no sé anotar una transferencia en otra moneda que la de sus cuentas. Por ahora, "
+    "solo en la moneda de las dos cuentas."
+)
 # The last two options of a list go joined by this, and the rest by a comma.
 LAST_OPTION_JOINER = " o "
 OPTION_SEPARATOR = ", "
