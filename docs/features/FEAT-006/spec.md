@@ -233,7 +233,9 @@ efectivo.
 
 - **Aprobado por:** Veronica Zacarias 05/11/2026
 - **C2-14, sumado al ver que la moneda dicha no frenaba una transferencia:** Veronica Zacarias 05/11/2026
-- **Total:** 14 casos, 11 unitarios y 3 de integración.
+- **El orden de las cuentas ofrecidas, cambiado al de la pregunta de un gasto:** Veronica Zacarias 05/11/2026
+- **C2-15, sumado con la revisión de `pr-reviewer` del corte 2:** Veronica Zacarias 05/11/2026
+- **Total:** 15 casos, 12 unitarios y 3 de integración.
 
 Las cuentas se ofrecen en el mismo orden que en la pregunta de un gasto: primero las de la moneda
 primaria del usuario y, en cada moneda, banco, billetera y efectivo, antes que el resto, y por
@@ -242,7 +244,8 @@ mención, o todas si no hay mención, menos la del otro lado, que ya se sabe. Ig
 aunque quede una sola: ofrecer no es elegir. Decidido por Vero el 5/11/2026. Lo que falta de una
 transferencia se nombra por su campo en `TRANSFER`: `amount`, `from_account_id` y
 `to_account_id`, y se pregunta en ese orden. Una transferencia que queda pendiente gasta la cuota
-de registro, como un gasto pendiente; una que recibe el texto fijo de CA-14 no la gasta.
+de registro, como un gasto pendiente, y también una rechazada por la fecha anterior al alta, como
+un gasto; una que recibe el texto fijo de CA-14 no la gasta.
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
@@ -260,6 +263,7 @@ de registro, como un gasto pendiente; una que recibe el texto fijo de CA-14 no l
 | C2-12 | Con una transferencia pendiente, otro movimiento no se anota y la respuesta la nombra | Unitario | CA-12 |
 | C2-13 | Un monto que no entra se vuelve a preguntar, diciendo por qué | Unitario | CA-12 |
 | C2-14 | Una moneda dicha que no es la de las cuentas recibe el texto fijo | Unitario | CA-14 |
+| C2-15 | Sin cuentas, el monto de la transferencia pendiente se nombra en la moneda dicha | Unitario | CA-12 |
 
 #### C2-01 · Una transferencia sin destino queda pendiente y pregunta a qué cuenta fue
 
@@ -440,6 +444,19 @@ de registro, como un gasto pendiente; una que recibe el texto fijo de CA-14 no l
   "Todavía no sé anotar una transferencia en otra moneda que la de sus cuentas. Por ahora, solo
   en la moneda de las dos cuentas.", con `response_kind = 'fixed_text'`.
 - **Test:** `tests/unit/test_pending_transfer.py::test_a_currency_said_that_is_not_the_one_of_the_accounts_gets_the_fixed_text`
+
+#### C2-15 · Sin cuentas, el monto de la transferencia pendiente se nombra en la moneda dicha
+
+- **Sale de:** CA-12 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía, "pasé 100 dólares", con el que el modelo responde una
+  transferencia de 100, con moneda USD dicha con "dólares" y sin ninguna de las dos cuentas, y
+  después otro mensaje suyo, "gasté 3500 en el súper con Mercado Pago", con el que el modelo
+  responde que trae otro movimiento,
+- **cuando** se procesa el segundo,
+- **entonces** no se registra nada, el pendiente sigue `open`, y la primera línea de la
+  respuesta es "No anoté tu último mensaje: primero terminemos con la transferencia de US$100,
+  y después mandámelo de nuevo.": el monto va en la moneda que Lucía dijo, no en la primaria.
+- **Test:** `tests/unit/test_pending_transfer.py::test_without_accounts_the_amount_of_the_pending_transfer_is_named_in_the_currency_said`
 
 ### Corte 3 — observabilidad
 

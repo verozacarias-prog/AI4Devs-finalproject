@@ -1,6 +1,6 @@
 """A transfer that lacks something, and how a reply continues it, with the model replaced.
 
-Cases C2-02, C2-03, C2-05 to C2-07, C2-09 and C2-10 to C2-14 of
+Cases C2-02, C2-03, C2-05 to C2-07, C2-09 and C2-10 to C2-15 of
 docs/features/FEAT-006/spec.md. Each case that starts from an open pending gets it the way a
 user does: a first message that leaves it pending, and then the reply. The database is in
 memory; the integration tests check the same use case against PostgreSQL.
@@ -405,3 +405,47 @@ def test_a_currency_said_that_is_not_the_one_of_the_accounts_gets_the_fixed_text
         "solo en la moneda de las dos cuentas."
     )
     assert reply.response_kind is ResponseKind.FIXED_TEXT
+
+
+def test_without_accounts_the_amount_of_the_pending_transfer_is_named_in_the_currency_said() -> (
+    None
+):
+    # Case C2-15.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    _answer(
+        unit_of_work,
+        lucia,
+        "pasé 100 dólares",
+        Classification(
+            MessageClass.REGISTRATION,
+            registration_type=RegistrationType.TRANSFER,
+            amount=Decimal("100"),
+            currency="USD",
+            currency_words="dólares",
+        ),
+    )
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "gasté 3500 en el súper con Mercado Pago",
+        Classification(
+            MessageClass.REGISTRATION,
+            registration_type=RegistrationType.EXPENSE,
+            amount=Decimal("3500"),
+            account="Mercado Pago",
+            category="Supermercado",
+            pending_reply=PendingReply.OTHER_MOVEMENT,
+        ),
+        now=NOW + timedelta(minutes=1),
+    )
+
+    assert unit_of_work.transfers.added == []
+    assert unit_of_work.transactions.added == []
+    [pending] = unit_of_work.pendings.added
+    assert pending.status is PendingStatus.OPEN
+    assert _last_reply(unit_of_work).splitlines()[0] == (
+        "No anoté tu último mensaje: primero terminemos con la transferencia de US$100, y "
+        "después mandámelo de nuevo."
+    )
