@@ -491,7 +491,8 @@ Cada pendiente pertenece a un lote (`PENDING_BATCH`), y un gasto suelto es un lo
 campos que el modelo había interpretado cambió el usuario antes de confirmar: el monto, el tipo,
 la fecha, la categoría o la cuenta que el mensaje nombraba. Suma uno por cada campo que una
 respuesta cambia. La moneda va con la cuenta: cambiar la cuenta por una de otra moneda suma uno,
-no dos. La métrica mira si hubo alguna corrección, no cuántas. No cuenta completar un dato que faltaba ni elegir el presupuesto, que
+no dos. En una transferencia, las dos cuentas cuentan como un solo campo: cambiar una o las dos
+suma uno. Decidido por Vero el 6 de noviembre de 2026. La métrica mira si hubo alguna corrección, no cuántas. No cuenta completar un dato que faltaba ni elegir el presupuesto, que
 se pregunta cuando hay más de uno posible. El contador no cambia nada de lo que ve el usuario: lo lee solo la métrica
 de calidad ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
 

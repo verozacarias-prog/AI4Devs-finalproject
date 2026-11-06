@@ -125,7 +125,7 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 - **CA-31.** Ninguna línea de los registros lleva el texto, el monto ni el teléfono.
 - **CA-32.** El prompt de sistema es el mismo para todos los usuarios.
 - **CA-33.** Una llamada al modelo cuyo mensaje termina con la transacción final deshecha deja igual su fila en `LLM_CALL`, y el worker usa siempre el envoltorio.
-- **CA-34.** Cada fila de `LLM_CALL` de una clasificación dice qué campos de la salida vinieron vacíos, sin ningún valor, para poder diagnosticar una interpretación fallida sin guardar contenido. Sumado el 17/10/2026, después de que un mensaje de la prueba contra el modelo real no se registrara sin que pudiera saberse por qué. Necesita una columna nueva en `LLM_CALL`.
+- **CA-34.** Cada fila de `LLM_CALL` de una clasificación dice qué campos de la salida vinieron vacíos, sin ningún valor, para poder diagnosticar una interpretación fallida sin guardar contenido. Sumado el 17/10/2026, después de que un mensaje de la prueba contra el modelo real no se registrara sin que pudiera saberse por qué. Necesita una columna nueva en `LLM_CALL`. En una transferencia, los campos son los suyos: sin la categoría y con la cuenta de destino ([FEAT-006](../FEAT-006/spec.md), CA-18, del 6/11/2026).
 - **CA-35.** `scripts/llm_metrics.sql` da la latencia, el costo, la calidad y las respuestas bloqueadas del ADR 0023.
 
 ## Casos de prueba
