@@ -63,6 +63,7 @@ from app.domain.services.transactions.pending_question import (
     transfer_question_text,
 )
 from app.domain.services.transactions.registration_confirmation import (
+    batch_confirmation_text,
     before_opening_text,
     confirmation_text,
     transfer_before_opening_text,
@@ -88,8 +89,24 @@ from app.domain.services.transactions.transfer_resolution import (
 )
 from app.shared.clock import Clock
 
-# The only pending of a batch in delivery 2: more than one comes with the final delivery.
+# The number of the only pending of a batch of one, and of the first of a batch of several.
 _FIRST_POSITION = 1
+
+
+@dataclass(frozen=True)
+class _MovementToRegister:
+    """An expense or an income of a batch, resolved, with what the messages said of it."""
+
+    movement: ResolvedMovement
+    interpretation: Interpretation
+
+
+@dataclass(frozen=True)
+class _TransferToRegister:
+    """A transfer of a batch, resolved, with what the messages said of it."""
+
+    transfer: ResolvedTransfer
+    interpretation: TransferInterpretation
 
 
 @dataclass(frozen=True)
@@ -473,10 +490,9 @@ def _counts_as_registration(classification: Classification, continuing: bool) ->
     """
     if continuing:
         return classification.pending_reply in (PendingReply.CONTINUES, PendingReply.DISCARDS)
-    return (
-        classification.message_class is MessageClass.REGISTRATION
-        and (is_movement(classification) or is_transfer(classification))
-        and not classification.several_movements
+    return classification.message_class is MessageClass.REGISTRATION and any(
+        is_movement(single) or is_transfer(single)
+        for single in map(classification.of_movement, classification.movements())
     )
 
 
@@ -511,22 +527,94 @@ def _answer_new(
     transfer: it uses the quota of registration (domain rules, § 12).
     """
     registration = classification.message_class is MessageClass.REGISTRATION
-    if registration and is_transfer(classification) and not classification.several_movements:
+    if registration and classification.more_movements:
+        return _answer_several(unit_of_work, context, classification)
+    if registration and is_transfer(classification):
         transfer = interpret_transfer(
             classification, context.message.text, context.accounts, context.today
         )
         return _settle_transfer(unit_of_work, context, transfer, None)
     if registration and is_movement(classification):
-        if classification.several_movements:
-            # Several movements in a message belong to the final delivery (CA-16).
-            _add_reply(unit_of_work, context, messages.CANNOT_REGISTER_YET, ResponseKind.FIXED_TEXT)
-            return False
         interpretation = interpret(
             classification, context.message.text, context.accounts, context.today
         )
         return _settle(unit_of_work, context, interpretation, None)
     _add_reply(unit_of_work, context, _fixed_text(classification), ResponseKind.FIXED_TEXT)
     return False
+
+
+def _answer_several(
+    unit_of_work: UnitOfWorkPort, context: _Context, classification: Classification
+) -> bool:
+    """A message with several movements (FEAT-007). Each one is resolved as if it came alone,
+    and when all of them are complete they are registered together, in one batch. Otherwise,
+    until the second cut, the message gets the fixed text and nothing is registered.
+    """
+    resolved: list[_MovementToRegister | _TransferToRegister] = []
+    for single in map(classification.of_movement, classification.movements()):
+        if is_transfer(single):
+            transfer = interpret_transfer(
+                single, context.message.text, context.accounts, context.today
+            )
+            transfer_resolution = _resolve_transfer(context, transfer)
+            if isinstance(transfer_resolution, ResolvedTransfer):
+                resolved.append(_TransferToRegister(transfer_resolution, transfer))
+                continue
+        elif is_movement(single):
+            interpretation = interpret(
+                single, context.message.text, context.accounts, context.today
+            )
+            resolution = _resolve(unit_of_work, context, interpretation)
+            if isinstance(resolution, ResolvedMovement):
+                resolved.append(_MovementToRegister(resolution, interpretation))
+                continue
+        _add_reply(unit_of_work, context, messages.CANNOT_REGISTER_YET, ResponseKind.FIXED_TEXT)
+        return False
+    _register_batch(unit_of_work, context, resolved)
+    return True
+
+
+def _register_batch(
+    unit_of_work: UnitOfWorkPort,
+    context: _Context,
+    resolved: list[_MovementToRegister | _TransferToRegister],
+) -> None:
+    """Every movement of the batch, and one confirmation that lists them by number. Each pending
+    is promoted, in the order of the message, and the batch closes keeping the confirmation
+    (domain rules, § 5).
+    """
+    user_id = context.user.id
+    texts: list[str] = []
+    # What each pending keeps, and the movement it became; the batch comes after the reply.
+    promoted: list[tuple[dict[str, str | None], Transaction | Transfer]] = []
+    for position, item in enumerate(resolved, start=_FIRST_POSITION):
+        if isinstance(item, _MovementToRegister):
+            transaction = _new_transaction(context, item.movement)
+            unit_of_work.transactions.add(transaction)
+            texts.append(_movement_confirmation(unit_of_work, item.movement, position))
+            promoted.append(
+                (_registered_parsed_data(item.movement, item.interpretation), transaction)
+            )
+        else:
+            transfer = _new_transfer(context, item.transfer)
+            unit_of_work.transfers.add(transfer)
+            texts.append(_transfer_confirmation(item.transfer, position))
+            parsed = transfer_to_parsed_data(registered(item.interpretation, item.transfer))
+            promoted.append((parsed, transfer))
+    confirmation = _add_reply(
+        unit_of_work, context, batch_confirmation_text(texts), ResponseKind.REGISTRATION
+    )
+    batch = _closed_batch(context, confirmation)
+    unit_of_work.pendings.add_batch(batch)
+    for position, (parsed, result) in enumerate(promoted, start=_FIRST_POSITION):
+        pending = _pending(context, batch, parsed, (), PendingStatus.PROMOTED, None, user_id)
+        if isinstance(result, Transaction):
+            pending = replace(pending, resulting_transaction_id=result.id)
+        else:
+            pending = replace(
+                pending, intent=PendingIntent.TRANSFER, resulting_transfer_id=result.id
+            )
+        unit_of_work.pendings.add(replace(pending, position=position))
 
 
 def _continue(
@@ -797,42 +885,15 @@ def _register(
     it later finds the movement.
     """
     user_id = context.user.id
-    currency = movement.account.currency
-    transaction = Transaction(
-        id=uuid.uuid4(),
-        user_id=user_id,
-        account_id=movement.account.id,
-        type=movement.type,
-        amount=movement.amount,
-        currency=currency,
-        exchange_rate=None,
-        transaction_date=movement.transaction_date,
-        budget_period_id=movement.period.id,
-        category_id=movement.category.id,
-        source=TransactionSource.MANUAL,
-    )
+    transaction = _new_transaction(context, movement)
     unit_of_work.transactions.add(transaction)
-    group_id = movement.period.family_group_id
-    group = None if group_id is None else unit_of_work.family_groups.find_by_id(group_id)
     confirmation = _add_reply(
         unit_of_work,
         context,
-        confirmation_text(
-            type=movement.type,
-            amount=movement.amount,
-            currency=currency,
-            account_name=movement.account.name,
-            category_name=movement.category.name,
-            transaction_date=movement.transaction_date,
-            period=movement.period,
-            group_name=None if group is None else group.name,
-        ),
+        _movement_confirmation(unit_of_work, movement, None),
         ResponseKind.REGISTRATION,
     )
-    parsed = to_parsed_data(
-        replace(interpretation, account=movement.account.name, category=movement.category.name),
-        currency,
-    )
+    parsed = _registered_parsed_data(movement, interpretation)
     if awaiting is not None:
         batch, pending = awaiting
         unit_of_work.pendings.update(
@@ -854,19 +915,71 @@ def _register(
             )
         )
         return
-    batch = PendingBatch(
+    batch = _closed_batch(context, confirmation)
+    unit_of_work.pendings.add_batch(batch)
+    unit_of_work.pendings.add(
+        _pending(context, batch, parsed, (), PendingStatus.PROMOTED, transaction.id, user_id)
+    )
+
+
+def _new_transaction(context: _Context, movement: ResolvedMovement) -> Transaction:
+    return Transaction(
         id=uuid.uuid4(),
-        user_id=user_id,
+        user_id=context.user.id,
+        account_id=movement.account.id,
+        type=movement.type,
+        amount=movement.amount,
+        currency=movement.account.currency,
+        exchange_rate=None,
+        transaction_date=movement.transaction_date,
+        budget_period_id=movement.period.id,
+        category_id=movement.category.id,
+        source=TransactionSource.MANUAL,
+    )
+
+
+def _movement_confirmation(
+    unit_of_work: UnitOfWorkPort, movement: ResolvedMovement, position: int | None
+) -> str:
+    """What its confirmation says of it: alone, or with its number in a batch of several."""
+    group_id = movement.period.family_group_id
+    group = None if group_id is None else unit_of_work.family_groups.find_by_id(group_id)
+    return confirmation_text(
+        type=movement.type,
+        amount=movement.amount,
+        currency=movement.account.currency,
+        account_name=movement.account.name,
+        category_name=movement.category.name,
+        transaction_date=movement.transaction_date,
+        period=movement.period,
+        group_name=None if group is None else group.name,
+        position=position,
+    )
+
+
+def _registered_parsed_data(
+    movement: ResolvedMovement, interpretation: Interpretation
+) -> dict[str, str | None]:
+    """What its pending keeps once promoted: the names of the account and the category."""
+    return to_parsed_data(
+        replace(interpretation, account=movement.account.name, category=movement.category.name),
+        movement.account.currency,
+    )
+
+
+def _closed_batch(context: _Context, confirmation: OutboundMessage) -> PendingBatch:
+    """A batch registered from its first message: nothing was asked, and it keeps the
+    confirmation.
+    """
+    return PendingBatch(
+        id=uuid.uuid4(),
+        user_id=context.user.id,
         source=PendingSource.MANUAL,
         awaiting_reply=False,
         question_message_id=None,
         confirmation_message_id=confirmation.id,
         status=BatchStatus.CLOSED,
         created_at=context.now,
-    )
-    unit_of_work.pendings.add_batch(batch)
-    unit_of_work.pendings.add(
-        _pending(context, batch, parsed, (), PendingStatus.PROMOTED, transaction.id, user_id)
     )
 
 
@@ -1010,33 +1123,10 @@ def _register_transfer(
     one or a new batch of one (§ 5).
     """
     user_id = context.user.id
-    currency = resolved.from_account.currency
-    transfer = Transfer(
-        id=uuid.uuid4(),
-        user_id=user_id,
-        from_account_id=resolved.from_account.id,
-        from_amount=resolved.amount,
-        from_currency=currency,
-        to_account_id=resolved.to_account.id,
-        to_amount=resolved.amount,
-        to_currency=resolved.to_account.currency,
-        # Both sides in the same currency: there is no rate (§ 13).
-        exchange_rate=None,
-        transfer_date=resolved.transfer_date,
-        source=TransactionSource.MANUAL,
-    )
+    transfer = _new_transfer(context, resolved)
     unit_of_work.transfers.add(transfer)
     confirmation = _add_reply(
-        unit_of_work,
-        context,
-        transfer_confirmation_text(
-            amount=resolved.amount,
-            currency=currency,
-            from_account_name=resolved.from_account.name,
-            to_account_name=resolved.to_account.name,
-            transfer_date=resolved.transfer_date,
-        ),
-        ResponseKind.REGISTRATION,
+        unit_of_work, context, _transfer_confirmation(resolved, None), ResponseKind.REGISTRATION
     )
     parsed = transfer_to_parsed_data(registered(interpretation, resolved))
     if awaiting is not None:
@@ -1060,16 +1150,7 @@ def _register_transfer(
             )
         )
         return
-    batch = PendingBatch(
-        id=uuid.uuid4(),
-        user_id=user_id,
-        source=PendingSource.MANUAL,
-        awaiting_reply=False,
-        question_message_id=None,
-        confirmation_message_id=confirmation.id,
-        status=BatchStatus.CLOSED,
-        created_at=context.now,
-    )
+    batch = _closed_batch(context, confirmation)
     unit_of_work.pendings.add_batch(batch)
     unit_of_work.pendings.add(
         replace(
@@ -1077,6 +1158,35 @@ def _register_transfer(
             intent=PendingIntent.TRANSFER,
             resulting_transfer_id=transfer.id,
         )
+    )
+
+
+def _new_transfer(context: _Context, resolved: ResolvedTransfer) -> Transfer:
+    return Transfer(
+        id=uuid.uuid4(),
+        user_id=context.user.id,
+        from_account_id=resolved.from_account.id,
+        from_amount=resolved.amount,
+        from_currency=resolved.from_account.currency,
+        to_account_id=resolved.to_account.id,
+        to_amount=resolved.amount,
+        to_currency=resolved.to_account.currency,
+        # Both sides in the same currency: there is no rate (§ 13).
+        exchange_rate=None,
+        transfer_date=resolved.transfer_date,
+        source=TransactionSource.MANUAL,
+    )
+
+
+def _transfer_confirmation(resolved: ResolvedTransfer, position: int | None) -> str:
+    """What its confirmation says of it: alone, or with its number in a batch of several."""
+    return transfer_confirmation_text(
+        amount=resolved.amount,
+        currency=resolved.from_account.currency,
+        from_account_name=resolved.from_account.name,
+        to_account_name=resolved.to_account.name,
+        transfer_date=resolved.transfer_date,
+        position=position,
     )
 
 

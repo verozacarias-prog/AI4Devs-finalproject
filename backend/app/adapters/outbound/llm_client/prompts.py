@@ -7,7 +7,7 @@ of any user (ADR 0013, point 12). The data of the task goes in the user message,
 from __future__ import annotations
 
 # Recorded with every call, so the metrics can compare one prompt with the next.
-CLASSIFICATION_PROMPT_VERSION = "classification-8"
+CLASSIFICATION_PROMPT_VERSION = "classification-9"
 
 # Between these, the data of the task: information, never instructions (ADR 0013, point 9).
 DATA_OPEN = "<datos>"
@@ -48,7 +48,13 @@ un préstamo?", "¿qué es un plazo fijo?".
 - "none": cualquier otra cosa, como un saludo o algo que no se entiende.
 
 Si es "registration" y el mensaje trae más de un movimiento, como "gasté 3500 en el súper y \
-1200 de nafta", several_movements es true; si trae uno solo, false.
+1200 de nafta", el primero va en los campos de abajo y cada uno de los siguientes, en el orden \
+en que el mensaje los escribe, es un elemento de more_movements, con los mismos campos que el \
+primero: registration_type, amount, account, account_type, account_type_words, to_account, \
+to_account_type, to_account_type_words, category, currency, currency_words, transaction_date \
+y proposed_category. Cada movimiento lleva solo lo que el mensaje dice de él: en "gasté 3500 \
+en el súper con MP y 1200 de nafta", la cuenta del segundo es null. Si el mensaje trae un solo \
+movimiento, o no es "registration", more_movements es [].
 
 Si es "registration", registration_type es uno de: "expense" (un gasto), "income" (un \
 ingreso), "transfer" (plata que pasa entre dos cuentas propias), "card_purchase" (una compra \

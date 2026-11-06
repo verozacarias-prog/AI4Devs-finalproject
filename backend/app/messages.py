@@ -65,6 +65,12 @@ REGISTERED_TRANSFER = (
     "¡Listo! Anoté una transferencia de {amount} de {from_account} a {to_account}."
 )
 TRANSFER_IS_NOT_AN_EXPENSE = "No cuenta como gasto."
+# The confirmation of a batch of several movements: each one with its number, and then what was
+# assumed of it (FEAT-007).
+REGISTERED_BATCH = "¡Listo! Anoté {count} movimientos:"
+BATCH_EXPENSE = "{position}. Un gasto de {amount} en {account}."
+BATCH_INCOME = "{position}. Un ingreso de {amount} en {account}."
+BATCH_TRANSFER = "{position}. Una transferencia de {amount} de {from_account} a {to_account}."
 CONFIRMATION_DATE = "Fecha: {date}"
 CONFIRMATION_CURRENCY = "Moneda: {currency}"
 CONFIRMATION_CATEGORY = "Categoría: {category}"

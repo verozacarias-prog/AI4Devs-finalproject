@@ -1,6 +1,6 @@
 """What the registration asks, and how a reply continues it, with the model replaced (FEAT-003).
 
-Cases C2-02 to C2-06, C2-08 to C2-13, C2-15, C2-17, C2-18, C2-20, C2-35, C2-37, C2-38, C2-44,
+Cases C2-02 to C2-06, C2-08 to C2-13, C2-15, C2-17, C2-18, C2-20, C2-37, C2-38, C2-44,
 C2-45, C2-46, C2-47, C2-48 to C2-51, C2-53, C2-54 and C2-55 of its spec.md.
 Each case that starts from an open pending gets it the way a user does: a first message that
 leaves it pending, and then the reply. The database is in memory; the integration tests check
@@ -491,27 +491,6 @@ def test_without_any_period_for_the_date_it_points_to_the_dashboard() -> None:
     assert _last_reply(unit_of_work).splitlines()[0] == (
         "No tenés un presupuesto para el 1/11/2026. Armalo en el dashboard y después avisame."
     )
-
-
-def test_a_message_with_several_movements_gets_the_fixed_text_and_stays_not_pending() -> None:
-    # Case C2-35. Several movements in a message belong to the final delivery.
-    unit_of_work = InMemoryUnitOfWork()
-    lucia = Lucia(unit_of_work)
-
-    _answer(
-        unit_of_work,
-        lucia,
-        "gasté 3500 en el súper con MP y 1200 de nafta en efectivo",
-        Classification(
-            MessageClass.REGISTRATION,
-            registration_type=RegistrationType.EXPENSE,
-            several_movements=True,
-        ),
-    )
-
-    assert unit_of_work.transactions.added == []
-    assert unit_of_work.pendings.added == []
-    assert _last_reply(unit_of_work) == CANNOT_REGISTER
 
 
 def _farmacia(unit_of_work: InMemoryUnitOfWork, lucia: Lucia) -> None:

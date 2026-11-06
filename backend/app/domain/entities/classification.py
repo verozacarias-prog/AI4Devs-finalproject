@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from decimal import Decimal
 from enum import StrEnum
@@ -83,8 +83,34 @@ class ModelUsage:
 
 
 @dataclass(frozen=True)
+class MovementReading:
+    """One movement of a message, as the model read it. Names are as the model wrote them.
+
+    The fields mean the same as those of a classification with one movement (FEAT-007, CA-1).
+    """
+
+    registration_type: RegistrationType | None = None
+    amount: Decimal | None = None
+    account: str | None = None
+    account_type: AccountType | None = None
+    account_type_words: str | None = None
+    to_account: str | None = None
+    to_account_type: AccountType | None = None
+    to_account_type_words: str | None = None
+    category: str | None = None
+    currency: str | None = None
+    currency_words: str | None = None
+    transaction_date: date | None = None
+    proposed_category: str | None = None
+
+
+@dataclass(frozen=True)
 class Classification:
-    """What the model understood of a message. Names are as the model wrote them."""
+    """What the model understood of a message. Names are as the model wrote them.
+
+    The fields of a movement are those of its first movement, or its only one; the ones after
+    it, in the order the message writes them, are in `more_movements` (FEAT-007).
+    """
 
     message_class: MessageClass
     registration_type: RegistrationType | None = None
@@ -108,8 +134,8 @@ class Classification:
     transaction_date: date | None = None
     # A name for a new category, when none of the user fits.
     proposed_category: str | None = None
-    # More than one movement in the same message.
-    several_movements: bool = False
+    # The movements after the first, when the message has more than one.
+    more_movements: tuple[MovementReading, ...] = ()
     # Only while a pending awaits a reply: what the message does to it.
     pending_reply: PendingReply | None = None
     # A yes to what the question offered: to create the category, or to confirm the draft.
@@ -117,3 +143,42 @@ class Classification:
     usage: ModelUsage | None = None
     # The row the call left in LLM_CALL, once the wrapper recorded it (ADR 0023).
     call_id: uuid.UUID | None = None
+
+    def movements(self) -> tuple[MovementReading, ...]:
+        """Every movement of the message, the first one included, in the order it writes them."""
+        first = MovementReading(
+            registration_type=self.registration_type,
+            amount=self.amount,
+            account=self.account,
+            account_type=self.account_type,
+            account_type_words=self.account_type_words,
+            to_account=self.to_account,
+            to_account_type=self.to_account_type,
+            to_account_type_words=self.to_account_type_words,
+            category=self.category,
+            currency=self.currency,
+            currency_words=self.currency_words,
+            transaction_date=self.transaction_date,
+            proposed_category=self.proposed_category,
+        )
+        return (first, *self.more_movements)
+
+    def of_movement(self, movement: MovementReading) -> Classification:
+        """This classification with only that movement, to resolve it as if it came alone."""
+        return replace(
+            self,
+            registration_type=movement.registration_type,
+            amount=movement.amount,
+            account=movement.account,
+            account_type=movement.account_type,
+            account_type_words=movement.account_type_words,
+            to_account=movement.to_account,
+            to_account_type=movement.to_account_type,
+            to_account_type_words=movement.to_account_type_words,
+            category=movement.category,
+            currency=movement.currency,
+            currency_words=movement.currency_words,
+            transaction_date=movement.transaction_date,
+            proposed_category=movement.proposed_category,
+            more_movements=(),
+        )
