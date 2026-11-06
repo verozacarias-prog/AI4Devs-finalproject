@@ -82,6 +82,7 @@ from app.domain.services.transactions.transfer_resolution import (
     is_transfer,
     registered,
     resolve_transfer,
+    transfer_corrections,
     transfer_from_parsed_data,
     transfer_to_parsed_data,
 )
@@ -907,7 +908,12 @@ def _continue_transfer(
             transfer = continue_transfer(
                 previous, classification, context.message.text, context.accounts
             )
-            return _settle_transfer(unit_of_work, context, transfer, awaiting)
+            corrected = replace(
+                pending,
+                corrected_fields_count=pending.corrected_fields_count
+                + transfer_corrections(previous, transfer),
+            )
+            return _settle_transfer(unit_of_work, context, transfer, (batch, corrected))
         case None:
             # Not about the pending: it keeps waiting, and the message gets its fixed text.
             _add_reply(unit_of_work, context, _fixed_text(classification), ResponseKind.FIXED_TEXT)

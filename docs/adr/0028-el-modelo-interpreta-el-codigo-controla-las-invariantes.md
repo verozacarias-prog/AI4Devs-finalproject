@@ -68,9 +68,11 @@ puede equivocar, y un mensaje armado puede manipularlo
   controles del código, y la confirmación, que muestra lo que se registró.
 - Lo que el modelo decide no lo prueba ningún test, porque ningún test llama al proveedor: se
   prueba a mano, con el modelo real, y con las métricas.
-- Algunas medidas quedan algo ruidosas mientras el modelo no las devuelva él. Por ejemplo, el
-  contador de correcciones cuenta cualquier dato que cambia, también una fecha que se había
-  asumido.
+- Algunas medidas son estimaciones, no un registro exacto. Por ejemplo, el contador de
+  correcciones cuenta cualquier dato que tenía un valor y cambia, también una fecha que se había
+  asumido, sin buscar quién se equivocó: estima cuántos registros no salieron bien del primer
+  mensaje, y es la regla elegida, no un paso provisorio
+  ([reglas de dominio § 5](../reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)).
 
 ## Alternativas descartadas
 

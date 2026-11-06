@@ -109,6 +109,21 @@ No hay pantalla nueva.
 
 - **CA-16.** Los registros de una transferencia no tienen el monto, el texto del mensaje ni el
   nombre de una cuenta.
+- **CA-17.** Un pendiente de transferencia cuenta las correcciones de la respuesta como uno de
+  gasto ([reglas de dominio § 5](../../reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)):
+  cambiar el monto suma uno, cambiar la fecha suma uno, y cambiar una cuenta, o las dos, suma
+  uno. Completar un lado que faltaba, o elegir entre las cuentas ofrecidas, no suma, y tampoco
+  completar un monto que no se podía guardar. Decidido por Vero el 6/11/2026; resuelve la issue
+  #146.
+- **CA-18.** La fila de `LLM_CALL` de una clasificación que resulta una transferencia dice qué
+  campos de la transferencia vinieron vacíos, como CA-34 de [FEAT-003](../FEAT-003/spec.md): los
+  de un gasto menos la categoría, que una transferencia no lleva, y más la cuenta de destino,
+  `to_account`. Decidido por Vero el 6/11/2026. Necesita una migración nueva, porque el `CHECK`
+  de `empty_fields` no admite `to_account`. Cubre la clasificación que abre la transferencia: en
+  la respuesta a una transferencia pendiente el modelo devuelve solo lo que agrega, el tipo puede
+  venir vacío, y la fila sigue la regla de un gasto. Que la respuesta use también los campos de
+  una transferencia queda para otra issue. Decidido por Vero el 6/11/2026, con la revisión de
+  `pr-reviewer` del corte 3.
 
 ## Casos de prueba
 
@@ -460,9 +475,92 @@ un gasto; una que recibe el texto fijo de CA-14 no la gasta.
 
 ### Corte 3 — observabilidad
 
-- **Aprobado por:** pendiente
+- **Aprobado por:** Veronica Zacarias 6/11/2026
+- **C3-06, sumado con el `/spec-drift` del corte 3:** Veronica Zacarias 6/11/2026
+- **Total:** 6 casos, 3 unitarios y 3 de integración.
 
-Se escriben antes de empezar el corte, con CA-16.
+| Caso | Qué prueba | Tipo | Sale de |
+|---|---|---|---|
+| C3-01 | Ninguna línea de los registros de una transferencia lleva el monto, el texto ni una cuenta | Integración | CA-16 |
+| C3-02 | Una respuesta que cambia el monto de una transferencia pendiente suma una corrección | Integración | CA-17 |
+| C3-03 | Cambiar las dos cuentas suma una sola corrección | Unitario | CA-17 |
+| C3-04 | Elegir entre las cuentas ofrecidas no suma una corrección | Unitario | CA-17 |
+| C3-05 | La fila de la clasificación de una transferencia dice qué campos vinieron vacíos | Integración | CA-18 |
+| C3-06 | Completar un monto que no se podía guardar no suma una corrección | Unitario | CA-17 |
+
+#### C3-01 · Ninguna línea de los registros de una transferencia lleva el monto, el texto ni una cuenta
+
+- **Sale de:** CA-16 · **Tipo:** integración
+- **Dado** los mensajes web de Lucía "pasé 20000 de Galicia pesos" y, después, "a Mercado
+  Pago", y el modelo responde las interpretaciones de C2-01 y de C2-04,
+- **cuando** el worker hace una ronda con cada uno, el primero queda pendiente y el segundo
+  registra la transferencia,
+- **entonces** ninguna línea de los registros contiene "20000", "20.000", "pasé", "Galicia",
+  "Mercado Pago", "Lucía" ni "000000000001".
+- **Test:** `tests/integration/test_registration_logs.py::test_no_log_line_of_a_transfer_carries_the_amount_the_text_or_an_account`
+
+#### C3-02 · Una respuesta que cambia el monto de una transferencia pendiente suma una corrección
+
+- **Sale de:** CA-17 · **Tipo:** integración
+- **Dado** el pendiente de C2-01, y otro mensaje web de Lucía, posterior, "no, fueron 30 lucas,
+  a Mercado Pago", y el modelo responde que continúa el pendiente, con monto 30000 y cuenta de
+  destino "Mercado Pago",
+- **cuando** el worker hace una ronda,
+- **entonces** `TRANSFER` tiene una sola fila, de Galicia pesos a Mercado Pago, con
+  `from_amount = 30000.00`; y el pendiente queda `promoted` con `corrected_fields_count = 1`:
+  el monto, que el modelo había interpretado, cambió, y el destino faltaba, así que completarlo
+  no cuenta.
+- **Test:** `tests/integration/test_pending_transfer.py::test_a_reply_that_changes_the_amount_of_a_pending_transfer_adds_a_correction`
+
+#### C3-03 · Cambiar las dos cuentas suma una sola corrección
+
+- **Sale de:** CA-17 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía, "pasé plata de Galicia pesos a Mercado Pago", que queda
+  pendiente porque el modelo responde una transferencia sin monto, con cuenta de origen
+  "Galicia pesos" y de destino "Mercado Pago"; y la respuesta "fueron 20000, de Efectivo a
+  Galicia pesos", que continúa el pendiente con monto 20000, origen "Efectivo" y destino
+  "Galicia pesos",
+- **cuando** se procesa la respuesta,
+- **entonces** se registra la transferencia de Efectivo a Galicia pesos, y el pendiente queda
+  `promoted` con `corrected_fields_count = 1`: cambiaron las dos cuentas, que cuentan como un
+  solo campo, y el monto faltaba.
+- **Test:** `tests/unit/test_pending_transfer.py::test_changing_both_accounts_adds_a_single_correction`
+
+#### C3-04 · Elegir entre las cuentas ofrecidas no suma una corrección
+
+- **Sale de:** CA-17 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía, "pasé 20000 de galicia a Mercado Pago", que queda pendiente
+  porque "galicia" nombra a Galicia pesos y a Galicia USD; y la respuesta "de Galicia pesos",
+  que continúa el pendiente con cuenta de origen "Galicia pesos",
+- **cuando** se procesa la respuesta,
+- **entonces** se registra la transferencia de Galicia pesos a Mercado Pago, y el pendiente
+  queda `promoted` con `corrected_fields_count = 0`: el origen faltaba, y elegirlo entre los
+  ofrecidos lo completa.
+- **Test:** `tests/unit/test_pending_transfer.py::test_choosing_among_the_offered_accounts_adds_no_correction`
+
+#### C3-05 · La fila de la clasificación de una transferencia dice qué campos vinieron vacíos
+
+- **Sale de:** CA-18 · **Tipo:** integración
+- **Dado** el mensaje de C2-01, "pasé 20000 de Galicia pesos", y el modelo responde una
+  transferencia de 20000 con cuenta de origen "Galicia pesos", sin cuenta de destino, sin
+  moneda y sin fecha,
+- **cuando** el worker hace una ronda,
+- **entonces** la fila de `LLM_CALL` tiene `empty_fields` con `to_account`, `currency` y
+  `transaction_date`, sin `category` y sin ningún valor de la salida.
+- **Test:** `tests/integration/test_llm_calls.py::test_the_row_of_a_transfer_says_which_of_its_fields_came_empty`
+
+#### C3-06 · Completar un monto que no se podía guardar no suma una corrección
+
+- **Sale de:** CA-17 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía, "pasé 100000000000000000000 de Galicia pesos a Mercado Pago",
+  que queda pendiente porque el modelo responde una transferencia de 100000000000000000000, con
+  cuenta de origen "Galicia pesos" y de destino "Mercado Pago", y ese monto no se puede guardar;
+  y la respuesta "fueron 20000", que continúa el pendiente con monto 20000,
+- **cuando** se procesa la respuesta,
+- **entonces** se registra la transferencia de $20.000 de Galicia pesos a Mercado Pago, y el
+  pendiente queda `promoted` con `corrected_fields_count = 0`: el monto faltaba, y completarlo
+  no es una corrección.
+- **Test:** `tests/unit/test_pending_transfer.py::test_completing_an_amount_that_could_not_be_stored_adds_no_correction`
 
 ## Mensajes al usuario
 
@@ -488,6 +586,7 @@ Se escriben antes de empezar el corte, con CA-16.
 | Una transferencia no se imputa a ningún período (§ 13) | C1-01 y C1-04 |
 | Montos en `Decimal`, con la moneda al lado | C1-01 y C1-08 |
 | El saldo se calcula, no se guarda (§ 2) | C1-03 |
+| Qué cuenta como corrección (§ 5) | C3-02, C3-03, C3-04 y C3-06 |
 
 ## Sin cubrir
 

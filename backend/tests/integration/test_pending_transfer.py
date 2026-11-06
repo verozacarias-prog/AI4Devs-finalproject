@@ -1,8 +1,8 @@
 """A transfer that lacks something, and its continuation, against PostgreSQL (FEAT-006).
 
-Cases C2-01, C2-04 and C2-08 of docs/features/FEAT-006/spec.md. The worker runs rounds, the way
-its process does, with the model replaced by a double inside the wrapper that records each
-call. A case that starts from an open pending gets it the way a user does: a first message that
+Cases C2-01, C2-04, C2-08 and C3-02 of docs/features/FEAT-006/spec.md. The worker runs rounds,
+the way its process does, with the model replaced by a double inside the wrapper that records
+each call. A case that starts from an open pending gets it the way a user does: a first message that
 leaves it pending, and then the reply.
 """
 
@@ -221,3 +221,32 @@ def test_a_transfer_between_different_currencies_gets_the_fixed_text_and_stays_n
         "Todavía no sé anotar una transferencia entre cuentas de distinta moneda. Por ahora, "
         "solo entre cuentas de la misma moneda."
     )
+
+
+def test_a_reply_that_changes_the_amount_of_a_pending_transfer_adds_a_correction(
+    settings: Settings, engine: Engine
+) -> None:
+    # Case C3-02. The amount changed, which the model had interpreted; the destination was
+    # missing, and completing it does not count.
+    _from_galicia_pesos(settings, engine)
+
+    _write_and_answer(
+        settings,
+        engine,
+        "no, fueron 30 lucas, a Mercado Pago",
+        Classification(
+            MessageClass.REGISTRATION,
+            amount=Decimal("30000"),
+            to_account="Mercado Pago",
+            pending_reply=PendingReply.CONTINUES,
+        ),
+        now=NOW + timedelta(minutes=1),
+    )
+
+    [transfer] = _transfers(engine)
+    assert transfer["from_account"] == "Galicia pesos"
+    assert transfer["to_account"] == "Mercado Pago"
+    assert transfer["from_amount"] == Decimal("30000.00")
+    [pending] = _rows(engine, "SELECT status, corrected_fields_count FROM pending_transaction")
+    assert pending["status"] == "promoted"
+    assert pending["corrected_fields_count"] == 1

@@ -488,11 +488,16 @@ Cada pendiente pertenece a un lote (`PENDING_BATCH`), y un gasto suelto es un lo
   toma los primeros 10 y le avisa que siga con el resto.
 
 **Qué cuenta como corrección, para medir la interpretación.** Cada pendiente cuenta cuántos
-campos que el modelo había interpretado cambió el usuario antes de confirmar: el monto, el tipo,
-la fecha, la categoría o la cuenta que el mensaje nombraba. Suma uno por cada campo que una
-respuesta cambia. La moneda va con la cuenta: cambiar la cuenta por una de otra moneda suma uno,
-no dos. La métrica mira si hubo alguna corrección, no cuántas. No cuenta completar un dato que faltaba ni elegir el presupuesto, que
-se pregunta cuando hay más de uno posible. El contador no cambia nada de lo que ve el usuario: lo lee solo la métrica
+campos que ya tenían un valor cambió el usuario antes de confirmar: el monto, el tipo, la fecha,
+la categoría o la cuenta. Suma uno por cada campo que una respuesta cambia, sin distinguir si ese
+valor lo interpretó el modelo o lo completó el sistema por defecto, como la fecha de hoy, ni si el
+modelo se equivocó o el usuario cambió de idea. El contador no busca saber quién se equivocó:
+estima cuántos registros no salieron bien del primer mensaje, con la misma regla para todos los
+campos. La moneda va con la cuenta: cambiar la cuenta por una de otra moneda suma uno, no dos. En
+una transferencia, las dos cuentas cuentan como un solo campo. No cuenta completar un dato que
+faltaba, incluido un monto que no se podía guardar, ni elegir entre las opciones ofrecidas o el
+presupuesto, que se pregunta cuando hay más de uno posible. La métrica mira si hubo alguna
+corrección, no cuántas. Decidido por Vero el 6 de noviembre de 2026. El contador no cambia nada de lo que ve el usuario: lo lee solo la métrica
 de calidad ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
 
 Ver también: [PENDING_TRANSACTION y PENDING_BATCH en 3.2](03-modelo-de-datos.md#32-descripción-de-entidades-principales) · [HU3](05-historias-de-usuario.md).

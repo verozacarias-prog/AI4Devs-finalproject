@@ -1,7 +1,7 @@
 """What the registration asks, and how a reply continues it, with the model replaced (FEAT-003).
 
 Cases C2-02 to C2-06, C2-08 to C2-13, C2-15, C2-17, C2-18, C2-20, C2-35, C2-37, C2-38, C2-44,
-C2-45, C2-46, C2-47, C2-48 to C2-51, C2-53 and C2-54 of its spec.md.
+C2-45, C2-46, C2-47, C2-48 to C2-51, C2-53, C2-54 and C2-55 of its spec.md.
 Each case that starts from an open pending gets it the way a user does: a first message that
 leaves it pending, and then the reply. The database is in memory; the integration tests check
 the same use case against PostgreSQL.
@@ -837,3 +837,31 @@ def test_a_reply_that_says_only_the_type_offers_the_accounts_of_that_type() -> N
     [pending] = unit_of_work.pendings.added
     assert pending.status is PendingStatus.OPEN
     assert "¿Con qué cuenta? Galicia pesos o Galicia USD." in _last_reply(unit_of_work).splitlines()
+
+
+def test_completing_an_amount_that_could_not_be_stored_adds_no_correction() -> None:
+    # Case C2-55. The amount does not fit the column, so it was missing, not interpreted.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    _answer(
+        unit_of_work,
+        lucia,
+        "gasté 100000000000000000000 en el súper con Galicia pesos",
+        _registration(
+            amount="100000000000000000000", account="Galicia pesos", category="Supermercado"
+        ),
+    )
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "fueron 20000",
+        _reply(PendingReply.CONTINUES, amount="20000"),
+        now=NOW + timedelta(minutes=1),
+    )
+
+    [transaction] = unit_of_work.transactions.added
+    assert transaction.amount == Decimal("20000")
+    [pending] = unit_of_work.pendings.added
+    assert pending.status is PendingStatus.PROMOTED
+    assert pending.corrected_fields_count == 0

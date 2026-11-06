@@ -3,7 +3,8 @@
 Case C3-15: a call whose final transaction is undone keeps its row (ADR 0023, point 5).
 Case C3-17: the row of a classification says which fields came empty (CA-34). Case C3-19:
 `scripts/llm_metrics.sql` gives the four metrics of ADR 0023 (CA-35). Case C3-23: a refusal of
-the model is no hallucination, and has its own figure.
+the model is no hallucination, and has its own figure. Case C3-05 of FEAT-006: the row of a
+transfer says which of its own fields came empty (CA-18).
 """
 
 from __future__ import annotations
@@ -131,6 +132,29 @@ def test_the_row_of_a_classification_says_which_fields_came_empty(
     assert empty is not None
     assert sorted(empty) == ["account", "currency", "transaction_date"]
     assert _empty_fields(engine, greeting) is None
+
+
+def test_the_row_of_a_transfer_says_which_of_its_fields_came_empty(
+    settings: Settings, engine: Engine
+) -> None:
+    # Case C3-05 of FEAT-006. Its destination is one of its fields; a category is not.
+    transfer = inbound(engine, "Lucía", "pasé 20000 de Galicia pesos", sent_at=SENT_AT)
+
+    _run_round(
+        settings,
+        FakeLLM(
+            Classification(
+                MessageClass.REGISTRATION,
+                registration_type=RegistrationType.TRANSFER,
+                amount=Decimal("20000"),
+                account="Galicia pesos",
+            )
+        ),
+    )
+
+    empty = _empty_fields(engine, transfer)
+    assert empty is not None
+    assert sorted(empty) == ["currency", "to_account", "transaction_date"]
 
 
 def _metrics(engine: Engine) -> list[list[RowMapping]]:

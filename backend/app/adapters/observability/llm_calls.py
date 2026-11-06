@@ -23,6 +23,7 @@ from app.domain.entities.classification import (
     ClassificationRequest,
     MessageClass,
     ModelUsage,
+    RegistrationType,
 )
 from app.domain.entities.llm_call import LlmCall, LlmOutcome, LlmPurpose, OutputField
 from app.domain.errors import ModelCallFailedError, ModelRefusedError
@@ -106,15 +107,21 @@ def _cost(usage: ModelUsage | None) -> Decimal | None:
 
 
 def _empty_fields(classification: Classification) -> tuple[OutputField, ...] | None:
-    """Which fields of a registration came empty: their names only, never a value (CA-34)."""
+    """Which fields of a registration came empty: their names only, never a value (CA-34).
+
+    A transfer has its own: no category, and the account the money goes to (CA-18 of FEAT-006).
+    """
     if classification.message_class is not MessageClass.REGISTRATION:
         return None
-    values = {
+    values: dict[OutputField, object] = {
         OutputField.REGISTRATION_TYPE: classification.registration_type,
         OutputField.AMOUNT: classification.amount,
         OutputField.ACCOUNT: classification.account,
-        OutputField.CATEGORY: classification.category,
-        OutputField.CURRENCY: classification.currency,
-        OutputField.TRANSACTION_DATE: classification.transaction_date,
     }
+    if classification.registration_type is RegistrationType.TRANSFER:
+        values[OutputField.TO_ACCOUNT] = classification.to_account
+    else:
+        values[OutputField.CATEGORY] = classification.category
+    values[OutputField.CURRENCY] = classification.currency
+    values[OutputField.TRANSACTION_DATE] = classification.transaction_date
     return tuple(field for field, value in values.items() if value is None)
