@@ -193,7 +193,7 @@ sequenceDiagram
 
 ## 5. Registro de un movimiento por WhatsApp
 
-**Estado:** el registro de un gasto, un ingreso o una transferencia completa entre cuentas propias en la misma moneda está construido, por el [chat web](#por-el-chat-web). Preguntar lo que le falta a una transferencia es el corte 2 de [FEAT-006](features/FEAT-006/spec.md). El webhook y el envío por WhatsApp, elegir entre un presupuesto individual y uno familiar, las transferencias entre monedas distintas y las reglas recurrentes son de una segunda versión.
+**Estado:** el registro de un gasto, un ingreso o una transferencia entre cuentas propias en la misma moneda está construido, por el [chat web](#por-el-chat-web), también cuando le falta algo y se pregunta ([FEAT-006](features/FEAT-006/spec.md)). El webhook y el envío por WhatsApp, elegir entre un presupuesto individual y uno familiar, las transferencias entre monedas distintas y las reglas recurrentes son de una segunda versión.
 
 El camino más frecuente. La versión centrada en la experiencia está en
 [1.3](01-producto.md#13-diseño-y-experiencia-de-usuario); esta muestra procesos y tablas.
@@ -234,7 +234,7 @@ sequenceDiagram
     rect rgb(240, 246, 252)
         Note over W,DB: Una sola transacción SQL
         W->>DB: UPDATE INBOUND_MESSAGE processed, con el mismo fencing,<br/>y UPDATE LLM_USAGE
-        W->>DB: INSERT TRANSACTION, o TRANSFER, o RECURRING_RULE<br/>si es una compra con tarjeta (hoy, solo TRANSACTION)
+        W->>DB: INSERT TRANSACTION, o TRANSFER, o RECURRING_RULE<br/>si es una compra con tarjeta (hoy, TRANSACTION o TRANSFER)
         W->>DB: UPDATE PENDING_TRANSACTION promoted<br/>y cierra el PENDING_BATCH
         W->>DB: INSERT OUTBOUND_MESSAGE con la confirmación
     end

@@ -17,6 +17,15 @@ from app.domain.entities.account import Account, AccountType
 from app.domain.entities.classification import Classification
 
 _WORD = re.compile(r"[a-z0-9]+")
+# The order in which accounts are offered, within each currency: so it never changes.
+_OFFER_ORDER = (
+    AccountType.BANK_ACCOUNT,
+    AccountType.DIGITAL_WALLET,
+    AccountType.CASH,
+    AccountType.BROKER,
+    AccountType.CREDIT_CARD,
+    AccountType.RECEIVABLE,
+)
 # A name of more words than this can be named by its initials, as "MP" for Mercado Pago.
 _SINGLE_WORD = 1
 
@@ -72,6 +81,69 @@ def account_candidates(
         # 5. Only those in the currency the message says.
         candidates = [account for account in candidates if account.currency == words.currency]
     return candidates
+
+
+def named_or_mentioned(
+    text: str, words: AccountWords, accounts: Sequence[Account]
+) -> tuple[str | None, str | None, AccountType | None]:
+    """The account the message names, or the mention and the type that named several of them,
+    to offer only those.
+    """
+    candidates = account_candidates(text, words, accounts)
+    if len(candidates) == 1:
+        return candidates[0].name, None, None
+    if len(candidates) > 1:
+        return None, words.mention, verified_type(words.type, words.type_words, text)
+    return None, None, None
+
+
+def chosen_account(
+    text: str, said: AccountWords, accounts: Sequence[Account], offered: Sequence[Account]
+) -> Account | None:
+    """The account a reply chooses: by its name, or by its currency among those offered."""
+    currency = said.currency
+    named = account_candidates(text, said, accounts)
+    if len(named) == 1:
+        return named[0]
+    offered_ids = {account.id for account in offered}
+    among_offered = [account for account in named if account.id in offered_ids]
+    if len(among_offered) == 1:
+        return among_offered[0]
+    if currency is not None:
+        in_currency = [account for account in offered if account.currency == currency]
+        if len(in_currency) == 1:
+            return in_currency[0]
+    return None
+
+
+def offered_accounts(
+    mention: str | None, account_type: AccountType | None, accounts: Sequence[Account]
+) -> list[Account]:
+    """The accounts the mention and the type said name, when they are more than one; or else
+    all of them (CA-20).
+    """
+    named = list(accounts)
+    if mention is not None:
+        named = account_candidates(mention, AccountWords(mention), named)
+    if account_type is not None:
+        named = [account for account in named if account.type is account_type]
+    return named if len(named) > 1 else list(accounts)
+
+
+def in_offer_order(accounts: Sequence[Account], primary_currency: str) -> tuple[Account, ...]:
+    """First those in the primary currency of the user, and within each currency the bank, the
+    wallet and the cash before the rest, by name, so the order never changes.
+    """
+    return tuple(
+        sorted(
+            accounts,
+            key=lambda account: (
+                account.currency != primary_currency,
+                _OFFER_ORDER.index(account.type),
+                account.name,
+            ),
+        )
+    )
 
 
 def account_words(classification: Classification, text: str) -> AccountWords:

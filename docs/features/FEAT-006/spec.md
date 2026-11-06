@@ -92,12 +92,16 @@ No hay pantalla nueva.
 
 - **CA-12.** Una transferencia sin monto, o con un lado que no nombra exactamente una cuenta,
   queda pendiente y se pregunta lo que falta en un solo mensaje, ofreciendo las cuentas del
-  usuario.
+  usuario: las que nombra la mención de ese lado, o todas, sin la cuenta del otro lado. Igual
+  pregunta aunque quede una sola. Decidido por Vero el 5/11/2026.
 - **CA-13.** Si los dos lados nombran la misma cuenta, no se registra nada y se preguntan las
   dos, origen y destino: el asistente no sabe cuál de las dos menciones está mal. Decidido por
   Vero el 4/11/2026.
 - **CA-14.** Una transferencia entre cuentas de distinta moneda no se registra y recibe un
-  texto fijo, sin otra llamada al modelo. Decidido por Vero el 4/11/2026.
+  texto fijo, sin otra llamada al modelo. Decidido por Vero el 4/11/2026. Lo mismo vale si el
+  mensaje dice una moneda que no es la de una de sus cuentas, como "pasé 100 dólares de Galicia
+  pesos a Mercado Pago": anotarla en la moneda de las cuentas guardaría otro monto que el
+  dicho, y convertirla necesita la cotización. Decidido por Vero el 5/11/2026.
 - **CA-15.** Una transferencia con fecha anterior al alta de cualquiera de sus dos cuentas no se
   registra, y la respuesta lo explica como en CA-10 de [FEAT-003](../FEAT-003/spec.md).
 
@@ -227,9 +231,232 @@ efectivo.
 
 ### Corte 2 — errores y lo que exige confirmación
 
-- **Aprobado por:** pendiente
+- **Aprobado por:** Veronica Zacarias 05/11/2026
+- **C2-14, sumado al ver que la moneda dicha no frenaba una transferencia:** Veronica Zacarias 05/11/2026
+- **El orden de las cuentas ofrecidas, cambiado al de la pregunta de un gasto:** Veronica Zacarias 05/11/2026
+- **C2-15, sumado con la revisión de `pr-reviewer` del corte 2:** Veronica Zacarias 05/11/2026
+- **Total:** 15 casos, 12 unitarios y 3 de integración.
 
-Se escriben antes de empezar el corte, con CA-12 a CA-15.
+Las cuentas se ofrecen en el mismo orden que en la pregunta de un gasto: primero las de la moneda
+primaria del usuario y, en cada moneda, banco, billetera y efectivo, antes que el resto, y por
+nombre. Para Lucía es Galicia pesos, Mercado Pago, Efectivo y Galicia USD. Cuando falta un lado, la pregunta ofrece las cuentas que nombra su
+mención, o todas si no hay mención, menos la del otro lado, que ya se sabe. Igual pregunta,
+aunque quede una sola: ofrecer no es elegir. Decidido por Vero el 5/11/2026. Lo que falta de una
+transferencia se nombra por su campo en `TRANSFER`: `amount`, `from_account_id` y
+`to_account_id`, y se pregunta en ese orden. Una transferencia que queda pendiente gasta la cuota
+de registro, como un gasto pendiente, y también una rechazada por la fecha anterior al alta, como
+un gasto; una que recibe el texto fijo de CA-14 no la gasta.
+
+| Caso | Qué prueba | Tipo | Sale de |
+|---|---|---|---|
+| C2-01 | Una transferencia sin destino queda pendiente y pregunta a qué cuenta fue | Integración | CA-12 |
+| C2-02 | Sin monto y sin origen, pregunta las dos cosas en un solo mensaje | Unitario | CA-12 |
+| C2-03 | Una mención que coincide con dos no ofrece la cuenta del otro lado | Unitario | CA-12 |
+| C2-04 | La respuesta completa el pendiente y registra la transferencia | Integración | CA-9 y CA-12 |
+| C2-05 | Una respuesta a medias pregunta solo lo que sigue faltando | Unitario | CA-12 |
+| C2-06 | Al modelo le llega el pendiente de la transferencia sin ningún identificador | Unitario | CA-12 |
+| C2-07 | Las dos cuentas iguales no registran nada y preguntan las dos | Unitario | CA-13 |
+| C2-08 | Una transferencia entre monedas distintas recibe el texto fijo y no queda pendiente | Integración | CA-14 |
+| C2-09 | Elegir en la respuesta una cuenta en otra moneda cierra el pendiente con el texto fijo | Unitario | CA-14 |
+| C2-10 | Con fecha anterior al alta de las dos cuentas, la respuesta nombra la de origen | Unitario | CA-15 |
+| C2-11 | Con fecha anterior al alta solo del destino, la respuesta nombra el destino | Unitario | CA-15 |
+| C2-12 | Con una transferencia pendiente, otro movimiento no se anota y la respuesta la nombra | Unitario | CA-12 |
+| C2-13 | Un monto que no entra se vuelve a preguntar, diciendo por qué | Unitario | CA-12 |
+| C2-14 | Una moneda dicha que no es la de las cuentas recibe el texto fijo | Unitario | CA-14 |
+| C2-15 | Sin cuentas, el monto de la transferencia pendiente se nombra en la moneda dicha | Unitario | CA-12 |
+
+#### C2-01 · Una transferencia sin destino queda pendiente y pregunta a qué cuenta fue
+
+- **Sale de:** CA-12 · **Tipo:** integración
+- **Dado** un mensaje web de Lucía, "pasé 20000 de Galicia pesos", pendiente, con `sent_at`
+  2026-10-17T17:59:55Z, y el modelo responde que es un registro de tipo transferencia, con monto
+  20000, cuenta de origen "Galicia pesos" y sin cuenta ni tipo de destino,
+- **cuando** el worker hace una ronda,
+- **entonces** `TRANSFER` sigue vacía; `PENDING_BATCH` tiene un solo lote de Lucía, manual,
+  `open`, con `awaiting_reply` verdadero y la respuesta como `question_message_id`;
+  `PENDING_TRANSACTION` tiene un solo pendiente en ese lote, `open`, con
+  `intent = 'transfer'` y `missing_fields = ['to_account_id']`; el mensaje queda `processed`;
+  el contador `registration` de Lucía del 17/10/2026 vale 1; y la única respuesta, de tipo
+  `registration`, es "¿A qué cuenta fue? Mercado Pago, Efectivo o Galicia USD.".
+- **Test:** `tests/integration/test_pending_transfer.py::test_a_transfer_without_a_destination_stays_pending_and_asks_where_it_went`
+
+#### C2-02 · Sin monto y sin origen, pregunta las dos cosas en un solo mensaje
+
+- **Sale de:** CA-12 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía, "pasé plata a Mercado Pago", y el modelo responde una
+  transferencia sin monto, sin cuenta de origen y con cuenta de destino "Mercado Pago",
+- **cuando** se procesa,
+- **entonces** no se registra ninguna transferencia, el pendiente queda con
+  `missing_fields = ['amount', 'from_account_id']`, y la respuesta es, línea por línea:
+
+  > ¿Cuánto fue?
+  > ¿De qué cuenta salió? Galicia pesos, Efectivo o Galicia USD.
+
+- **Test:** `tests/unit/test_pending_transfer.py::test_without_an_amount_and_an_origin_it_asks_both_in_one_message`
+
+#### C2-03 · Una mención que coincide con dos no ofrece la cuenta del otro lado
+
+- **Sale de:** CA-12 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía, "pasé 20000 de Galicia pesos a la galicia", y el modelo responde
+  una transferencia de 20000, con cuenta de origen "Galicia pesos" y de destino "galicia",
+- **cuando** se procesa,
+- **entonces** no se registra ninguna transferencia: "galicia" nombra a Galicia pesos y a Galicia
+  USD; el pendiente queda con `missing_fields = ['to_account_id']`, y la respuesta es "¿A qué
+  cuenta fue? Galicia USD.", sin Galicia pesos, que es el origen.
+- **Test:** `tests/unit/test_pending_transfer.py::test_a_mention_that_matches_two_does_not_offer_the_account_of_the_other_side`
+
+#### C2-04 · La respuesta completa el pendiente y registra la transferencia
+
+- **Sale de:** CA-9 y CA-12 · **Tipo:** integración
+- **Dado** el pendiente de C2-01, y otro mensaje web de Lucía, posterior, "a Mercado Pago", y
+  el modelo responde que continúa el pendiente, con cuenta de destino "Mercado Pago",
+- **cuando** el worker hace una ronda,
+- **entonces** `TRANSFER` tiene una sola fila, de Galicia pesos a Mercado Pago, con
+  `from_amount = 20000.00`, `to_amount = 20000.00`, en ARS y con `transfer_date = 2026-10-17`;
+  el pendiente queda `promoted`, con `missing_fields` vacío y `resulting_transfer_id` igual a la
+  transferencia; el lote queda `closed`, con `awaiting_reply` falso y la confirmación como
+  `confirmation_message_id`; y la confirmación es la de C1-02.
+- **Test:** `tests/integration/test_pending_transfer.py::test_the_reply_completes_the_pending_and_registers_the_transfer`
+
+#### C2-05 · Una respuesta a medias pregunta solo lo que sigue faltando
+
+- **Sale de:** CA-12 · **Tipo:** unitario
+- **Dado** el pendiente de C2-02, y una respuesta de Lucía, "fueron 20 lucas", con la que el
+  modelo continúa el pendiente con monto 20000,
+- **cuando** se procesa,
+- **entonces** no se registra ninguna transferencia, el pendiente queda con
+  `missing_fields = ['from_account_id']` y monto 20000, y la respuesta es "¿De qué cuenta
+  salió? Galicia pesos, Efectivo o Galicia USD.".
+- **Test:** `tests/unit/test_pending_transfer.py::test_a_reply_that_completes_half_asks_only_what_is_still_missing`
+
+#### C2-06 · Al modelo le llega el pendiente de la transferencia sin ningún identificador
+
+- **Sale de:** CA-12 · **Tipo:** unitario
+- **Dado** el pendiente de C2-01, y una respuesta de Lucía, "a Mercado Pago",
+- **cuando** se clasifica,
+- **entonces** el pendiente abierto que recibe el modelo dice, en lo interpretado, el tipo
+  `transfer`, el monto 20000 y la cuenta de origen "Galicia pesos"; en lo que falta,
+  `to_account_id`; y como pregunta, la de C2-01; y no tiene ningún identificador.
+- **Test:** `tests/unit/test_pending_transfer.py::test_the_model_gets_the_pending_transfer_without_any_identifier`
+
+#### C2-07 · Las dos cuentas iguales no registran nada y preguntan las dos
+
+- **Sale de:** CA-13 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía, "pasé 20000 de Galicia pesos a Galicia pesos", y el modelo
+  responde una transferencia de 20000, con cuenta de origen y de destino "Galicia pesos",
+- **cuando** se procesa,
+- **entonces** no se registra ninguna transferencia; el pendiente queda con
+  `missing_fields = ['from_account_id', 'to_account_id']`, sin ninguna de las dos cuentas en lo
+  interpretado; y la respuesta es, línea por línea:
+
+  > La cuenta de origen y la de destino no pueden ser la misma.
+  > ¿De qué cuenta salió? Galicia pesos, Mercado Pago, Efectivo o Galicia USD.
+  > ¿A qué cuenta fue? Galicia pesos, Mercado Pago, Efectivo o Galicia USD.
+
+- **Test:** `tests/unit/test_pending_transfer.py::test_the_same_account_on_both_sides_registers_nothing_and_asks_both`
+
+#### C2-08 · Una transferencia entre monedas distintas recibe el texto fijo y no queda pendiente
+
+- **Sale de:** CA-14 · **Tipo:** integración
+- **Dado** un mensaje web de Lucía, "pasé 100 de Galicia USD a Mercado Pago", pendiente, y el
+  modelo responde una transferencia de 100, con cuenta de origen "Galicia USD" y de destino
+  "Mercado Pago",
+- **cuando** el worker hace una ronda,
+- **entonces** `TRANSFER`, `PENDING_BATCH` y `PENDING_TRANSACTION` siguen vacías; `LLM_CALL`
+  tiene una sola fila de ese mensaje; el contador `registration` de Lucía no suma; el mensaje
+  queda `processed`; y la única respuesta, con `response_kind = 'fixed_text'`, es "Todavía no
+  sé anotar una transferencia entre cuentas de distinta moneda. Por ahora, solo entre cuentas
+  de la misma moneda.".
+- **Test:** `tests/integration/test_pending_transfer.py::test_a_transfer_between_different_currencies_gets_the_fixed_text_and_stays_no_pending`
+
+#### C2-09 · Elegir en la respuesta una cuenta en otra moneda cierra el pendiente con el texto fijo
+
+- **Sale de:** CA-14 · **Tipo:** unitario
+- **Dado** el pendiente de C2-03, y una respuesta de Lucía, "a Galicia USD", con la que el
+  modelo continúa el pendiente con cuenta de destino "Galicia USD",
+- **cuando** se procesa,
+- **entonces** no se registra ninguna transferencia, el pendiente queda `rejected`, el lote
+  `closed` con `awaiting_reply` falso, y la respuesta es el texto fijo de C2-08.
+- **Test:** `tests/unit/test_pending_transfer.py::test_choosing_an_account_in_another_currency_in_the_reply_closes_the_pending_with_the_fixed_text`
+
+#### C2-10 · Con fecha anterior al alta de las dos cuentas, la respuesta nombra la de origen
+
+- **Sale de:** CA-15 · **Tipo:** unitario
+- **Dado** Lucía con Galicia pesos y Mercado Pago dadas de alta el 13/10/2026, un mensaje suyo,
+  "el lunes pasé 20000 de Galicia pesos a Mercado Pago", y el modelo responde la transferencia
+  de C1-01 con fecha 2026-10-12,
+- **cuando** se procesa,
+- **entonces** no se registra ninguna transferencia ni queda ningún pendiente abierto, y la
+  respuesta es "Galicia pesos la tenés cargada desde el 13/10/2026, así que lo que
+  transferiste antes ya está en el saldo con el que la diste de alta. Lo dejo sin anotar para
+  no contarlo dos veces.", con `response_kind = 'fixed_text'`.
+- **Test:** `tests/unit/test_pending_transfer.py::test_a_date_before_both_accounts_were_opened_names_the_origin`
+
+#### C2-11 · Con fecha anterior al alta solo del destino, la respuesta nombra el destino
+
+- **Sale de:** CA-15 · **Tipo:** unitario
+- **Dado** Lucía con Mercado Pago dada de alta el 13/10/2026 y Galicia pesos antes del
+  12/10/2026, un mensaje suyo, "el lunes pasé 20000 de Galicia pesos a Mercado Pago", y el
+  modelo responde la transferencia de C1-01 con fecha 2026-10-12,
+- **cuando** se procesa,
+- **entonces** no se registra ninguna transferencia ni queda ningún pendiente abierto, y la respuesta es
+  "Mercado Pago la tenés cargada desde el 13/10/2026, así que lo que transferiste antes ya está
+  en el saldo con el que la diste de alta. Lo dejo sin anotar para no contarlo dos veces.".
+- **Test:** `tests/unit/test_pending_transfer.py::test_a_date_before_only_the_destination_was_opened_names_the_destination`
+
+#### C2-12 · Con una transferencia pendiente, otro movimiento no se anota y la respuesta la nombra
+
+- **Sale de:** CA-12 · **Tipo:** unitario
+- **Dado** el pendiente de C2-01, y otro mensaje de Lucía, "gasté 3500 en el súper con Mercado
+  Pago", con el que el modelo responde que trae otro movimiento,
+- **cuando** se procesa,
+- **entonces** no se registra nada, el pendiente sigue `open` con lo que tenía, y la respuesta
+  es, línea por línea:
+
+  > No anoté tu último mensaje: primero terminemos con la transferencia de $20.000 de Galicia pesos, y después mandámelo de nuevo.
+  > ¿A qué cuenta fue? Mercado Pago, Efectivo o Galicia USD.
+
+- **Test:** `tests/unit/test_pending_transfer.py::test_with_a_pending_transfer_another_movement_is_not_registered_and_the_reply_names_it`
+
+#### C2-13 · Un monto que no entra se vuelve a preguntar, diciendo por qué
+
+- **Sale de:** CA-12 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía, "pasé 1000000000000000000 de Galicia pesos a Mercado Pago", y
+  el modelo responde una transferencia por ese monto, con cuenta de origen "Galicia pesos" y de
+  destino "Mercado Pago",
+- **cuando** se procesa,
+- **entonces** no se registra ninguna transferencia, el pendiente queda con
+  `missing_fields = ['amount']`, y la respuesta es, línea por línea:
+
+  > Ese monto es más grande de lo que puedo registrar.
+  > ¿Cuánto fue?
+
+- **Test:** `tests/unit/test_pending_transfer.py::test_an_amount_that_does_not_fit_is_asked_again_saying_why`
+
+#### C2-14 · Una moneda dicha que no es la de las cuentas recibe el texto fijo
+
+- **Sale de:** CA-14 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía, "pasé 100 dólares de Galicia pesos a Mercado Pago", y el modelo
+  responde una transferencia de 100, con moneda USD dicha con "dólares", cuenta de origen
+  "Galicia pesos" y de destino "Mercado Pago", las dos en ARS,
+- **cuando** se procesa,
+- **entonces** no se registra ninguna transferencia ni queda ningún pendiente, y la respuesta es
+  "Todavía no sé anotar una transferencia en otra moneda que la de sus cuentas. Por ahora, solo
+  en la moneda de las dos cuentas.", con `response_kind = 'fixed_text'`.
+- **Test:** `tests/unit/test_pending_transfer.py::test_a_currency_said_that_is_not_the_one_of_the_accounts_gets_the_fixed_text`
+
+#### C2-15 · Sin cuentas, el monto de la transferencia pendiente se nombra en la moneda dicha
+
+- **Sale de:** CA-12 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía, "pasé 100 dólares", con el que el modelo responde una
+  transferencia de 100, con moneda USD dicha con "dólares" y sin ninguna de las dos cuentas, y
+  después otro mensaje suyo, "gasté 3500 en el súper con Mercado Pago", con el que el modelo
+  responde que trae otro movimiento,
+- **cuando** se procesa el segundo,
+- **entonces** no se registra nada, el pendiente sigue `open`, y la primera línea de la
+  respuesta es "No anoté tu último mensaje: primero terminemos con la transferencia de US$100,
+  y después mandámelo de nuevo.": el monto va en la moneda que Lucía dijo, no en la primaria.
+- **Test:** `tests/unit/test_pending_transfer.py::test_without_accounts_the_amount_of_the_pending_transfer_is_named_in_the_currency_said`
 
 ### Corte 3 — observabilidad
 
@@ -242,13 +469,22 @@ Se escriben antes de empezar el corte, con CA-16.
 | Situación | Texto |
 |---|---|
 | Transferencia registrada | La confirmación de C1-02 |
+| Falta el monto (corte 2) | "¿Cuánto fue?", el mismo de un gasto |
+| Falta la cuenta de origen (corte 2) | "¿De qué cuenta salió? {cuentas}." |
+| Falta la cuenta de destino (corte 2) | "¿A qué cuenta fue? {cuentas}." |
+| Las dos cuentas son la misma (corte 2) | "La cuenta de origen y la de destino no pueden ser la misma.", antes de las dos preguntas |
 | Transferencia entre monedas distintas (corte 2) | "Todavía no sé anotar una transferencia entre cuentas de distinta moneda. Por ahora, solo entre cuentas de la misma moneda." |
+| Transferencia en otra moneda que la de sus cuentas (corte 2) | "Todavía no sé anotar una transferencia en otra moneda que la de sus cuentas. Por ahora, solo en la moneda de las dos cuentas." |
+| Fecha anterior al alta de una de sus cuentas (corte 2) | El texto de CA-10 de [FEAT-003](../FEAT-003/spec.md), con "transferiste", y la cuenta de origen si la fecha es anterior al alta de las dos |
+| Otro movimiento con una transferencia pendiente (corte 2) | El texto de CA-36 de [FEAT-003](../FEAT-003/spec.md), que la nombra como "la transferencia de {monto} de {origen} a {destino}", con lo que se sabe |
 
 ## Reglas de dominio bajo prueba
 
 | Regla | Caso que la cubre |
 |---|---|
-| Nunca una cuenta por defecto (§ 1) | C1-06, y los del corte 2 |
+| Nunca una cuenta por defecto (§ 1) | C1-06, C2-01, C2-03 y C2-07 |
+| Origen y destino son cuentas distintas (§ 13) | C2-03 y C2-07 |
+| Nada antes del alta de la cuenta (§ 2) | C2-10 y C2-11 |
 | Una transferencia no se imputa a ningún período (§ 13) | C1-01 y C1-04 |
 | Montos en `Decimal`, con la moneda al lado | C1-01 y C1-08 |
 | El saldo se calcula, no se guarda (§ 2) | C1-03 |

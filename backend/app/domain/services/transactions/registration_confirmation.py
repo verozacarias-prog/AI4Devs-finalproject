@@ -77,6 +77,13 @@ def before_opening_text(type: TransactionType, account_name: str, opened_on: dat
     )
 
 
+def transfer_before_opening_text(account_name: str, opened_on: date) -> str:
+    """Why a transfer before one of its accounts was opened is not registered (§ 2, CA-15)."""
+    return messages.BEFORE_ACCOUNT_OPENING.format(
+        account=account_name, date=written_day(opened_on), done=messages.TRANSFERRED_BEFORE
+    )
+
+
 _DONE_BEFORE = {
     TransactionType.EXPENSE: messages.SPENT_BEFORE,
     TransactionType.INCOME: messages.RECEIVED_BEFORE,

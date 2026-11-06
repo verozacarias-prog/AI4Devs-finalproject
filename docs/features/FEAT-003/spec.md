@@ -1211,8 +1211,8 @@ Cómo se cuentan los límites, para leer los casos
   El contador `registration` es la cuota de registro.
 - El día es el del momento en que el mensaje se procesa, en la zona horaria del usuario. La
   fecha de un movimiento, en cambio, sigue siendo el día en que se escribió (§ 1).
-- Cuentan en la cuota de registro un gasto, un ingreso, una transferencia que se anota
-  ([FEAT-006](../FEAT-006/spec.md)) y la respuesta a un pendiente, también la que lo descarta. No cuentan un saludo, una consulta, un consejo ni un registro que recibe
+- Cuentan en la cuota de registro un gasto, un ingreso, una transferencia, salvo la que
+  recibe un texto fijo porque necesita una cotización ([FEAT-006](../FEAT-006/spec.md), CA-14) y la respuesta a un pendiente, también la que lo descarta. No cuentan un saludo, una consulta, un consejo ni un registro que recibe
   el texto fijo de C1-09, como una compra con tarjeta: ninguno tiene código detrás
   ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final)).
 - Un mensaje demorado vuelve a `pending` con `next_attempt_at` en el inicio del día siguiente
@@ -1659,7 +1659,7 @@ Los dos textos los aprobó Vero el 18/10/2026.
 ## Costos asumidos
 
 - Con la cuota de registro agotada, un gasto que igual recibiría un texto fijo, como uno en otra
-  moneda o con más de un período posible, o una transferencia a la que le falta algo, se demora al día siguiente con el aviso de la cuota.
+  moneda o con más de un período posible, o una transferencia entre cuentas de distinta moneda, se demora al día siguiente con el aviso de la cuota.
   La cuota se mira antes de interpretar el movimiento, y recién al interpretarlo se sabe que no
   la gastaría (C3-24). Al día siguiente recibe su texto fijo.
 
@@ -1683,8 +1683,9 @@ Los dos textos los aprobó Vero el 18/10/2026.
 - Un período de grupo en borrador: la pregunta que dice que falta la confirmación del dueño y
   ofrece el presupuesto individual (§ 3) es de una segunda versión, con el presupuesto de grupo.
   Mientras tanto, el movimiento recibe el texto fijo de C1-09.
-- Un gasto en otra moneda, transferencias, compras con tarjeta, reglas recurrentes, reintegros
-  y el aviso de duplicado entre miembros: reciben el texto fijo de C1-09.
+- Un gasto en otra moneda, compras con tarjeta, reglas recurrentes, reintegros y el aviso de
+  duplicado entre miembros: reciben el texto fijo de C1-09. Las transferencias llegan con
+  [FEAT-006](../FEAT-006/spec.md).
 - Las consultas y los consejos: reciben el texto fijo de C1-10. Sus cuotas, y el texto de una
   cuota agotada, llegan con su código: la de consultas en la entrega final y la de consejos en
   una segunda versión (CA-30).
