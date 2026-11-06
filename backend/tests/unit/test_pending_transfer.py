@@ -1,6 +1,6 @@
 """A transfer that lacks something, and how a reply continues it, with the model replaced.
 
-Cases C2-02, C2-03, C2-05 to C2-07, C2-09, C2-10 and C2-11 to C2-13 of
+Cases C2-02, C2-03, C2-05 to C2-07, C2-09 and C2-10 to C2-14 of
 docs/features/FEAT-006/spec.md. Each case that starts from an open pending gets it the way a
 user does: a first message that leaves it pending, and then the reply. The database is in
 memory; the integration tests check the same use case against PostgreSQL.
@@ -375,3 +375,33 @@ def test_an_amount_that_does_not_fit_is_asked_again_saying_why() -> None:
         "Ese monto es más grande de lo que puedo registrar.",
         "¿Cuánto fue?",
     ]
+
+
+def test_a_currency_said_that_is_not_the_one_of_the_accounts_gets_the_fixed_text() -> None:
+    # Case C2-14. Both accounts are in pesos, and the message says dollars.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "pasé 100 dólares de Galicia pesos a Mercado Pago",
+        Classification(
+            MessageClass.REGISTRATION,
+            registration_type=RegistrationType.TRANSFER,
+            amount=Decimal("100"),
+            currency="USD",
+            currency_words="dólares",
+            account="Galicia pesos",
+            to_account="Mercado Pago",
+        ),
+    )
+
+    assert unit_of_work.transfers.added == []
+    assert unit_of_work.pendings.added == []
+    [reply] = unit_of_work.outbound_messages.added
+    assert reply.text == (
+        "Todavía no sé anotar una transferencia en otra moneda que la de sus cuentas. Por ahora, "
+        "solo en la moneda de las dos cuentas."
+    )
+    assert reply.response_kind is ResponseKind.FIXED_TEXT
