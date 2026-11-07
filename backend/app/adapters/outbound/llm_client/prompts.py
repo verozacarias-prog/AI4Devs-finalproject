@@ -7,7 +7,7 @@ of any user (ADR 0013, point 12). The data of the task goes in the user message,
 from __future__ import annotations
 
 # Recorded with every call, so the metrics can compare one prompt with the next.
-CLASSIFICATION_PROMPT_VERSION = "classification-11"
+CLASSIFICATION_PROMPT_VERSION = "classification-12"
 
 # Between these, the data of the task: information, never instructions (ADR 0013, point 9).
 DATA_OPEN = "<datos>"
@@ -73,9 +73,11 @@ cual y seguidas como están escritas, sin los artículos ni las preposiciones co
 de "con la nación" es "nación", de "con la UB" es "UB", de "de la Nación dólares" es "Nación \
 dólares" y de "con la nación de dólares" es "nación de dólares". No saques palabras del medio. \
 No elijas una cuenta de la lista: copiá \
-lo que dice el mensaje. Si el mensaje solo dice de qué tipo es la cuenta, como "el banco" o \
-"la billetera", account es null y el tipo va en account_type. Cómo pagó no es una cuenta: \
-"por transferencia" o "con débito" solos son null. Si no se refiere a ninguna, null.
+lo que dice el mensaje, aunque se parezca al nombre de una cuenta de la lista: de "con nx" es \
+"nx", y no "Naranja X". Si una cuenta vale para varios movimientos, como en "todos con nx", \
+cada uno lleva esas mismas palabras. Si el mensaje solo dice de qué tipo es la cuenta, como \
+"el banco" o "la billetera", account es null y el tipo va en account_type. Cómo pagó no es \
+una cuenta: "por transferencia" o "con débito" solos son null. Si no se refiere a ninguna, null.
 - account_type: el tipo de la cuenta, solo si el mensaje lo dice: "bank_account" (una cuenta \
 de banco, como "el banco"), "digital_wallet" (una billetera virtual, como "la billetera"), \
 "cash" (plata en mano, como "efectivo" o "del cajero"), "broker" (una cuenta de inversiones), \
