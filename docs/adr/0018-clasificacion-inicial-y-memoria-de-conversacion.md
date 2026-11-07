@@ -53,7 +53,8 @@ Los mensajes ya se guardan, por otros motivos, en `INBOUND_MESSAGE` y `OUTBOUND_
    hacer, sin cobrar cuota.
 9. **Memoria de conversación, según la tarea.** Un intercambio es un mensaje del usuario y la
    respuesta de Platita.
-   - **Registro:** sin historial. El contexto es el estado del pendiente abierto.
+   - **Registro:** sin historial. El contexto es el estado del lote abierto, con cada pendiente
+     vigente y su número; un pendiente solo es un lote de uno.
    - **Clasificación:** solo el último intercambio.
    - **Consulta y consejo:** los últimos 3 intercambios dentro de los últimos 30 minutos. Los dos
      valores son configuración.
