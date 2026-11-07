@@ -9,7 +9,6 @@ from dataclasses import replace
 from decimal import Decimal
 
 from app import messages
-from app.constants import LINE_END
 from app.domain.entities.budget_period import PeriodStatus
 from app.domain.entities.category import Category
 from app.domain.entities.classification import (
@@ -42,15 +41,12 @@ from app.domain.services.transactions.movement_resolution import (
     to_parsed_data,
 )
 from app.domain.services.transactions.pending_question import (
-    finish_the_pending_first_text,
     question_text,
 )
 from app.domain.services.transactions.registration_confirmation import (
     before_opening_text,
     confirmation_text,
 )
-
-# The number of the only pending of a batch of one, and of the first of a batch of several.
 from app.domain.use_cases.messages.reply_context import (
     ReplyContext,
     add_reply,
@@ -78,45 +74,43 @@ def continue_movement(
             close_pending(unit_of_work, awaiting, PendingStatus.REJECTED, context.user.id)
             add_reply(unit_of_work, context, messages.PENDING_DISCARDED, ResponseKind.FIXED_TEXT)
             return True
-        case PendingReply.OTHER_MOVEMENT:
-            # One at a time in delivery 2: the new one is not registered (CA-36).
-            missing = movement_missing_of(unit_of_work, context, pending)
-            reply = add_reply(
-                unit_of_work,
-                context,
-                LINE_END.join(
-                    (
-                        finish_the_pending_first_text(missing, _amount_currency(context, missing)),
-                        movement_question(unit_of_work, context, missing),
-                    )
-                ),
-                ResponseKind.REGISTRATION,
-            )
-            unit_of_work.pendings.update_batch(replace(batch, question_message_id=reply.id))
-            return False
         case PendingReply.CONTINUES:
-            previous = from_parsed_data(pending.parsed_data, context.today)
-            interpretation = continue_interpretation(
-                previous, classification, context.message.text, context.accounts
+            interpretation, corrected = continued_movement(
+                unit_of_work, context, pending, classification
             )
-            # Counted before a yes fills what was missing, which is not a correction.
-            corrected = replace(
-                pending,
-                corrected_fields_count=pending.corrected_fields_count
-                + corrections(previous, interpretation),
-            )
-            # A yes to a name nobody offered nor wrote accepts nothing: it is asked again.
-            if classification.accepts_proposal and not proposes_an_unwritten_name(
-                previous, classification, context.message.text
-            ):
-                interpretation = _accept_proposal(
-                    unit_of_work, context, pending, previous, interpretation
-                )
             return settle_movement(unit_of_work, context, interpretation, (batch, corrected))
-        case None:
+        case PendingReply.OTHER_MOVEMENT | None:
             # Not about the pending: it keeps waiting, and the message gets its fixed text.
+            # Another movement joins the batch before it gets here (FEAT-007, CA-13).
             add_reply(unit_of_work, context, fixed_text(classification), ResponseKind.FIXED_TEXT)
             return False
+
+
+def continued_movement(
+    unit_of_work: UnitOfWorkPort,
+    context: ReplyContext,
+    pending: PendingTransaction,
+    classification: Classification,
+) -> tuple[Interpretation, PendingTransaction]:
+    """What a reply makes of a pending expense or income: what it adds or changes, a yes to what
+    its question offered, and the pending with the corrections counted (domain rules, § 5).
+    """
+    previous = from_parsed_data(pending.parsed_data, context.today)
+    interpretation = continue_interpretation(
+        previous, classification, context.message.text, context.accounts
+    )
+    # Counted before a yes fills what was missing, which is not a correction.
+    corrected = replace(
+        pending,
+        corrected_fields_count=pending.corrected_fields_count
+        + corrections(previous, interpretation),
+    )
+    # A yes to a name nobody offered nor wrote accepts nothing: it is asked again.
+    if classification.accepts_proposal and not proposes_an_unwritten_name(
+        previous, classification, context.message.text
+    ):
+        interpretation = _accept_proposal(unit_of_work, context, pending, previous, interpretation)
+    return interpretation, corrected
 
 
 def _accept_proposal(
@@ -234,7 +228,7 @@ def _ask(
     )
 
 
-def _amount_currency(context: ReplyContext, missing: Missing) -> str:
+def amount_currency(context: ReplyContext, missing: Missing) -> str:
     """The currency its amount is in: the one of its account, or else the primary one."""
     return context.user.primary_currency if missing.account is None else missing.account.currency
 

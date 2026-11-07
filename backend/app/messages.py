@@ -153,12 +153,40 @@ DRAFT_LIMITS = "Topes: {limits}."
 DRAFT_LIMIT = "{category} {amount}"
 DRAFT_WITHOUT_LIMITS = "Sin topes."
 NO_PERIOD = "No tenés un presupuesto para el {date}. Armalo en el dashboard y después avisame."
-# Another movement while a pending awaits its reply: one at a time in delivery 2 (CA-36).
-# It names the pending: its question alone does not say which movement it is about (CA-36).
-FINISH_THE_PENDING_FIRST = (
-    "No anoté tu último mensaje: primero terminemos con {movement}, y después mandámelo de nuevo."
-)
 PENDING_DISCARDED = "Listo, no lo anoto."
+# A batch of several pendings: the list that asks for what is missing, each one by its number,
+# with what was understood and what it lacks (FEAT-007, CA-8).
+BATCH_ITEM = "{position}. {movement}."
+BATCH_ITEM_COMPLETE = "{position}. {movement}, completo."
+BATCH_DISCARDED = "Listo, no anoto ninguno."
+# A movement that does not enter the batch, in a line of its own (FEAT-007, CA-12): by its order
+# in the message, or by its number when a reply left it out.
+NOT_REGISTERED_BY_ORDER = "El {ordinal} movimiento no lo anoté: {reason}"
+NOT_REGISTERED_BY_NUMBER = "El {position} no lo anoté: {reason}"
+ORDINALS = (
+    "primer",
+    "segundo",
+    "tercer",
+    "cuarto",
+    "quinto",
+    "sexto",
+    "séptimo",
+    "octavo",
+    "noveno",
+    "décimo",
+)
+# More movements than fit in a batch of 10 (FEAT-007, CA-14).
+TOOK_THE_FIRST_OF_THE_MESSAGE = "Tomé solo los primeros {taken} movimientos."
+OTHERS_IN_ANOTHER_MESSAGE = "Los otros {left} mandámelos en otro mensaje."
+OTHER_IN_ANOTHER_MESSAGE = "El otro mandámelo en otro mensaje."
+TOOK_THE_FIRST_NEW = "Tomé solo el primero de los movimientos nuevos."
+TOOK_THE_FIRST_NEW_ONES = "Tomé solo los primeros {taken} de los movimientos nuevos."
+TOOK_NONE_OF_THE_NEW = (
+    "Ya hay 10 movimientos en esta lista, así que no tomé los nuevos: mandámelos cuando "
+    "terminemos con estos."
+)
+OTHER_WHEN_WE_FINISH = "El otro mandámelo cuando terminemos con estos."
+OTHERS_WHEN_WE_FINISH = "Los otros {left} mandámelos cuando terminemos con estos."
 # The model refused to interpret the message: it is not tried again (CA-40).
 MODEL_REFUSED = (
     "No pude entender ese mensaje. ¿Me lo escribís de otra forma? Por ejemplo: «gasté 3500 en "

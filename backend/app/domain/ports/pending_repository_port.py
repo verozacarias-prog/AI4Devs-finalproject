@@ -16,10 +16,13 @@ class PendingRepositoryPort(Protocol):
     def find_awaiting_reply(
         self, user_id: uuid.UUID
     ) -> tuple[PendingBatch, PendingTransaction] | None:
-        """The batch of the user that awaits a reply, and its pending: there is one at most.
-
-        A batch of delivery 2 holds one pending; more than one comes with the final delivery.
+        """The batch of the user that awaits a reply, and its first open pending: there is one
+        batch at most.
         """
+        ...
+
+    def list_in_batch(self, batch_id: uuid.UUID) -> list[PendingTransaction]:
+        """Every pending of the batch, whatever its status, by position."""
         ...
 
     def update(self, pending: PendingTransaction) -> None:

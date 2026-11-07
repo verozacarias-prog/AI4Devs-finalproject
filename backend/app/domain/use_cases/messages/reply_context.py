@@ -5,6 +5,7 @@ the pending and the batch it leaves (domain rules, § 5).
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 
@@ -128,22 +129,43 @@ def ask_in_pending(
         unit_of_work.pendings.update(replace(pending, parsed_data=parsed, missing_fields=fields))
         unit_of_work.pendings.update_batch(replace(batch, question_message_id=reply.id))
         return
-    batch = PendingBatch(
-        id=uuid.uuid4(),
-        user_id=context.user.id,
-        source=PendingSource.MANUAL,
-        awaiting_reply=True,
-        question_message_id=reply.id,
-        confirmation_message_id=None,
-        status=BatchStatus.OPEN,
-        created_at=context.now,
-    )
+    batch = open_batch(context, reply)
     unit_of_work.pendings.add_batch(batch)
     unit_of_work.pendings.add(
         replace(
             new_pending(context, batch, parsed, fields, PendingStatus.OPEN, None, None),
             intent=intent,
         )
+    )
+
+
+def open_batch(context: ReplyContext, question: OutboundMessage) -> PendingBatch:
+    """A batch that awaits the reply to its question (domain rules, § 5)."""
+    return PendingBatch(
+        id=uuid.uuid4(),
+        user_id=context.user.id,
+        source=PendingSource.MANUAL,
+        awaiting_reply=True,
+        question_message_id=question.id,
+        confirmation_message_id=None,
+        status=BatchStatus.OPEN,
+        created_at=context.now,
+    )
+
+
+def close_batch(
+    unit_of_work: UnitOfWorkPort,
+    batch: PendingBatch,
+    pendings: Sequence[PendingTransaction],
+    status: PendingStatus,
+    resolved_by: uuid.UUID | None,
+) -> None:
+    """Every open pending of the batch ends without a movement, and the batch closes."""
+    for pending in pendings:
+        if pending.status is PendingStatus.OPEN:
+            unit_of_work.pendings.update(replace(pending, status=status, resolved_by=resolved_by))
+    unit_of_work.pendings.update_batch(
+        replace(batch, awaiting_reply=False, status=BatchStatus.CLOSED)
     )
 
 

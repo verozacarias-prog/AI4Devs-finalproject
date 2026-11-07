@@ -1,6 +1,6 @@
 """What the registration asks, and how a reply continues it, with the model replaced (FEAT-003).
 
-Cases C2-02 to C2-06, C2-08 to C2-13, C2-15, C2-17, C2-18, C2-20, C2-37, C2-38, C2-44,
+Cases C2-02 to C2-06, C2-08 to C2-11, C2-13, C2-15, C2-17, C2-18, C2-20, C2-37, C2-38, C2-44,
 C2-45, C2-46, C2-47, C2-48 to C2-51, C2-53, C2-54 and C2-55 of its spec.md.
 Each case that starts from an open pending gets it the way a user does: a first message that
 leaves it pending, and then the reply. The database is in memory; the integration tests check
@@ -338,39 +338,6 @@ def test_choosing_an_account_in_another_currency_than_the_period_does_not_regist
     assert batch.status is BatchStatus.CLOSED
     assert batch.awaiting_reply is False
     assert _last_reply(unit_of_work) == CANNOT_REGISTER
-
-
-def test_with_an_open_pending_another_movement_is_not_registered() -> None:
-    # Case C2-12.
-    unit_of_work = InMemoryUnitOfWork()
-    lucia = Lucia(unit_of_work)
-    _supermarket_without_account(unit_of_work, lucia)
-
-    _answer(
-        unit_of_work,
-        lucia,
-        "cobré 850000 de sueldo en la Galicia pesos",
-        Classification(
-            MessageClass.REGISTRATION,
-            registration_type=RegistrationType.INCOME,
-            amount=Decimal("850000"),
-            account="Galicia pesos",
-            category="Sueldo",
-            pending_reply=PendingReply.OTHER_MOVEMENT,
-        ),
-    )
-
-    assert unit_of_work.transactions.added == []
-    [pending] = unit_of_work.pendings.added
-    assert pending.status is PendingStatus.OPEN
-    reply = unit_of_work.outbound_messages.added[-1]
-    assert reply.text.splitlines() == [
-        "No anoté tu último mensaje: primero terminemos con el gasto de $3.500 en Supermercado, "
-        "y después mandámelo de nuevo.",
-        ALL_ACCOUNTS,
-    ]
-    [batch] = unit_of_work.pendings.batches
-    assert batch.question_message_id == reply.id
 
 
 def test_the_user_discards_the_pending() -> None:

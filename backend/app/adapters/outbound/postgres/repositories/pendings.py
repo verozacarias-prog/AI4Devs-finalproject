@@ -32,9 +32,16 @@ class PostgresPendingRepository:
         self, user_id: uuid.UUID
     ) -> tuple[PendingBatch, PendingTransaction] | None:
         row = self._connection.execute(
-            text(queries.SELECT_AWAITING_PENDING), {"user_id": user_id}
+            text(queries.SELECT_AWAITING_PENDING),
+            {"user_id": user_id, "open": PendingStatus.OPEN.value},
         ).one_or_none()
         return None if row is None else (_batch_from(row), _pending_from(row))
+
+    def list_in_batch(self, batch_id: uuid.UUID) -> list[PendingTransaction]:
+        rows = self._connection.execute(
+            text(queries.SELECT_PENDINGS_IN_BATCH), {"batch_id": batch_id}
+        ).all()
+        return [_pending_from(row) for row in rows]
 
     def update(self, pending: PendingTransaction) -> None:
         execute_write(self._connection, queries.UPDATE_PENDING_TRANSACTION, _parameters(pending))

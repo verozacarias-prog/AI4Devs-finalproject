@@ -48,6 +48,9 @@ from app.domain.services.transactions.transfer_resolution import (
 )
 from app.domain.use_cases.messages.batch_registration import (
     answer_several,
+    batch_question,
+    continue_batch,
+    join_batch,
 )
 from app.domain.use_cases.messages.movement_registration import (
     continue_movement,
@@ -55,12 +58,10 @@ from app.domain.use_cases.messages.movement_registration import (
     movement_question,
     settle_movement,
 )
-
-# The number of the only pending of a batch of one, and of the first of a batch of several.
 from app.domain.use_cases.messages.reply_context import (
     ReplyContext,
     add_reply,
-    close_pending,
+    close_batch,
     fixed_text,
     reply_message,
 )
@@ -138,8 +139,10 @@ class _Loaded:
     categories: list[Category]
     # The day the user wrote, in their time zone.
     today: date
+    # The batch that awaits a reply and its first open pending, and every pending of it.
     awaiting: tuple[PendingBatch, PendingTransaction] | None
-    # The pending the message may answer: none if there is none, or if it expired (§ 5).
+    in_batch: tuple[PendingTransaction, ...]
+    # The batch the message may answer: none if there is none, or if it expired (§ 5).
     open_batch: OpenBatch | None
 
 
@@ -254,21 +257,15 @@ class AnswerMessage:
             # processed.
             today = local_today(message.sent_at, user.time_zone)
             awaiting = unit_of_work.pendings.find_awaiting_reply(user.id)
+            in_batch = (
+                ()
+                if awaiting is None
+                else tuple(unit_of_work.pendings.list_in_batch(awaiting[0].id))
+            )
             open_batch = None
             if awaiting is not None and not _expired(awaiting[1], message.sent_at):
                 context = ReplyContext(message, user, accounts, categories, today, message.sent_at)
-                pending = awaiting[1]
-                # A single pending is a batch of one (domain rules, § 5).
-                open_batch = OpenBatch(
-                    pendings=(
-                        NumberedPending(
-                            number=pending.position,
-                            interpreted=dict(pending.parsed_data),
-                            missing=pending.missing_fields,
-                        ),
-                    ),
-                    question=_pending_question(unit_of_work, context, pending),
-                )
+                open_batch = _open_batch(unit_of_work, context, awaiting[1], in_batch)
             return _Loaded(
                 usage=usage,
                 classified=unit_of_work.llm_usage.count(
@@ -278,6 +275,7 @@ class AnswerMessage:
                 categories=categories,
                 today=today,
                 awaiting=awaiting,
+                in_batch=in_batch,
                 open_batch=open_batch,
             )
 
@@ -291,7 +289,13 @@ class AnswerMessage:
         """What the classification says, in one transaction, or put off by the quota."""
         usage, awaiting = loaded.usage, loaded.awaiting
         continuing = awaiting is not None and loaded.open_batch is not None
-        if awaiting is not None and continuing:
+        # Several open pendings are answered as a batch, and another movement joins it.
+        alone = (
+            loaded.open_batch is not None
+            and len(loaded.open_batch.pendings) == 1
+            and classification.pending_reply is not PendingReply.OTHER_MOVEMENT
+        )
+        if awaiting is not None and continuing and alone:
             # What the reply says of the pending it continues, by its number.
             classification = classification.for_pending(awaiting[1].position)
         # A pending transfer has no category whose name a reply could propose.
@@ -299,6 +303,7 @@ class AnswerMessage:
             from_parsed_data(awaiting[1].parsed_data, loaded.today)
             if awaiting is not None
             and continuing
+            and alone
             and awaiting[1].intent is PendingIntent.TRANSACTION
             else None
         )
@@ -325,9 +330,13 @@ class AnswerMessage:
             _count(unit_of_work, usage, UsageCounter.CLASSIFICATION, classification.usage)
             if awaiting is not None and not continuing:
                 # It expired before this message was written: it is not continued (§ 5).
-                close_pending(unit_of_work, awaiting, PendingStatus.EXPIRED, None)
-            if awaiting is not None and continuing:
+                close_batch(unit_of_work, awaiting[0], loaded.in_batch, PendingStatus.EXPIRED, None)
+            if awaiting is not None and continuing and alone:
                 interpreted = _continue(unit_of_work, context, awaiting, classification)
+            elif awaiting is not None and continuing:
+                interpreted = _continue_batch(
+                    unit_of_work, context, awaiting[0], loaded.in_batch, classification
+                )
             else:
                 interpreted = _answer_new(unit_of_work, context, classification)
             # What got a fixed text because it cannot be registered yet uses no quota (C3-24).
@@ -447,12 +456,18 @@ class AnswerMessage:
 def _counts_as_registration(classification: Classification, continuing: bool) -> bool:
     """Whether the message uses the quota of registration (domain rules, § 12).
 
-    An expense, an income or a transfer to register, and the reply that completes or discards a
-    pending.
+    An expense, an income or a transfer to register or to add to the open batch, and the reply
+    that answers or discards it.
     What gets a fixed text because it has no code yet uses none (docs/hoja-de-ruta.md).
     """
-    if continuing:
-        return classification.pending_reply in (PendingReply.CONTINUES, PendingReply.DISCARDS)
+    if continuing and classification.pending_reply in (
+        PendingReply.CONTINUES,
+        PendingReply.DISCARDS,
+    ):
+        return True
+    if continuing and classification.pending_reply is not PendingReply.OTHER_MOVEMENT:
+        return False
+    # A new message, or another movement that joins the batch (FEAT-007, CA-13).
     return classification.message_class is MessageClass.REGISTRATION and any(
         is_movement(single) or is_transfer(single)
         for single in map(classification.of_movement, classification.movements())
@@ -497,6 +512,21 @@ def _continue(
     return continue_movement(unit_of_work, context, awaiting, classification)
 
 
+def _continue_batch(
+    unit_of_work: UnitOfWorkPort,
+    context: ReplyContext,
+    batch: PendingBatch,
+    in_batch: tuple[PendingTransaction, ...],
+    classification: Classification,
+) -> bool:
+    """A message while a batch awaits its reply, as a batch: another movement joins it, and the
+    reply to several pendings goes by number (FEAT-007).
+    """
+    if classification.pending_reply is PendingReply.OTHER_MOVEMENT:
+        return join_batch(unit_of_work, context, batch, in_batch, classification)
+    return continue_batch(unit_of_work, context, batch, in_batch, classification)
+
+
 def _answer_new(
     unit_of_work: UnitOfWorkPort, context: ReplyContext, classification: Classification
 ) -> bool:
@@ -518,6 +548,34 @@ def _answer_new(
         return settle_movement(unit_of_work, context, interpretation, None)
     add_reply(unit_of_work, context, fixed_text(classification), ResponseKind.FIXED_TEXT)
     return False
+
+
+def _open_batch(
+    unit_of_work: UnitOfWorkPort,
+    context: ReplyContext,
+    first: PendingTransaction,
+    in_batch: tuple[PendingTransaction, ...],
+) -> OpenBatch:
+    """The batch as the model receives it: each open pending with its number, and the question
+    the user got. A single pending is a batch of one, with its own question (domain rules, § 5).
+    """
+    pendings = [pending for pending in in_batch if pending.status is PendingStatus.OPEN]
+    question = (
+        _pending_question(unit_of_work, context, first)
+        if len(pendings) == 1
+        else batch_question(unit_of_work, context, pendings)
+    )
+    return OpenBatch(
+        pendings=tuple(
+            NumberedPending(
+                number=pending.position,
+                interpreted=dict(pending.parsed_data),
+                missing=pending.missing_fields,
+            )
+            for pending in pendings
+        ),
+        question=question,
+    )
 
 
 def _pending_question(

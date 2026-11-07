@@ -8,7 +8,6 @@ import uuid
 from dataclasses import replace
 
 from app import messages
-from app.constants import LINE_END
 from app.domain.entities.classification import (
     Classification,
     PendingReply,
@@ -25,7 +24,6 @@ from app.domain.entities.transaction import TransactionSource
 from app.domain.entities.transfer import Transfer
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
 from app.domain.services.transactions.pending_question import (
-    finish_the_transfer_first_text,
     transfer_question_text,
 )
 from app.domain.services.transactions.registration_confirmation import (
@@ -48,8 +46,6 @@ from app.domain.services.transactions.transfer_resolution import (
     transfer_from_parsed_data,
     transfer_to_parsed_data,
 )
-
-# The number of the only pending of a batch of one, and of the first of a batch of several.
 from app.domain.use_cases.messages.reply_context import (
     ReplyContext,
     add_reply,
@@ -77,39 +73,28 @@ def continue_pending_transfer(
             close_pending(unit_of_work, awaiting, PendingStatus.REJECTED, context.user.id)
             add_reply(unit_of_work, context, messages.PENDING_DISCARDED, ResponseKind.FIXED_TEXT)
             return True
-        case PendingReply.OTHER_MOVEMENT:
-            # One at a time: the new one is not registered (CA-36 of FEAT-003).
-            missing = transfer_missing_of(context, pending)
-            reply = add_reply(
-                unit_of_work,
-                context,
-                LINE_END.join(
-                    (
-                        finish_the_transfer_first_text(
-                            missing, _transfer_currency(context, missing)
-                        ),
-                        transfer_question_text(missing),
-                    )
-                ),
-                ResponseKind.REGISTRATION,
-            )
-            unit_of_work.pendings.update_batch(replace(batch, question_message_id=reply.id))
-            return False
         case PendingReply.CONTINUES:
-            previous = transfer_from_parsed_data(pending.parsed_data, context.today)
-            transfer = continue_transfer(
-                previous, classification, context.message.text, context.accounts
-            )
-            corrected = replace(
-                pending,
-                corrected_fields_count=pending.corrected_fields_count
-                + transfer_corrections(previous, transfer),
-            )
+            transfer, corrected = continued_transfer(context, pending, classification)
             return settle_transfer(unit_of_work, context, transfer, (batch, corrected))
-        case None:
+        case PendingReply.OTHER_MOVEMENT | None:
             # Not about the pending: it keeps waiting, and the message gets its fixed text.
+            # Another movement joins the batch before it gets here (FEAT-007, CA-13).
             add_reply(unit_of_work, context, fixed_text(classification), ResponseKind.FIXED_TEXT)
             return False
+
+
+def continued_transfer(
+    context: ReplyContext, pending: PendingTransaction, classification: Classification
+) -> tuple[TransferInterpretation, PendingTransaction]:
+    """What a reply makes of a pending transfer, and the pending with the corrections counted."""
+    previous = transfer_from_parsed_data(pending.parsed_data, context.today)
+    transfer = continue_transfer(previous, classification, context.message.text, context.accounts)
+    corrected = replace(
+        pending,
+        corrected_fields_count=pending.corrected_fields_count
+        + transfer_corrections(previous, transfer),
+    )
+    return transfer, corrected
 
 
 def settle_transfer(
@@ -171,7 +156,7 @@ def transfer_missing_of(context: ReplyContext, pending: PendingTransaction) -> M
     return resolution
 
 
-def _transfer_currency(context: ReplyContext, missing: MissingTransfer) -> str:
+def transfer_currency(context: ReplyContext, missing: MissingTransfer) -> str:
     """The currency its amount is in: the one of an account it names, or else the one the
     messages say, or else the primary (C2-15). With an account, the one said is the same:
     another one gets the fixed text of CA-14.

@@ -14,6 +14,7 @@ from app.domain.entities.dev_access_link import DevAccessLink
 from app.domain.entities.family_group import FamilyGroup, GroupRole, Membership
 from app.domain.entities.financial_profile import FinancialProfile
 from app.domain.entities.inbound_message import InboundMessage, InboundStatus
+from app.domain.entities.pending_transaction import PendingStatus
 from app.domain.entities.session import Session
 from app.domain.entities.user import User
 from app.domain.errors import ConflictError, ErrorCode
@@ -185,8 +186,18 @@ class InMemoryPendings:
         )
         if batch is None:
             return None
-        pending = next(pending for pending in self.added if pending.batch_id == batch.id)
-        return batch, pending
+        first = next(
+            pending
+            for pending in self.list_in_batch(batch.id)
+            if pending.status is PendingStatus.OPEN
+        )
+        return batch, first
+
+    def list_in_batch(self, batch_id: uuid.UUID) -> list[PendingTransaction]:
+        return sorted(
+            (pending for pending in self.added if pending.batch_id == batch_id),
+            key=lambda pending: pending.position,
+        )
 
     def update(self, pending: PendingTransaction) -> None:
         self.added = [pending if stored.id == pending.id else stored for stored in self.added]
