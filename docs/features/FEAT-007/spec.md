@@ -233,9 +233,236 @@ Los tipos de caso, qué se reemplaza en cada uno y los datos de partida son los 
 
 ### Corte 2 — lo que falta y lo que no se puede anotar
 
-- **Aprobado por:** pendiente
+- **Aprobado por:** Veronica Zacarias 06/11/2026
+- **Total:** 16 casos, 13 unitarios y 3 de integración.
 
-Los casos se escriben antes del corte.
+Donde el caso dice que el modelo contesta "el pendiente 2", el doble devuelve una respuesta por
+número: el número del pendiente y lo que la respuesta le agrega o le cambia, con los mismos campos
+de un movimiento, o que lo descarta.
+
+| Caso | Qué prueba | Tipo | Sale de |
+|---|---|---|---|
+| C2-01 | Con un movimiento incompleto, no se registra ninguno y la pregunta los lista numerados | Integración | CA-8 |
+| C2-02 | La respuesta por número completa el lote y se registran juntos | Integración | CA-9 y CA-10 |
+| C2-03 | Una respuesta general vale para cada pendiente | Unitario | CA-9 |
+| C2-04 | Mientras falte algo, la pregunta se repite con la lista actualizada | Unitario | CA-10 |
+| C2-05 | Descartar uno por número registra los demás | Unitario | CA-11 |
+| C2-06 | Descartar todos cierra el lote sin registrar nada | Unitario | CA-11 |
+| C2-07 | Un movimiento que todavía no se sabe anotar se nombra aparte y los demás se registran | Unitario | CA-12 |
+| C2-08 | Si ninguno se puede anotar, no queda nada pendiente | Unitario | CA-12 |
+| C2-09 | Una respuesta que deja un pendiente sin poder anotarse lo saca del lote | Unitario | CA-12 |
+| C2-10 | Con un lote esperando respuesta, otro movimiento se suma al lote | Integración | CA-13 |
+| C2-11 | Con una transferencia pendiente, otro movimiento se suma y la lista la nombra en su moneda | Unitario | CA-13 |
+| C2-12 | De un mensaje con más de 10, entran los primeros 10 | Unitario | CA-14 |
+| C2-13 | Un lote con 9 suma uno solo de los dos que llegan | Unitario | CA-14 |
+| C2-14 | Una respuesta a un número que no está en el lote no cambia nada | Unitario | CA-9 |
+| C2-15 | El modelo recibe cada pendiente del lote con su número | Unitario | CA-9 |
+| C2-16 | El adaptador devuelve las respuestas por número | Unitario | CA-9 |
+
+Reemplazan a C2-12 de [FEAT-003](../FEAT-003/spec.md) y a C2-12 y C2-15 de
+[FEAT-006](../FEAT-006/spec.md), que probaban el aviso de CA-36 de FEAT-003: con CA-13 ese aviso
+deja de existir, y sus tests se borran.
+
+#### C2-01 · Con un movimiento incompleto, no se registra ninguno y la pregunta los lista numerados
+
+- **Sale de:** CA-8 · **Tipo:** integración
+- **Dado** un mensaje web de Lucía, "gasté 3500 en el súper con MP y 1200 de nafta", pendiente,
+  y el modelo responde dos gastos: uno de 3500, cuenta "MP", categoría Supermercado, y uno de
+  1200, sin cuenta, categoría Transporte,
+- **cuando** el worker hace una ronda,
+- **entonces** no hay ningún gasto en `TRANSACTION`; el único lote de Lucía espera respuesta
+  (`open` y `awaiting_reply`), y su `question_message_id` es la respuesta; en ese lote hay dos
+  pendientes `open`: el de la posición 1 con `missing_fields` vacío y el de
+  la posición 2 con `missing_fields = ['account_id']`; y la respuesta, de tipo `registration`,
+  es, línea por línea:
+
+  > 1. El gasto de $3.500 en Supermercado con Mercado Pago, completo.
+  >
+  > 2. El gasto de $1.200 en Transporte.
+  > ¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD.
+
+- **Test:** `tests/integration/test_pending_batch.py::test_with_an_incomplete_movement_none_is_registered_and_the_question_lists_them`
+
+#### C2-02 · La respuesta por número completa el lote y se registran juntos
+
+- **Sale de:** CA-9 y CA-10 · **Tipo:** integración
+- **Dado** el lote de C2-01 esperando respuesta, un mensaje web nuevo de Lucía, "el 2 en
+  efectivo", pendiente, y el modelo responde que contesta el pendiente 2 con cuenta "efectivo",
+- **cuando** el worker hace una ronda,
+- **entonces** `TRANSACTION` tiene el gasto de `3500.00` en Mercado Pago y el de `1200.00` en
+  Efectivo; los dos pendientes quedan `promoted`, en sus posiciones 1 y 2, cada uno enlazado a su
+  gasto; el lote deja de esperar respuesta y se cierra guardando la respuesta como su
+  confirmación; y esa respuesta es la confirmación numerada de C1-02, con los dos gastos.
+- **Test:** `tests/integration/test_pending_batch.py::test_the_reply_by_number_completes_the_batch_and_they_are_registered_together`
+
+#### C2-03 · Una respuesta general vale para cada pendiente
+
+- **Sale de:** CA-9 · **Tipo:** unitario
+- **Dado** un lote de Lucía esperando respuesta con dos gastos sin cuenta, el 1 de $3.500 en
+  Supermercado y el 2 de $1.200 en Transporte, el mensaje "todos con MP", y el modelo responde
+  que contesta el pendiente 1 y el 2, los dos con cuenta "MP",
+- **cuando** se procesa,
+- **entonces** se registran los dos gastos en Mercado Pago, con una sola confirmación.
+- **Test:** `tests/unit/test_pending_batch.py::test_a_general_reply_applies_to_each_pending`
+
+#### C2-04 · Mientras falte algo, la pregunta se repite con la lista actualizada
+
+- **Sale de:** CA-10 · **Tipo:** unitario
+- **Dado** un lote de Lucía esperando respuesta con dos gastos: el 1 de $3.500 en Supermercado,
+  sin cuenta, y el 2 en Transporte con Efectivo, sin monto; el mensaje "el 1 con MP", y el modelo
+  responde que contesta el pendiente 1 con cuenta "MP",
+- **cuando** se procesa,
+- **entonces** no se registra nada; el pendiente 1 queda `open` con `missing_fields` vacío y
+  cuenta Mercado Pago; y la respuesta es:
+
+  > 1. El gasto de $3.500 en Supermercado con Mercado Pago, completo.
+  >
+  > 2. El gasto en Transporte con Efectivo.
+  > ¿Cuánto fue?
+
+- **Test:** `tests/unit/test_pending_batch.py::test_while_something_is_missing_the_list_is_repeated_up_to_date`
+
+#### C2-05 · Descartar uno por número registra los demás
+
+- **Sale de:** CA-11 · **Tipo:** unitario
+- **Dado** el lote de C2-01 esperando respuesta, el mensaje "el 2 no lo anotes", y el modelo
+  responde que descarta el pendiente 2,
+- **cuando** se procesa,
+- **entonces** el pendiente 2 queda `rejected`; el gasto de $3.500 en Mercado Pago se registra y
+  el pendiente 1 queda `promoted`; el lote queda `closed`; y, como se registró uno solo, la
+  respuesta es la confirmación de un movimiento solo, sin número, que empieza "¡Listo! Anoté un
+  gasto de $3.500 en Mercado Pago.".
+- **Test:** `tests/unit/test_pending_batch.py::test_discarding_one_by_number_registers_the_others`
+
+#### C2-06 · Descartar todos cierra el lote sin registrar nada
+
+- **Sale de:** CA-11 · **Tipo:** unitario
+- **Dado** los dos pendientes de C2-01 sin contestar, Lucía escribe "no anotes ninguno", y el
+  modelo responde que los descarta a todos,
+- **cuando** se procesa,
+- **entonces** no se registra nada; los dos pendientes quedan `rejected`; el lote queda `closed`
+  con `awaiting_reply` falso; y la respuesta es "Listo, no anoto ninguno.".
+- **Test:** `tests/unit/test_pending_batch.py::test_discarding_all_closes_the_batch_with_nothing_registered`
+
+#### C2-07 · Un movimiento que todavía no se sabe anotar se nombra aparte y los demás se registran
+
+- **Sale de:** CA-12 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía, "gasté 3500 en el súper con MP y compré una heladera en 6 cuotas
+  con la Visa", y el modelo responde un gasto de 3500, cuenta "MP", categoría Supermercado, y una
+  compra con tarjeta,
+- **cuando** se procesa,
+- **entonces** se registra el gasto en un lote de uno, con el pendiente en la posición 1, y la
+  respuesta es la confirmación de un movimiento solo, seguida de una línea en blanco y de "El
+  segundo movimiento no lo anoté: eso todavía no lo sé anotar. Por ahora me manejo con gastos,
+  ingresos y transferencias.".
+- **Test:** `tests/unit/test_pending_batch.py::test_a_movement_that_cannot_be_registered_yet_is_named_apart`
+
+#### C2-08 · Si ninguno se puede anotar, no queda nada pendiente
+
+- **Sale de:** CA-12 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía, "compré una heladera en 6 cuotas y pago el alquiler todos los
+  meses", y el modelo responde una compra con tarjeta y una regla recurrente,
+- **cuando** se procesa,
+- **entonces** no se registra nada ni se crea ningún lote, y la respuesta tiene dos líneas: "El
+  primer movimiento no lo anoté: eso todavía no lo sé anotar. Por ahora me manejo con gastos,
+  ingresos y transferencias." y la misma con "El segundo".
+- **Test:** `tests/unit/test_pending_batch.py::test_when_none_can_be_registered_nothing_is_left_pending`
+
+#### C2-09 · Una respuesta que deja un pendiente sin poder anotarse lo saca del lote
+
+- **Sale de:** CA-12 · **Tipo:** unitario
+- **Dado** el lote de C2-01 esperando respuesta, el mensaje "el 2 con la Galicia USD", y el
+  modelo responde que contesta el pendiente 2 con cuenta "Galicia USD", una cuenta en dólares
+  para un gasto en un período en pesos,
+- **cuando** se procesa,
+- **entonces** el pendiente 2 queda `rejected`; el gasto de $3.500 en Mercado Pago se registra;
+  y la respuesta es la confirmación de un movimiento solo, seguida de una línea en blanco y de
+  "El 2 no lo anoté: eso todavía no lo sé anotar. Por ahora me manejo con gastos, ingresos y
+  transferencias.".
+- **Test:** `tests/unit/test_pending_batch.py::test_a_reply_that_leaves_a_pending_unregistrable_takes_it_out_of_the_batch`
+
+#### C2-10 · Con un lote esperando respuesta, otro movimiento se suma al lote
+
+- **Sale de:** CA-13 · **Tipo:** integración
+- **Dado** el pendiente de C2-01 de [FEAT-003](../FEAT-003/spec.md) esperando respuesta, el gasto
+  de $3.500 en Supermercado sin cuenta, en un lote de uno; un mensaje web nuevo de Lucía, "y
+  1200 de nafta en efectivo", pendiente, y el modelo responde que trae otro movimiento, un gasto
+  de 1200, cuenta "efectivo", categoría Transporte,
+- **cuando** el worker hace una ronda,
+- **entonces** no se registra nada; el lote sigue `open` y esperando respuesta, ahora con dos
+  pendientes: el de la posición 1, sin cuenta, y uno nuevo en la posición 2, completo; el
+  `question_message_id` del lote apunta a la respuesta; y la respuesta es:
+
+  > 1. El gasto de $3.500 en Supermercado.
+  > ¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD.
+  >
+  > 2. El gasto de $1.200 en Transporte con Efectivo, completo.
+
+- **Test:** `tests/integration/test_pending_batch.py::test_with_a_batch_awaiting_a_reply_another_movement_joins_it`
+
+#### C2-11 · Con una transferencia pendiente, otro movimiento se suma y la lista la nombra en su moneda
+
+- **Sale de:** CA-13 · **Tipo:** unitario
+- **Dado** una transferencia pendiente de Lucía, "pasé 100 dólares", sin cuentas, y el mensaje
+  "gasté 3500 en el súper con Mercado Pago", con el que el modelo responde que trae otro
+  movimiento, un gasto completo,
+- **cuando** se procesa,
+- **entonces** no se registra nada; el gasto entra al lote en la posición 2; y la respuesta
+  empieza "1. La transferencia de US$100.", seguida de las preguntas de las dos cuentas, y lista
+  el gasto como "2. El gasto de $3.500 en Supermercado con Mercado Pago, completo.".
+- **Test:** `tests/unit/test_pending_batch.py::test_with_a_pending_transfer_another_movement_joins_and_the_list_names_it_in_its_currency`
+
+#### C2-12 · De un mensaje con más de 10, entran los primeros 10
+
+- **Sale de:** CA-14 · **Tipo:** unitario
+- **Dado** un mensaje de Lucía con 12 gastos completos, y el modelo responde los 12,
+- **cuando** se procesa,
+- **entonces** se registran los primeros 10, en las posiciones 1 a 10 de un lote cerrado; los
+  dos últimos no; y la confirmación termina con una línea en blanco y "Tomé solo los primeros 10
+  movimientos. Los otros 2 mandámelos en otro mensaje.".
+- **Test:** `tests/unit/test_pending_batch.py::test_of_a_message_with_more_than_10_the_first_10_go_in`
+
+#### C2-13 · Un lote con 9 suma uno solo de los dos que llegan
+
+- **Sale de:** CA-14 · **Tipo:** unitario
+- **Dado** un lote de Lucía esperando respuesta con 9 pendientes, y un mensaje con el que el
+  modelo responde que trae otros dos movimientos completos,
+- **cuando** se procesa,
+- **entonces** entra el primero, en la posición 10; el segundo no entra; y la lista termina con
+  una línea en blanco y "Tomé solo el primero de los movimientos nuevos. El otro mandámelo cuando
+  terminemos con estos.".
+- **Test:** `tests/unit/test_pending_batch.py::test_a_batch_with_9_adds_only_one_of_the_two_that_come`
+
+#### C2-14 · Una respuesta a un número que no está en el lote no cambia nada
+
+- **Sale de:** CA-9 · **Tipo:** unitario
+- **Dado** el lote de C2-01 esperando respuesta, el mensaje "el 5 con MP", y el modelo responde
+  que contesta el pendiente 5 con cuenta "MP",
+- **cuando** se procesa,
+- **entonces** no se registra nada, los dos pendientes siguen como estaban, y la respuesta repite
+  la lista de C2-01.
+- **Test:** `tests/unit/test_pending_batch.py::test_a_reply_to_a_number_that_is_not_in_the_batch_changes_nothing`
+
+#### C2-15 · El modelo recibe cada pendiente del lote con su número
+
+- **Sale de:** CA-9 · **Tipo:** unitario
+- **Dado** el lote de C2-01 esperando respuesta, y el mensaje "el 2 en efectivo",
+- **cuando** se procesa,
+- **entonces** el pedido al modelo trae los dos pendientes, cada uno con su número, lo ya
+  interpretado y lo que le falta, y la pregunta que recibió Lucía; y no trae ningún
+  identificador.
+- **Test:** `tests/unit/test_pending_batch.py::test_the_model_receives_each_pending_of_the_batch_with_its_number`
+
+#### C2-16 · El adaptador devuelve las respuestas por número
+
+- **Sale de:** CA-9 · **Tipo:** unitario
+- **Dado** el transporte HTTP del SDK, que responde la salida estructurada de una respuesta que
+  contesta el pendiente 2 con cuenta "efectivo" y descarta el 1,
+- **cuando** el adaptador clasifica el mensaje,
+- **entonces** la clasificación tiene las dos respuestas por número: la del 2 con cuenta
+  "efectivo", y la del 1, que lo descarta; y el esquema que se le pidió al modelo las devuelve
+  como una lista.
+- **Test:** `tests/unit/test_pending_batch.py::test_the_adapter_returns_the_replies_by_number`
 
 ### Corte 3 — observabilidad
 
@@ -249,9 +476,11 @@ Los casos se escriben antes del corte.
 |---|---|
 | Lote completo registrado | La confirmación de C1-02 |
 | Un solo movimiento | La confirmación o la pregunta de [FEAT-003](../FEAT-003/spec.md) y [FEAT-006](../FEAT-006/spec.md), sin número |
-| Lote con algo que falta (corte 2) | Se define con los casos del corte 2 |
-| Movimiento que todavía no se sabe anotar (corte 2) | Se define con los casos del corte 2 |
-| Más de 10 movimientos (corte 2) | Se define con los casos del corte 2 |
+| Lote con algo que falta | La lista numerada de C2-01: cada uno con lo ya interpretado, "completo" o lo que le falta |
+| Se descartan todos | "Listo, no anoto ninguno." |
+| Movimiento que todavía no se sabe anotar | "El {ordinal} movimiento no lo anoté: " y su texto fijo, en una línea propia (C2-07); si se cayó al responder, "El {número} no lo anoté: " (C2-09) |
+| Más de 10 en un mensaje | "Tomé solo los primeros 10 movimientos. Los otros {n} mandámelos en otro mensaje." |
+| Un lote que se llena con un mensaje nuevo | "Tomé solo el primero de los movimientos nuevos. El otro mandámelo cuando terminemos con estos.", o con "los primeros {n}" y "los otros {m}" |
 
 ## Reglas de dominio bajo prueba
 
