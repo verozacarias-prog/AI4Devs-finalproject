@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, replace
 
 from app import messages
-from app.constants import BATCH_MAX_PENDINGS, LINE_END
+from app.constants import BATCH_MAX_PENDINGS, LINE_END, PENDING_VALIDITY_HOURS
 from app.domain.entities.classification import (
     Classification,
     PendingReply,
@@ -166,6 +166,7 @@ def join_batch(
     context: ReplyContext,
     batch: PendingBatch,
     in_batch: Sequence[PendingTransaction],
+    expired: Sequence[PendingTransaction],
     classification: Classification,
 ) -> bool:
     """Another movement while the batch awaits a reply: it joins with the next number, and the
@@ -174,6 +175,7 @@ def join_batch(
     True if some movement joined: it uses the quota of registration (§ 12).
     """
     items, notes = _open_items(unit_of_work, context, in_batch)
+    notes = _expired_notes(expired) + notes
     last = max(pending.position for pending in in_batch)
     movements = list(map(classification.of_movement, classification.movements()))
     taken = movements[: BATCH_MAX_PENDINGS - last]
@@ -196,26 +198,30 @@ def continue_batch(
     context: ReplyContext,
     batch: PendingBatch,
     in_batch: Sequence[PendingTransaction],
+    expired: Sequence[PendingTransaction],
     classification: Classification,
 ) -> bool:
     """A message while a batch of several awaits its reply (CA-9 to CA-12). What it says of
     each pending goes by its number, with the same rules as a pending alone; a number that is
-    not in the batch changes nothing.
+    not in the batch changes nothing. Those that expired are named (CA-18).
 
     True if it answered or discarded: it uses the quota of registration (§ 12).
     """
+    notes = _expired_notes(expired)
     match classification.pending_reply:
         case PendingReply.DISCARDS:
             close_batch(unit_of_work, batch, in_batch, PendingStatus.REJECTED, context.user.id)
-            add_reply(unit_of_work, context, messages.BATCH_DISCARDED, ResponseKind.FIXED_TEXT)
+            text = _with_notes(messages.BATCH_DISCARDED, notes, None)
+            add_reply(unit_of_work, context, text, ResponseKind.FIXED_TEXT)
             return True
         case PendingReply.CONTINUES:
-            _answer_by_number(unit_of_work, context, batch, in_batch, classification)
+            _answer_by_number(unit_of_work, context, batch, in_batch, classification, notes)
             return True
         case PendingReply.OTHER_MOVEMENT | None:
             # Not about the batch: it keeps waiting, and the message gets its fixed text.
             # Another movement joins the batch before it gets here (CA-13).
-            add_reply(unit_of_work, context, fixed_text(classification), ResponseKind.FIXED_TEXT)
+            text = _with_notes(fixed_text(classification), notes, None)
+            add_reply(unit_of_work, context, text, ResponseKind.FIXED_TEXT)
             return False
 
 
@@ -233,13 +239,14 @@ def _answer_by_number(
     batch: PendingBatch,
     in_batch: Sequence[PendingTransaction],
     classification: Classification,
+    notes: list[str],
 ) -> None:
     """What the reply adds, changes or discards of each pending, and what follows: the batch
-    registered, the list again, or the batch closed (CA-10, CA-11).
+    registered, the list again, or the batch closed (CA-10, CA-11). `notes` already names the
+    pendings that expired.
     """
     replies = {reply.number: reply for reply in classification.numbered_replies}
     items: list[_Item] = []
-    notes: list[str] = []
     for pending in _open(in_batch):
         reply = replies.get(pending.position)
         if reply is not None and reply.discards:
@@ -289,6 +296,12 @@ def _open_items(
         else:
             items.append(_Item(pending.position, state, pending))
     return items, notes
+
+
+def _expired_notes(expired: Sequence[PendingTransaction]) -> list[str]:
+    """A line for each pending that expired, by its number (CA-18)."""
+    reason = messages.PENDING_EXPIRED.format(hours=PENDING_VALIDITY_HOURS)
+    return [not_registered_by_number(pending.position, reason) for pending in expired]
 
 
 def _open(in_batch: Sequence[PendingTransaction]) -> list[PendingTransaction]:

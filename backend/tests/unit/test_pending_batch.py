@@ -580,7 +580,7 @@ def _supermarket_and_nafta_joined_later(
     _answer(
         unit_of_work,
         lucia,
-        "y 1200 de nafta",
+        "y 1200 de nafta" if nafta_account is None else "y 1200 de nafta en efectivo",
         _registration(
             _expense("1200", nafta_account, "Transporte"),
             pending_reply=PendingReply.OTHER_MOVEMENT,

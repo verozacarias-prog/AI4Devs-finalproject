@@ -159,6 +159,8 @@ PENDING_DISCARDED = "Listo, no lo anoto."
 BATCH_ITEM = "{position}. {movement}."
 BATCH_ITEM_COMPLETE = "{position}. {movement}, completo."
 BATCH_DISCARDED = "Listo, no anoto ninguno."
+# Why a pending of the batch was not registered: it expired, each at its own hours (CA-18).
+PENDING_EXPIRED = "pasaron más de {hours} horas."
 # A movement that does not enter the batch, in a line of its own (FEAT-007, CA-12): by its order
 # in the message, or by its number when a reply left it out.
 NOT_REGISTERED_BY_ORDER = "El {ordinal} movimiento no lo anoté: {reason}"

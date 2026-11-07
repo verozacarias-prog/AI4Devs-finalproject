@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 
 from app import messages
@@ -139,9 +139,12 @@ class _Loaded:
     categories: list[Category]
     # The day the user wrote, in their time zone.
     today: date
-    # The batch that awaits a reply and its first open pending, and every pending of it.
+    # The batch that awaits a reply and its first open pending still valid, or else its first
+    # open one; every pending of it, with those that expired already marked; and the open ones
+    # that expired before the message was written, each at its own 24 hours (§ 5, CA-18).
     awaiting: tuple[PendingBatch, PendingTransaction] | None
     in_batch: tuple[PendingTransaction, ...]
+    expired: tuple[PendingTransaction, ...]
     # The batch the message may answer: none if there is none, or if it expired (§ 5).
     open_batch: OpenBatch | None
 
@@ -262,10 +265,18 @@ class AnswerMessage:
                 if awaiting is None
                 else tuple(unit_of_work.pendings.list_in_batch(awaiting[0].id))
             )
+            opened = [pending for pending in in_batch if pending.status is PendingStatus.OPEN]
+            expired = tuple(pending for pending in opened if _expired(pending, message.sent_at))
+            valid = [pending for pending in opened if pending not in expired]
+            in_batch = tuple(
+                replace(pending, status=PendingStatus.EXPIRED) if pending in expired else pending
+                for pending in in_batch
+            )
             open_batch = None
-            if awaiting is not None and not _expired(awaiting[1], message.sent_at):
+            if awaiting is not None and valid:
+                awaiting = (awaiting[0], valid[0])
                 context = ReplyContext(message, user, accounts, categories, today, message.sent_at)
-                open_batch = _open_batch(unit_of_work, context, awaiting[1], in_batch)
+                open_batch = _open_batch(unit_of_work, context, valid, alone=not expired)
             return _Loaded(
                 usage=usage,
                 classified=unit_of_work.llm_usage.count(
@@ -276,6 +287,7 @@ class AnswerMessage:
                 today=today,
                 awaiting=awaiting,
                 in_batch=in_batch,
+                expired=expired,
                 open_batch=open_batch,
             )
 
@@ -289,10 +301,12 @@ class AnswerMessage:
         """What the classification says, in one transaction, or put off by the quota."""
         usage, awaiting = loaded.usage, loaded.awaiting
         continuing = awaiting is not None and loaded.open_batch is not None
-        # Several open pendings are answered as a batch, and another movement joins it.
+        # Several open pendings are answered as a batch, and another movement joins it; so is a
+        # pending left alone by others that expired, which the reply names (CA-18).
         alone = (
             loaded.open_batch is not None
             and len(loaded.open_batch.pendings) == 1
+            and not loaded.expired
             and classification.pending_reply is not PendingReply.OTHER_MOVEMENT
         )
         if awaiting is not None and continuing and alone:
@@ -329,13 +343,17 @@ class AnswerMessage:
                 return False
             _count(unit_of_work, usage, UsageCounter.CLASSIFICATION, classification.usage)
             if awaiting is not None and not continuing:
-                # It expired before this message was written: it is not continued (§ 5).
-                close_batch(unit_of_work, awaiting[0], loaded.in_batch, PendingStatus.EXPIRED, None)
+                # They all expired before this message was written: none is continued (§ 5).
+                close_batch(unit_of_work, awaiting[0], loaded.expired, PendingStatus.EXPIRED, None)
+            elif loaded.expired:
+                # Some expired: they leave the batch, and the others go on (CA-18).
+                for pending in loaded.expired:
+                    unit_of_work.pendings.update(replace(pending, status=PendingStatus.EXPIRED))
             if awaiting is not None and continuing and alone:
                 interpreted = _continue(unit_of_work, context, awaiting, classification)
             elif awaiting is not None and continuing:
                 interpreted = _continue_batch(
-                    unit_of_work, context, awaiting[0], loaded.in_batch, classification
+                    unit_of_work, context, awaiting[0], loaded, classification
                 )
             else:
                 interpreted = _answer_new(unit_of_work, context, classification)
@@ -516,15 +534,16 @@ def _continue_batch(
     unit_of_work: UnitOfWorkPort,
     context: ReplyContext,
     batch: PendingBatch,
-    in_batch: tuple[PendingTransaction, ...],
+    loaded: _Loaded,
     classification: Classification,
 ) -> bool:
     """A message while a batch awaits its reply, as a batch: another movement joins it, and the
-    reply to several pendings goes by number (FEAT-007).
+    reply to several pendings goes by number (FEAT-007). Those that expired are named.
     """
+    in_batch, expired = loaded.in_batch, loaded.expired
     if classification.pending_reply is PendingReply.OTHER_MOVEMENT:
-        return join_batch(unit_of_work, context, batch, in_batch, classification)
-    return continue_batch(unit_of_work, context, batch, in_batch, classification)
+        return join_batch(unit_of_work, context, batch, in_batch, expired, classification)
+    return continue_batch(unit_of_work, context, batch, in_batch, expired, classification)
 
 
 def _answer_new(
@@ -553,16 +572,17 @@ def _answer_new(
 def _open_batch(
     unit_of_work: UnitOfWorkPort,
     context: ReplyContext,
-    first: PendingTransaction,
-    in_batch: tuple[PendingTransaction, ...],
+    pendings: list[PendingTransaction],
+    *,
+    alone: bool,
 ) -> OpenBatch:
-    """The batch as the model receives it: each open pending with its number, and the question
-    the user got. A single pending is a batch of one, with its own question (domain rules, § 5).
+    """The batch as the model receives it: each open pending still valid with its number, and
+    the question the user got. A single pending is a batch of one, with its own question, unless
+    others of its batch expired (domain rules, § 5; CA-18).
     """
-    pendings = [pending for pending in in_batch if pending.status is PendingStatus.OPEN]
     question = (
-        _pending_question(unit_of_work, context, first)
-        if len(pendings) == 1
+        _pending_question(unit_of_work, context, pendings[0])
+        if alone and len(pendings) == 1
         else batch_question(unit_of_work, context, pendings)
     )
     return OpenBatch(
