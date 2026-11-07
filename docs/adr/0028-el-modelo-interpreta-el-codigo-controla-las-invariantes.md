@@ -57,7 +57,7 @@ puede equivocar, y un mensaje armado puede manipularlo
 - El código del registro queda acotado a un conjunto de controles que no crece con cada forma de
   contestar.
 - Las garantías que importan no dependen de que el modelo acierte: un modelo equivocado o
-  manipulado puede entender mal, pero no puede registrar en una cuenta que el mensaje no escribe,
+  manipulado puede entender mal, pero no puede registrar en una cuenta que el mensaje no nombra,
   ni imputar a un período sin confirmar, ni crear una categoría sin un sí.
 - Una interpretación que falla se arregla en un solo lugar, el prompt, y se mide con las métricas
   de calidad del [ADR 0023](0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md).
