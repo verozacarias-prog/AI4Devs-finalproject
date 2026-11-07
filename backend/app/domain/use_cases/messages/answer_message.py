@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import date, datetime
 
@@ -336,9 +336,7 @@ class AnswerMessage:
             else None
         )
         self._mark_if_rejected(
-            message.text,
-            _readings(classification, loaded, continuing, alone, previous),
-            loaded.accounts,
+            message.text, _readings(classification, loaded, continuing, alone, previous)
         )
         now = self._clock.now()
         context = ReplyContext(
@@ -371,10 +369,7 @@ class AnswerMessage:
         return True
 
     def _mark_if_rejected(
-        self,
-        text: str,
-        readings: list[tuple[Classification, Interpretation | None]],
-        accounts: Sequence[Account],
+        self, text: str, readings: list[tuple[Classification, Interpretation | None]]
     ) -> None:
         """Marks the call blocked when the checks in code drop something it returned of any
         movement or of any pending (CA-47; FEAT-007, CA-19).
@@ -383,9 +378,7 @@ class AnswerMessage:
         if (
             self._calls is not None
             and call_id is not None
-            and any(
-                rejects_output(reading, text, previous, accounts) for reading, previous in readings
-            )
+            and any(rejects_output(reading, text, previous) for reading, previous in readings)
         ):
             self._calls.mark_blocked(call_id)
 

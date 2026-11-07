@@ -34,7 +34,6 @@ from app.domain.services.transactions.account_resolution import (
     offered_accounts,
     verified_currency,
     verified_type,
-    written_mention,
 )
 
 _TRANSACTION_TYPES = {
@@ -447,10 +446,7 @@ def proposes_an_unwritten_name(
 
 
 def rejects_output(
-    classification: Classification,
-    text: str,
-    previous: Interpretation | None,
-    accounts: Sequence[Account],
+    classification: Classification, text: str, previous: Interpretation | None
 ) -> bool:
     """Whether the checks in code drop something the model returned (ADR 0023, CA-47).
 
@@ -462,22 +458,15 @@ def rejects_output(
     """
     proposed = classification.proposed_category
     return (
-        _unnamed(classification.account, text, accounts)
+        is_unwritten(classification.account, text)
         or is_unwritten(classification.account_type_words, text)
         or (classification.account_type is not None and classification.account_type_words is None)
-        or _unnamed(classification.to_account, text, accounts)
+        or is_unwritten(classification.to_account, text)
         or is_unwritten(classification.to_account_type_words, text)
         or is_unwritten(classification.currency_words, text)
         or (proposed is not None and _valid_proposal(proposed) is None)
         or (previous is not None and proposes_an_unwritten_name(previous, classification, text))
     )
-
-
-def _unnamed(mention: str | None, text: str, accounts: Sequence[Account]) -> bool:
-    """Whether the model mentioned an account the message does not name: neither written, nor
-    a full name the message names in other words (domain rules, § 1; FEAT-007, CA-21).
-    """
-    return mention is not None and written_mention(mention, text, accounts) is None
 
 
 def _written_proposal(classification: Classification, text: str) -> str | None:

@@ -1,9 +1,9 @@
 """Several movements in one message, with the model replaced (FEAT-007, its spec.md).
 
-Cases C1-02 and C1-05 to C1-10: the numbered confirmation of a batch, the date of each
+Cases C1-02, C1-05 to C1-08 and C1-10: the numbered confirmation of a batch, the date of each
 movement, the quota a message with several movements counts, the adapter that returns every
 movement, a message that is new when no batch is open, and the full name of an account the
-message names in other words. The database is in memory;
+message does not write. The database is in memory;
 the integration tests check the same use case against PostgreSQL.
 """
 
@@ -334,45 +334,6 @@ def _answer_recorded(
     AnswerMessage(unit_of_work, FixedClock(NOW), llm, calls=calls).execute(
         lucia.message(text, sent_at=NOW - timedelta(seconds=5))
     )
-
-
-def test_the_full_name_of_an_account_the_message_names_by_its_initials_counts() -> None:
-    # Case C1-09.
-    unit_of_work = InMemoryUnitOfWork()
-    lucia = Lucia(unit_of_work)
-    calls = InMemoryLlmCallLog()
-
-    _answer_recorded(
-        unit_of_work,
-        lucia,
-        calls,
-        "anotá: 1500 de carnicería y 10 mil de uber, todos con mp",
-        Classification(
-            MessageClass.REGISTRATION,
-            registration_type=RegistrationType.EXPENSE,
-            amount=Decimal("1500"),
-            account="Mercado Pago",
-            category="Supermercado",
-            more_movements=(
-                MovementReading(
-                    registration_type=RegistrationType.EXPENSE,
-                    amount=Decimal("10000"),
-                    account="Mercado Pago",
-                    category="Transporte",
-                ),
-            ),
-        ),
-    )
-
-    transactions = unit_of_work.transactions.added
-    assert sorted(transaction.amount for transaction in transactions) == [
-        Decimal("1500.00"),
-        Decimal("10000.00"),
-    ]
-    assert {transaction.account_id for transaction in transactions} == {
-        lucia.accounts["Mercado Pago"]
-    }
-    assert calls.blocked == []
 
 
 def test_the_full_name_of_an_account_the_message_names_with_another_does_not_count() -> None:

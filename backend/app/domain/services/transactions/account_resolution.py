@@ -53,10 +53,10 @@ def account_candidates(
 
     The rule of the domain, step by step (domain rules, § 1).
     """
+    mention = words.mention
     # 1. What the message does not write is not used: an account the model deduced, as from
-    # "por transferencia", is not named. A full name counts as the words that name it.
-    mention = written_mention(words.mention, text, accounts)
-    if words.mention is not None and mention is None:
+    # "por transferencia", is not named.
+    if is_unwritten(mention, text):
         return []
     account_type = verified_type(words.type, words.type_words, text)
     if mention is None:
@@ -67,10 +67,13 @@ def account_candidates(
     else:
         # The mention, not the rest of the message: in "con MP porque no tenía efectivo" the
         # account is the one named "MP", even though "efectivo" is the whole name of another.
-        named = _named_by(mention, accounts)
-        if named.complete:
-            return named.accounts
-        candidates = named.accounts
+        mention_words = set(_words(mention))
+        # 2. Its whole name is that account, whatever the type or the currency said.
+        complete = [account for account in accounts if set(_words(account.name)) <= mention_words]
+        if len(complete) == 1:
+            return complete
+        # 3. The accounts of which the mention is a part of the name.
+        candidates = [account for account in accounts if _named_by_part(account, mention_words)]
     if account_type is not None:
         # 4. Only those of the type the message says.
         candidates = [account for account in candidates if account.type is account_type]
@@ -90,8 +93,7 @@ def named_or_mentioned(
     if len(candidates) == 1:
         return candidates[0].name, None, None
     if len(candidates) > 1:
-        mention = written_mention(words.mention, text, accounts)
-        return None, mention, verified_type(words.type, words.type_words, text)
+        return None, words.mention, verified_type(words.type, words.type_words, text)
     return None, None, None
 
 
@@ -175,50 +177,6 @@ def verified_type(
     if account_type is None or type_words is None or not _written_in(type_words, text):
         return None
     return account_type
-
-
-@dataclass(frozen=True)
-class _Named:
-    """The accounts a mention names, and whether it names one by its whole name."""
-
-    accounts: list[Account]
-    complete: bool
-
-
-def _named_by(mention: str, accounts: Sequence[Account]) -> _Named:
-    """Steps 2 and 3 of the rule: the account whose whole name the mention has, if only one;
-    or else the accounts of which the mention is a part of the name, or the initials.
-    """
-    mention_words = set(_words(mention))
-    complete = [account for account in accounts if set(_words(account.name)) <= mention_words]
-    if len(complete) == 1:
-        return _Named(complete, complete=True)
-    return _Named(
-        [account for account in accounts if _named_by_part(account, mention_words)],
-        complete=False,
-    )
-
-
-def written_mention(mention: str | None, text: str, accounts: Sequence[Account]) -> str | None:
-    """The words of the message that name the account the model mentions, or None.
-
-    A mention the message writes is itself. The full name of an account the message does not
-    write counts as the words of the message that name that account and no other, by steps 2
-    and 3: as if the model had copied them (domain rules, § 1; FEAT-007, CA-21).
-    """
-    if mention is None or _written_in(mention, text):
-        return mention
-    name_words = _words(mention)
-    full = [account for account in accounts if _words(account.name) == name_words]
-    if len(full) != 1:
-        return None
-    text_words = _words(text)
-    for size in range(len(name_words), 0, -1):
-        for start in range(len(text_words) - size + 1):
-            words = " ".join(text_words[start : start + size])
-            if _named_by(words, accounts).accounts == full:
-                return words
-    return None
 
 
 def is_written(words: str, text: str) -> bool:
