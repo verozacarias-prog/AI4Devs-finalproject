@@ -558,3 +558,124 @@ def test_the_adapter_returns_the_replies_by_number() -> None:
     properties = cast(dict[str, dict[str, object]], schema["properties"])
     assert "numbered_replies" in cast(list[str], schema["required"])
     assert properties["numbered_replies"]["type"] == "array"
+
+
+# Minutes from the first message of a batch: the second one joins 8 hours later, and the reply
+# comes 26 hours after the first, when only the first pending expired.
+JOINED_LATER = 8 * 60
+EXPIRED_FIRST = 26 * 60
+EXPIRED = "El 1 no lo anoté: pasaron más de 24 horas."
+
+
+def _supermarket_and_nafta_joined_later(
+    unit_of_work: InMemoryUnitOfWork, lucia: Lucia, nafta_account: str | None
+) -> None:
+    """The supermarket with no account, and 8 hours later the nafta, which joins the batch."""
+    _answer(
+        unit_of_work,
+        lucia,
+        "gasté 3500 en el súper",
+        _registration(_expense("3500", None, "Supermercado")),
+    )
+    _answer(
+        unit_of_work,
+        lucia,
+        "y 1200 de nafta",
+        _registration(
+            _expense("1200", nafta_account, "Transporte"),
+            pending_reply=PendingReply.OTHER_MOVEMENT,
+        ),
+        minutes_later=JOINED_LATER,
+    )
+
+
+def test_an_expired_pending_leaves_the_batch_and_the_reply_names_it() -> None:
+    # Case C2-17.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    _supermarket_and_nafta_joined_later(unit_of_work, lucia, "Efectivo")
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "el 1 con MP",
+        _by_number(NumberedReply(number=1, reading=MovementReading(account="MP"))),
+        minutes_later=EXPIRED_FIRST,
+    )
+
+    assert _status_by_position(unit_of_work) == {
+        1: PendingStatus.EXPIRED,
+        2: PendingStatus.PROMOTED,
+    }
+    [transaction] = unit_of_work.transactions.added
+    assert transaction.amount == Decimal("1200.00")
+    assert transaction.account_id == lucia.accounts["Efectivo"]
+    [batch] = unit_of_work.pendings.batches
+    assert batch.status is BatchStatus.CLOSED
+    lines = _last_reply(unit_of_work).splitlines()
+    assert lines[0] == "¡Listo! Anoté un gasto de $1.200 en Efectivo."
+    assert lines[-2:] == ["", EXPIRED]
+
+
+def test_the_model_receives_only_the_pendings_still_valid() -> None:
+    # Case C2-18.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    _supermarket_and_nafta_joined_later(unit_of_work, lucia, None)
+
+    llm = _answer(
+        unit_of_work,
+        lucia,
+        "el 1 con MP",
+        _by_number(NumberedReply(number=1, reading=MovementReading(account="MP"))),
+        minutes_later=EXPIRED_FIRST,
+    )
+
+    [request] = llm.requests
+    assert request.open_batch is not None
+    assert [pending.number for pending in request.open_batch.pendings] == [2]
+    assert unit_of_work.transactions.added == []
+    assert _status_by_position(unit_of_work) == {
+        1: PendingStatus.EXPIRED,
+        2: PendingStatus.OPEN,
+    }
+    assert _last_reply(unit_of_work).splitlines() == [
+        "2. El gasto de $1.200 en Transporte.",
+        ALL_ACCOUNTS,
+        "",
+        EXPIRED,
+    ]
+
+
+def test_when_all_expired_the_batch_closes_and_the_message_is_a_new_one() -> None:
+    # Case C2-19.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    _answer(
+        unit_of_work,
+        lucia,
+        "gasté 3500 en el súper y 1200 de nafta",
+        _registration(_expense("3500", None, "Supermercado"), _expense("1200", None, "Transporte")),
+    )
+
+    llm = _answer(
+        unit_of_work,
+        lucia,
+        "gasté 500 en el súper con MP",
+        _registration(_expense("500", "MP", "Supermercado")),
+        minutes_later=EXPIRED_FIRST,
+    )
+
+    [request] = llm.requests
+    assert request.open_batch is None
+    old, new = unit_of_work.pendings.batches
+    assert old.status is BatchStatus.CLOSED
+    assert old.awaiting_reply is False
+    expired = [pending for pending in unit_of_work.pendings.added if pending.batch_id == old.id]
+    assert [pending.status for pending in expired] == [PendingStatus.EXPIRED] * 2
+    assert new.status is BatchStatus.CLOSED
+    [transaction] = unit_of_work.transactions.added
+    assert transaction.amount == Decimal("500.00")
+    reply = _last_reply(unit_of_work)
+    assert reply.splitlines()[0] == "¡Listo! Anoté un gasto de $500 en Mercado Pago."
+    assert "24 horas" not in reply

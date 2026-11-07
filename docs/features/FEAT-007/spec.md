@@ -101,6 +101,13 @@ No hay pantalla nueva.
 - **CA-14.** Un lote tiene como mucho 10 pendientes. Si un mensaje trae más de los que entran,
   entran los primeros hasta llegar a 10, y la respuesta dice cuántos tomó y pide mandar el resto
   después.
+- **CA-18.** Cada pendiente del lote vence a las 24 horas de creado
+  ([§ 5](../../reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)),
+  aunque se haya sumado después que los otros. Uno vencido sale del lote, queda `expired`, y la
+  respuesta lo nombra en una línea propia; los demás siguen con su número, y el modelo recibe
+  solo esos. Si vencieron todos, el lote se cierra y el mensaje se procesa como si no hubiera
+  nada abierto, como en CA-38 de [FEAT-003](../FEAT-003/spec.md). Decidido por Vero el
+  7/11/2026, con el `/spec-drift` del corte 2 (issue #151).
 
 ### Observabilidad — corte 3
 
@@ -234,7 +241,8 @@ Los tipos de caso, qué se reemplaza en cada uno y los datos de partida son los 
 ### Corte 2 — lo que falta y lo que no se puede anotar
 
 - **Aprobado por:** Veronica Zacarias 06/11/2026
-- **Total:** 16 casos, 13 unitarios y 3 de integración.
+- **C2-17 a C2-19, sumados con el `/spec-drift` del corte 2:** Veronica Zacarias 06/11/2026
+- **Total:** 19 casos, 16 unitarios y 3 de integración.
 
 Donde el caso dice que el modelo contesta "el pendiente 2", el doble devuelve una respuesta por
 número: el número del pendiente y lo que la respuesta le agrega o le cambia, con los mismos campos
@@ -258,6 +266,9 @@ de un movimiento, o que lo descarta.
 | C2-14 | Una respuesta a un número que no está en el lote no cambia nada | Unitario | CA-9 |
 | C2-15 | El modelo recibe cada pendiente del lote con su número | Unitario | CA-9 |
 | C2-16 | El adaptador devuelve las respuestas por número | Unitario | CA-9 |
+| C2-17 | Un pendiente vencido sale del lote y la respuesta lo nombra; los demás se registran | Unitario | CA-18 |
+| C2-18 | El modelo recibe solo los pendientes vigentes, y la lista sigue con los que faltan | Unitario | CA-18 |
+| C2-19 | Si vencieron todos, el lote se cierra y el mensaje se procesa como nuevo | Unitario | CA-18 |
 
 Reemplazan a C2-12 de [FEAT-003](../FEAT-003/spec.md) y a C2-12 y C2-15 de
 [FEAT-006](../FEAT-006/spec.md), que probaban el aviso de CA-36 de FEAT-003: con CA-13 ese aviso
@@ -464,6 +475,46 @@ deja de existir, y sus tests se borran.
   como una lista.
 - **Test:** `tests/unit/test_pending_batch.py::test_the_adapter_returns_the_replies_by_number`
 
+#### C2-17 · Un pendiente vencido sale del lote y la respuesta lo nombra; los demás se registran
+
+- **Sale de:** CA-18 · **Tipo:** unitario
+- **Dado** un lote de Lucía esperando respuesta con el pendiente 1, el gasto de $3.500 en
+  Supermercado sin cuenta, creado hace 26 horas, y el pendiente 2, el gasto de $1.200 en
+  Transporte con Efectivo, completo, que se sumó hace 18 horas; el mensaje "el 1 con MP", y el
+  modelo responde que contesta el pendiente 1 con cuenta "MP",
+- **cuando** se procesa,
+- **entonces** el pendiente 1 queda `expired` y no se registra; el gasto de $1.200 en Efectivo se
+  registra y el pendiente 2 queda `promoted`; el lote queda `closed`; y la respuesta es la
+  confirmación de un movimiento solo, seguida de una línea en blanco y de "El 1 no lo anoté:
+  pasaron más de 24 horas.".
+- **Test:** `tests/unit/test_pending_batch.py::test_an_expired_pending_leaves_the_batch_and_the_reply_names_it`
+
+#### C2-18 · El modelo recibe solo los pendientes vigentes, y la lista sigue con los que faltan
+
+- **Sale de:** CA-18 · **Tipo:** unitario
+- **Dado** el lote de C2-17, pero con el pendiente 2 sin cuenta, y el mensaje "el 1 con MP",
+- **cuando** se procesa,
+- **entonces** el pedido al modelo trae solo el pendiente 2, con su número; no se registra nada;
+  el pendiente 1 queda `expired` y el 2 sigue `open`; y la respuesta es, línea por línea:
+
+  > 2. El gasto de $1.200 en Transporte.
+  > ¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD.
+  >
+  > El 1 no lo anoté: pasaron más de 24 horas.
+
+- **Test:** `tests/unit/test_pending_batch.py::test_the_model_receives_only_the_pendings_still_valid`
+
+#### C2-19 · Si vencieron todos, el lote se cierra y el mensaje se procesa como nuevo
+
+- **Sale de:** CA-18 · **Tipo:** unitario
+- **Dado** un lote de Lucía esperando respuesta con dos gastos sin cuenta, creados hace 26
+  horas, el mensaje "gasté 500 en el súper con MP", y el modelo responde un gasto completo,
+- **cuando** se procesa,
+- **entonces** el pedido al modelo no trae ningún lote abierto; los dos pendientes quedan
+  `expired` y su lote `closed`; y el gasto se registra en un lote nuevo de uno, con la
+  confirmación de siempre, sin ningún aviso de vencimiento.
+- **Test:** `tests/unit/test_pending_batch.py::test_when_all_expired_the_batch_closes_and_the_message_is_a_new_one`
+
 ### Corte 3 — observabilidad
 
 - **Aprobado por:** pendiente
@@ -481,6 +532,7 @@ Los casos se escriben antes del corte.
 | Movimiento que todavía no se sabe anotar | "El {ordinal} movimiento no lo anoté: " y su texto fijo, en una línea propia (C2-07); si se cayó al responder, "El {número} no lo anoté: " (C2-09) |
 | Más de 10 en un mensaje | "Tomé solo los primeros 10 movimientos. Los otros {n} mandámelos en otro mensaje.", o "El otro mandámelo en otro mensaje." si queda uno solo |
 | Un lote que se llena con un mensaje nuevo | "Tomé solo el primero de los movimientos nuevos. El otro mandámelo cuando terminemos con estos.", o con "los primeros {n}" y "los otros {m}" |
+| Pendiente vencido en un lote que sigue | "El {número} no lo anoté: pasaron más de 24 horas.", en una línea propia (C2-17) |
 | Un lote que ya tiene 10, y llega otro movimiento | "Ya hay 10 movimientos en esta lista, así que no tomé los nuevos: mandámelos cuando terminemos con estos." |
 
 ## Reglas de dominio bajo prueba
@@ -500,9 +552,6 @@ Los casos se escriben antes del corte.
   ([ADR 0028](../../adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md)).
 - Que un mensaje con un solo movimiento no cambie (CA-7) lo siguen probando los casos de
   FEAT-003 y FEAT-006, que deben pasar sin cambios.
-- El vencimiento de un lote cuyos pendientes se sumaron en momentos distintos: cada pendiente
-  guarda sus 24 horas, y el lote vence cuando vence el primero que sigue abierto, que es el más
-  viejo; entonces vencen todos los abiertos. Ningún caso lo prueba.
 
 ## Fuera de alcance
 
