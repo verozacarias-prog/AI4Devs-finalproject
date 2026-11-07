@@ -157,8 +157,8 @@ desplegar ([FEAT-003](features/FEAT-003/spec.md), CA-46):
 
 - `LLM_DAILY_CLASSIFICATION_LIMIT`: el tope diario total, cuántos mensajes se clasifican por
   día, 100 si no se define.
-- `LLM_DAILY_REGISTRATION_LIMIT`: la cuota de registro, cuántos movimientos se interpretan por
-  día, 50 si no se define.
+- `LLM_DAILY_REGISTRATION_LIMIT`: la cuota de registro, cuántos mensajes de registro se
+  interpretan por día, aunque traigan varios movimientos, 50 si no se define.
 
 `WAITING_MESSAGES_LIMIT` es cuántos mensajes puede tener un usuario esperando respuesta, 200 si
 no se define. La lee la API, que rechaza con `429` el mensaje del chat web que lo supera, y se

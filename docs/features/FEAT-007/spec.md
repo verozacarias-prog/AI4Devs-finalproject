@@ -113,10 +113,16 @@ No hay pantalla nueva.
 
 - **CA-15.** Los registros de un mensaje con varios movimientos dicen cuántos trajo y cuántos
   entraron al lote, sin montos, sin el texto del mensaje y sin nombres de cuentas.
-- **CA-16.** La fila de `LLM_CALL` de una clasificación con varios movimientos dice cuántos
-  movimientos devolvió el modelo, y qué campos vinieron vacíos en alguno de ellos.
+- **CA-16.** La fila de `LLM_CALL` de una clasificación con varios movimientos dice qué campos
+  vinieron vacíos en alguno de ellos. Cuántos movimientos devolvió no se guarda: el consumo se
+  mide por llamada, y un mensaje con varios movimientos es una sola. Decidido por Vero el
+  7/11/2026.
 - **CA-17.** Cada pendiente del lote cuenta sus propias correcciones con la regla de § 5: "el 2
   fueron 3800" suma uno al pendiente 2 y no cambia los demás.
+- **CA-19.** Lo que el código descarta de cualquier movimiento del mensaje, o de cualquier
+  pendiente en una respuesta por número, marca la llamada `blocked`, como CA-47 de
+  [FEAT-003](../FEAT-003/spec.md). Sumado por Vero el 7/11/2026, con el `/spec-drift` del
+  corte 2.
 
 ## Casos de prueba
 
@@ -517,9 +523,79 @@ deja de existir, y sus tests se borran.
 
 ### Corte 3 — observabilidad
 
-- **Aprobado por:** pendiente
+- **Aprobado por:** Veronica Zacarias 07/11/2026
+- **Total:** 6 casos, 4 unitarios y 2 de integración.
 
-Los casos se escriben antes del corte.
+| Caso | Qué prueba | Tipo | Sale de |
+|---|---|---|---|
+| C3-01 | Los registros de un mensaje con varios movimientos dicen cuántos trajo y cuántos entraron al lote, sin datos del usuario | Integración | CA-15 |
+| C3-02 | La fila de la clasificación lista los campos vacíos de cualquiera de los movimientos | Unitario | CA-16 |
+| C3-03 | Una respuesta por número suma la corrección solo al pendiente que cambia | Unitario | CA-17 |
+| C3-04 | Las correcciones de cada pendiente del lote quedan guardadas | Integración | CA-17 |
+| C3-05 | Una cuenta no escrita en el segundo movimiento del mensaje marca la llamada `blocked` | Unitario | CA-19 |
+| C3-06 | Una cuenta no escrita en una respuesta por número marca la llamada `blocked` | Unitario | CA-19 |
+
+#### C3-01 · Los registros de un mensaje con varios movimientos dicen cuántos trajo y cuántos entraron al lote, sin datos del usuario
+
+- **Sale de:** CA-15 · **Tipo:** integración
+- **Dado** un mensaje web de Lucía, "gasté 3500 en el súper con MP, 1200 de nafta en efectivo y
+  compré una heladera en cuotas", pendiente, y el modelo responde dos gastos completos y una
+  compra con tarjeta,
+- **cuando** el worker hace una ronda,
+- **entonces** la línea `message.answered` del mensaje dice `movements: 3` y `batched: 2`; y
+  ninguna línea de los registros contiene "3500", "3.500", "1200", "1.200", "súper",
+  "heladera", "Mercado Pago", "Efectivo", "Lucía" ni "000000000001".
+- **Test:** `tests/integration/test_batch_observability.py::test_the_line_of_a_message_with_several_movements_says_how_many_came_and_entered`
+
+#### C3-02 · La fila de la clasificación lista los campos vacíos de cualquiera de los movimientos
+
+- **Sale de:** CA-16 · **Tipo:** unitario
+- **Dado** el envoltorio que registra las llamadas, y un modelo que responde dos gastos: uno de
+  3500 con cuenta "MP" y categoría Supermercado, y uno de 1200 sin cuenta, con categoría
+  Transporte, los dos sin moneda ni fecha,
+- **cuando** se clasifica el mensaje,
+- **entonces** la fila de `LLM_CALL` tiene `empty_fields` igual a `account`, `currency` y
+  `transaction_date`: la cuenta vacía del segundo cuenta aunque el primero la tenga.
+- **Test:** `tests/unit/test_batch_observability.py::test_the_row_of_the_classification_lists_the_empty_fields_of_any_movement`
+
+#### C3-03 · Una respuesta por número suma la corrección solo al pendiente que cambia
+
+- **Sale de:** CA-17 · **Tipo:** unitario
+- **Dado** el lote de C2-01 esperando respuesta, el mensaje "el 2 fueron 1300 en efectivo", y el
+  modelo responde que contesta el pendiente 2 con monto 1300 y cuenta "efectivo",
+- **cuando** se procesa,
+- **entonces** se registran los dos gastos; el pendiente 2 queda con `corrected_fields_count`
+  1, porque cambió el monto, y la cuenta que faltaba no suma; y el pendiente 1 queda con 0.
+- **Test:** `tests/unit/test_batch_observability.py::test_a_reply_by_number_adds_the_correction_only_to_the_pending_it_changes`
+
+#### C3-04 · Las correcciones de cada pendiente del lote quedan guardadas
+
+- **Sale de:** CA-17 · **Tipo:** integración
+- **Dado** el lote de C2-01 esperando respuesta, un mensaje web nuevo de Lucía, "el 2 fueron
+  1300 en efectivo", pendiente, y el modelo responde como en C3-03,
+- **cuando** el worker hace una ronda,
+- **entonces** en `PENDING_TRANSACTION` el pendiente de la posición 2 tiene
+  `corrected_fields_count = 1` y el de la posición 1, `0`.
+- **Test:** `tests/integration/test_batch_observability.py::test_the_corrections_of_each_pending_of_the_batch_are_stored`
+
+#### C3-05 · Una cuenta no escrita en el segundo movimiento del mensaje marca la llamada `blocked`
+
+- **Sale de:** CA-19 · **Tipo:** unitario
+- **Dado** el mensaje "gasté 3500 en el súper con MP y 1200 de nafta", y el modelo responde dos
+  gastos: el primero con cuenta "MP" y el segundo con cuenta "Brubank", que el mensaje no
+  escribe,
+- **cuando** se procesa,
+- **entonces** la llamada queda marcada `blocked`, y el segundo gasto queda sin cuenta.
+- **Test:** `tests/unit/test_batch_observability.py::test_an_account_not_written_in_the_second_movement_leaves_the_call_blocked`
+
+#### C3-06 · Una cuenta no escrita en una respuesta por número marca la llamada `blocked`
+
+- **Sale de:** CA-19 · **Tipo:** unitario
+- **Dado** el lote de C2-01 esperando respuesta, el mensaje "el 2 en efectivo", y el modelo
+  responde que contesta el pendiente 2 con cuenta "Mercado Pago", que la respuesta no escribe,
+- **cuando** se procesa,
+- **entonces** la llamada queda marcada `blocked`, y el pendiente 2 sigue sin cuenta.
+- **Test:** `tests/unit/test_batch_observability.py::test_an_account_not_written_in_a_reply_by_number_leaves_the_call_blocked`
 
 ## Mensajes al usuario
 
