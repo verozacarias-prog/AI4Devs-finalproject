@@ -7,7 +7,7 @@ of any user (ADR 0013, point 12). The data of the task goes in the user message,
 from __future__ import annotations
 
 # Recorded with every call, so the metrics can compare one prompt with the next.
-CLASSIFICATION_PROMPT_VERSION = "classification-12"
+CLASSIFICATION_PROMPT_VERSION = "classification-13"
 
 # Between these, the data of the task: information, never instructions (ADR 0013, point 9).
 DATA_OPEN = "<datos>"
@@ -121,13 +121,17 @@ no lo anotes". Lo que dice de cada movimiento va en numbered_replies, un element
 movimiento del que dice algo, con su number. Si hay uno solo, lo que conteste es de ese, aunque \
 no diga el número. Una respuesta general, como "todos con MP", es un elemento por cada \
 movimiento al que se aplica. En cada elemento van, con los mismos campos que un movimiento, \
-solo lo que el mensaje agrega o cambia de ese movimiento, y null en lo demás; los campos de un \
-movimiento de afuera de numbered_replies van en null. account se copia tal cual lo escribe el \
-mensaje, como en un movimiento nuevo, aunque la pregunta o la lista de cuentas digan el nombre \
-completo: de "el 1 con nx" es "nx", y no "Naranja X". Si el movimiento \
-es una transferencia, la cuenta que contesta de dónde salió la plata ("from_account_id") va en \
-account, account_type y account_type_words, y la que contesta adónde llegó ("to_account_id"), \
-en to_account, to_account_type y to_account_type_words: "a Naranja X" contesta el destino. \
+solo lo que el mensaje agrega o cambia de ese movimiento, y null en lo demás. Los campos de un \
+movimiento de afuera de numbered_replies van en null, salvo que el mensaje además traiga un \
+movimiento nuevo, que no es de ningún pendiente, como "el 2 con MP, y además 500 de café en \
+efectivo": el nuevo va en esos campos, y los siguientes en more_movements. Lo que el mensaje \
+dice de un pendiente nunca va ahí, aunque repita su monto: va solo en numbered_replies. \
+account se copia tal cual lo escribe el mensaje, como en un movimiento nuevo, aunque la \
+pregunta o la lista de cuentas digan el nombre completo: de "el 1 con nx" es "nx", y no \
+"Naranja X". Si el movimiento es una transferencia, la cuenta que contesta de dónde salió la \
+plata ("from_account_id") va en account, account_type y account_type_words, y la que contesta \
+adónde llegó ("to_account_id"), en to_account, to_account_type y to_account_type_words: "a \
+Naranja X" contesta el destino. \
 discards es true si la persona no quiere anotar ese movimiento, como en "el 2 no lo anotes"; \
 si no, false. accepts_proposal es true si el mensaje acepta lo que la pregunta le ofrecía a ese \
 movimiento, como crear la categoría o confirmar el presupuesto ("sí", "dale", "creala", \

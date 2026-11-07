@@ -273,7 +273,7 @@ class AnswerMessage:
             in_batch = (
                 ()
                 if awaiting is None
-                else tuple(unit_of_work.pendings.list_in_batch(awaiting[0].id))
+                else tuple(unit_of_work.pendings.list_in_batch(awaiting[0].id, user.id))
             )
             opened = [pending for pending in in_batch if pending.status is PendingStatus.OPEN]
             expired = tuple(pending for pending in opened if _expired(pending, message.sent_at))
@@ -322,6 +322,7 @@ class AnswerMessage:
             and len(loaded.open_batch.pendings) == 1
             and not loaded.expired
             and classification.pending_reply is not PendingReply.OTHER_MOVEMENT
+            and not classification.brought_movements()
         )
         if awaiting is not None and continuing and alone:
             # What the reply says of the pending it continues, by its number.
@@ -604,6 +605,9 @@ def _readings(
             for pending in loaded.in_batch
             if pending.status is PendingStatus.OPEN
             and any(reply.number == pending.position for reply in classification.numbered_replies)
+        ] + [
+            (classification.of_movement(movement), None)
+            for movement in classification.brought_movements()
         ]
     return [(classification.of_movement(movement), None) for movement in classification.movements()]
 

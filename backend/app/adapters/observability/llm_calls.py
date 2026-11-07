@@ -63,7 +63,9 @@ class RecordedLLM:
             raise
         call = replace(
             _call(LlmPurpose.CLASSIFICATION, classification.usage, started, LlmOutcome.OK),
-            empty_fields=_empty_fields(classification),
+            empty_fields=_empty_fields(
+                classification, answers_a_batch=request.open_batch is not None
+            ),
         )
         self._calls.record(call)
         return replace(classification, call_id=call.id)
@@ -106,15 +108,18 @@ def _cost(usage: ModelUsage | None) -> Decimal | None:
     return cost.quantize(_COST_PRECISION)
 
 
-def _empty_fields(classification: Classification) -> tuple[OutputField, ...] | None:
+def _empty_fields(
+    classification: Classification, *, answers_a_batch: bool
+) -> tuple[OutputField, ...] | None:
     """Which fields of a registration came empty in any of its movements, or in any pending a
     reply to the open batch names: their names only, never a value (CA-34; FEAT-007, CA-16).
+    With no batch open, the replies by number are not used, so the movements are (CA-20).
     """
     if classification.message_class is not MessageClass.REGISTRATION:
         return None
     readings = (
         [classification.for_pending(reply.number) for reply in classification.numbered_replies]
-        if classification.numbered_replies
+        if answers_a_batch and classification.numbered_replies
         else [classification.of_movement(movement) for movement in classification.movements()]
     )
     empty = {field for reading in readings for field in _empty_of(reading)}

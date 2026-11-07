@@ -25,6 +25,7 @@ from app.domain.entities.pending_transaction import (
 )
 from app.domain.entities.transaction import Transaction, TransactionSource, TransactionType
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
+from app.domain.services.transactions.account_resolution import in_offer_order
 from app.domain.services.transactions.movement_resolution import (
     BeforeAccountOpening,
     Interpretation,
@@ -259,7 +260,8 @@ def movement_missing_of(
             fields=tuple(MissingField(field) for field in pending.missing_fields),
             account=None,
             category=None,
-            account_options=(),
+            # The accounts it would have offered, so the question names them again.
+            account_options=in_offer_order(context.accounts, context.user.primary_currency),
             draft=None,
         )
     return resolution

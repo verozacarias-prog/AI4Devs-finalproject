@@ -37,9 +37,9 @@ class PostgresPendingRepository:
         ).one_or_none()
         return None if row is None else (_batch_from(row), _pending_from(row))
 
-    def list_in_batch(self, batch_id: uuid.UUID) -> list[PendingTransaction]:
+    def list_in_batch(self, batch_id: uuid.UUID, user_id: uuid.UUID) -> list[PendingTransaction]:
         rows = self._connection.execute(
-            text(queries.SELECT_PENDINGS_IN_BATCH), {"batch_id": batch_id}
+            text(queries.SELECT_PENDINGS_IN_BATCH), {"batch_id": batch_id, "user_id": user_id}
         ).all()
         return [_pending_from(row) for row in rows]
 

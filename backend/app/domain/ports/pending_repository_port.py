@@ -21,8 +21,10 @@ class PendingRepositoryPort(Protocol):
         """
         ...
 
-    def list_in_batch(self, batch_id: uuid.UUID) -> list[PendingTransaction]:
-        """Every pending of the batch, whatever its status, by position."""
+    def list_in_batch(self, batch_id: uuid.UUID, user_id: uuid.UUID) -> list[PendingTransaction]:
+        """Every pending of the batch of that user, whatever its status, by position; none if
+        the batch is of another user (FEAT-007, CA-23).
+        """
         ...
 
     def update(self, pending: PendingTransaction) -> None:

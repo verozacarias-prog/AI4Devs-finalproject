@@ -44,6 +44,7 @@ from app.domain.services.transactions.pending_question import (
     message_overflow_text,
     movement_description,
     new_movements_overflow_text,
+    not_registered_alone,
     not_registered_by_number,
     not_registered_by_order,
     transfer_description,
@@ -146,17 +147,11 @@ def answer_several(
     How many movements entered the batch: any uses the quota of registration (§ 12).
     """
     movements = list(map(classification.of_movement, classification.movements()))
-    taken = movements[:BATCH_MAX_PENDINGS]
-    items: list[_Item] = []
-    notes: list[str] = []
-    for index, single in enumerate(taken):
-        state = _new_state(unit_of_work, context, single)
-        if isinstance(state, _CannotEnter):
-            notes.append(not_registered_by_order(index, state.reason))
-        else:
-            items.append(_Item(FIRST_POSITION + len(items), state, None))
-    left = len(movements) - len(taken)
-    overflow = message_overflow_text(len(taken), left) if left else None
+    items, notes, taken = _new_items(
+        unit_of_work, context, movements, BATCH_MAX_PENDINGS, FIRST_POSITION, alone=False
+    )
+    left = len(movements) - taken
+    overflow = message_overflow_text(taken, left) if left else None
     _settle(unit_of_work, context, None, items, notes, overflow)
     return len(items)
 
@@ -174,23 +169,65 @@ def join_batch(
 
     How many movements joined: any uses the quota of registration (§ 12).
     """
-    items, notes = _open_items(unit_of_work, context, in_batch)
+    items, notes = _open_items(unit_of_work, context, in_batch, reject=True)
     notes = _expired_notes(expired) + notes
-    last = max(pending.position for pending in in_batch)
     movements = list(map(classification.of_movement, classification.movements()))
-    taken = movements[: BATCH_MAX_PENDINGS - last]
-    joined = 0
-    for index, single in enumerate(taken):
+    joined, more_notes, overflow = _joining(unit_of_work, context, in_batch, movements)
+    _settle(unit_of_work, context, batch, items + joined, notes + more_notes, overflow)
+    return len(joined)
+
+
+def _joining(
+    unit_of_work: UnitOfWorkPort,
+    context: ReplyContext,
+    in_batch: Sequence[PendingTransaction],
+    movements: list[Classification],
+) -> tuple[list[_Item], list[str], str | None]:
+    """The new movements that join the batch with the next numbers, what is said of those that
+    cannot, and of those that did not fit (CA-12 to CA-14). Each number is used once per batch.
+    """
+    last = max(pending.position for pending in in_batch)
+    joined, notes, taken = _new_items(
+        unit_of_work,
+        context,
+        movements,
+        BATCH_MAX_PENDINGS - last,
+        last + 1,
+        alone=len(movements) == 1,
+    )
+    left = len(movements) - taken
+    return joined, notes, new_movements_overflow_text(taken, left) if left else None
+
+
+def _new_items(
+    unit_of_work: UnitOfWorkPort,
+    context: ReplyContext,
+    movements: list[Classification],
+    room: int,
+    first_position: int,
+    *,
+    alone: bool,
+) -> tuple[list[_Item], list[str], int]:
+    """The movements that enter, in order, until the room is full; only those count for it, and
+    the others are named in a line of their own (CA-12, CA-14). Also how many were taken.
+    """
+    items: list[_Item] = []
+    notes: list[str] = []
+    taken = 0
+    for index, single in enumerate(movements):
+        if len(items) == room:
+            break
+        taken += 1
         state = _new_state(unit_of_work, context, single)
         if isinstance(state, _CannotEnter):
-            notes.append(not_registered_by_order(index, state.reason))
+            notes.append(
+                not_registered_alone(state.reason)
+                if alone
+                else not_registered_by_order(index, state.reason)
+            )
         else:
-            joined += 1
-            items.append(_Item(last + joined, state, None))
-    left = len(movements) - len(taken)
-    overflow = new_movements_overflow_text(len(taken), left) if left else None
-    _settle(unit_of_work, context, batch, items, notes, overflow)
-    return joined
+            items.append(_Item(first_position + len(items), state, None))
+    return items, notes, taken
 
 
 def continue_batch(
@@ -229,7 +266,7 @@ def batch_question(
     unit_of_work: UnitOfWorkPort, context: ReplyContext, in_batch: Sequence[PendingTransaction]
 ) -> str:
     """The list the open pendings of the batch got, as the model receives it with the reply."""
-    items, _ = _open_items(unit_of_work, context, in_batch)
+    items, _ = _open_items(unit_of_work, context, in_batch, reject=False)
     return batch_list_text([_item_text(unit_of_work, context, item) for item in items])
 
 
@@ -264,6 +301,10 @@ def _answer_by_number(
             notes.append(not_registered_by_number(pending.position, state.reason))
             continue
         items.append(_Item(pending.position, state, answered, answered=reply is not None))
+    # A new movement the same message brings is not registered: it is asked for in another
+    # message, so a pending the model repeats as new is never registered twice (CA-22).
+    if classification.brought_movements():
+        notes.append(messages.NEW_MOVEMENT_IN_ANOTHER_MESSAGE)
     _settle(unit_of_work, context, batch, items, notes, None)
 
 
@@ -282,16 +323,23 @@ def _continued_state(
 
 
 def _open_items(
-    unit_of_work: UnitOfWorkPort, context: ReplyContext, in_batch: Sequence[PendingTransaction]
+    unit_of_work: UnitOfWorkPort,
+    context: ReplyContext,
+    in_batch: Sequence[PendingTransaction],
+    *,
+    reject: bool,
 ) -> tuple[list[_Item], list[str]]:
     """The open pendings of the batch, as they stand: what they kept, resolved again. One that
-    can no longer be registered is named by its number instead.
+    can no longer be registered is named by its number instead, and rejected if `reject`: only
+    reading the batch for the model leaves it as it is (CA-12).
     """
     items: list[_Item] = []
     notes: list[str] = []
     for pending in _open(in_batch):
         state = _stored_state(unit_of_work, context, pending)
         if isinstance(state, _CannotEnter):
+            if reject:
+                _reject(unit_of_work, context, pending)
             notes.append(not_registered_by_number(pending.position, state.reason))
         else:
             items.append(_Item(pending.position, state, pending))

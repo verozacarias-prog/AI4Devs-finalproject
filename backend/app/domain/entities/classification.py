@@ -189,6 +189,12 @@ class Classification:
         )
         return (first, *self.more_movements)
 
+    def brought_movements(self) -> tuple[MovementReading, ...]:
+        """The movements a reply to the open batch also brings: those with an amount. A reply
+        that brings none may still leave a type or a currency in those fields (FEAT-007, CA-22).
+        """
+        return tuple(movement for movement in self.movements() if movement.amount is not None)
+
     def of_movement(self, movement: MovementReading) -> Classification:
         """This classification with only that movement, to resolve it as if it came alone."""
         return replace(

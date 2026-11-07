@@ -303,6 +303,7 @@ SELECT_PENDINGS_IN_BATCH = """
            created_at, corrected_fields_count
       FROM pending_transaction
      WHERE batch_id = :batch_id
+       AND user_id = :user_id
      ORDER BY position
 """
 

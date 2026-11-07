@@ -128,6 +128,11 @@ def not_registered_by_order(index: int, reason: str) -> str:
     )
 
 
+def not_registered_alone(reason: str) -> str:
+    """The only new movement of a message to an open batch, which does not enter it (CA-12)."""
+    return messages.NOT_REGISTERED_ALONE.format(reason=_continued(reason))
+
+
 def not_registered_by_number(position: int, reason: str) -> str:
     """A pending a reply left unable to be registered, by its number (CA-12)."""
     return messages.NOT_REGISTERED_BY_NUMBER.format(position=position, reason=_continued(reason))

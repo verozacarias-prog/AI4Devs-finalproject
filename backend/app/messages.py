@@ -165,6 +165,10 @@ PENDING_EXPIRED = "pasaron más de {hours} horas."
 # in the message, or by its number when a reply left it out.
 NOT_REGISTERED_BY_ORDER = "El {ordinal} movimiento no lo anoté: {reason}"
 NOT_REGISTERED_BY_NUMBER = "El {position} no lo anoté: {reason}"
+# A reply to the open batch that also brings a new movement: it is not registered (CA-22).
+NEW_MOVEMENT_IN_ANOTHER_MESSAGE = "El movimiento nuevo mandámelo en otro mensaje."
+# The only new movement of a message to an open batch, which cannot enter it (FEAT-007, CA-12).
+NOT_REGISTERED_ALONE = "Ese movimiento no lo anoté: {reason}"
 ORDINALS = (
     "primer",
     "segundo",
@@ -183,8 +187,9 @@ OTHERS_IN_ANOTHER_MESSAGE = "Los otros {left} mandámelos en otro mensaje."
 OTHER_IN_ANOTHER_MESSAGE = "El otro mandámelo en otro mensaje."
 TOOK_THE_FIRST_NEW = "Tomé solo el primero de los movimientos nuevos."
 TOOK_THE_FIRST_NEW_ONES = "Tomé solo los primeros {taken} de los movimientos nuevos."
+# Each number is used once per batch, also by a discarded or expired pending (CA-14).
 TOOK_NONE_OF_THE_NEW = (
-    "Ya hay 10 movimientos en esta lista, así que no tomé los nuevos: mandámelos cuando "
+    "Esta lista ya usó sus 10 números, así que no tomé los nuevos: mandámelos cuando "
     "terminemos con estos."
 )
 OTHER_WHEN_WE_FINISH = "El otro mandámelo cuando terminemos con estos."

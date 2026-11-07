@@ -188,14 +188,18 @@ class InMemoryPendings:
             return None
         first = next(
             pending
-            for pending in self.list_in_batch(batch.id)
+            for pending in self.list_in_batch(batch.id, user_id)
             if pending.status is PendingStatus.OPEN
         )
         return batch, first
 
-    def list_in_batch(self, batch_id: uuid.UUID) -> list[PendingTransaction]:
+    def list_in_batch(self, batch_id: uuid.UUID, user_id: uuid.UUID) -> list[PendingTransaction]:
         return sorted(
-            (pending for pending in self.added if pending.batch_id == batch_id),
+            (
+                pending
+                for pending in self.added
+                if pending.batch_id == batch_id and pending.user_id == user_id
+            ),
             key=lambda pending: pending.position,
         )
 
