@@ -7,7 +7,7 @@ of any user (ADR 0013, point 12). The data of the task goes in the user message,
 from __future__ import annotations
 
 # Recorded with every call, so the metrics can compare one prompt with the next.
-CLASSIFICATION_PROMPT_VERSION = "classification-10"
+CLASSIFICATION_PROMPT_VERSION = "classification-11"
 
 # Between these, the data of the task: information, never instructions (ADR 0013, point 9).
 DATA_OPEN = "<datos>"
@@ -120,7 +120,9 @@ movimiento del que dice algo, con su number. Si hay uno solo, lo que conteste es
 no diga el número. Una respuesta general, como "todos con MP", es un elemento por cada \
 movimiento al que se aplica. En cada elemento van, con los mismos campos que un movimiento, \
 solo lo que el mensaje agrega o cambia de ese movimiento, y null en lo demás; los campos de un \
-movimiento de afuera de numbered_replies van en null. Si el movimiento \
+movimiento de afuera de numbered_replies van en null. account se copia tal cual lo escribe el \
+mensaje, como en un movimiento nuevo, aunque la pregunta o la lista de cuentas digan el nombre \
+completo: de "el 1 con nx" es "nx", y no "Naranja X". Si el movimiento \
 es una transferencia, la cuenta que contesta de dónde salió la plata ("from_account_id") va en \
 account, account_type y account_type_words, y la que contesta adónde llegó ("to_account_id"), \
 en to_account, to_account_type y to_account_type_words: "a Naranja X" contesta el destino. \

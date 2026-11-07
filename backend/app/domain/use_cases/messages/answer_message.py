@@ -311,6 +311,10 @@ class AnswerMessage:
         """What the classification says, in one transaction, or put off by the quota."""
         usage, awaiting = loaded.usage, loaded.awaiting
         continuing = awaiting is not None and loaded.open_batch is not None
+        if not continuing:
+            # No batch is open: the message is new, whatever the model says it answers. Which
+            # batch is open the code knows, not the model (CA-20).
+            classification = replace(classification, pending_reply=None, numbered_replies=())
         # Several open pendings are answered as a batch, and another movement joins it; so is a
         # pending left alone by others that expired, which the reply names (CA-18).
         alone = (
