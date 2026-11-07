@@ -56,12 +56,12 @@ El entorno `demo` llega en la entrega final. Se despliega desde la rama de la en
 entorno de pruebas: cada persona que prueba tiene su usuario y su enlace. Se aloja en Render, en
 sus planes pagos más chicos ([ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md)). En la entrega 2 Platita se probaba en `local`.
 
-**Un pendiente a la vez, hasta que lleguen varios movimientos en un mensaje.** Las [reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)
+**Un lote de varios pendientes, desde el corte 2 de FEAT-007.** Las [reglas de dominio § 5](reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)
 suman al lote que espera respuesta un movimiento nuevo que llega mientras tanto, y reenvían la
-lista numerada. Hoy un lote tiene un solo pendiente: con uno esperando respuesta, el
-asistente pide terminar el anterior y no anota el nuevo
-([FEAT-003](features/FEAT-003/spec.md), CA-36). Sumarlo al lote llega con los varios
-movimientos en un mensaje.
+lista numerada. Hasta ese corte un lote tenía un solo pendiente, y con uno esperando respuesta
+el asistente pedía terminar el anterior ([FEAT-003](features/FEAT-003/spec.md), CA-36). Desde
+el corte 2 de [FEAT-007](features/FEAT-007/spec.md) el movimiento nuevo se suma al lote, hasta
+10, y la respuesta va por número.
 
 **Lo que el asistente todavía no sabe hacer responde un texto fijo.** La clasificación reconoce las tres
 clases y todos los tipos de registro desde el inicio. Cuando el mensaje pide algo que todavía no
@@ -243,8 +243,8 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   textos fijos de arriba cubren un registro que no es gasto ni ingreso, y una consulta o un
   consejo. Un mensaje con varios movimientos recibía el de un registro que no es gasto ni
   ingreso, decidido el 17 de octubre de 2026 ([FEAT-003](features/FEAT-003/spec.md), C2-35).
-  Desde el corte 1 de [FEAT-007](features/FEAT-007/spec.md) los registra en un lote cuando están
-  todos completos; si a alguno le falta un dato, recibe todavía ese texto, hasta el corte 2.
+  Desde [FEAT-007](features/FEAT-007/spec.md) los registra en un lote: juntos cuando están todos
+  completos, y si a alguno le falta un dato, con una lista numerada que lo pregunta.
   Un usuario con un período individual y uno de grupo para la misma fecha recibe el texto de C2-52,
   y elegir entre los dos pasa a una segunda versión. Queda para la entrega final una respuesta que
   cita una confirmación para corregirla o borrarla.

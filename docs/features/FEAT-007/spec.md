@@ -479,8 +479,9 @@ Los casos se escriben antes del corte.
 | Lote con algo que falta | La lista numerada de C2-01: cada uno con lo ya interpretado, "completo" o lo que le falta |
 | Se descartan todos | "Listo, no anoto ninguno." |
 | Movimiento que todavía no se sabe anotar | "El {ordinal} movimiento no lo anoté: " y su texto fijo, en una línea propia (C2-07); si se cayó al responder, "El {número} no lo anoté: " (C2-09) |
-| Más de 10 en un mensaje | "Tomé solo los primeros 10 movimientos. Los otros {n} mandámelos en otro mensaje." |
+| Más de 10 en un mensaje | "Tomé solo los primeros 10 movimientos. Los otros {n} mandámelos en otro mensaje.", o "El otro mandámelo en otro mensaje." si queda uno solo |
 | Un lote que se llena con un mensaje nuevo | "Tomé solo el primero de los movimientos nuevos. El otro mandámelo cuando terminemos con estos.", o con "los primeros {n}" y "los otros {m}" |
+| Un lote que ya tiene 10, y llega otro movimiento | "Ya hay 10 movimientos en esta lista, así que no tomé los nuevos: mandámelos cuando terminemos con estos." |
 
 ## Reglas de dominio bajo prueba
 
@@ -499,6 +500,9 @@ Los casos se escriben antes del corte.
   ([ADR 0028](../../adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md)).
 - Que un mensaje con un solo movimiento no cambie (CA-7) lo siguen probando los casos de
   FEAT-003 y FEAT-006, que deben pasar sin cambios.
+- El vencimiento de un lote cuyos pendientes se sumaron en momentos distintos: cada pendiente
+  guarda sus 24 horas, y el lote vence cuando vence el primero que sigue abierto, que es el más
+  viejo; entonces vencen todos los abiertos. Ningún caso lo prueba.
 
 ## Fuera de alcance
 
