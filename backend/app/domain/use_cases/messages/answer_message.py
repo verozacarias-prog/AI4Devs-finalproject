@@ -1,15 +1,11 @@
 from __future__ import annotations
 
-import uuid
 from collections.abc import Callable
-from dataclasses import dataclass, replace
-from datetime import date, datetime, timedelta
-from decimal import Decimal
+from dataclasses import dataclass
+from datetime import date, datetime
 
 from app import messages
-from app.constants import LINE_END, PENDING_VALIDITY_HOURS
 from app.domain.entities.account import Account
-from app.domain.entities.budget_period import PeriodStatus
 from app.domain.entities.category import Category
 from app.domain.entities.classification import (
     Classification,
@@ -21,17 +17,14 @@ from app.domain.entities.classification import (
 )
 from app.domain.entities.inbound_message import InboundMessage, RetryPolicy
 from app.domain.entities.llm_usage import UsageCounter, UsageLimits
-from app.domain.entities.outbound_message import OutboundMessage, ResponseKind, reply_to
+from app.domain.entities.outbound_message import ResponseKind
 from app.domain.entities.pending_transaction import (
-    BatchStatus,
     PendingBatch,
     PendingIntent,
-    PendingSource,
     PendingStatus,
     PendingTransaction,
 )
-from app.domain.entities.transaction import Transaction, TransactionSource, TransactionType
-from app.domain.entities.transfer import Transfer
+from app.domain.entities.transaction import TransactionType
 from app.domain.entities.user import User
 from app.domain.errors import ModelCallFailedError, ModelRefusedError, StoreUnavailableError
 from app.domain.ports.llm_call_log_port import LlmCallLogPort
@@ -39,74 +32,43 @@ from app.domain.ports.llm_port import LLMPort
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
 from app.domain.services.dates.local_date import local_today, start_of_day, start_of_next_day
 from app.domain.services.transactions.movement_resolution import (
-    BeforeAccountOpening,
     Interpretation,
-    Missing,
-    MissingField,
-    NotYetSupported,
-    ResolvedMovement,
-    continue_interpretation,
-    corrections,
     from_parsed_data,
     interpret,
     is_movement,
-    proposes_an_unwritten_name,
     rejects_output,
-    resolve,
-    same_name,
-    to_parsed_data,
 )
 from app.domain.services.transactions.pending_question import (
-    finish_the_pending_first_text,
-    finish_the_transfer_first_text,
-    question_text,
     transfer_question_text,
 )
-from app.domain.services.transactions.registration_confirmation import (
-    batch_confirmation_text,
-    before_opening_text,
-    confirmation_text,
-    transfer_before_opening_text,
-    transfer_confirmation_text,
-)
 from app.domain.services.transactions.transfer_resolution import (
-    AnotherCurrencyThanItsAccounts,
-    DifferentCurrencies,
-    MissingTransfer,
-    ResolvedTransfer,
-    TransferBeforeOpening,
-    TransferField,
-    TransferInterpretation,
-    TransferResolution,
-    continue_transfer,
     interpret_transfer,
     is_transfer,
-    registered,
-    resolve_transfer,
-    transfer_corrections,
-    transfer_from_parsed_data,
-    transfer_to_parsed_data,
 )
-from app.shared.clock import Clock
+from app.domain.use_cases.messages.batch_registration import (
+    answer_several,
+)
+from app.domain.use_cases.messages.movement_registration import (
+    continue_movement,
+    movement_missing_of,
+    movement_question,
+    settle_movement,
+)
 
 # The number of the only pending of a batch of one, and of the first of a batch of several.
-_FIRST_POSITION = 1
-
-
-@dataclass(frozen=True)
-class _MovementToRegister:
-    """An expense or an income of a batch, resolved, with what the messages said of it."""
-
-    movement: ResolvedMovement
-    interpretation: Interpretation
-
-
-@dataclass(frozen=True)
-class _TransferToRegister:
-    """A transfer of a batch, resolved, with what the messages said of it."""
-
-    transfer: ResolvedTransfer
-    interpretation: TransferInterpretation
+from app.domain.use_cases.messages.reply_context import (
+    ReplyContext,
+    add_reply,
+    close_pending,
+    fixed_text,
+    reply_message,
+)
+from app.domain.use_cases.messages.transfer_registration import (
+    continue_pending_transfer,
+    settle_transfer,
+    transfer_missing_of,
+)
+from app.shared.clock import Clock
 
 
 @dataclass(frozen=True)
@@ -178,18 +140,6 @@ class _Loaded:
     awaiting: tuple[PendingBatch, PendingTransaction] | None
     # The pending the message may answer: none if there is none, or if it expired (§ 5).
     open_pending: OpenPending | None
-
-
-@dataclass(frozen=True)
-class _Context:
-    """What the answer of one message needs to know of its user."""
-
-    message: InboundMessage
-    user: User
-    accounts: list[Account]
-    categories: list[Category]
-    today: date
-    now: datetime
 
 
 class AnswerMessage:
@@ -305,7 +255,7 @@ class AnswerMessage:
             awaiting = unit_of_work.pendings.find_awaiting_reply(user.id)
             open_pending = None
             if awaiting is not None and not _expired(awaiting[1], message.sent_at):
-                context = _Context(message, user, accounts, categories, today, message.sent_at)
+                context = ReplyContext(message, user, accounts, categories, today, message.sent_at)
                 open_pending = OpenPending(
                     interpreted=dict(awaiting[1].parsed_data),
                     missing=awaiting[1].missing_fields,
@@ -343,7 +293,7 @@ class AnswerMessage:
         )
         self._mark_if_rejected(classification, message.text, previous)
         now = self._clock.now()
-        context = _Context(
+        context = ReplyContext(
             message, usage.user, loaded.accounts, loaded.categories, loaded.today, now
         )
         registration = _counts_as_registration(classification, continuing)
@@ -364,7 +314,7 @@ class AnswerMessage:
             _count(unit_of_work, usage, UsageCounter.CLASSIFICATION, classification.usage)
             if awaiting is not None and not continuing:
                 # It expired before this message was written: it is not continued (§ 5).
-                _close(unit_of_work, awaiting, PendingStatus.EXPIRED, None)
+                close_pending(unit_of_work, awaiting, PendingStatus.EXPIRED, None)
             if awaiting is not None and continuing:
                 interpreted = _continue(unit_of_work, context, awaiting, classification)
             else:
@@ -401,7 +351,7 @@ class AnswerMessage:
             )
             if not told:
                 unit_of_work.outbound_messages.add(
-                    _reply(
+                    reply_message(
                         message, messages.DAILY_LIMIT_REACHED, ResponseKind.FIXED_TEXT, usage.now
                     )
                 )
@@ -426,7 +376,9 @@ class AnswerMessage:
             return False
         _count(unit_of_work, usage, UsageCounter.CLASSIFICATION, classification.usage)
         unit_of_work.outbound_messages.add(
-            _reply(message, messages.REGISTRATION_QUOTA_USED_UP, ResponseKind.FIXED_TEXT, usage.now)
+            reply_message(
+                message, messages.REGISTRATION_QUOTA_USED_UP, ResponseKind.FIXED_TEXT, usage.now
+            )
         )
         unit_of_work.commit()
         notify(LimitReached(UsageCounter.REGISTRATION, answered=True))
@@ -444,7 +396,7 @@ class AnswerMessage:
             if not unit_of_work.inbound_messages.mark_processed(message.id, message.attempts, now):
                 return False
             _count_paid(unit_of_work, paid)
-            unit_of_work.outbound_messages.add(_reply(message, text, kind, now))
+            unit_of_work.outbound_messages.add(reply_message(message, text, kind, now))
             unit_of_work.commit()
         return True
 
@@ -458,7 +410,7 @@ class AnswerMessage:
                 return False
             _count_paid(unit_of_work, paid)
             unit_of_work.outbound_messages.add(
-                _reply(message, messages.MESSAGE_FAILED, ResponseKind.FIXED_TEXT, now)
+                reply_message(message, messages.MESSAGE_FAILED, ResponseKind.FIXED_TEXT, now)
             )
             unit_of_work.commit()
         return True
@@ -520,713 +472,51 @@ def _count_paid(unit_of_work: UnitOfWorkPort, paid: _PaidCall | None) -> None:
         _count(unit_of_work, paid.usage, UsageCounter.CLASSIFICATION, paid.model)
 
 
-def _answer_new(
-    unit_of_work: UnitOfWorkPort, context: _Context, classification: Classification
-) -> bool:
-    """A message with no pending to continue. True if it was interpreted as a movement or a
-    transfer: it uses the quota of registration (domain rules, § 12).
-    """
-    registration = classification.message_class is MessageClass.REGISTRATION
-    if registration and classification.more_movements:
-        return _answer_several(unit_of_work, context, classification)
-    if registration and is_transfer(classification):
-        transfer = interpret_transfer(
-            classification, context.message.text, context.accounts, context.today
-        )
-        return _settle_transfer(unit_of_work, context, transfer, None)
-    if registration and is_movement(classification):
-        interpretation = interpret(
-            classification, context.message.text, context.accounts, context.today
-        )
-        return _settle(unit_of_work, context, interpretation, None)
-    _add_reply(unit_of_work, context, _fixed_text(classification), ResponseKind.FIXED_TEXT)
-    return False
-
-
-def _answer_several(
-    unit_of_work: UnitOfWorkPort, context: _Context, classification: Classification
-) -> bool:
-    """A message with several movements (FEAT-007). Each one is resolved as if it came alone,
-    and when all of them are complete they are registered together, in one batch. Otherwise,
-    until the second cut, the message gets the fixed text and nothing is registered.
-    """
-    resolved: list[_MovementToRegister | _TransferToRegister] = []
-    for single in map(classification.of_movement, classification.movements()):
-        if is_transfer(single):
-            transfer = interpret_transfer(
-                single, context.message.text, context.accounts, context.today
-            )
-            transfer_resolution = _resolve_transfer(context, transfer)
-            if isinstance(transfer_resolution, ResolvedTransfer):
-                resolved.append(_TransferToRegister(transfer_resolution, transfer))
-                continue
-        elif is_movement(single):
-            interpretation = interpret(
-                single, context.message.text, context.accounts, context.today
-            )
-            resolution = _resolve(unit_of_work, context, interpretation)
-            if isinstance(resolution, ResolvedMovement):
-                resolved.append(_MovementToRegister(resolution, interpretation))
-                continue
-        _add_reply(unit_of_work, context, messages.CANNOT_REGISTER_YET, ResponseKind.FIXED_TEXT)
-        return False
-    _register_batch(unit_of_work, context, resolved)
-    return True
-
-
-def _register_batch(
-    unit_of_work: UnitOfWorkPort,
-    context: _Context,
-    resolved: list[_MovementToRegister | _TransferToRegister],
-) -> None:
-    """Every movement of the batch, and one confirmation that lists them by number. Each pending
-    is promoted, in the order of the message, and the batch closes keeping the confirmation
-    (domain rules, § 5).
-    """
-    user_id = context.user.id
-    texts: list[str] = []
-    # What each pending keeps, and the movement it became; the batch comes after the reply.
-    promoted: list[tuple[dict[str, str | None], Transaction | Transfer]] = []
-    for position, item in enumerate(resolved, start=_FIRST_POSITION):
-        if isinstance(item, _MovementToRegister):
-            transaction = _new_transaction(context, item.movement)
-            unit_of_work.transactions.add(transaction)
-            texts.append(_movement_confirmation(unit_of_work, item.movement, position))
-            promoted.append(
-                (_registered_parsed_data(item.movement, item.interpretation), transaction)
-            )
-        else:
-            transfer = _new_transfer(context, item.transfer)
-            unit_of_work.transfers.add(transfer)
-            texts.append(_transfer_confirmation(item.transfer, position))
-            parsed = transfer_to_parsed_data(registered(item.interpretation, item.transfer))
-            promoted.append((parsed, transfer))
-    confirmation = _add_reply(
-        unit_of_work, context, batch_confirmation_text(texts), ResponseKind.REGISTRATION
-    )
-    batch = _closed_batch(context, confirmation)
-    unit_of_work.pendings.add_batch(batch)
-    for position, (parsed, result) in enumerate(promoted, start=_FIRST_POSITION):
-        pending = _pending(context, batch, parsed, (), PendingStatus.PROMOTED, None, user_id)
-        if isinstance(result, Transaction):
-            pending = replace(pending, resulting_transaction_id=result.id)
-        else:
-            pending = replace(
-                pending, intent=PendingIntent.TRANSFER, resulting_transfer_id=result.id
-            )
-        unit_of_work.pendings.add(replace(pending, position=position))
-
-
 def _continue(
     unit_of_work: UnitOfWorkPort,
-    context: _Context,
+    context: ReplyContext,
     awaiting: tuple[PendingBatch, PendingTransaction],
     classification: Classification,
 ) -> bool:
     """A message while a pending awaits its reply (domain rules, § 5). True if it completed or
     discarded it: it uses the quota of registration (§ 12).
     """
-    batch, pending = awaiting
-    if pending.intent is PendingIntent.TRANSFER:
-        return _continue_transfer(unit_of_work, context, awaiting, classification)
-    match classification.pending_reply:
-        case PendingReply.DISCARDS:
-            _close(unit_of_work, awaiting, PendingStatus.REJECTED, context.user.id)
-            _add_reply(unit_of_work, context, messages.PENDING_DISCARDED, ResponseKind.FIXED_TEXT)
-            return True
-        case PendingReply.OTHER_MOVEMENT:
-            # One at a time in delivery 2: the new one is not registered (CA-36).
-            missing = _missing_of(unit_of_work, context, pending)
-            reply = _add_reply(
-                unit_of_work,
-                context,
-                LINE_END.join(
-                    (
-                        finish_the_pending_first_text(missing, _amount_currency(context, missing)),
-                        _question(unit_of_work, context, missing),
-                    )
-                ),
-                ResponseKind.REGISTRATION,
-            )
-            unit_of_work.pendings.update_batch(replace(batch, question_message_id=reply.id))
-            return False
-        case PendingReply.CONTINUES:
-            previous = from_parsed_data(pending.parsed_data, context.today)
-            interpretation = continue_interpretation(
-                previous, classification, context.message.text, context.accounts
-            )
-            # Counted before a yes fills what was missing, which is not a correction.
-            corrected = replace(
-                pending,
-                corrected_fields_count=pending.corrected_fields_count
-                + corrections(previous, interpretation),
-            )
-            # A yes to a name nobody offered nor wrote accepts nothing: it is asked again.
-            if classification.accepts_proposal and not proposes_an_unwritten_name(
-                previous, classification, context.message.text
-            ):
-                interpretation = _accept_proposal(
-                    unit_of_work, context, pending, previous, interpretation
-                )
-            return _settle(unit_of_work, context, interpretation, (batch, corrected))
-        case None:
-            # Not about the pending: it keeps waiting, and the message gets its fixed text.
-            _add_reply(unit_of_work, context, _fixed_text(classification), ResponseKind.FIXED_TEXT)
-            return False
+    if awaiting[1].intent is PendingIntent.TRANSFER:
+        return continue_pending_transfer(unit_of_work, context, awaiting, classification)
+    return continue_movement(unit_of_work, context, awaiting, classification)
 
 
-def _accept_proposal(
-    unit_of_work: UnitOfWorkPort,
-    context: _Context,
-    pending: PendingTransaction,
-    asked: Interpretation,
-    interpretation: Interpretation,
-) -> Interpretation:
-    """A yes to what the question offered: the category to create, or the draft to confirm.
-
-    The draft is the one the question showed, for the day it asked about, and only while the
-    movement still falls in it: a yes never confirms a period the user did not see (§ 3).
-    """
-    proposed = interpretation.proposed_category
-    if (
-        MissingField.CATEGORY in pending.missing_fields
-        and proposed is not None
-        and interpretation.type is not None
-    ):
-        category = _category_named(unit_of_work, context, proposed, interpretation.type)
-        interpretation = replace(interpretation, category=category.name)
-    if MissingField.PERIOD in pending.missing_fields:
-        shown = unit_of_work.budget_periods.list_covering(context.user.id, asked.transaction_date)
-        if (
-            len(shown) == 1
-            and shown[0].status is PeriodStatus.DRAFT
-            and shown[0].user_id == context.user.id
-            and shown[0].period_start <= interpretation.transaction_date <= shown[0].period_end
-        ):
-            unit_of_work.budget_periods.confirm(shown[0].id)
-    return interpretation
-
-
-def _category_named(
-    unit_of_work: UnitOfWorkPort, context: _Context, name: str, kind: TransactionType
-) -> Category:
-    """The category the user confirmed: the one with that name if there is one, or a new one.
-
-    A category of the user never repeats a name of the base catalog (domain rules, § 4).
-    """
-    existing = [
-        category
-        for category in context.categories
-        if category.kind is kind and same_name(category.name, name)
-    ]
-    if existing:
-        return existing[0]
-    created = Category(id=uuid.uuid4(), name=name.strip(), kind=kind, user_id=context.user.id)
-    unit_of_work.categories.add(created)
-    context.categories.append(created)
-    return created
-
-
-def _settle(
-    unit_of_work: UnitOfWorkPort,
-    context: _Context,
-    interpretation: Interpretation,
-    awaiting: tuple[PendingBatch, PendingTransaction] | None,
+def _answer_new(
+    unit_of_work: UnitOfWorkPort, context: ReplyContext, classification: Classification
 ) -> bool:
-    """Registers it, says why not, or asks what is missing, in a new pending or in the open one.
-
-    False when it cannot be registered yet, whatever it says (§ 12, C3-24).
+    """A message with no pending to continue. True if it was interpreted as a movement or a
+    transfer: it uses the quota of registration (domain rules, § 12).
     """
-    resolution = _resolve(unit_of_work, context, interpretation)
-    match resolution:
-        case ResolvedMovement():
-            _register(unit_of_work, context, resolution, interpretation, awaiting)
-        case BeforeAccountOpening():
-            text = before_opening_text(
-                resolution.type, resolution.account.name, resolution.opened_on
-            )
-            _reject(unit_of_work, context, awaiting, text)
-        case NotYetSupported(several_periods=True):
-            _reject(unit_of_work, context, awaiting, messages.SEVERAL_PERIODS)
-        case NotYetSupported():
-            _reject(unit_of_work, context, awaiting, messages.CANNOT_REGISTER_YET)
-        case Missing():
-            _ask(unit_of_work, context, resolution, awaiting)
-    return not isinstance(resolution, NotYetSupported)
-
-
-def _resolve(
-    unit_of_work: UnitOfWorkPort, context: _Context, interpretation: Interpretation
-) -> Missing | ResolvedMovement | BeforeAccountOpening | NotYetSupported:
-    periods = unit_of_work.budget_periods.list_covering(
-        context.user.id, interpretation.transaction_date
-    )
-    return resolve(
-        interpretation,
-        context.accounts,
-        context.categories,
-        periods,
-        context.user.time_zone,
-        context.user.primary_currency,
-    )
-
-
-def _reject(
-    unit_of_work: UnitOfWorkPort,
-    context: _Context,
-    awaiting: tuple[PendingBatch, PendingTransaction] | None,
-    text: str,
-) -> None:
-    if awaiting is not None:
-        _close(unit_of_work, awaiting, PendingStatus.REJECTED, context.user.id)
-    _add_reply(unit_of_work, context, text, ResponseKind.FIXED_TEXT)
-
-
-def _ask(
-    unit_of_work: UnitOfWorkPort,
-    context: _Context,
-    missing: Missing,
-    awaiting: tuple[PendingBatch, PendingTransaction] | None,
-) -> None:
-    """The question, and the pending that keeps what was understood (§ 5)."""
-    # Only the currency the messages said: the one of an account was never said (CA-48).
-    _ask_in_pending(
-        unit_of_work,
-        context,
-        _question(unit_of_work, context, missing),
-        to_parsed_data(missing.interpretation, missing.interpretation.currency),
-        tuple(field.value for field in missing.fields),
-        PendingIntent.TRANSACTION,
-        awaiting,
-    )
-
-
-def _ask_in_pending(
-    unit_of_work: UnitOfWorkPort,
-    context: _Context,
-    question: str,
-    parsed: dict[str, str | None],
-    fields: tuple[str, ...],
-    intent: PendingIntent,
-    awaiting: tuple[PendingBatch, PendingTransaction] | None,
-) -> None:
-    """The question, in the open pending or in a new one with its batch of one."""
-    reply = _add_reply(unit_of_work, context, question, ResponseKind.REGISTRATION)
-    if awaiting is not None:
-        batch, pending = awaiting
-        unit_of_work.pendings.update(replace(pending, parsed_data=parsed, missing_fields=fields))
-        unit_of_work.pendings.update_batch(replace(batch, question_message_id=reply.id))
-        return
-    batch = PendingBatch(
-        id=uuid.uuid4(),
-        user_id=context.user.id,
-        source=PendingSource.MANUAL,
-        awaiting_reply=True,
-        question_message_id=reply.id,
-        confirmation_message_id=None,
-        status=BatchStatus.OPEN,
-        created_at=context.now,
-    )
-    unit_of_work.pendings.add_batch(batch)
-    unit_of_work.pendings.add(
-        replace(
-            _pending(context, batch, parsed, fields, PendingStatus.OPEN, None, None),
-            intent=intent,
+    registration = classification.message_class is MessageClass.REGISTRATION
+    if registration and classification.more_movements:
+        return answer_several(unit_of_work, context, classification)
+    if registration and is_transfer(classification):
+        transfer = interpret_transfer(
+            classification, context.message.text, context.accounts, context.today
         )
-    )
-
-
-def _amount_currency(context: _Context, missing: Missing) -> str:
-    """The currency its amount is in: the one of its account, or else the primary one."""
-    return context.user.primary_currency if missing.account is None else missing.account.currency
-
-
-def _question(unit_of_work: UnitOfWorkPort, context: _Context, missing: Missing) -> str:
-    limits: list[tuple[str, Decimal]] = []
-    if missing.draft is not None:
-        names = {category.id: category.name for category in context.categories}
-        limits = sorted(
-            (names[budget.category_id], budget.limit_amount)
-            for budget in unit_of_work.budgets.list_by_period(missing.draft.id)
-            if budget.category_id in names
+        return settle_transfer(unit_of_work, context, transfer, None)
+    if registration and is_movement(classification):
+        interpretation = interpret(
+            classification, context.message.text, context.accounts, context.today
         )
-    return question_text(missing, limits)
-
-
-def _missing_of(
-    unit_of_work: UnitOfWorkPort, context: _Context, pending: PendingTransaction
-) -> Missing:
-    """What an open pending lacks, as it was asked: from what it kept, the same way."""
-    interpretation = from_parsed_data(pending.parsed_data, context.today)
-    resolution = _resolve(unit_of_work, context, interpretation)
-    if not isinstance(resolution, Missing):
-        # Something changed since it was asked, as a period that now exists: the question is
-        # the one its missing fields say.
-        resolution = Missing(
-            interpretation=interpretation,
-            fields=tuple(MissingField(field) for field in pending.missing_fields),
-            account=None,
-            category=None,
-            account_options=(),
-            draft=None,
-        )
-    return resolution
-
-
-def _register(
-    unit_of_work: UnitOfWorkPort,
-    context: _Context,
-    movement: ResolvedMovement,
-    interpretation: Interpretation,
-    awaiting: tuple[PendingBatch, PendingTransaction] | None,
-) -> None:
-    """The movement and its confirmation. Its pending is promoted and its batch closed, the open
-    one or a new batch of one (domain rules, § 5): the batch keeps the confirmation, so quoting
-    it later finds the movement.
-    """
-    user_id = context.user.id
-    transaction = _new_transaction(context, movement)
-    unit_of_work.transactions.add(transaction)
-    confirmation = _add_reply(
-        unit_of_work,
-        context,
-        _movement_confirmation(unit_of_work, movement, None),
-        ResponseKind.REGISTRATION,
-    )
-    parsed = _registered_parsed_data(movement, interpretation)
-    if awaiting is not None:
-        batch, pending = awaiting
-        unit_of_work.pendings.update(
-            replace(
-                pending,
-                parsed_data=parsed,
-                missing_fields=(),
-                resulting_transaction_id=transaction.id,
-                status=PendingStatus.PROMOTED,
-                resolved_by=user_id,
-            )
-        )
-        unit_of_work.pendings.update_batch(
-            replace(
-                batch,
-                awaiting_reply=False,
-                confirmation_message_id=confirmation.id,
-                status=BatchStatus.CLOSED,
-            )
-        )
-        return
-    batch = _closed_batch(context, confirmation)
-    unit_of_work.pendings.add_batch(batch)
-    unit_of_work.pendings.add(
-        _pending(context, batch, parsed, (), PendingStatus.PROMOTED, transaction.id, user_id)
-    )
-
-
-def _new_transaction(context: _Context, movement: ResolvedMovement) -> Transaction:
-    return Transaction(
-        id=uuid.uuid4(),
-        user_id=context.user.id,
-        account_id=movement.account.id,
-        type=movement.type,
-        amount=movement.amount,
-        currency=movement.account.currency,
-        exchange_rate=None,
-        transaction_date=movement.transaction_date,
-        budget_period_id=movement.period.id,
-        category_id=movement.category.id,
-        source=TransactionSource.MANUAL,
-    )
-
-
-def _movement_confirmation(
-    unit_of_work: UnitOfWorkPort, movement: ResolvedMovement, position: int | None
-) -> str:
-    """What its confirmation says of it: alone, or with its number in a batch of several."""
-    group_id = movement.period.family_group_id
-    group = None if group_id is None else unit_of_work.family_groups.find_by_id(group_id)
-    return confirmation_text(
-        type=movement.type,
-        amount=movement.amount,
-        currency=movement.account.currency,
-        account_name=movement.account.name,
-        category_name=movement.category.name,
-        transaction_date=movement.transaction_date,
-        period=movement.period,
-        group_name=None if group is None else group.name,
-        position=position,
-    )
-
-
-def _registered_parsed_data(
-    movement: ResolvedMovement, interpretation: Interpretation
-) -> dict[str, str | None]:
-    """What its pending keeps once promoted: the names of the account and the category."""
-    return to_parsed_data(
-        replace(interpretation, account=movement.account.name, category=movement.category.name),
-        movement.account.currency,
-    )
-
-
-def _closed_batch(context: _Context, confirmation: OutboundMessage) -> PendingBatch:
-    """A batch registered from its first message: nothing was asked, and it keeps the
-    confirmation.
-    """
-    return PendingBatch(
-        id=uuid.uuid4(),
-        user_id=context.user.id,
-        source=PendingSource.MANUAL,
-        awaiting_reply=False,
-        question_message_id=None,
-        confirmation_message_id=confirmation.id,
-        status=BatchStatus.CLOSED,
-        created_at=context.now,
-    )
-
-
-def _continue_transfer(
-    unit_of_work: UnitOfWorkPort,
-    context: _Context,
-    awaiting: tuple[PendingBatch, PendingTransaction],
-    classification: Classification,
-) -> bool:
-    """A message while a pending transfer awaits its reply (domain rules, § 5). True if it
-    completed or discarded it: it uses the quota of registration (§ 12).
-    """
-    batch, pending = awaiting
-    match classification.pending_reply:
-        case PendingReply.DISCARDS:
-            _close(unit_of_work, awaiting, PendingStatus.REJECTED, context.user.id)
-            _add_reply(unit_of_work, context, messages.PENDING_DISCARDED, ResponseKind.FIXED_TEXT)
-            return True
-        case PendingReply.OTHER_MOVEMENT:
-            # One at a time: the new one is not registered (CA-36 of FEAT-003).
-            missing = _transfer_missing_of(context, pending)
-            reply = _add_reply(
-                unit_of_work,
-                context,
-                LINE_END.join(
-                    (
-                        finish_the_transfer_first_text(
-                            missing, _transfer_currency(context, missing)
-                        ),
-                        transfer_question_text(missing),
-                    )
-                ),
-                ResponseKind.REGISTRATION,
-            )
-            unit_of_work.pendings.update_batch(replace(batch, question_message_id=reply.id))
-            return False
-        case PendingReply.CONTINUES:
-            previous = transfer_from_parsed_data(pending.parsed_data, context.today)
-            transfer = continue_transfer(
-                previous, classification, context.message.text, context.accounts
-            )
-            corrected = replace(
-                pending,
-                corrected_fields_count=pending.corrected_fields_count
-                + transfer_corrections(previous, transfer),
-            )
-            return _settle_transfer(unit_of_work, context, transfer, (batch, corrected))
-        case None:
-            # Not about the pending: it keeps waiting, and the message gets its fixed text.
-            _add_reply(unit_of_work, context, _fixed_text(classification), ResponseKind.FIXED_TEXT)
-            return False
-
-
-def _settle_transfer(
-    unit_of_work: UnitOfWorkPort,
-    context: _Context,
-    interpretation: TransferInterpretation,
-    awaiting: tuple[PendingBatch, PendingTransaction] | None,
-) -> bool:
-    """Registers it, says why not, or asks what is missing, in a new pending or in the open one
-    (FEAT-006). False when it cannot be registered yet, because it needs a rate (CA-14).
-    """
-    resolution = _resolve_transfer(context, interpretation)
-    match resolution:
-        case ResolvedTransfer():
-            _register_transfer(unit_of_work, context, resolution, interpretation, awaiting)
-        case TransferBeforeOpening():
-            text = transfer_before_opening_text(resolution.account.name, resolution.opened_on)
-            _reject(unit_of_work, context, awaiting, text)
-        case DifferentCurrencies():
-            _reject(unit_of_work, context, awaiting, messages.TRANSFER_IN_DIFFERENT_CURRENCIES)
-        case AnotherCurrencyThanItsAccounts():
-            _reject(unit_of_work, context, awaiting, messages.TRANSFER_IN_ANOTHER_CURRENCY)
-        case MissingTransfer():
-            _ask_in_pending(
-                unit_of_work,
-                context,
-                transfer_question_text(resolution),
-                transfer_to_parsed_data(resolution.interpretation),
-                tuple(field.value for field in resolution.fields),
-                PendingIntent.TRANSFER,
-                awaiting,
-            )
-    return not isinstance(resolution, (DifferentCurrencies, AnotherCurrencyThanItsAccounts))
-
-
-def _resolve_transfer(
-    context: _Context, interpretation: TransferInterpretation
-) -> TransferResolution:
-    return resolve_transfer(
-        interpretation, context.accounts, context.user.time_zone, context.user.primary_currency
-    )
-
-
-def _transfer_missing_of(context: _Context, pending: PendingTransaction) -> MissingTransfer:
-    """What an open pending transfer lacks, as it was asked: from what it kept, the same way."""
-    interpretation = transfer_from_parsed_data(pending.parsed_data, context.today)
-    resolution = _resolve_transfer(context, interpretation)
-    if not isinstance(resolution, MissingTransfer):
-        # Something changed since it was asked, as an account that was renamed: the question
-        # is the one its missing fields say, offering every account.
-        resolution = MissingTransfer(
-            interpretation=interpretation,
-            fields=tuple(TransferField(field) for field in pending.missing_fields),
-            from_account=None,
-            to_account=None,
-            from_options=tuple(context.accounts),
-            to_options=tuple(context.accounts),
-        )
-    return resolution
-
-
-def _transfer_currency(context: _Context, missing: MissingTransfer) -> str:
-    """The currency its amount is in: the one of an account it names, or else the one the
-    messages say, or else the primary (C2-15). With an account, the one said is the same:
-    another one gets the fixed text of CA-14.
-    """
-    account = missing.from_account or missing.to_account
-    if account is not None:
-        return account.currency
-    return missing.interpretation.currency or context.user.primary_currency
+        return settle_movement(unit_of_work, context, interpretation, None)
+    add_reply(unit_of_work, context, fixed_text(classification), ResponseKind.FIXED_TEXT)
+    return False
 
 
 def _pending_question(
-    unit_of_work: UnitOfWorkPort, context: _Context, pending: PendingTransaction
+    unit_of_work: UnitOfWorkPort, context: ReplyContext, pending: PendingTransaction
 ) -> str:
     """The question an open pending got, as the model receives it with the reply."""
     if pending.intent is PendingIntent.TRANSFER:
-        return transfer_question_text(_transfer_missing_of(context, pending))
-    return _question(unit_of_work, context, _missing_of(unit_of_work, context, pending))
-
-
-def _register_transfer(
-    unit_of_work: UnitOfWorkPort,
-    context: _Context,
-    resolved: ResolvedTransfer,
-    interpretation: TransferInterpretation,
-    awaiting: tuple[PendingBatch, PendingTransaction] | None,
-) -> None:
-    """The transfer and its confirmation. Its pending is promoted and its batch closed, the open
-    one or a new batch of one (§ 5).
-    """
-    user_id = context.user.id
-    transfer = _new_transfer(context, resolved)
-    unit_of_work.transfers.add(transfer)
-    confirmation = _add_reply(
-        unit_of_work, context, _transfer_confirmation(resolved, None), ResponseKind.REGISTRATION
-    )
-    parsed = transfer_to_parsed_data(registered(interpretation, resolved))
-    if awaiting is not None:
-        batch, pending = awaiting
-        unit_of_work.pendings.update(
-            replace(
-                pending,
-                parsed_data=parsed,
-                missing_fields=(),
-                resulting_transfer_id=transfer.id,
-                status=PendingStatus.PROMOTED,
-                resolved_by=user_id,
-            )
-        )
-        unit_of_work.pendings.update_batch(
-            replace(
-                batch,
-                awaiting_reply=False,
-                confirmation_message_id=confirmation.id,
-                status=BatchStatus.CLOSED,
-            )
-        )
-        return
-    batch = _closed_batch(context, confirmation)
-    unit_of_work.pendings.add_batch(batch)
-    unit_of_work.pendings.add(
-        replace(
-            _pending(context, batch, parsed, (), PendingStatus.PROMOTED, None, user_id),
-            intent=PendingIntent.TRANSFER,
-            resulting_transfer_id=transfer.id,
-        )
-    )
-
-
-def _new_transfer(context: _Context, resolved: ResolvedTransfer) -> Transfer:
-    return Transfer(
-        id=uuid.uuid4(),
-        user_id=context.user.id,
-        from_account_id=resolved.from_account.id,
-        from_amount=resolved.amount,
-        from_currency=resolved.from_account.currency,
-        to_account_id=resolved.to_account.id,
-        to_amount=resolved.amount,
-        to_currency=resolved.to_account.currency,
-        # Both sides in the same currency: there is no rate (§ 13).
-        exchange_rate=None,
-        transfer_date=resolved.transfer_date,
-        source=TransactionSource.MANUAL,
-    )
-
-
-def _transfer_confirmation(resolved: ResolvedTransfer, position: int | None) -> str:
-    """What its confirmation says of it: alone, or with its number in a batch of several."""
-    return transfer_confirmation_text(
-        amount=resolved.amount,
-        currency=resolved.from_account.currency,
-        from_account_name=resolved.from_account.name,
-        to_account_name=resolved.to_account.name,
-        transfer_date=resolved.transfer_date,
-        position=position,
-    )
-
-
-def _pending(
-    context: _Context,
-    batch: PendingBatch,
-    parsed: dict[str, str | None],
-    missing: tuple[str, ...],
-    status: PendingStatus,
-    transaction_id: uuid.UUID | None,
-    resolved_by: uuid.UUID | None,
-) -> PendingTransaction:
-    return PendingTransaction(
-        id=uuid.uuid4(),
-        user_id=context.user.id,
-        intent=PendingIntent.TRANSACTION,
-        parsed_data=parsed,
-        missing_fields=missing,
-        source=PendingSource.MANUAL,
-        batch_id=batch.id,
-        position=_FIRST_POSITION,
-        resulting_transaction_id=transaction_id,
-        status=status,
-        resolved_by=resolved_by,
-        expires_at=context.now + timedelta(hours=PENDING_VALIDITY_HOURS),
-        created_at=context.now,
-    )
-
-
-def _close(
-    unit_of_work: UnitOfWorkPort,
-    awaiting: tuple[PendingBatch, PendingTransaction],
-    status: PendingStatus,
-    resolved_by: uuid.UUID | None,
-) -> None:
-    """The pending ends without a movement, rejected or expired, and its batch closes."""
-    batch, pending = awaiting
-    unit_of_work.pendings.update(replace(pending, status=status, resolved_by=resolved_by))
-    unit_of_work.pendings.update_batch(
-        replace(batch, awaiting_reply=False, status=BatchStatus.CLOSED)
+        return transfer_question_text(transfer_missing_of(context, pending))
+    return movement_question(
+        unit_of_work, context, movement_missing_of(unit_of_work, context, pending)
     )
 
 
@@ -1253,29 +543,4 @@ def _request(
         ),
         today=today,
         open_pending=open_pending,
-    )
-
-
-def _fixed_text(classification: Classification) -> str:
-    """What the assistant answers to what it cannot do yet (ADR 0018)."""
-    if classification.message_class is MessageClass.REGISTRATION:
-        return messages.CANNOT_REGISTER_YET
-    if classification.message_class in (MessageClass.QUERY, MessageClass.ADVICE):
-        return messages.CANNOT_ANSWER_YET
-    return messages.ASK_FOR_DETAILS
-
-
-def _add_reply(
-    unit_of_work: UnitOfWorkPort, context: _Context, text: str, kind: ResponseKind
-) -> OutboundMessage:
-    reply = _reply(context.message, text, kind, context.now)
-    unit_of_work.outbound_messages.add(reply)
-    return reply
-
-
-def _reply(
-    message: InboundMessage, text: str, kind: ResponseKind, now: datetime
-) -> OutboundMessage:
-    return reply_to(
-        message.id, message.provider, message.user_id, message.from_phone, text, kind, now
     )
