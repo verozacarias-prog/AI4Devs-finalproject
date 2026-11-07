@@ -33,7 +33,6 @@ from app.domain.entities.classification import (
 )
 from app.domain.entities.pending_transaction import BatchStatus, PendingStatus
 from app.domain.use_cases.messages.answer_message import AnswerMessage
-from app.messages import SEVERAL_PERIODS
 from tests.support.doubles import FixedClock, InMemoryUnitOfWork
 from tests.support.fake_llm import FakeLLM
 from tests.support.registration_data import NOW, OCTOBER_16, OCTOBER_17, Lucia
@@ -775,14 +774,13 @@ def test_a_reply_by_number_and_a_new_movement_in_the_same_message() -> None:
     )
 
     assert sorted(transaction.amount for transaction in unit_of_work.transactions.added) == [
-        Decimal("500.00"),
         Decimal("1200.00"),
         Decimal("3500.00"),
     ]
-    third = next(pending for pending in unit_of_work.pendings.added if pending.position == 3)
-    assert Decimal(str(third.parsed_data["amount"])) == Decimal("500")
-    [*_, reply] = unit_of_work.outbound_messages.added
-    assert reply.text.startswith("¡Listo! Anoté 3 movimientos:")
+    assert sorted(pending.position for pending in unit_of_work.pendings.added) == [1, 2]
+    reply = _last_reply(unit_of_work)
+    assert reply.startswith("¡Listo! Anoté 2 movimientos:")
+    assert reply.splitlines()[-1] == "El movimiento nuevo mandámelo en otro mensaje."
 
 
 def test_a_single_new_movement_that_cannot_be_registered_is_named_without_an_ordinal() -> None:
@@ -860,4 +858,7 @@ def test_a_pending_that_can_no_longer_be_registered_when_another_joins_is_reject
     }
     [batch] = unit_of_work.pendings.batches
     assert batch.status is BatchStatus.CLOSED
-    assert _last_reply(unit_of_work).splitlines()[-1] == "El 1 no lo anoté: " + SEVERAL_PERIODS
+    assert _last_reply(unit_of_work).splitlines()[-1] == (
+        "El 1 no lo anoté: para esa fecha tenés más de un presupuesto, y todavía no sé elegir en "
+        "cuál anotarlo. Por ahora no lo anoto."
+    )
