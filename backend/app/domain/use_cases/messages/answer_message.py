@@ -91,8 +91,18 @@ class ModelFailed:
     error: ModelCallFailedError
 
 
+@dataclass(frozen=True)
+class SeveralMovements:
+    """A message with several movements: how many it brought, and how many entered the batch
+    (FEAT-007, CA-15). Counts only: what they were is never logged.
+    """
+
+    movements: int
+    batched: int
+
+
 # What the entry point learns of an answer besides how it ended, to log it (ADR 0023).
-AnswerNotice = LimitReached | ModelFailed
+AnswerNotice = LimitReached | ModelFailed | SeveralMovements
 
 
 def _ignore(notice: AnswerNotice) -> None:
@@ -321,7 +331,9 @@ class AnswerMessage:
             and awaiting[1].intent is PendingIntent.TRANSACTION
             else None
         )
-        self._mark_if_rejected(classification, message.text, previous)
+        self._mark_if_rejected(
+            message.text, _readings(classification, loaded, continuing, alone, previous)
+        )
         now = self._clock.now()
         context = ReplyContext(
             message, usage.user, loaded.accounts, loaded.categories, loaded.today, now
@@ -342,37 +354,29 @@ class AnswerMessage:
             if not unit_of_work.inbound_messages.mark_processed(message.id, message.attempts, now):
                 return False
             _count(unit_of_work, usage, UsageCounter.CLASSIFICATION, classification.usage)
-            if awaiting is not None and not continuing:
-                # They all expired before this message was written: none is continued (§ 5).
-                close_batch(unit_of_work, awaiting[0], loaded.expired, PendingStatus.EXPIRED, None)
-            elif loaded.expired:
-                # Some expired: they leave the batch, and the others go on (CA-18).
-                for pending in loaded.expired:
-                    unit_of_work.pendings.update(replace(pending, status=PendingStatus.EXPIRED))
-            if awaiting is not None and continuing and alone:
-                interpreted = _continue(unit_of_work, context, awaiting, classification)
-            elif awaiting is not None and continuing:
-                interpreted = _continue_batch(
-                    unit_of_work, context, awaiting[0], loaded, classification
-                )
-            else:
-                interpreted = _answer_new(unit_of_work, context, classification)
+            _expire(unit_of_work, loaded, continuing)
+            batched = _dispatch(unit_of_work, context, loaded, classification, continuing, alone)
             # What got a fixed text because it cannot be registered yet uses no quota (C3-24).
-            if interpreted:
+            if batched:
                 _count(unit_of_work, usage, UsageCounter.REGISTRATION, None)
             unit_of_work.commit()
+        if _several(classification) and not (continuing and alone):
+            notify(SeveralMovements(len(classification.movements()), batched))
         return True
 
     def _mark_if_rejected(
-        self, classification: Classification, text: str, previous: Interpretation | None
+        self, text: str, readings: list[tuple[Classification, Interpretation | None]]
     ) -> None:
-        """Marks the call blocked when the checks in code drop something it returned (CA-47)."""
+        """Marks the call blocked when the checks in code drop something it returned of any
+        movement or of any pending (CA-47; FEAT-007, CA-19).
+        """
+        call_id = readings[0][0].call_id if readings else None
         if (
             self._calls is not None
-            and classification.call_id is not None
-            and rejects_output(classification, text, previous)
+            and call_id is not None
+            and any(rejects_output(reading, text, previous) for reading, previous in readings)
         ):
-            self._calls.mark_blocked(classification.call_id)
+            self._calls.mark_blocked(call_id)
 
     def _put_off_by_the_cap(
         self, message: InboundMessage, usage: _Usage, notify: Callable[[AnswerNotice], None]
@@ -530,20 +534,93 @@ def _continue(
     return continue_movement(unit_of_work, context, awaiting, classification)
 
 
+def _expire(unit_of_work: UnitOfWorkPort, loaded: _Loaded, continuing: bool) -> None:
+    """The pendings that expired before the message was written leave the batch (§ 5, CA-18)."""
+    if loaded.awaiting is not None and not continuing:
+        # They all expired: none is continued, and the batch closes.
+        close_batch(unit_of_work, loaded.awaiting[0], loaded.expired, PendingStatus.EXPIRED, None)
+        return
+    # Some expired: they leave the batch, and the others go on.
+    for pending in loaded.expired:
+        unit_of_work.pendings.update(replace(pending, status=PendingStatus.EXPIRED))
+
+
+def _dispatch(
+    unit_of_work: UnitOfWorkPort,
+    context: ReplyContext,
+    loaded: _Loaded,
+    classification: Classification,
+    continuing: bool,
+    alone: bool,
+) -> int:
+    """Answers the message by what it is. How many movements entered or joined the batch, or 1
+    if a single one was interpreted or the batch was answered: anything but 0 uses the quota of
+    registration (§ 12).
+    """
+    awaiting = loaded.awaiting
+    if awaiting is not None and continuing and alone:
+        return int(_continue(unit_of_work, context, awaiting, classification))
+    if awaiting is not None and continuing:
+        return _continue_batch(unit_of_work, context, awaiting[0], loaded, classification)
+    if _several(classification):
+        return answer_several(unit_of_work, context, classification)
+    return int(_answer_new(unit_of_work, context, classification))
+
+
+def _several(classification: Classification) -> bool:
+    """Whether the message brings several movements (FEAT-007)."""
+    return (
+        classification.message_class is MessageClass.REGISTRATION
+        and bool(classification.more_movements)
+        and classification.pending_reply in (None, PendingReply.OTHER_MOVEMENT)
+    )
+
+
+def _readings(
+    classification: Classification,
+    loaded: _Loaded,
+    continuing: bool,
+    alone: bool,
+    previous: Interpretation | None,
+) -> list[tuple[Classification, Interpretation | None]]:
+    """What the model returned of each movement or of each pending, with what that pending had
+    understood before: what the checks in code look at to mark the call (CA-19).
+    """
+    if continuing and alone:
+        return [(classification, previous)]
+    if continuing and classification.pending_reply is PendingReply.CONTINUES:
+        today = loaded.today
+        return [
+            (
+                classification.for_pending(pending.position),
+                from_parsed_data(pending.parsed_data, today)
+                if pending.intent is PendingIntent.TRANSACTION
+                else None,
+            )
+            for pending in loaded.in_batch
+            if pending.status is PendingStatus.OPEN
+            and any(reply.number == pending.position for reply in classification.numbered_replies)
+        ]
+    return [(classification.of_movement(movement), None) for movement in classification.movements()]
+
+
 def _continue_batch(
     unit_of_work: UnitOfWorkPort,
     context: ReplyContext,
     batch: PendingBatch,
     loaded: _Loaded,
     classification: Classification,
-) -> bool:
+) -> int:
     """A message while a batch awaits its reply, as a batch: another movement joins it, and the
     reply to several pendings goes by number (FEAT-007). Those that expired are named.
+
+    How many movements joined the batch, or 1 if the reply answered or discarded it: anything
+    but 0 uses the quota of registration (§ 12).
     """
     in_batch, expired = loaded.in_batch, loaded.expired
     if classification.pending_reply is PendingReply.OTHER_MOVEMENT:
         return join_batch(unit_of_work, context, batch, in_batch, expired, classification)
-    return continue_batch(unit_of_work, context, batch, in_batch, expired, classification)
+    return int(continue_batch(unit_of_work, context, batch, in_batch, expired, classification))
 
 
 def _answer_new(
@@ -553,8 +630,6 @@ def _answer_new(
     transfer: it uses the quota of registration (domain rules, § 12).
     """
     registration = classification.message_class is MessageClass.REGISTRATION
-    if registration and classification.more_movements:
-        return answer_several(unit_of_work, context, classification)
     if registration and is_transfer(classification):
         transfer = interpret_transfer(
             classification, context.message.text, context.accounts, context.today

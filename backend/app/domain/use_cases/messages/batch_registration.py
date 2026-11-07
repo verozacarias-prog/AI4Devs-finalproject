@@ -137,13 +137,13 @@ class _Item:
 
 def answer_several(
     unit_of_work: UnitOfWorkPort, context: ReplyContext, classification: Classification
-) -> bool:
+) -> int:
     """A message with several movements (FEAT-007). Each one is resolved as if it came alone:
     complete, they are registered together; with something missing, none is, and the list asks
     for it (CA-8). What cannot be registered yet stays out, in a line of its own (CA-12), and
     beyond 10 the rest waits for another message (CA-14).
 
-    True if some movement entered the batch: it uses the quota of registration (§ 12).
+    How many movements entered the batch: any uses the quota of registration (§ 12).
     """
     movements = list(map(classification.of_movement, classification.movements()))
     taken = movements[:BATCH_MAX_PENDINGS]
@@ -158,7 +158,7 @@ def answer_several(
     left = len(movements) - len(taken)
     overflow = message_overflow_text(len(taken), left) if left else None
     _settle(unit_of_work, context, None, items, notes, overflow)
-    return bool(items)
+    return len(items)
 
 
 def join_batch(
@@ -168,11 +168,11 @@ def join_batch(
     in_batch: Sequence[PendingTransaction],
     expired: Sequence[PendingTransaction],
     classification: Classification,
-) -> bool:
+) -> int:
     """Another movement while the batch awaits a reply: it joins with the next number, and the
     list goes again, up to date (CA-13). Only those that fit in 10 join (CA-14).
 
-    True if some movement joined: it uses the quota of registration (§ 12).
+    How many movements joined: any uses the quota of registration (§ 12).
     """
     items, notes = _open_items(unit_of_work, context, in_batch)
     notes = _expired_notes(expired) + notes
@@ -190,7 +190,7 @@ def join_batch(
     left = len(movements) - len(taken)
     overflow = new_movements_overflow_text(len(taken), left) if left else None
     _settle(unit_of_work, context, batch, items, notes, overflow)
-    return joined > 0
+    return joined
 
 
 def continue_batch(

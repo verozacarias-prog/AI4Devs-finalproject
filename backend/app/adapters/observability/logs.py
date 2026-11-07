@@ -48,6 +48,7 @@ from app.adapters.observability.events import (
     MAX_DURATION_MS,
     MAX_ENDPOINT_LENGTH,
     MAX_EVENT_LENGTH,
+    MAX_MOVEMENTS_LOGGED,
     MAX_RESULT_CODE,
     MAX_STACK_DEPTH,
     MIN_RESULT_CODE,
@@ -58,7 +59,7 @@ from app.adapters.observability.events import (
     LineKey,
     LoggerName,
 )
-from app.constants import ProcessName
+from app.constants import BATCH_MAX_PENDINGS, ProcessName
 from app.domain.errors import ContextField
 
 __all__ = [
@@ -144,6 +145,8 @@ FIELD_RULES: dict[str, Callable[[object], bool]] = {
     Field.CONSTRAINT: _matches(_CONSTRAINT),
     Field.METHOD: _matches(_SHORT_WORD),
     Field.QUOTA: _matches(_SHORT_WORD),
+    Field.MOVEMENTS: _is_integer_between(0, MAX_MOVEMENTS_LOGGED),
+    Field.BATCHED: _is_integer_between(0, BATCH_MAX_PENDINGS),
     # A catalog value is a short word of the code.
     **dict.fromkeys(ContextField, _matches(_SHORT_WORD)),
 }

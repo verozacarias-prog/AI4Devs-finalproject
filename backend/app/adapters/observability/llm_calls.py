@@ -107,25 +107,45 @@ def _cost(usage: ModelUsage | None) -> Decimal | None:
 
 
 def _empty_fields(classification: Classification) -> tuple[OutputField, ...] | None:
-    """Which fields of a registration came empty: their names only, never a value (CA-34).
-
-    A transfer has its own: no category, and the account the money goes to (CA-18 of FEAT-006).
+    """Which fields of a registration came empty in any of its movements, or in any pending a
+    reply to the open batch names: their names only, never a value (CA-34; FEAT-007, CA-16).
     """
     if classification.message_class is not MessageClass.REGISTRATION:
         return None
-    if classification.numbered_replies:
-        # A reply to the open batch: what it says of the first pending it names, which in a
-        # batch of one is all it says. The rows of several come with the third cut of FEAT-007.
-        classification = classification.for_pending(classification.numbered_replies[0].number)
+    readings = (
+        [classification.for_pending(reply.number) for reply in classification.numbered_replies]
+        if classification.numbered_replies
+        else [classification.of_movement(movement) for movement in classification.movements()]
+    )
+    empty = {field for reading in readings for field in _empty_of(reading)}
+    return tuple(field for field in _FIELD_ORDER if field in empty)
+
+
+# The order the fields of a row are listed in.
+_FIELD_ORDER = (
+    OutputField.REGISTRATION_TYPE,
+    OutputField.AMOUNT,
+    OutputField.ACCOUNT,
+    OutputField.TO_ACCOUNT,
+    OutputField.CATEGORY,
+    OutputField.CURRENCY,
+    OutputField.TRANSACTION_DATE,
+)
+
+
+def _empty_of(reading: Classification) -> list[OutputField]:
+    """The empty fields of one movement. A transfer has its own: no category, and the account
+    the money goes to (CA-18 of FEAT-006).
+    """
     values: dict[OutputField, object] = {
-        OutputField.REGISTRATION_TYPE: classification.registration_type,
-        OutputField.AMOUNT: classification.amount,
-        OutputField.ACCOUNT: classification.account,
+        OutputField.REGISTRATION_TYPE: reading.registration_type,
+        OutputField.AMOUNT: reading.amount,
+        OutputField.ACCOUNT: reading.account,
     }
-    if classification.registration_type is RegistrationType.TRANSFER:
-        values[OutputField.TO_ACCOUNT] = classification.to_account
+    if reading.registration_type is RegistrationType.TRANSFER:
+        values[OutputField.TO_ACCOUNT] = reading.to_account
     else:
-        values[OutputField.CATEGORY] = classification.category
-    values[OutputField.CURRENCY] = classification.currency
-    values[OutputField.TRANSACTION_DATE] = classification.transaction_date
-    return tuple(field for field, value in values.items() if value is None)
+        values[OutputField.CATEGORY] = reading.category
+    values[OutputField.CURRENCY] = reading.currency
+    values[OutputField.TRANSACTION_DATE] = reading.transaction_date
+    return [field for field, value in values.items() if value is None]

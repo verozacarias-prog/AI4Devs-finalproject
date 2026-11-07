@@ -38,6 +38,8 @@ IDENTIFIER_FIELD_SUFFIX = "_id"
 MAX_STACK_DEPTH = 30
 MAX_EVENT_LENGTH = 64
 MAX_DURATION_MS = 3_600_000
+# How many movements of one message a line may count: more than the model is asked to return.
+MAX_MOVEMENTS_LOGGED = 100
 MIN_RESULT_CODE = 100
 MAX_RESULT_CODE = 599
 
@@ -79,6 +81,10 @@ class Field(StrEnum):
     CONSTRAINT = "constraint"
     # Which daily counter a user went over: one of UsageCounter.
     QUOTA = "quota"
+    # Of a message with several movements: how many it brought, and how many entered the batch
+    # (FEAT-007, CA-15). Counts only, never what they were.
+    MOVEMENTS = "movements"
+    BATCHED = "batched"
 
 
 class SessionMethod(StrEnum):
