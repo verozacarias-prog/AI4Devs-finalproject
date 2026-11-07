@@ -94,13 +94,20 @@ No hay pantalla nueva.
   recurrente, un cambio, uno en otra moneda o con más de un período posible— no entra al lote: la
   respuesta lo nombra en una línea propia con su texto fijo, y los demás siguen. Decidido por
   Vero el 6/11/2026, para no perder los que sí se pueden anotar. Si ninguno entra, la respuesta
-  son solo esos textos y no queda nada pendiente.
+  son solo esos textos y no queda nada pendiente. Un pendiente que ya estaba en el lote y deja de
+  poder anotarse, como cuando aparece otro período para su fecha, queda rechazado y la respuesta
+  lo nombra por su número, tanto al contestar como al sumarse otro movimiento. Si el mensaje
+  nuevo trae uno solo que no se puede anotar, la línea dice "Ese movimiento no lo anoté: " y no
+  un ordinal.
 - **CA-13.** Con un lote esperando respuesta, un mensaje que trae otro movimiento lo suma al lote
   con el número siguiente, y el asistente manda la lista actualizada. Reemplaza CA-36 de
   FEAT-003.
 - **CA-14.** Un lote tiene como mucho 10 pendientes. Si un mensaje trae más de los que entran,
   entran los primeros hasta llegar a 10, y la respuesta dice cuántos tomó y pide mandar el resto
-  después.
+  después. Para llegar a 10 cuentan solo los que entran al lote: uno que no se puede anotar no
+  ocupa un lugar. Cada número se usa una sola vez por lote, también el de un pendiente descartado
+  o vencido, así que un lote que ya usó sus 10 números no toma otro movimiento aunque muestre
+  menos. Decidido por Vero el 7/11/2026, con el `pr-reviewer`.
 - **CA-18.** Cada pendiente del lote vence a las 24 horas de creado
   ([§ 5](../../reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)),
   aunque se haya sumado después que los otros. Uno vencido sale del lote, queda `expired`, y la
@@ -108,6 +115,13 @@ No hay pantalla nueva.
   solo esos. Si vencieron todos, el lote se cierra y el mensaje se procesa como si no hubiera
   nada abierto, como en CA-38 de [FEAT-003](../FEAT-003/spec.md). Decidido por Vero el
   7/11/2026, con el `/spec-drift` del corte 2 (issue #151).
+- **CA-22.** Un mensaje puede contestar el lote y traer otro movimiento a la vez, como "el 2 con
+  MP, y además 500 de café en efectivo": se aplica la respuesta por número y el movimiento nuevo
+  se suma con el número siguiente, como en CA-13. Decidido por Vero el 7/11/2026, con el
+  `pr-reviewer`.
+- **CA-23.** Los pendientes de un lote se leen siempre con el usuario del mensaje: los de un lote
+  de otro usuario no se leen nunca ([AGENTS.md § 7](../../../AGENTS.md#7-seguridad)). Sumado por
+  Vero el 7/11/2026, con el `pr-reviewer`.
 
 ### Observabilidad — corte 3
 
@@ -298,7 +312,8 @@ Los tipos de caso, qué se reemplaza en cada uno y los datos de partida son los 
 
 - **Aprobado por:** Veronica Zacarias 06/11/2026
 - **C2-17 a C2-19, sumados con el `/spec-drift` del corte 2:** Veronica Zacarias 06/11/2026
-- **Total:** 19 casos, 16 unitarios y 3 de integración.
+- **C2-20 a C2-25, sumados con el `pr-reviewer`:** Veronica Zacarias 07/11/2026
+- **Total:** 25 casos, 21 unitarios y 4 de integración.
 
 Donde el caso dice que el modelo contesta "el pendiente 2", el doble devuelve una respuesta por
 número: el número del pendiente y lo que la respuesta le agrega o le cambia, con los mismos campos
@@ -325,6 +340,12 @@ de un movimiento, o que lo descarta.
 | C2-17 | Un pendiente vencido sale del lote y la respuesta lo nombra; los demás se registran | Unitario | CA-18 |
 | C2-18 | El modelo recibe solo los pendientes vigentes, y la lista sigue con los que faltan | Unitario | CA-18 |
 | C2-19 | Si vencieron todos, el lote se cierra y el mensaje se procesa como nuevo | Unitario | CA-18 |
+| C2-20 | Un pendiente que deja de poder anotarse cuando se suma otro movimiento queda rechazado | Unitario | CA-12 |
+| C2-21 | Lo que no se puede anotar no ocupa un lugar de los 10 | Unitario | CA-14 |
+| C2-22 | Un lote que usó sus 10 números lo dice así, aunque muestre menos | Unitario | CA-14 |
+| C2-23 | Una respuesta por número y un movimiento nuevo en el mismo mensaje | Unitario | CA-22 |
+| C2-24 | Un solo movimiento nuevo que no se puede anotar se nombra sin ordinal | Unitario | CA-12 |
+| C2-25 | Los pendientes de un lote no se leen con otro usuario | Integración | CA-23 |
 
 Reemplazan a C2-12 de [FEAT-003](../FEAT-003/spec.md) y a C2-12 y C2-15 de
 [FEAT-006](../FEAT-006/spec.md), que probaban el aviso de CA-36 de FEAT-003: con CA-13 ese aviso
@@ -571,10 +592,77 @@ deja de existir, y sus tests se borran.
   confirmación de siempre, sin ningún aviso de vencimiento.
 - **Test:** `tests/unit/test_pending_batch.py::test_when_all_expired_the_batch_closes_and_the_message_is_a_new_one`
 
+#### C2-20 · Un pendiente que deja de poder anotarse cuando se suma otro movimiento queda rechazado
+
+- **Sale de:** CA-12 · **Tipo:** unitario
+- **Dado** el mensaje "ayer gasté 3500 en el súper", que deja el pendiente 1 esperando la cuenta;
+  un segundo período de Lucía creado después, del 15/9 al 16/10, que también cubre ayer; y el
+  mensaje "y 1200 de nafta con MP", de hoy, que el modelo responde como otro movimiento, un gasto
+  completo,
+- **cuando** se procesa,
+- **entonces** se registra el gasto de $1.200 en Mercado Pago; el pendiente 1 queda `rejected`;
+  el lote queda cerrado sin ningún pendiente `open`; y la respuesta termina con la línea "El 1 no
+  lo anoté: " seguida del texto de más de un período posible. La fecha del súper, ayer, la cubren
+  los dos períodos, y la de la nafta, hoy, solo el de octubre: corregido así por Vero el
+  7/11/2026, porque con las dos del mismo día la nafta tampoco se podía anotar.
+- **Test:** `tests/unit/test_pending_batch.py::test_a_pending_that_can_no_longer_be_registered_when_another_joins_is_rejected`
+
+#### C2-21 · Lo que no se puede anotar no ocupa un lugar de los 10
+
+- **Sale de:** CA-14 · **Tipo:** unitario
+- **Dado** un lote de 9 gastos esperando la cuenta, y el mensaje "compré una heladera en cuotas y
+  500 de café con MP", que el modelo responde como otro movimiento con dos: una compra con tarjeta
+  y un gasto completo,
+- **cuando** se procesa,
+- **entonces** el café entra al lote con el número 10, la lista lo muestra completo, la compra se
+  nombra en una línea propia como no anotada, y la respuesta no dice que tomó solo una parte.
+- **Test:** `tests/unit/test_pending_batch.py::test_what_cannot_be_registered_takes_no_place_of_the_10`
+
+#### C2-22 · Un lote que usó sus 10 números lo dice así, aunque muestre menos
+
+- **Sale de:** CA-14 · **Tipo:** unitario
+- **Dado** un lote de 10 gastos esperando la cuenta, de los que una respuesta descartó del 4 al 10,
+  y el mensaje "y 500 de café con MP", que el modelo responde como otro movimiento completo,
+- **cuando** se procesa,
+- **entonces** el café no entra, la lista muestra los pendientes 1 a 3, y la respuesta termina con
+  "Esta lista ya usó sus 10 números, así que no tomé los nuevos: mandámelos cuando terminemos con
+  estos."
+- **Test:** `tests/unit/test_pending_batch.py::test_a_batch_that_used_its_10_numbers_says_so_though_it_shows_fewer`
+
+#### C2-23 · Una respuesta por número y un movimiento nuevo en el mismo mensaje
+
+- **Sale de:** CA-22 · **Tipo:** unitario
+- **Dado** el lote de C2-01 esperando respuesta, el mensaje "el 2 con efectivo, y además 500 de
+  café con MP", y el modelo responde que contesta el pendiente 2 con cuenta "efectivo" y trae,
+  además, un gasto de 500 con cuenta "MP" y categoría Comida afuera y delivery,
+- **cuando** se procesa,
+- **entonces** se registran los tres gastos, de $3.500, $1.200 y $500, con una sola confirmación
+  numerada, y el café es el 3.
+- **Test:** `tests/unit/test_pending_batch.py::test_a_reply_by_number_and_a_new_movement_in_the_same_message`
+
+#### C2-24 · Un solo movimiento nuevo que no se puede anotar se nombra sin ordinal
+
+- **Sale de:** CA-12 · **Tipo:** unitario
+- **Dado** el lote de C2-01 esperando respuesta, y el mensaje "compré una heladera en cuotas",
+  que el modelo responde como otro movimiento, una compra con tarjeta,
+- **cuando** se procesa,
+- **entonces** el lote sigue con sus dos pendientes, y la respuesta repite la lista y termina con
+  la línea "Ese movimiento no lo anoté: " seguida del texto de lo que todavía no se sabe anotar.
+- **Test:** `tests/unit/test_pending_batch.py::test_a_single_new_movement_that_cannot_be_registered_is_named_without_an_ordinal`
+
+#### C2-25 · Los pendientes de un lote no se leen con otro usuario
+
+- **Sale de:** CA-23 · **Tipo:** integración
+- **Dado** el lote de C2-01 de Lucía guardado en PostgreSQL,
+- **cuando** el repositorio lee los pendientes de ese lote con el usuario de Pablo,
+- **entonces** la lista está vacía; y con el de Lucía tiene los dos pendientes, en orden.
+- **Test:** `tests/integration/test_pending_batch.py::test_the_pendings_of_a_batch_are_not_read_with_another_user`
+
 ### Corte 3 — observabilidad
 
 - **Aprobado por:** Veronica Zacarias 07/11/2026
-- **Total:** 6 casos, 4 unitarios y 2 de integración.
+- **C3-07, sumado con el `pr-reviewer`:** Veronica Zacarias 07/11/2026
+- **Total:** 7 casos, 5 unitarios y 2 de integración.
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
@@ -584,6 +672,7 @@ deja de existir, y sus tests se borran.
 | C3-04 | Las correcciones de cada pendiente del lote quedan guardadas | Integración | CA-17 |
 | C3-05 | Una cuenta no escrita en el segundo movimiento del mensaje marca la llamada `blocked` | Unitario | CA-19 |
 | C3-06 | Una cuenta no escrita en una respuesta por número marca la llamada `blocked` | Unitario | CA-19 |
+| C3-07 | Sin lote abierto, la fila lista los campos vacíos de los movimientos y no de las respuestas | Unitario | CA-16 y CA-20 |
 
 #### C3-01 · Los registros de un mensaje con varios movimientos dicen cuántos trajo y cuántos entraron al lote, sin datos del usuario
 
@@ -647,6 +736,17 @@ deja de existir, y sus tests se borran.
 - **entonces** la llamada queda marcada `blocked`, y el pendiente 2 sigue sin cuenta.
 - **Test:** `tests/unit/test_batch_observability.py::test_an_account_not_written_in_a_reply_by_number_leaves_the_call_blocked`
 
+#### C3-07 · Sin lote abierto, la fila lista los campos vacíos de los movimientos y no de las respuestas
+
+- **Sale de:** CA-16 y CA-20 · **Tipo:** unitario
+- **Dado** el envoltorio que registra las llamadas, un pedido sin lote abierto, y un modelo que
+  responde un gasto de 3500 con cuenta "MP" y categoría Supermercado, sin moneda ni fecha, y
+  marca el mensaje como respuesta con una respuesta por número que solo trae un monto,
+- **cuando** se clasifica el mensaje,
+- **entonces** la fila de `LLM_CALL` tiene `empty_fields` igual a `currency` y
+  `transaction_date`: los del gasto, no los de la respuesta.
+- **Test:** `tests/unit/test_batch_observability.py::test_with_no_open_batch_the_row_lists_the_empty_fields_of_the_movements`
+
 ## Mensajes al usuario
 
 | Situación | Texto |
@@ -655,11 +755,11 @@ deja de existir, y sus tests se borran.
 | Un solo movimiento | La confirmación o la pregunta de [FEAT-003](../FEAT-003/spec.md) y [FEAT-006](../FEAT-006/spec.md), sin número |
 | Lote con algo que falta | La lista numerada de C2-01: cada uno con lo ya interpretado, "completo" o lo que le falta |
 | Se descartan todos | "Listo, no anoto ninguno." |
-| Movimiento que todavía no se sabe anotar | "El {ordinal} movimiento no lo anoté: " y su texto fijo, en una línea propia (C2-07); si se cayó al responder, "El {número} no lo anoté: " (C2-09) |
+| Movimiento que todavía no se sabe anotar | "El {ordinal} movimiento no lo anoté: " y su texto fijo, en una línea propia (C2-07); si es el único movimiento nuevo de un lote abierto, "Ese movimiento no lo anoté: " (C2-24); si se cayó al responder o al sumarse otro, "El {número} no lo anoté: " (C2-09 y C2-20) |
 | Más de 10 en un mensaje | "Tomé solo los primeros 10 movimientos. Los otros {n} mandámelos en otro mensaje.", o "El otro mandámelo en otro mensaje." si queda uno solo |
 | Un lote que se llena con un mensaje nuevo | "Tomé solo el primero de los movimientos nuevos. El otro mandámelo cuando terminemos con estos.", o con "los primeros {n}" y "los otros {m}" |
 | Pendiente vencido en un lote que sigue | "El {número} no lo anoté: pasaron más de 24 horas.", en una línea propia (C2-17) |
-| Un lote que ya tiene 10, y llega otro movimiento | "Ya hay 10 movimientos en esta lista, así que no tomé los nuevos: mandámelos cuando terminemos con estos." |
+| Un lote que ya usó sus 10 números, y llega otro movimiento | "Esta lista ya usó sus 10 números, así que no tomé los nuevos: mandámelos cuando terminemos con estos." (C2-22) |
 
 ## Reglas de dominio bajo prueba
 

@@ -1,6 +1,6 @@
 """What a batch of several movements leaves to measure, with the ports replaced (FEAT-007).
 
-Cases C3-02, C3-03, C3-05 and C3-06 of its spec.md: the fields that came empty in any movement,
+Cases C3-02, C3-03 and C3-05 to C3-07 of its spec.md: the fields that came empty in any movement,
 the corrections of each pending, and the call marked `blocked` when the code drops what the
 model returned of any movement or of any pending. The database is in memory and nothing reaches
 the provider.
@@ -14,6 +14,7 @@ from decimal import Decimal
 from app.adapters.observability.llm_calls import RecordedLLM
 from app.domain.entities.classification import (
     Classification,
+    ClassificationRequest,
     MessageClass,
     MovementReading,
     NumberedReply,
@@ -24,7 +25,7 @@ from app.domain.entities.llm_call import OutputField
 from app.domain.use_cases.messages.answer_message import AnswerMessage
 from tests.support.doubles import FixedClock, InMemoryLlmCallLog, InMemoryUnitOfWork
 from tests.support.fake_llm import FakeLLM
-from tests.support.registration_data import NOW, Lucia
+from tests.support.registration_data import NOW, OCTOBER_17, Lucia
 
 
 def _expense(amount: str, account: str | None, category: str) -> MovementReading:
@@ -173,3 +174,37 @@ def test_an_account_not_written_in_a_reply_by_number_leaves_the_call_blocked() -
     assert calls.blocked == [reply_call.id]
     second = next(pending for pending in unit_of_work.pendings.added if pending.position == 2)
     assert second.missing_fields == ("account_id",)
+
+
+def test_with_no_open_batch_the_row_lists_the_empty_fields_of_the_movements() -> None:
+    # Case C3-07.
+    calls = InMemoryLlmCallLog()
+    llm = RecordedLLM(
+        FakeLLM(
+            Classification(
+                MessageClass.REGISTRATION,
+                pending_reply=PendingReply.CONTINUES,
+                numbered_replies=(
+                    NumberedReply(number=1, reading=MovementReading(amount=Decimal("100"))),
+                ),
+                registration_type=RegistrationType.EXPENSE,
+                amount=Decimal("3500"),
+                account="MP",
+                category="Supermercado",
+            )
+        ),
+        calls,
+    )
+
+    llm.classify(
+        ClassificationRequest(
+            "gasté 3500 en el súper con MP",
+            ("Mercado Pago",),
+            ("Supermercado",),
+            ("Sueldo",),
+            OCTOBER_17,
+        )
+    )
+
+    [call] = calls.recorded
+    assert call.empty_fields == (OutputField.CURRENCY, OutputField.TRANSACTION_DATE)

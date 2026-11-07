@@ -14,11 +14,13 @@ import uuid
 from collections.abc import Iterator
 from datetime import timedelta
 from decimal import Decimal
+from typing import cast
 
 import pytest
 from sqlalchemy import Engine, Row, create_engine, text
 
 from app.adapters.inbound.message_worker.worker import create_worker
+from app.adapters.outbound.postgres.repositories.pendings import PostgresPendingRepository
 from app.domain.entities.classification import (
     Classification,
     MessageClass,
@@ -28,7 +30,7 @@ from app.domain.entities.classification import (
     RegistrationType,
 )
 from app.settings import Settings, load_settings
-from tests.support.chat_data import inbound
+from tests.support.chat_data import inbound, user_id
 from tests.support.doubles import FixedClock
 from tests.support.fake_llm import FakeLLM
 from tests.support.registration_data import NOW, seed_on_october_1
@@ -248,3 +250,24 @@ def test_with_a_batch_awaiting_a_reply_another_movement_joins_it(
         "",
         "2. El gasto de $1.200 en Transporte con Efectivo, completo.",
     ]
+
+
+def test_the_pendings_of_a_batch_are_not_read_with_another_user(
+    settings: Settings, engine: Engine
+) -> None:
+    # Case C2-25. The batch of C2-01.
+    inbound(engine, "Lucía", "gasté 3500 en el súper con MP y 1200 de nafta", sent_at=SENT_AT)
+    _run_round(
+        settings,
+        _registration(_expense("3500", "MP", "Supermercado"), _expense("1200", None, "Transporte")),
+    )
+    [batch] = _batches(engine)
+    batch_id = cast(uuid.UUID, batch.id)
+
+    with engine.connect() as connection:
+        pendings = PostgresPendingRepository(connection)
+        of_pablo = pendings.list_in_batch(batch_id, user_id(engine, "Pablo"))
+        of_lucia = pendings.list_in_batch(batch_id, user_id(engine, "Lucía"))
+
+    assert of_pablo == []
+    assert [pending.position for pending in of_lucia] == [1, 2]

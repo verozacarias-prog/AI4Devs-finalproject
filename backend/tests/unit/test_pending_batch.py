@@ -1,9 +1,10 @@
 """A batch of several pendings, asked and answered by number, with the model replaced (FEAT-007).
 
-Cases C2-03 to C2-09 and C2-11 to C2-16 of its spec.md: a general reply, the list repeated while
-something is missing, discarding one or all, what cannot be registered yet, another movement that
-joins the batch, the limit of 10, a number that is not in the batch, what the model receives and
-what the adapter returns. Each case that starts from an open batch gets it the way a user does: a
+Cases C2-03 to C2-09, C2-11 to C2-24 of its spec.md: a general reply, the list
+repeated while something is missing, discarding one or all, what cannot be registered yet,
+another movement that joins the batch, the limit of 10, a number that is not in the batch, what
+the model receives and what the adapter returns, the pendings that expire, and a reply that
+brings another movement. Each case that starts from an open batch gets it the way a user does: a
 first message that leaves it waiting, and then the reply. The database is in memory; the
 integration tests check the same use case against PostgreSQL.
 """
@@ -12,13 +13,15 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import timedelta
+import uuid
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import cast
 
 import httpx2
 
 from app.adapters.outbound.llm_client.openai_llm import OpenAILLM
+from app.domain.entities.budget_period import BudgetPeriod, PeriodStatus, PeriodType
 from app.domain.entities.classification import (
     Classification,
     ClassificationRequest,
@@ -30,9 +33,10 @@ from app.domain.entities.classification import (
 )
 from app.domain.entities.pending_transaction import BatchStatus, PendingStatus
 from app.domain.use_cases.messages.answer_message import AnswerMessage
+from app.messages import SEVERAL_PERIODS
 from tests.support.doubles import FixedClock, InMemoryUnitOfWork
 from tests.support.fake_llm import FakeLLM
-from tests.support.registration_data import NOW, OCTOBER_17, Lucia
+from tests.support.registration_data import NOW, OCTOBER_16, OCTOBER_17, Lucia
 
 UUID_PATTERN = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 ALL_ACCOUNTS = "¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD."
@@ -679,3 +683,181 @@ def test_when_all_expired_the_batch_closes_and_the_message_is_a_new_one() -> Non
     reply = _last_reply(unit_of_work)
     assert reply.splitlines()[0] == "¡Listo! Anoté un gasto de $500 en Mercado Pago."
     assert "24 horas" not in reply
+
+
+def test_what_cannot_be_registered_takes_no_place_of_the_10() -> None:
+    # Case C2-21. The first of the nine has no account, so the batch waits.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    nine = [
+        _expense(str(100 * number), None if number == 1 else "mp", "Supermercado")
+        for number in range(1, 10)
+    ]
+    _answer(unit_of_work, lucia, "nueve gastos con mp", _registration(*nine))
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "compré una heladera en cuotas y 500 de café con MP",
+        _registration(
+            MovementReading(registration_type=RegistrationType.CARD_PURCHASE),
+            _expense("500", "MP", "Supermercado"),
+            pending_reply=PendingReply.OTHER_MOVEMENT,
+        ),
+        minutes_later=1,
+    )
+
+    tenth = next(pending for pending in unit_of_work.pendings.added if pending.position == 10)
+    assert Decimal(str(tenth.parsed_data["amount"])) == Decimal("500")
+    reply = _last_reply(unit_of_work)
+    assert "10. El gasto de $500 en Supermercado con Mercado Pago, completo." in reply
+    assert "Tomé solo" not in reply
+    assert reply.splitlines()[-2:] == ["", "El primer movimiento no lo anoté: " + CANNOT_REGISTER]
+
+
+def test_a_batch_that_used_its_10_numbers_says_so_though_it_shows_fewer() -> None:
+    # Case C2-22.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    ten = [_expense(str(100 * number), None, "Supermercado") for number in range(1, 11)]
+    _answer(unit_of_work, lucia, "diez gastos", _registration(*ten))
+    _answer(
+        unit_of_work,
+        lucia,
+        "del 4 al 10 no los anotes",
+        _by_number(*(NumberedReply(number=number, discards=True) for number in range(4, 11))),
+        minutes_later=1,
+    )
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "y 500 de café con MP",
+        _registration(
+            _expense("500", "MP", "Supermercado"), pending_reply=PendingReply.OTHER_MOVEMENT
+        ),
+        minutes_later=2,
+    )
+
+    assert len(unit_of_work.pendings.added) == 10
+    lines = _last_reply(unit_of_work).splitlines()
+    numbered = [line.split(".")[0] for line in lines if line[:1].isdigit()]
+    assert numbered == ["1", "2", "3"]
+    assert lines[-1] == (
+        "Esta lista ya usó sus 10 números, así que no tomé los nuevos: mandámelos cuando "
+        "terminemos con estos."
+    )
+
+
+def test_a_reply_by_number_and_a_new_movement_in_the_same_message() -> None:
+    # Case C2-23.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    lucia.add_base_category("Comida afuera y delivery")
+    _supermarket_and_nafta(unit_of_work, lucia)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "el 2 con efectivo, y además 500 de café con MP",
+        Classification(
+            MessageClass.REGISTRATION,
+            pending_reply=PendingReply.CONTINUES,
+            numbered_replies=(
+                NumberedReply(number=2, reading=MovementReading(account="efectivo")),
+            ),
+            registration_type=RegistrationType.EXPENSE,
+            amount=Decimal("500"),
+            account="MP",
+            category="Comida afuera y delivery",
+        ),
+        minutes_later=1,
+    )
+
+    assert sorted(transaction.amount for transaction in unit_of_work.transactions.added) == [
+        Decimal("500.00"),
+        Decimal("1200.00"),
+        Decimal("3500.00"),
+    ]
+    third = next(pending for pending in unit_of_work.pendings.added if pending.position == 3)
+    assert Decimal(str(third.parsed_data["amount"])) == Decimal("500")
+    [*_, reply] = unit_of_work.outbound_messages.added
+    assert reply.text.startswith("¡Listo! Anoté 3 movimientos:")
+
+
+def test_a_single_new_movement_that_cannot_be_registered_is_named_without_an_ordinal() -> None:
+    # Case C2-24.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    _supermarket_and_nafta(unit_of_work, lucia)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "compré una heladera en cuotas",
+        _registration(
+            MovementReading(registration_type=RegistrationType.CARD_PURCHASE),
+            pending_reply=PendingReply.OTHER_MOVEMENT,
+        ),
+        minutes_later=1,
+    )
+
+    assert _status_by_position(unit_of_work) == {1: PendingStatus.OPEN, 2: PendingStatus.OPEN}
+    assert _last_reply(unit_of_work).splitlines() == [
+        *LIST_OF_C2_01,
+        "",
+        "Ese movimiento no lo anoté: " + CANNOT_REGISTER,
+    ]
+
+
+def test_a_pending_that_can_no_longer_be_registered_when_another_joins_is_rejected() -> None:
+    # Case C2-20. Yesterday is covered by both periods, and today only by the one of October.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    supermarket = _registration(_expense("3500", None, "Supermercado"))
+    _answer(
+        unit_of_work,
+        lucia,
+        "ayer gasté 3500 en el súper",
+        Classification(
+            MessageClass.REGISTRATION,
+            registration_type=supermarket.registration_type,
+            amount=supermarket.amount,
+            category=supermarket.category,
+            transaction_date=OCTOBER_16,
+        ),
+    )
+    unit_of_work.budget_periods.add(
+        BudgetPeriod(
+            id=uuid.uuid4(),
+            user_id=lucia.id,
+            family_group_id=None,
+            period_type=PeriodType.MONTHLY,
+            period_start=date(2026, 9, 15),
+            period_end=OCTOBER_16,
+            primary_currency="ARS",
+            estimated_income=Decimal("0"),
+            status=PeriodStatus.CONFIRMED,
+        )
+    )
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "y 1200 de nafta con MP",
+        _registration(
+            _expense("1200", "MP", "Transporte"), pending_reply=PendingReply.OTHER_MOVEMENT
+        ),
+        minutes_later=1,
+    )
+
+    [transaction] = unit_of_work.transactions.added
+    assert transaction.amount == Decimal("1200.00")
+    assert transaction.account_id == lucia.accounts["Mercado Pago"]
+    assert _status_by_position(unit_of_work) == {
+        1: PendingStatus.REJECTED,
+        2: PendingStatus.PROMOTED,
+    }
+    [batch] = unit_of_work.pendings.batches
+    assert batch.status is BatchStatus.CLOSED
+    assert _last_reply(unit_of_work).splitlines()[-1] == "El 1 no lo anoté: " + SEVERAL_PERIODS
