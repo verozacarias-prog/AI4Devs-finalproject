@@ -33,26 +33,35 @@ class RegistrationType(StrEnum):
 
 
 class PendingReply(StrEnum):
-    """What a message does to the pending that awaits a reply (domain rules, § 5)."""
+    """What a message does to the batch that awaits a reply (domain rules, § 5)."""
 
-    # It answers the question: what it adds completes the pending.
+    # It answers the question: what it adds or changes of each pending goes by its number.
     CONTINUES = "continues"
     # It brings another movement instead.
     OTHER_MOVEMENT = "other_movement"
-    # The user does not want it registered.
+    # The user does not want any of them registered.
     DISCARDS = "discards"
 
 
 @dataclass(frozen=True)
-class OpenPending:
-    """The pending a message may answer: the memory of a registration (ADR 0018, point 9).
-
-    What was understood and what is missing, by field name, and the question the user got.
+class NumberedPending:
+    """One pending of the batch a message may answer: the memory of a registration (ADR 0018,
+    point 9). Its number in the batch, what was understood and what is missing, by field name.
     Never an identifier.
     """
 
+    number: int
     interpreted: Mapping[str, str | None]
     missing: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class OpenBatch:
+    """The batch a message may answer, with every pending it still asks about, and the
+    question the user got (domain rules, § 5). A single pending is a batch of one.
+    """
+
+    pendings: tuple[NumberedPending, ...]
     question: str
 
 
@@ -66,8 +75,8 @@ class ClassificationRequest:
     income_categories: tuple[str, ...]
     # The day the user wrote, in their time zone: what "today" and "ayer" mean.
     today: date
-    # The pending awaiting a reply of the user, if any.
-    open_pending: OpenPending | None = None
+    # The batch awaiting a reply of the user, if any.
+    open_batch: OpenBatch | None = None
 
 
 @dataclass(frozen=True)
@@ -105,6 +114,21 @@ class MovementReading:
 
 
 @dataclass(frozen=True)
+class NumberedReply:
+    """What a reply says of one pending of the batch, by its number (FEAT-007, CA-9).
+
+    `reading` has only what the reply adds or changes. `discards` drops that pending, and
+    `accepts_proposal` is a yes to what its question offered, as creating the category or
+    confirming the draft.
+    """
+
+    number: int
+    reading: MovementReading = MovementReading()
+    discards: bool = False
+    accepts_proposal: bool = False
+
+
+@dataclass(frozen=True)
 class Classification:
     """What the model understood of a message. Names are as the model wrote them.
 
@@ -136,9 +160,11 @@ class Classification:
     proposed_category: str | None = None
     # The movements after the first, when the message has more than one.
     more_movements: tuple[MovementReading, ...] = ()
-    # Only while a pending awaits a reply: what the message does to it.
+    # Only while a batch awaits a reply: what the message does to it, and, when it answers,
+    # what it says of each pending by its number.
     pending_reply: PendingReply | None = None
-    # A yes to what the question offered: to create the category, or to confirm the draft.
+    numbered_replies: tuple[NumberedReply, ...] = ()
+    # In the reply to one pending, from `for_pending`: a yes to what its question offered.
     accepts_proposal: bool = False
     usage: ModelUsage | None = None
     # The row the call left in LLM_CALL, once the wrapper recorded it (ADR 0023).
@@ -181,4 +207,23 @@ class Classification:
             transaction_date=movement.transaction_date,
             proposed_category=movement.proposed_category,
             more_movements=(),
+        )
+
+    def for_pending(self, number: int) -> Classification:
+        """This reply as it concerns the pending with that number: its fields are what the
+        reply says of it, and nothing when it says nothing of it. Dropping it is `DISCARDS`.
+        A message that does not answer the batch, as another movement, stays as it is.
+        """
+        if self.pending_reply is not PendingReply.CONTINUES:
+            return self
+        reply = next(
+            (reply for reply in self.numbered_replies if reply.number == number),
+            NumberedReply(number=number),
+        )
+        pending_reply = PendingReply.DISCARDS if reply.discards else PendingReply.CONTINUES
+        return replace(
+            self.of_movement(reply.reading),
+            pending_reply=pending_reply,
+            numbered_replies=(),
+            accepts_proposal=reply.accepts_proposal,
         )

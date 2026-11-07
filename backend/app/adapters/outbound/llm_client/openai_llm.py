@@ -41,7 +41,8 @@ from app.domain.entities.classification import (
     MessageClass,
     ModelUsage,
     MovementReading,
-    OpenPending,
+    NumberedReply,
+    OpenBatch,
     PendingReply,
     RegistrationType,
 )
@@ -88,6 +89,22 @@ _MORE_MOVEMENTS = {
         "properties": _MOVEMENT_PROPERTIES,
     },
 }
+# What a reply says of each pending of the open batch, by its number (FEAT-007, CA-9).
+_NUMBERED_REPLY_PROPERTIES: dict[str, object] = {
+    "number": {"type": "integer"},
+    "discards": _BOOLEAN,
+    "accepts_proposal": _BOOLEAN,
+    **_MOVEMENT_PROPERTIES,
+}
+_NUMBERED_REPLIES = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": list(_NUMBERED_REPLY_PROPERTIES),
+        "properties": _NUMBERED_REPLY_PROPERTIES,
+    },
+}
 # Strict structured output: every field present, nothing else (ADR 0025).
 _CLASSIFICATION_SCHEMA: dict[str, object] = {
     "type": "object",
@@ -109,7 +126,7 @@ _CLASSIFICATION_SCHEMA: dict[str, object] = {
         "proposed_category",
         "more_movements",
         "pending_reply",
-        "accepts_proposal",
+        "numbered_replies",
     ],
     "properties": {
         "message_class": {"type": "string", "enum": [value.value for value in MessageClass]},
@@ -119,7 +136,7 @@ _CLASSIFICATION_SCHEMA: dict[str, object] = {
             "type": ["string", "null"],
             "enum": [*(value.value for value in PendingReply), None],
         },
-        "accepts_proposal": _BOOLEAN,
+        "numbered_replies": _NUMBERED_REPLIES,
     },
 }
 
@@ -168,6 +185,22 @@ class _MovementOutput(BaseModel):
         )
 
 
+class _NumberedReplyOutput(_MovementOutput):
+    """What a reply says of one pending of the open batch, as the model must answer it."""
+
+    number: int
+    discards: bool
+    accepts_proposal: bool = False
+
+    def numbered_reply(self) -> NumberedReply:
+        return NumberedReply(
+            number=self.number,
+            reading=self.reading(),
+            discards=self.discards,
+            accepts_proposal=self.accepts_proposal,
+        )
+
+
 class _ClassificationOutput(BaseModel):
     @field_validator("currency")
     @classmethod
@@ -197,7 +230,7 @@ class _ClassificationOutput(BaseModel):
     proposed_category: str | None = None
     more_movements: tuple[_MovementOutput, ...] = ()
     pending_reply: PendingReply | None = None
-    accepts_proposal: bool = False
+    numbered_replies: tuple[_NumberedReplyOutput, ...] = ()
 
 
 class OpenAILLM:
@@ -271,7 +304,7 @@ class OpenAILLM:
             proposed_category=output.proposed_category,
             more_movements=tuple(movement.reading() for movement in output.more_movements),
             pending_reply=output.pending_reply,
-            accepts_proposal=output.accepts_proposal,
+            numbered_replies=tuple(reply.numbered_reply() for reply in output.numbered_replies),
             usage=_usage(response),
         )
 
@@ -307,8 +340,8 @@ def _delimited(request: ClassificationRequest) -> str:
         prompts.DATA_KEY_EXPENSE_CATEGORIES: list(request.expense_categories),
         prompts.DATA_KEY_INCOME_CATEGORIES: list(request.income_categories),
     }
-    if request.open_pending is not None:
-        data[prompts.DATA_KEY_OPEN_PENDING] = _pending_data(request.open_pending)
+    if request.open_batch is not None:
+        data[prompts.DATA_KEY_OPEN_BATCH] = _batch_data(request.open_batch)
     # Escaped as JSON allows, so that a message cannot close the delimiter with "</datos>".
     encoded = json.dumps(data, ensure_ascii=False)
     for character, escaped in prompts.DELIMITER_ESCAPES.items():
@@ -316,12 +349,20 @@ def _delimited(request: ClassificationRequest) -> str:
     return f"{prompts.DATA_OPEN}{encoded}{prompts.DATA_CLOSE}"
 
 
-def _pending_data(pending: OpenPending) -> dict[str, object]:
-    """The pending the message may answer: what was understood, what is missing, the question."""
+def _batch_data(batch: OpenBatch) -> dict[str, object]:
+    """The batch the message may answer: each pending with its number, what was understood and
+    what is missing, and the question.
+    """
     return {
-        prompts.DATA_KEY_INTERPRETED: {
-            key: value for key, value in pending.interpreted.items() if value is not None
-        },
-        prompts.DATA_KEY_MISSING: list(pending.missing),
-        prompts.DATA_KEY_QUESTION: pending.question,
+        prompts.DATA_KEY_PENDINGS: [
+            {
+                prompts.DATA_KEY_NUMBER: pending.number,
+                prompts.DATA_KEY_INTERPRETED: {
+                    key: value for key, value in pending.interpreted.items() if value is not None
+                },
+                prompts.DATA_KEY_MISSING: list(pending.missing),
+            }
+            for pending in batch.pendings
+        ],
+        prompts.DATA_KEY_QUESTION: batch.question,
     }

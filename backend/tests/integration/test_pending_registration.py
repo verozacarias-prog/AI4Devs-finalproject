@@ -23,7 +23,6 @@ from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
 from app.domain.entities.classification import (
     Classification,
     MessageClass,
-    PendingReply,
     RegistrationType,
 )
 from app.domain.use_cases.messages.answer_message import AnswerMessage
@@ -39,6 +38,7 @@ from tests.support.registration_data import (
     OCTOBER_31,
     seed_on_october_1,
 )
+from tests.support.replies import reply_to_pending
 
 pytestmark = pytest.mark.integration
 
@@ -105,12 +105,7 @@ def _expense(
 
 
 def _continues(*, account: str | None = None, accepts_proposal: bool = False) -> Classification:
-    return Classification(
-        MessageClass.REGISTRATION,
-        account=account,
-        pending_reply=PendingReply.CONTINUES,
-        accepts_proposal=accepts_proposal,
-    )
+    return reply_to_pending(account=account, accepts_proposal=accepts_proposal)
 
 
 def _rows(engine: Engine, query: str, **parameters: object) -> list[dict[str, object]]:
@@ -222,7 +217,7 @@ def test_an_expired_pending_is_not_continued(settings: Settings, engine: Engine)
     _, llm = _write_and_answer(settings, engine, "con MP", _expense(amount=None, account="MP"))
 
     [request] = llm.requests
-    assert request.open_pending is None
+    assert request.open_batch is None
     [expired] = _rows(
         engine, "SELECT status FROM pending_transaction WHERE id = :id", id=first["id"]
     )
@@ -423,7 +418,7 @@ def test_nothing_of_another_user_reaches_the_model_or_is_used(
     )
     assert "Brubank" not in request.accounts
     assert "Pádel" not in request.expense_categories
-    assert request.open_pending is None
+    assert request.open_batch is None
     assert "5000" not in sent
     assert _rows(engine, "SELECT id FROM transaction") == []
     [reply] = _replies_to(engine, message)
@@ -462,12 +457,7 @@ def test_a_reply_that_changes_an_interpreted_field_adds_a_correction(
     # Case C2-36. The amount changed, which the model had interpreted; the account was
     # missing, and completing it does not count.
     _supermarket_without_account(settings, engine)
-    reply = Classification(
-        MessageClass.REGISTRATION,
-        amount=Decimal("3800"),
-        account="MP",
-        pending_reply=PendingReply.CONTINUES,
-    )
+    reply = reply_to_pending(amount=Decimal("3800"), account="MP")
 
     _write_and_answer(
         settings, engine, "con MP, y eran 3800", reply, now=NOW + timedelta(minutes=1)

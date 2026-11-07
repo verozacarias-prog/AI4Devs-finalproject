@@ -12,7 +12,8 @@ from app.domain.entities.classification import (
     ClassificationRequest,
     MessageClass,
     ModelUsage,
-    OpenPending,
+    NumberedPending,
+    OpenBatch,
     PendingReply,
 )
 from app.domain.entities.inbound_message import InboundMessage, RetryPolicy
@@ -139,7 +140,7 @@ class _Loaded:
     today: date
     awaiting: tuple[PendingBatch, PendingTransaction] | None
     # The pending the message may answer: none if there is none, or if it expired (§ 5).
-    open_pending: OpenPending | None
+    open_batch: OpenBatch | None
 
 
 class AnswerMessage:
@@ -217,7 +218,7 @@ class AnswerMessage:
                     loaded.accounts,
                     loaded.categories,
                     loaded.today,
-                    loaded.open_pending,
+                    loaded.open_batch,
                 )
             )
         except ModelRefusedError as error:
@@ -253,13 +254,20 @@ class AnswerMessage:
             # processed.
             today = local_today(message.sent_at, user.time_zone)
             awaiting = unit_of_work.pendings.find_awaiting_reply(user.id)
-            open_pending = None
+            open_batch = None
             if awaiting is not None and not _expired(awaiting[1], message.sent_at):
                 context = ReplyContext(message, user, accounts, categories, today, message.sent_at)
-                open_pending = OpenPending(
-                    interpreted=dict(awaiting[1].parsed_data),
-                    missing=awaiting[1].missing_fields,
-                    question=_pending_question(unit_of_work, context, awaiting[1]),
+                pending = awaiting[1]
+                # A single pending is a batch of one (domain rules, § 5).
+                open_batch = OpenBatch(
+                    pendings=(
+                        NumberedPending(
+                            number=pending.position,
+                            interpreted=dict(pending.parsed_data),
+                            missing=pending.missing_fields,
+                        ),
+                    ),
+                    question=_pending_question(unit_of_work, context, pending),
                 )
             return _Loaded(
                 usage=usage,
@@ -270,7 +278,7 @@ class AnswerMessage:
                 categories=categories,
                 today=today,
                 awaiting=awaiting,
-                open_pending=open_pending,
+                open_batch=open_batch,
             )
 
     def _settle_message(
@@ -282,7 +290,10 @@ class AnswerMessage:
     ) -> bool:
         """What the classification says, in one transaction, or put off by the quota."""
         usage, awaiting = loaded.usage, loaded.awaiting
-        continuing = awaiting is not None and loaded.open_pending is not None
+        continuing = awaiting is not None and loaded.open_batch is not None
+        if awaiting is not None and continuing:
+            # What the reply says of the pending it continues, by its number.
+            classification = classification.for_pending(awaiting[1].position)
         # A pending transfer has no category whose name a reply could propose.
         previous = (
             from_parsed_data(awaiting[1].parsed_data, loaded.today)
@@ -530,7 +541,7 @@ def _request(
     accounts: list[Account],
     categories: list[Category],
     today: date,
-    open_pending: OpenPending | None,
+    open_batch: OpenBatch | None,
 ) -> ClassificationRequest:
     return ClassificationRequest(
         text=text,
@@ -542,5 +553,5 @@ def _request(
             category.name for category in categories if category.kind is TransactionType.INCOME
         ),
         today=today,
-        open_pending=open_pending,
+        open_batch=open_batch,
     )

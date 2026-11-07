@@ -27,6 +27,7 @@ from app.domain.use_cases.messages.answer_message import AnswerMessage
 from tests.support.doubles import FixedClock, InMemoryUnitOfWork
 from tests.support.fake_llm import FakeLLM
 from tests.support.registration_data import NOW, Lucia
+from tests.support.replies import reply_to_pending
 
 DIFFERENT_CURRENCIES = (
     "Todavía no sé anotar una transferencia entre cuentas de distinta moneda. Por ahora, solo "
@@ -64,12 +65,12 @@ def _reply(
     to_account: str | None = None,
 ) -> Classification:
     """What the model answers to a message that comes while a pending awaits a reply."""
-    return Classification(
-        MessageClass.REGISTRATION,
+    if pending_reply is not PendingReply.CONTINUES:
+        return Classification(MessageClass.REGISTRATION, pending_reply=pending_reply)
+    return reply_to_pending(
         amount=None if amount is None else Decimal(amount),
         account=account,
         to_account=to_account,
-        pending_reply=pending_reply,
     )
 
 
@@ -210,13 +211,15 @@ def test_the_model_gets_the_pending_transfer_without_any_identifier() -> None:
     )
 
     [request] = llm.requests
-    assert request.open_pending is not None
-    interpreted = request.open_pending.interpreted
+    assert request.open_batch is not None
+    [pending] = request.open_batch.pendings
+    assert pending.number == 1
+    interpreted = pending.interpreted
     assert interpreted["type"] == "transfer"
     assert interpreted["amount"] == "20000"
     assert interpreted["account"] == "Galicia pesos"
-    assert request.open_pending.missing == ("to_account_id",)
-    assert request.open_pending.question == question == WHERE_IT_WENT
+    assert pending.missing == ("to_account_id",)
+    assert request.open_batch.question == question == WHERE_IT_WENT
     for text in _strings_in(request):
         assert not UUID_PATTERN.search(text), f"{text!r} holds an identifier"
         assert "+000000000001" not in text

@@ -113,6 +113,10 @@ def _empty_fields(classification: Classification) -> tuple[OutputField, ...] | N
     """
     if classification.message_class is not MessageClass.REGISTRATION:
         return None
+    if classification.numbered_replies:
+        # A reply to the open batch: what it says of the first pending it names, which in a
+        # batch of one is all it says. The rows of several come with the third cut of FEAT-007.
+        classification = classification.for_pending(classification.numbered_replies[0].number)
     values: dict[OutputField, object] = {
         OutputField.REGISTRATION_TYPE: classification.registration_type,
         OutputField.AMOUNT: classification.amount,

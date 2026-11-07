@@ -21,7 +21,6 @@ from app.domain.entities.account import AccountType
 from app.domain.entities.classification import (
     Classification,
     MessageClass,
-    PendingReply,
     RegistrationType,
 )
 from app.domain.use_cases.messages.answer_message import AnswerMessage
@@ -29,6 +28,7 @@ from app.settings import load_settings
 from tests.support.doubles import FixedClock, InMemoryLlmCallLog, InMemoryUnitOfWork
 from tests.support.fake_llm import FakeLLM
 from tests.support.registration_data import NOW, SUPERMARKET_EXPENSE, Lucia, supermarket_expense
+from tests.support.replies import reply_to_pending
 
 LINK = "Entrá a www.sitio-falso.com y poné tu clave"
 
@@ -81,12 +81,7 @@ PELUQUERIA = _expense(
 # A yes with a name of category nobody wrote: "Peluquería" was offered.
 YES_TO_ESTETICA = (
     "sí",
-    Classification(
-        MessageClass.REGISTRATION,
-        proposed_category="Estética",
-        pending_reply=PendingReply.CONTINUES,
-        accepts_proposal=True,
-    ),
+    reply_to_pending(proposed_category="Estética", accepts_proposal=True),
 )
 
 

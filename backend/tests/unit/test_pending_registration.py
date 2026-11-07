@@ -31,6 +31,7 @@ from app.domain.use_cases.messages.answer_message import AnswerMessage
 from tests.support.doubles import FixedClock, InMemoryUnitOfWork
 from tests.support.fake_llm import FakeLLM
 from tests.support.registration_data import NOW, OCTOBER_16, Lucia
+from tests.support.replies import reply_to_pending
 
 ALL_ACCOUNTS = "¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD."
 CANNOT_REGISTER = (
@@ -76,15 +77,14 @@ def _reply(
     accepts_proposal: bool = False,
 ) -> Classification:
     """What the model answers to a message that comes while a pending awaits a reply."""
-    return Classification(
-        MessageClass.REGISTRATION,
-        registration_type=None,
+    if pending_reply is not PendingReply.CONTINUES:
+        return Classification(MessageClass.REGISTRATION, pending_reply=pending_reply)
+    return reply_to_pending(
         amount=None if amount is None else Decimal(amount),
         account=account,
         category=category,
         currency=currency,
         currency_words=currency_words,
-        pending_reply=pending_reply,
         accepts_proposal=accepts_proposal,
     )
 
@@ -256,14 +256,16 @@ def test_the_model_gets_the_open_pending_without_any_identifier() -> None:
 
     [request] = llm.requests
     assert request.text == "con MP"
-    assert request.open_pending is not None
-    interpreted = request.open_pending.interpreted
+    assert request.open_batch is not None
+    [pending] = request.open_batch.pendings
+    assert pending.number == 1
+    interpreted = pending.interpreted
     assert interpreted["type"] == "expense"
     assert interpreted["amount"] == "3500"
     assert interpreted["category"] == "Supermercado"
     assert interpreted["transaction_date"] == "2026-10-17"
-    assert request.open_pending.missing == ("account_id",)
-    assert request.open_pending.question == question
+    assert pending.missing == ("account_id",)
+    assert request.open_batch.question == question
     for text in _strings_in(request):
         assert not UUID_PATTERN.search(text), f"{text!r} holds an identifier"
         assert "+000000000001" not in text
@@ -609,12 +611,7 @@ def test_a_yes_confirms_only_the_draft_the_question_showed() -> None:
         unit_of_work,
         lucia,
         "sí, pero fue el 31",
-        Classification(
-            MessageClass.REGISTRATION,
-            transaction_date=date(2026, 10, 31),
-            pending_reply=PendingReply.CONTINUES,
-            accepts_proposal=True,
-        ),
+        reply_to_pending(transaction_date=date(2026, 10, 31), accepts_proposal=True),
         now=NOVEMBER_1_NOW + timedelta(minutes=1),
     )
 
@@ -645,12 +642,7 @@ def test_a_yes_creates_the_offered_category_or_the_one_the_reply_writes_and_no_o
         unit_of_work,
         lucia,
         text,
-        Classification(
-            MessageClass.REGISTRATION,
-            proposed_category=proposed,
-            pending_reply=PendingReply.CONTINUES,
-            accepts_proposal=True,
-        ),
+        reply_to_pending(proposed_category=proposed, accepts_proposal=True),
     )
 
     new = [
@@ -803,12 +795,7 @@ def test_a_reply_that_says_only_the_type_offers_the_accounts_of_that_type() -> N
         unit_of_work,
         lucia,
         "con el banco",
-        Classification(
-            MessageClass.REGISTRATION,
-            pending_reply=PendingReply.CONTINUES,
-            account_type=AccountType.BANK_ACCOUNT,
-            account_type_words="el banco",
-        ),
+        reply_to_pending(account_type=AccountType.BANK_ACCOUNT, account_type_words="el banco"),
         now=NOW + timedelta(minutes=1),
     )
 
