@@ -77,7 +77,12 @@ palabras. Con eso, el código sigue una regla fija:
 
 1. Las palabras de la mención, y las que dicen el tipo, tienen que estar escritas en el mensaje.
    Una cuenta o un tipo que el modelo deduce sin palabras que lo digan, por ejemplo de "por
-   transferencia", no cuenta como nombrado.
+   transferencia", no cuenta como nombrado. Si el modelo devuelve el nombre completo de una
+   cuenta y no está escrito, cuenta como nombrada solo si alguna parte del mensaje la nombra a
+   ella y a ninguna otra, con los pasos 2 y 3: todas las palabras de su nombre, una parte de él o
+   sus iniciales. Es lo mismo que si el modelo hubiera copiado esas palabras: "todos con mp" con
+   "Mercado Pago" va a Mercado Pago, y "con galicia" con "Galicia pesos" sigue preguntando cuál.
+   Decidido por Vero el 7/11/2026, con [FEAT-007](features/FEAT-007/spec.md).
 2. Si la mención tiene todas las palabras del nombre de una sola cuenta, como "galicia pesos",
    es esa. Se mira la mención y no el resto del mensaje: en "con MP porque no tenía efectivo",
    la cuenta es Mercado Pago, no Efectivo.

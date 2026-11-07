@@ -126,6 +126,11 @@ No hay pantalla nueva.
 - **CA-20.** Si no hay un lote abierto, el mensaje es nuevo aunque el modelo diga que contesta
   uno: cuál es el lote abierto lo sabe el código, no el modelo. Sumado por Vero el 7/11/2026,
   con la prueba a mano.
+- **CA-21.** En cada movimiento del lote y en cada respuesta por número, el nombre completo de
+  una cuenta que el mensaje no escribe cuenta como mención si alguna parte del mensaje nombra esa
+  cuenta y ninguna otra, como si el modelo hubiera copiado esas palabras
+  ([reglas de dominio § 1](../../reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma);
+  CA-9 de [FEAT-003](../FEAT-003/spec.md)). Sumado por Vero el 7/11/2026, con la prueba a mano.
 
 ## Casos de prueba
 
@@ -137,7 +142,8 @@ Los tipos de caso, qué se reemplaza en cada uno y los datos de partida son los 
 
 - **Aprobado por:** Veronica Zacarias 6/11/2026
 - **C1-08 aprobado por:** Veronica Zacarias 7//11/2026
-- **Total:** 8 casos, 5 unitarios y 3 de integración.
+- **C1-09 y C1-10 aprobados por:** Veronica Zacarias 7//11/2026
+- **Total:** 10 casos, 7 unitarios y 3 de integración.
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
@@ -149,6 +155,8 @@ Los tipos de caso, qué se reemplaza en cada uno y los datos de partida son los 
 | C1-06 | Un mensaje con varios movimientos cuenta una vez en la cuota | Unitario | CA-6 |
 | C1-07 | El adaptador devuelve cada movimiento del mensaje | Unitario | CA-1 |
 | C1-08 | Sin lote abierto, un mensaje que el modelo marca como respuesta es nuevo | Unitario | CA-20 |
+| C1-09 | El nombre completo de una cuenta que el mensaje nombra por sus iniciales cuenta como mención | Unitario | CA-21 |
+| C1-10 | El nombre completo de una cuenta que el mensaje nombra junto con otra no cuenta | Unitario | CA-21 |
 
 #### C1-01 · Dos gastos completos en un mensaje quedan registrados en un lote
 
@@ -259,6 +267,27 @@ Los tipos de caso, qué se reemplaza en cada uno y los datos de partida son los 
 - **entonces** se registran los tres gastos, de $1.500, $10.000 y $5.400, en Mercado Pago, con
   una sola confirmación numerada.
 - **Test:** `tests/unit/test_several_movements.py::test_with_no_open_batch_a_message_the_model_marks_as_a_reply_is_new`
+
+#### C1-09 · El nombre completo de una cuenta que el mensaje nombra por sus iniciales cuenta como mención
+
+- **Sale de:** CA-21 · **Tipo:** unitario
+- **Dado** el mensaje "anotá: 1500 de carnicería y 10 mil de uber, todos con mp", y el modelo
+  responde los dos gastos con cuenta "Mercado Pago", que el mensaje no escribe,
+- **cuando** se procesa,
+- **entonces** se registran los dos gastos, de $1.500 y $10.000, en Mercado Pago, y la llamada no
+  queda marcada `blocked`: "mp" son las iniciales de Mercado Pago y de ninguna otra cuenta de
+  Lucía.
+- **Test:** `tests/unit/test_several_movements.py::test_the_full_name_of_an_account_the_message_names_by_its_initials_counts`
+
+#### C1-10 · El nombre completo de una cuenta que el mensaje nombra junto con otra no cuenta
+
+- **Sale de:** CA-21 · **Tipo:** unitario
+- **Dado** el mensaje "gasté 2000 en el súper con galicia", y el modelo responde un gasto con
+  cuenta "Galicia pesos", que el mensaje no escribe,
+- **cuando** se procesa,
+- **entonces** no se registra ningún movimiento, la respuesta pregunta la cuenta, y la llamada
+  queda marcada `blocked`: "galicia" nombra a Galicia pesos y a Galicia USD.
+- **Test:** `tests/unit/test_several_movements.py::test_the_full_name_of_an_account_the_message_names_with_another_does_not_count`
 
 ### Corte 2 — lo que falta y lo que no se puede anotar
 

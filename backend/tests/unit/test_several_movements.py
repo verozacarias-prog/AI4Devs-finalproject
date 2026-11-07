@@ -1,8 +1,9 @@
 """Several movements in one message, with the model replaced (FEAT-007, its spec.md).
 
-Cases C1-02, C1-05, C1-06, C1-07 and C1-08: the numbered confirmation of a batch, the date of
-each movement, the quota a message with several movements counts, the adapter that returns
-every movement, and a message that is new when no batch is open. The database is in memory;
+Cases C1-02 and C1-05 to C1-10: the numbered confirmation of a batch, the date of each
+movement, the quota a message with several movements counts, the adapter that returns every
+movement, a message that is new when no batch is open, and the full name of an account the
+message names in other words. The database is in memory;
 the integration tests check the same use case against PostgreSQL.
 """
 
@@ -16,6 +17,7 @@ from typing import cast
 
 import httpx2
 
+from app.adapters.observability.llm_calls import RecordedLLM
 from app.adapters.outbound.llm_client.openai_llm import OpenAILLM
 from app.domain.entities.budget_period import BudgetPeriod, PeriodStatus, PeriodType
 from app.domain.entities.classification import (
@@ -34,7 +36,7 @@ from app.domain.services.transactions.registration_confirmation import (
     transfer_confirmation_text,
 )
 from app.domain.use_cases.messages.answer_message import AnswerMessage
-from tests.support.doubles import FixedClock, InMemoryUnitOfWork
+from tests.support.doubles import FixedClock, InMemoryLlmCallLog, InMemoryUnitOfWork
 from tests.support.fake_llm import FakeLLM
 from tests.support.registration_data import (
     NOW,
@@ -318,3 +320,83 @@ def test_with_no_open_batch_a_message_the_model_marks_as_a_reply_is_new() -> Non
     }
     [reply] = unit_of_work.outbound_messages.added
     assert reply.text.startswith("¡Listo! Anoté 3 movimientos:")
+
+
+def _answer_recorded(
+    unit_of_work: InMemoryUnitOfWork,
+    lucia: Lucia,
+    calls: InMemoryLlmCallLog,
+    text: str,
+    classification: Classification,
+) -> None:
+    """Answers the message with the model behind the wrapper that records its calls."""
+    llm = RecordedLLM(FakeLLM(classification), calls)
+    AnswerMessage(unit_of_work, FixedClock(NOW), llm, calls=calls).execute(
+        lucia.message(text, sent_at=NOW - timedelta(seconds=5))
+    )
+
+
+def test_the_full_name_of_an_account_the_message_names_by_its_initials_counts() -> None:
+    # Case C1-09.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    calls = InMemoryLlmCallLog()
+
+    _answer_recorded(
+        unit_of_work,
+        lucia,
+        calls,
+        "anotá: 1500 de carnicería y 10 mil de uber, todos con mp",
+        Classification(
+            MessageClass.REGISTRATION,
+            registration_type=RegistrationType.EXPENSE,
+            amount=Decimal("1500"),
+            account="Mercado Pago",
+            category="Supermercado",
+            more_movements=(
+                MovementReading(
+                    registration_type=RegistrationType.EXPENSE,
+                    amount=Decimal("10000"),
+                    account="Mercado Pago",
+                    category="Transporte",
+                ),
+            ),
+        ),
+    )
+
+    transactions = unit_of_work.transactions.added
+    assert sorted(transaction.amount for transaction in transactions) == [
+        Decimal("1500.00"),
+        Decimal("10000.00"),
+    ]
+    assert {transaction.account_id for transaction in transactions} == {
+        lucia.accounts["Mercado Pago"]
+    }
+    assert calls.blocked == []
+
+
+def test_the_full_name_of_an_account_the_message_names_with_another_does_not_count() -> None:
+    # Case C1-10.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    calls = InMemoryLlmCallLog()
+
+    _answer_recorded(
+        unit_of_work,
+        lucia,
+        calls,
+        "gasté 2000 en el súper con galicia",
+        Classification(
+            MessageClass.REGISTRATION,
+            registration_type=RegistrationType.EXPENSE,
+            amount=Decimal("2000"),
+            account="Galicia pesos",
+            category="Supermercado",
+        ),
+    )
+
+    assert unit_of_work.transactions.added == []
+    [reply] = unit_of_work.outbound_messages.added
+    assert "¿Con qué cuenta?" in reply.text
+    [call] = calls.recorded
+    assert calls.blocked == [call.id]
