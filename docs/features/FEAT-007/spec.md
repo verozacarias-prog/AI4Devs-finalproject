@@ -123,6 +123,9 @@ No hay pantalla nueva.
   pendiente en una respuesta por número, marca la llamada `blocked`, como CA-47 de
   [FEAT-003](../FEAT-003/spec.md). Sumado por Vero el 7/11/2026, con el `/spec-drift` del
   corte 2.
+- **CA-20.** Si no hay un lote abierto, el mensaje es nuevo aunque el modelo diga que contesta
+  uno: cuál es el lote abierto lo sabe el código, no el modelo. Sumado por Vero el 7/11/2026,
+  con la prueba a mano.
 
 ## Casos de prueba
 
@@ -133,7 +136,8 @@ Los tipos de caso, qué se reemplaza en cada uno y los datos de partida son los 
 ### Corte 1 — camino feliz
 
 - **Aprobado por:** Veronica Zacarias 6/11/2026
-- **Total:** 7 casos, 4 unitarios y 3 de integración.
+- **C1-08 aprobado por:** Veronica Zacarias 7//11/2026
+- **Total:** 8 casos, 5 unitarios y 3 de integración.
 
 | Caso | Qué prueba | Tipo | Sale de |
 |---|---|---|---|
@@ -144,6 +148,7 @@ Los tipos de caso, qué se reemplaza en cada uno y los datos de partida son los 
 | C1-05 | Cada movimiento conserva su propia fecha | Unitario | CA-2 |
 | C1-06 | Un mensaje con varios movimientos cuenta una vez en la cuota | Unitario | CA-6 |
 | C1-07 | El adaptador devuelve cada movimiento del mensaje | Unitario | CA-1 |
+| C1-08 | Sin lote abierto, un mensaje que el modelo marca como respuesta es nuevo | Unitario | CA-20 |
 
 #### C1-01 · Dos gastos completos en un mensaje quedan registrados en un lote
 
@@ -243,6 +248,17 @@ Los tipos de caso, qué se reemplaza en cada uno y los datos de partida son los 
   `Decimal("20000")`, cuenta de origen "Galicia pesos" y de destino "efectivo"; y el esquema que
   se le pidió al modelo devuelve los movimientos como una lista.
 - **Test:** `tests/unit/test_several_movements.py::test_the_adapter_returns_every_movement_of_the_message`
+
+#### C1-08 · Sin lote abierto, un mensaje que el modelo marca como respuesta es nuevo
+
+- **Sale de:** CA-20 · **Tipo:** unitario
+- **Dado** que Lucía no tiene ningún lote abierto, el mensaje "anotá: 1500 de carnicería, 10 mil
+  de uber y 5400 de verdulería, todos con MP", y el modelo responde los tres gastos con cuenta
+  "MP" pero marca el mensaje como respuesta a un lote ("continues"),
+- **cuando** se procesa,
+- **entonces** se registran los tres gastos, de $1.500, $10.000 y $5.400, en Mercado Pago, con
+  una sola confirmación numerada.
+- **Test:** `tests/unit/test_several_movements.py::test_with_no_open_batch_a_message_the_model_marks_as_a_reply_is_new`
 
 ### Corte 2 — lo que falta y lo que no se puede anotar
 

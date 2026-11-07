@@ -1,9 +1,9 @@
 """Several movements in one message, with the model replaced (FEAT-007, its spec.md).
 
-Cases C1-02, C1-05, C1-06 and C1-07: the numbered confirmation of a batch, the date of each
-movement, the quota a message with several movements counts, and the adapter that returns
-every movement. The database is in memory; the integration tests check the same use case
-against PostgreSQL.
+Cases C1-02, C1-05, C1-06, C1-07 and C1-08: the numbered confirmation of a batch, the date of
+each movement, the quota a message with several movements counts, the adapter that returns
+every movement, and a message that is new when no batch is open. The database is in memory;
+the integration tests check the same use case against PostgreSQL.
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ from app.domain.entities.classification import (
     ClassificationRequest,
     MessageClass,
     MovementReading,
+    PendingReply,
     RegistrationType,
 )
 from app.domain.entities.llm_usage import UsageCounter
@@ -268,3 +269,52 @@ def test_the_adapter_returns_every_movement_of_the_message() -> None:
     properties = cast(dict[str, dict[str, object]], schema["properties"])
     assert "more_movements" in cast(list[str], schema["required"])
     assert properties["more_movements"]["type"] == "array"
+
+
+def test_with_no_open_batch_a_message_the_model_marks_as_a_reply_is_new() -> None:
+    # Case C1-08.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    llm = FakeLLM(
+        Classification(
+            MessageClass.REGISTRATION,
+            pending_reply=PendingReply.CONTINUES,
+            registration_type=RegistrationType.EXPENSE,
+            amount=Decimal("1500"),
+            account="MP",
+            category="Supermercado",
+            more_movements=(
+                MovementReading(
+                    registration_type=RegistrationType.EXPENSE,
+                    amount=Decimal("10000"),
+                    account="MP",
+                    category="Transporte",
+                ),
+                MovementReading(
+                    registration_type=RegistrationType.EXPENSE,
+                    amount=Decimal("5400"),
+                    account="MP",
+                    category="Supermercado",
+                ),
+            ),
+        )
+    )
+
+    AnswerMessage(unit_of_work, FixedClock(NOW), llm).execute(
+        lucia.message(
+            "anotá: 1500 de carnicería, 10 mil de uber y 5400 de verdulería, todos con MP",
+            sent_at=NOW - timedelta(seconds=5),
+        )
+    )
+
+    transactions = unit_of_work.transactions.added
+    assert sorted(transaction.amount for transaction in transactions) == [
+        Decimal("1500.00"),
+        Decimal("5400.00"),
+        Decimal("10000.00"),
+    ]
+    assert {transaction.account_id for transaction in transactions} == {
+        lucia.accounts["Mercado Pago"]
+    }
+    [reply] = unit_of_work.outbound_messages.added
+    assert reply.text.startswith("¡Listo! Anoté 3 movimientos:")
