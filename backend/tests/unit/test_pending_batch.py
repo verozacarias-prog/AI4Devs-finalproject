@@ -1,6 +1,6 @@
 """A batch of several pendings, asked and answered by number, with the model replaced (FEAT-007).
 
-Cases C2-03 to C2-09, C2-11 to C2-24 of its spec.md: a general reply, the list
+Cases C2-03 to C2-09, C2-11 to C2-24, C2-26 and C2-27 of its spec.md: a general reply, the list
 repeated while something is missing, discarding one or all, what cannot be registered yet,
 another movement that joins the batch, the limit of 10, a number that is not in the batch, what
 the model receives and what the adapter returns, the pendings that expire, and a reply that
@@ -862,3 +862,71 @@ def test_a_pending_that_can_no_longer_be_registered_when_another_joins_is_reject
         "El 1 no lo anoté: para esa fecha tenés más de un presupuesto, y todavía no sé elegir en "
         "cuál anotarlo. Por ahora no lo anoto."
     )
+
+
+def _discarded_with_a_coffee(unit_of_work: InMemoryUnitOfWork) -> None:
+    """Nothing registered, the batch closed, and the coffee asked for in another message."""
+    assert unit_of_work.transactions.added == []
+    assert _status_by_position(unit_of_work) == {
+        1: PendingStatus.REJECTED,
+        2: PendingStatus.REJECTED,
+    }
+    [batch] = unit_of_work.pendings.batches
+    assert batch.status is BatchStatus.CLOSED
+    assert _last_reply(unit_of_work) == (
+        "Listo, no anoto ninguno.\n\nEl movimiento nuevo mandámelo en otro mensaje."
+    )
+
+
+def test_discarding_all_by_number_with_a_new_movement_confirms_and_warns() -> None:
+    # Case C2-26.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    lucia.add_base_category("Comida afuera y delivery")
+    _supermarket_and_nafta(unit_of_work, lucia)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "el 1 y el 2 no, y anotá 500 de café con MP",
+        Classification(
+            MessageClass.REGISTRATION,
+            pending_reply=PendingReply.CONTINUES,
+            numbered_replies=(
+                NumberedReply(number=1, reading=MovementReading(), discards=True),
+                NumberedReply(number=2, reading=MovementReading(), discards=True),
+            ),
+            registration_type=RegistrationType.EXPENSE,
+            amount=Decimal("500"),
+            account="MP",
+            category="Comida afuera y delivery",
+        ),
+        minutes_later=1,
+    )
+
+    _discarded_with_a_coffee(unit_of_work)
+
+
+def test_discarding_the_whole_batch_with_a_new_movement_warns() -> None:
+    # Case C2-27.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    lucia.add_base_category("Comida afuera y delivery")
+    _supermarket_and_nafta(unit_of_work, lucia)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "no anotes ninguno, anotá solo 500 de café con MP",
+        Classification(
+            MessageClass.REGISTRATION,
+            pending_reply=PendingReply.DISCARDS,
+            registration_type=RegistrationType.EXPENSE,
+            amount=Decimal("500"),
+            account="MP",
+            category="Comida afuera y delivery",
+        ),
+        minutes_later=1,
+    )
+
+    _discarded_with_a_coffee(unit_of_work)

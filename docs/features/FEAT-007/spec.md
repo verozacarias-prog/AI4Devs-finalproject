@@ -121,7 +121,9 @@ No hay pantalla nueva.
   nunca se pierde en silencio. Decidido por Vero el 7/11/2026, con el `pr-reviewer`. Primero se
   decidió sumarlo al lote, y se cambió el mismo día: en la prueba con el modelo real, 1 de cada 4
   veces el modelo repetía un pendiente como movimiento nuevo, y el código lo habría anotado dos
-  veces.
+  veces. Vale para toda respuesta al lote, también la que descarta todo: la respuesta conserva su
+  texto, como la confirmación o "Listo, no anoto ninguno.", y el aviso va al final. Extendido por
+  Vero el 7/11/2026, con la segunda pasada del `pr-reviewer`.
 - **CA-23.** Los pendientes de un lote se leen siempre con el usuario del mensaje: los de un lote
   de otro usuario no se leen nunca ([AGENTS.md § 7](../../../AGENTS.md#7-seguridad)). Sumado por
   Vero el 7/11/2026, con el `pr-reviewer`.
@@ -316,7 +318,8 @@ Los tipos de caso, qué se reemplaza en cada uno y los datos de partida son los 
 - **Aprobado por:** Veronica Zacarias 06/11/2026
 - **C2-17 a C2-19, sumados con el `/spec-drift` del corte 2:** Veronica Zacarias 06/11/2026
 - **C2-20 a C2-25, sumados con el `pr-reviewer`:** Veronica Zacarias 07/11/2026
-- **Total:** 25 casos, 21 unitarios y 4 de integración.
+- **C2-26 y C2-27, sumados con la segunda pasada del `pr-reviewer`:** Veronica Zacarias 07/11/2026
+- **Total:** 27 casos, 23 unitarios y 4 de integración.
 
 Donde el caso dice que el modelo contesta "el pendiente 2", el doble devuelve una respuesta por
 número: el número del pendiente y lo que la respuesta le agrega o le cambia, con los mismos campos
@@ -349,6 +352,8 @@ de un movimiento, o que lo descarta.
 | C2-23 | Una respuesta por número y un movimiento nuevo en el mismo mensaje: el nuevo se pide en otro mensaje | Unitario | CA-22 |
 | C2-24 | Un solo movimiento nuevo que no se puede anotar se nombra sin ordinal | Unitario | CA-12 |
 | C2-25 | Los pendientes de un lote no se leen con otro usuario | Integración | CA-23 |
+| C2-26 | Descartar todos por número y traer un movimiento nuevo: se confirma el descarte y se avisa | Unitario | CA-11, CA-22 |
+| C2-27 | Descartar el lote entero y traer un movimiento nuevo: se avisa | Unitario | CA-22 |
 
 Reemplazan a C2-12 de [FEAT-003](../FEAT-003/spec.md) y a C2-12 y C2-15 de
 [FEAT-006](../FEAT-006/spec.md), que probaban el aviso de CA-36 de FEAT-003: con CA-13 ese aviso
@@ -663,6 +668,30 @@ deja de existir, y sus tests se borran.
 - **entonces** la lista está vacía; y con el de Lucía tiene los dos pendientes, en orden.
 - **Test:** `tests/integration/test_pending_batch.py::test_the_pendings_of_a_batch_are_not_read_with_another_user`
 
+#### C2-26 · Descartar todos por número y traer un movimiento nuevo: se confirma el descarte y se avisa
+
+- **Sale de:** CA-11 y CA-22 · **Tipo:** unitario
+- **Dado** el lote de C2-01 esperando respuesta, el mensaje "el 1 y el 2 no, y anotá 500 de café
+  con MP", y el modelo responde que descarta los pendientes 1 y 2 por número y trae, además, un
+  gasto de 500 con cuenta "MP" y categoría Comida afuera y delivery,
+- **cuando** se procesa,
+- **entonces** no se registra ningún gasto, los dos pendientes quedan rechazados y el lote
+  cerrado, y la respuesta es "Listo, no anoto ninguno." seguida de la línea "El movimiento nuevo
+  mandámelo en otro mensaje."
+- **Test:** `tests/unit/test_pending_batch.py::test_discarding_all_by_number_with_a_new_movement_confirms_and_warns`
+
+#### C2-27 · Descartar el lote entero y traer un movimiento nuevo: se avisa
+
+- **Sale de:** CA-22 · **Tipo:** unitario
+- **Dado** el lote de C2-01 esperando respuesta, el mensaje "no anotes ninguno, anotá solo 500 de
+  café con MP", y el modelo responde que descarta el lote y trae, además, un gasto de 500 con
+  cuenta "MP" y categoría Comida afuera y delivery,
+- **cuando** se procesa,
+- **entonces** no se registra ningún gasto, los dos pendientes quedan rechazados y el lote
+  cerrado, y la respuesta es "Listo, no anoto ninguno." seguida de la línea "El movimiento nuevo
+  mandámelo en otro mensaje."
+- **Test:** `tests/unit/test_pending_batch.py::test_discarding_the_whole_batch_with_a_new_movement_warns`
+
 ### Corte 3 — observabilidad
 
 - **Aprobado por:** Veronica Zacarias 07/11/2026
@@ -763,7 +792,7 @@ deja de existir, y sus tests se borran.
 | Movimiento que todavía no se sabe anotar | "El {ordinal} movimiento no lo anoté: " y su texto fijo, en una línea propia (C2-07); si es el único movimiento nuevo de un lote abierto, "Ese movimiento no lo anoté: " (C2-24); si se cayó al responder o al sumarse otro, "El {número} no lo anoté: " (C2-09 y C2-20) |
 | Más de 10 en un mensaje | "Tomé solo los primeros 10 movimientos. Los otros {n} mandámelos en otro mensaje.", o "El otro mandámelo en otro mensaje." si queda uno solo |
 | Un lote que se llena con un mensaje nuevo | "Tomé solo el primero de los movimientos nuevos. El otro mandámelo cuando terminemos con estos.", o con "los primeros {n}" y "los otros {m}" |
-| Una respuesta que trae además un movimiento nuevo | "El movimiento nuevo mandámelo en otro mensaje.", en una línea propia (C2-23) |
+| Una respuesta que trae además un movimiento nuevo | "El movimiento nuevo mandámelo en otro mensaje.", en una línea propia al final, también después de un descarte (C2-23, C2-26 y C2-27) |
 | Pendiente vencido en un lote que sigue | "El {número} no lo anoté: pasaron más de 24 horas.", en una línea propia (C2-17) |
 | Un lote que ya usó sus 10 números, y llega otro movimiento | "Esta lista ya usó sus 10 números, así que no tomé los nuevos: mandámelos cuando terminemos con estos." (C2-22) |
 
