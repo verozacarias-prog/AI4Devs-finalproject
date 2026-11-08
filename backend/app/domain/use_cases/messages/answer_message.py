@@ -605,9 +605,6 @@ def _readings(
             for pending in loaded.in_batch
             if pending.status is PendingStatus.OPEN
             and any(reply.number == pending.position for reply in classification.numbered_replies)
-        ] + [
-            (classification.of_movement(movement), None)
-            for movement in classification.brought_movements()
         ]
     return [(classification.of_movement(movement), None) for movement in classification.movements()]
 

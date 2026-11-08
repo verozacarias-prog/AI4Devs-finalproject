@@ -247,10 +247,11 @@ def continue_batch(
     notes = _expired_notes(expired)
     match classification.pending_reply:
         case PendingReply.DISCARDS:
+            # A pending alone keeps its own answer, though a new movement brought it here.
+            alone = len(_open(in_batch)) == 1 and not expired
+            discarded = messages.PENDING_DISCARDED if alone else messages.BATCH_DISCARDED
             close_batch(unit_of_work, batch, in_batch, PendingStatus.REJECTED, context.user.id)
-            text = _with_notes(
-                messages.BATCH_DISCARDED, notes, _new_movement_notice(classification)
-            )
+            text = _with_notes(discarded, notes, _new_movement_notice(classification))
             add_reply(unit_of_work, context, text, ResponseKind.FIXED_TEXT)
             return True
         case PendingReply.CONTINUES:
@@ -311,7 +312,13 @@ def _new_movement_notice(classification: Classification) -> str | None:
     another message, at the end of the reply, so a pending the model repeats as new is never
     registered twice (CA-22).
     """
-    return messages.NEW_MOVEMENT_IN_ANOTHER_MESSAGE if classification.brought_movements() else None
+    match len(classification.brought_movements()):
+        case 0:
+            return None
+        case 1:
+            return messages.NEW_MOVEMENT_IN_ANOTHER_MESSAGE
+        case _:
+            return messages.NEW_MOVEMENTS_IN_ANOTHER_MESSAGE
 
 
 def _continued_state(

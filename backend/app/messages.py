@@ -167,6 +167,7 @@ NOT_REGISTERED_BY_ORDER = "El {ordinal} movimiento no lo anoté: {reason}"
 NOT_REGISTERED_BY_NUMBER = "El {position} no lo anoté: {reason}"
 # A reply to the open batch that also brings a new movement: it is not registered (CA-22).
 NEW_MOVEMENT_IN_ANOTHER_MESSAGE = "El movimiento nuevo mandámelo en otro mensaje."
+NEW_MOVEMENTS_IN_ANOTHER_MESSAGE = "Los movimientos nuevos mandámelos en otro mensaje."
 # The only new movement of a message to an open batch, which cannot enter it (FEAT-007, CA-12).
 NOT_REGISTERED_ALONE = "Ese movimiento no lo anoté: {reason}"
 ORDINALS = (
