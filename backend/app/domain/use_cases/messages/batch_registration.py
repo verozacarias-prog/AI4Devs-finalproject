@@ -248,7 +248,9 @@ def continue_batch(
     match classification.pending_reply:
         case PendingReply.DISCARDS:
             close_batch(unit_of_work, batch, in_batch, PendingStatus.REJECTED, context.user.id)
-            text = _with_notes(messages.BATCH_DISCARDED, notes, None)
+            text = _with_notes(
+                messages.BATCH_DISCARDED, notes, _new_movement_notice(classification)
+            )
             add_reply(unit_of_work, context, text, ResponseKind.FIXED_TEXT)
             return True
         case PendingReply.CONTINUES:
@@ -301,11 +303,15 @@ def _answer_by_number(
             notes.append(not_registered_by_number(pending.position, state.reason))
             continue
         items.append(_Item(pending.position, state, answered, answered=reply is not None))
-    # A new movement the same message brings is not registered: it is asked for in another
-    # message, so a pending the model repeats as new is never registered twice (CA-22).
-    if classification.brought_movements():
-        notes.append(messages.NEW_MOVEMENT_IN_ANOTHER_MESSAGE)
-    _settle(unit_of_work, context, batch, items, notes, None)
+    _settle(unit_of_work, context, batch, items, notes, _new_movement_notice(classification))
+
+
+def _new_movement_notice(classification: Classification) -> str | None:
+    """A new movement a reply to the batch also brings is not registered: it is asked for in
+    another message, at the end of the reply, so a pending the model repeats as new is never
+    registered twice (CA-22).
+    """
+    return messages.NEW_MOVEMENT_IN_ANOTHER_MESSAGE if classification.brought_movements() else None
 
 
 def _continued_state(
