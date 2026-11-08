@@ -1,6 +1,6 @@
 """A batch of several pendings, asked and answered by number, with the model replaced (FEAT-007).
 
-Cases C2-03 to C2-09, C2-11 to C2-24, C2-26 and C2-27 of its spec.md: a general reply, the list
+Cases C2-03 to C2-09, C2-11 to C2-24 and C2-26 to C2-29 of its spec.md: a general reply, the list
 repeated while something is missing, discarding one or all, what cannot be registered yet,
 another movement that joins the batch, the limit of 10, a number that is not in the batch, what
 the model receives and what the adapter returns, the pendings that expire, and a reply that
@@ -930,3 +930,72 @@ def test_discarding_the_whole_batch_with_a_new_movement_warns() -> None:
     )
 
     _discarded_with_a_coffee(unit_of_work)
+
+
+def test_discarding_a_lone_pending_with_a_new_movement_answers_as_a_lone_pending() -> None:
+    # Case C2-28.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    lucia.add_base_category("Comida afuera y delivery")
+    _answer(
+        unit_of_work,
+        lucia,
+        "gasté 1200 de nafta",
+        _registration(_expense("1200", None, "Transporte")),
+    )
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "no lo anotes, y anotá 500 de café con MP",
+        Classification(
+            MessageClass.REGISTRATION,
+            pending_reply=PendingReply.DISCARDS,
+            registration_type=RegistrationType.EXPENSE,
+            amount=Decimal("500"),
+            account="MP",
+            category="Comida afuera y delivery",
+        ),
+        minutes_later=1,
+    )
+
+    assert unit_of_work.transactions.added == []
+    assert _status_by_position(unit_of_work) == {1: PendingStatus.REJECTED}
+    assert _last_reply(unit_of_work) == (
+        "Listo, no lo anoto.\n\nEl movimiento nuevo mandámelo en otro mensaje."
+    )
+
+
+def test_a_reply_that_brings_two_new_movements_warns_in_plural() -> None:
+    # Case C2-29.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+    lucia.add_base_category("Comida afuera y delivery")
+    _supermarket_and_nafta(unit_of_work, lucia)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "el 2 con efectivo, y además 500 de café y 800 del diario con MP",
+        Classification(
+            MessageClass.REGISTRATION,
+            pending_reply=PendingReply.CONTINUES,
+            numbered_replies=(
+                NumberedReply(number=2, reading=MovementReading(account="efectivo")),
+            ),
+            registration_type=RegistrationType.EXPENSE,
+            amount=Decimal("500"),
+            account="MP",
+            category="Comida afuera y delivery",
+            more_movements=(_expense("800", "MP", "Comida afuera y delivery"),),
+        ),
+        minutes_later=1,
+    )
+
+    assert sorted(transaction.amount for transaction in unit_of_work.transactions.added) == [
+        Decimal("1200.00"),
+        Decimal("3500.00"),
+    ]
+    assert _last_reply(unit_of_work).splitlines()[-1] == (
+        "Los movimientos nuevos mandámelos en otro mensaje."
+    )

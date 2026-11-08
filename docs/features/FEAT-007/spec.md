@@ -123,7 +123,9 @@ No hay pantalla nueva.
   veces el modelo repetía un pendiente como movimiento nuevo, y el código lo habría anotado dos
   veces. Vale para toda respuesta al lote, también la que descarta todo: la respuesta conserva su
   texto, como la confirmación o "Listo, no anoto ninguno.", y el aviso va al final. Extendido por
-  Vero el 7/11/2026, con la segunda pasada del `pr-reviewer`.
+  Vero el 7/11/2026, con la segunda pasada del `pr-reviewer`. Con un solo pendiente, la respuesta
+  es la de un pendiente solo, "Listo, no lo anoto.", y con dos o más movimientos nuevos el aviso
+  va en plural.
 - **CA-23.** Los pendientes de un lote se leen siempre con el usuario del mensaje: los de un lote
   de otro usuario no se leen nunca ([AGENTS.md § 7](../../../AGENTS.md#7-seguridad)). Sumado por
   Vero el 7/11/2026, con el `pr-reviewer`.
@@ -319,7 +321,8 @@ Los tipos de caso, qué se reemplaza en cada uno y los datos de partida son los 
 - **C2-17 a C2-19, sumados con el `/spec-drift` del corte 2:** Veronica Zacarias 06/11/2026
 - **C2-20 a C2-25, sumados con el `pr-reviewer`:** Veronica Zacarias 07/11/2026
 - **C2-26 y C2-27, sumados con la segunda pasada del `pr-reviewer`:** Veronica Zacarias 07/11/2026
-- **Total:** 27 casos, 23 unitarios y 4 de integración.
+- **C2-28 y C2-29, sumados con las observaciones de la segunda pasada:** Veronica Zacarias 07/11/2026
+- **Total:** 29 casos, 25 unitarios y 4 de integración.
 
 Donde el caso dice que el modelo contesta "el pendiente 2", el doble devuelve una respuesta por
 número: el número del pendiente y lo que la respuesta le agrega o le cambia, con los mismos campos
@@ -354,6 +357,8 @@ de un movimiento, o que lo descarta.
 | C2-25 | Los pendientes de un lote no se leen con otro usuario | Integración | CA-23 |
 | C2-26 | Descartar todos por número y traer un movimiento nuevo: se confirma el descarte y se avisa | Unitario | CA-11, CA-22 |
 | C2-27 | Descartar el lote entero y traer un movimiento nuevo: se avisa | Unitario | CA-22 |
+| C2-28 | Descartar un pendiente solo y traer un movimiento nuevo: la respuesta es la de un pendiente solo | Unitario | CA-22 |
+| C2-29 | Una respuesta que trae dos movimientos nuevos avisa en plural | Unitario | CA-22 |
 
 Reemplazan a C2-12 de [FEAT-003](../FEAT-003/spec.md) y a C2-12 y C2-15 de
 [FEAT-006](../FEAT-006/spec.md), que probaban el aviso de CA-36 de FEAT-003: con CA-13 ese aviso
@@ -692,6 +697,28 @@ deja de existir, y sus tests se borran.
   mandámelo en otro mensaje."
 - **Test:** `tests/unit/test_pending_batch.py::test_discarding_the_whole_batch_with_a_new_movement_warns`
 
+#### C2-28 · Descartar un pendiente solo y traer un movimiento nuevo: la respuesta es la de un pendiente solo
+
+- **Sale de:** CA-22 · **Tipo:** unitario
+- **Dado** el mensaje "gasté 1200 de nafta", que deja un pendiente solo esperando la cuenta, el
+  mensaje "no lo anotes, y anotá 500 de café con MP", y el modelo responde que descarta el
+  pendiente y trae, además, un gasto de 500 con cuenta "MP" y categoría Comida afuera y delivery,
+- **cuando** se procesa,
+- **entonces** no se registra ningún gasto, el pendiente queda rechazado, y la respuesta es
+  "Listo, no lo anoto." seguida de la línea "El movimiento nuevo mandámelo en otro mensaje."
+- **Test:** `tests/unit/test_pending_batch.py::test_discarding_a_lone_pending_with_a_new_movement_answers_as_a_lone_pending`
+
+#### C2-29 · Una respuesta que trae dos movimientos nuevos avisa en plural
+
+- **Sale de:** CA-22 · **Tipo:** unitario
+- **Dado** el lote de C2-01 esperando respuesta, el mensaje "el 2 con efectivo, y además 500 de
+  café y 800 del diario con MP", y el modelo responde que contesta el pendiente 2 con cuenta
+  "efectivo" y trae, además, un gasto de 500 y otro de 800, los dos con cuenta "MP",
+- **cuando** se procesa,
+- **entonces** se registran los dos gastos del lote, de $3.500 y $1.200; ninguno de los nuevos se
+  anota; y la respuesta termina con la línea "Los movimientos nuevos mandámelos en otro mensaje."
+- **Test:** `tests/unit/test_pending_batch.py::test_a_reply_that_brings_two_new_movements_warns_in_plural`
+
 ### Corte 3 — observabilidad
 
 - **Aprobado por:** Veronica Zacarias 07/11/2026
@@ -790,9 +817,9 @@ deja de existir, y sus tests se borran.
 | Lote con algo que falta | La lista numerada de C2-01: cada uno con lo ya interpretado, "completo" o lo que le falta |
 | Se descartan todos | "Listo, no anoto ninguno." |
 | Movimiento que todavía no se sabe anotar | "El {ordinal} movimiento no lo anoté: " y su texto fijo, en una línea propia (C2-07); si es el único movimiento nuevo de un lote abierto, "Ese movimiento no lo anoté: " (C2-24); si se cayó al responder o al sumarse otro, "El {número} no lo anoté: " (C2-09 y C2-20) |
-| Más de 10 en un mensaje | "Tomé solo los primeros 10 movimientos. Los otros {n} mandámelos en otro mensaje.", o "El otro mandámelo en otro mensaje." si queda uno solo |
+| Más de 10 en un mensaje | "Tomé solo los primeros {N} movimientos. Los otros {n} mandámelos en otro mensaje.", o "El otro mandámelo en otro mensaje." si queda uno solo. {N} son los que se leyeron: 10, más los que no se pueden anotar y se nombran aparte (C2-12, C2-21) |
 | Un lote que se llena con un mensaje nuevo | "Tomé solo el primero de los movimientos nuevos. El otro mandámelo cuando terminemos con estos.", o con "los primeros {n}" y "los otros {m}" |
-| Una respuesta que trae además un movimiento nuevo | "El movimiento nuevo mandámelo en otro mensaje.", en una línea propia al final, también después de un descarte (C2-23, C2-26 y C2-27) |
+| Una respuesta que trae además un movimiento nuevo | "El movimiento nuevo mandámelo en otro mensaje.", en una línea propia al final, también después de un descarte (C2-23, C2-26 a C2-28); con dos o más, "Los movimientos nuevos mandámelos en otro mensaje." (C2-29) |
 | Pendiente vencido en un lote que sigue | "El {número} no lo anoté: pasaron más de 24 horas.", en una línea propia (C2-17) |
 | Un lote que ya usó sus 10 números, y llega otro movimiento | "Esta lista ya usó sus 10 números, así que no tomé los nuevos: mandámelos cuando terminemos con estos." (C2-22) |
 
