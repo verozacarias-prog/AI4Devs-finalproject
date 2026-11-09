@@ -185,6 +185,20 @@ YES_TO_ESTETICA = (
             True,
             id="C2-61",
         ),
+        pytest.param(
+            [
+                _expense(
+                    "gasté $50 en el super con galicia",
+                    amount="50",
+                    account="galicia",
+                    category="Supermercado",
+                    currency="USD",
+                    currency_words="$",
+                )
+            ],
+            True,
+            id="C2-62",
+        ),
     ],
 )
 def test_what_the_validation_rejects_leaves_the_call_blocked(

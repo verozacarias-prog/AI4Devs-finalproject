@@ -892,3 +892,25 @@ def test_a_full_stop_as_the_words_of_the_currency_does_not_say_it() -> None:
 
     assert unit_of_work.transactions.added == []
     assert _last_reply(unit_of_work) == "¿Con qué cuenta? Galicia pesos o Galicia USD."
+
+
+def test_the_dollar_sign_with_dollars_does_not_say_the_currency() -> None:
+    # Case C2-62 of FEAT-003.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "gasté $50 en el super con galicia",
+        _registration(
+            amount="50",
+            account="galicia",
+            category="Supermercado",
+            currency="USD",
+            currency_words="$",
+        ),
+    )
+
+    assert unit_of_work.transactions.added == []
+    assert _last_reply(unit_of_work) == "¿Con qué cuenta? Galicia pesos o Galicia USD."

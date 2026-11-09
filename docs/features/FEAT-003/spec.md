@@ -105,7 +105,7 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 - **CA-37.** El usuario puede descartar el pendiente que espera respuesta, como con "dejalo, no lo anotes": queda rechazado, su lote cerrado, y no se registra nada.
 - **CA-38.** Un pendiente vencido, a las 24 horas de creado, no se continúa: queda `expired`, y el mensaje se procesa como si no hubiera nada abierto. Las 24 horas se cuentan hasta el momento en que el usuario escribió la respuesta, no hasta el que se procesa: una respuesta escrita a tiempo y demorada por los reintentos sigue valiendo, igual que la fecha de un movimiento es el día en que se escribió (§ 1). Anotado el 17/10/2026 con el `/spec-drift` del corte 2.
 - **CA-41.** Cada respuesta que cambia un dato que ya tenía un valor —el monto, el tipo, la fecha, la categoría o la cuenta, con su moneda— suma uno al contador de correcciones del pendiente; completar un dato que faltaba no suma ([reglas de dominio § 5](../../reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)). Sumado el 17/10/2026, con el `/spec-drift` del corte 2. Una fecha que se había asumido por defecto y la respuesta cambia también suma, y un monto que no se podía guardar y la respuesta completa no suma: la regla es la de § 5, que estima cuántos registros no salieron bien del primer mensaje sin buscar quién se equivocó. Decidido por Vero el 6/11/2026, con el `/spec-drift` del corte 3 de [FEAT-006](../FEAT-006/spec.md).
-- **CA-39.** Si el modelo devuelve las palabras que dicen la moneda y no están escritas en el mensaje, la moneda no cuenta, igual que una mención de la cuenta que no está escrita. Si devuelve la moneda sin sus palabras, cuenta como la dio: así lo decidió Vero el 17/10/2026, para no cambiar C1-23, sabiendo que un modelo que no devuelve las palabras se saltea la verificación. Es la opción B que eligió Vero en el corte 1. Lo escrito puede ser un signo de moneda, como "$" o "€": no es una palabra, y cuenta si aparece tal cual en el mensaje. Es signo de moneda el que Unicode clasifica así; un punto o una coma no lo son, y no cuentan. Vale solo para la moneda: la mención de la cuenta y las palabras de su tipo siguen siendo palabras. Que "$" son pesos lo interpreta el modelo, y el código solo comprueba que el signo esté escrito. Decidido por Vero el 9/11/2026, con la #139.
+- **CA-39.** Si el modelo devuelve las palabras que dicen la moneda y no están escritas en el mensaje, la moneda no cuenta, igual que una mención de la cuenta que no está escrita. Si devuelve la moneda sin sus palabras, cuenta como la dio: así lo decidió Vero el 17/10/2026, para no cambiar C1-23, sabiendo que un modelo que no devuelve las palabras se saltea la verificación. Es la opción B que eligió Vero en el corte 1. Lo escrito puede ser un signo de moneda, como "$" o "€": no es una palabra, y cuenta si aparece tal cual en el mensaje. Es signo de moneda el que Unicode clasifica así; un punto o una coma no lo son, y no cuentan. Vale solo para la moneda: la mención de la cuenta y las palabras de su tipo siguen siendo palabras. Si el signo es el de una moneda que el sistema conoce, como "$", que es el de ARS, tiene que ser el de la moneda que dice el modelo: un "$" con USD no cuenta. Un signo que el sistema no conoce, como "€", cuenta si está escrito. Decidido por Vero el 9/11/2026, con la segunda revisión de `pr-reviewer`. Que "$" son pesos lo interpreta el modelo, y el código solo comprueba que el signo esté escrito. Decidido por Vero el 9/11/2026, con la #139.
 - **CA-48.** La moneda que dice el mensaje es la del movimiento, y queda guardada en el pendiente para la respuesta. Si no es la del período, o no es la de la cuenta nombrada, el movimiento recibe enseguida el texto fijo de C1-09, sin preguntar lo que falte: la multimoneda no entra en la entrega 2 ([reglas de dominio § 1](../../reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma)). Una mención con el nombre completo de una cuenta la elige aunque la moneda dicha sea otra. Sumado el 19/10/2026 con el `/spec-drift` del proyecto, que encontró un gasto en dólares registrado como pesos.
 
 ### Cuando algo falla — corte 2
@@ -503,9 +503,10 @@ de 2026, 2026-10-17T18:00:00Z.
 - **C2-55, sumado con el `/spec-drift` del corte 3 de [FEAT-006](../FEAT-006/spec.md):** Veronica Zacarias 06/11/2026
 - **C2-56 a C2-59, sumados con la #138 y la #139:** Veronica Zacarias 09/11/2026
 - **C2-60 y C2-61, sumados con la revisión de `pr-reviewer` de la #139:** Veronica Zacarias 9/11/2026
+- **C2-62, sumado con la segunda revisión de `pr-reviewer` de la #139:** Veronica Zacarias 09/11/2026
 - **C2-02 a C2-06, C2-09, C2-12, C2-15, C2-18, C2-37, C2-44, C2-45 y C2-47 cambiados, con la pregunta que va directa (CA-22):** Veronica Zacarias 05/11/2026
 - **C2-20 cambiado, con la pregunta que va directa (CA-22):** Veronica Zacarias 05/11/2026
-- **Total:** 61 casos, 44 unitarios y 17 de integración.
+- **Total:** 62 casos, 45 unitarios y 17 de integración.
 
 Cómo se continúa un pendiente, para leer los casos
 ([ADR 0018](../../adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), punto 9):
@@ -588,8 +589,9 @@ defecto.
 | C2-57 | Un gasto en euros recibe el texto fijo y no se anota | Unitario | CA-48 |
 | C2-58 | El signo "$" dice pesos y elige la cuenta en pesos | Unitario | CA-39 |
 | C2-59 | El signo "$" escrito no deja la llamada `blocked` | Unitario | CA-47 |
-| C2-60 | Un punto como palabras del tipo no elige la cuenta | Unitario | CA-39, CA-47 |
-| C2-61 | Un punto como palabras de la moneda no la dice | Unitario | CA-39, CA-47 |
+| C2-60 | Un punto como palabras del tipo no elige la cuenta | Unitario | CA-39 y CA-47 |
+| C2-61 | Un punto como palabras de la moneda no la dice | Unitario | CA-39 y CA-47 |
+| C2-62 | El signo "$" con dólares no dice la moneda | Unitario | CA-39 y CA-47 |
 
 #### C2-01 · Un gasto sin cuenta queda pendiente y su lote espera respuesta
 
@@ -1280,6 +1282,18 @@ defecto.
   USD.", y la fila de su llamada en `LLM_CALL` queda `blocked`: el punto no es un signo de
   moneda, así que la moneda no cuenta y no elige entre las dos Galicia.
 - **Test:** `tests/unit/test_pending_registration.py::test_a_full_stop_as_the_words_of_the_currency_does_not_say_it` y `tests/unit/test_llm_calls.py::test_what_the_validation_rejects_leaves_the_call_blocked[C2-61]`
+
+#### C2-62 · El signo "$" con dólares no dice la moneda
+
+- **Sale de:** CA-39 y CA-47 · **Tipo:** unitario
+- **Dado** el mensaje de Lucía "gasté $50 en el super con galicia", con Galicia pesos y Galicia
+  USD, y el modelo responde un gasto de 50, con cuenta "galicia", categoría "Supermercado",
+  moneda "USD" y palabras "$",
+- **cuando** se procesa,
+- **entonces** no se registra nada, la pregunta es "¿Con qué cuenta? Galicia pesos o Galicia
+  USD.", y la fila de su llamada en `LLM_CALL` queda `blocked`: el "$" está escrito, pero es el
+  signo de ARS y no el de USD, así que la moneda no cuenta y no elige Galicia USD.
+- **Test:** `tests/unit/test_pending_registration.py::test_the_dollar_sign_with_dollars_does_not_say_the_currency` y `tests/unit/test_llm_calls.py::test_what_the_validation_rejects_leaves_the_call_blocked[C2-62]`
 
 ### Corte 3 — límites y observabilidad
 
