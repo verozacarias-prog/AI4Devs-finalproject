@@ -587,7 +587,7 @@ deja de existir, y sus tests se borran.
 - **entonces** el pedido al modelo trae solo el pendiente 2, con su número; no se registra nada;
   el pendiente 1 queda `expired` y el 2 sigue `open`; y la respuesta es, línea por línea:
 
-  > 2. El gasto de $1.200 en Transporte.
+  > 2\. El gasto de $1.200 en Transporte.
   > ¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD.
   >
   > El 1 no lo anoté: pasaron más de 24 horas.
