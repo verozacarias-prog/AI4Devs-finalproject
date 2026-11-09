@@ -140,6 +140,65 @@ YES_TO_ESTETICA = (
         ),
         pytest.param([PELUQUERIA, YES_TO_ESTETICA], True, id="C2-47"),
         pytest.param([(SUPERMARKET_EXPENSE, supermarket_expense())], False, id="C1-01"),
+        pytest.param(
+            [
+                _expense(
+                    "gasté $2000 con galicia",
+                    amount="2000",
+                    account="galicia",
+                    category="Supermercado",
+                    currency="ARS",
+                    currency_words="$",
+                )
+            ],
+            False,
+            id="C2-59",
+        ),
+        pytest.param(
+            [
+                (
+                    "gasté 500 en el super.",
+                    Classification(
+                        MessageClass.REGISTRATION,
+                        registration_type=RegistrationType.EXPENSE,
+                        amount=Decimal("500"),
+                        account_type=AccountType.CASH,
+                        account_type_words=".",
+                        category="Supermercado",
+                    ),
+                )
+            ],
+            True,
+            id="C2-60",
+        ),
+        pytest.param(
+            [
+                _expense(
+                    "gasté 500 en el super con galicia.",
+                    amount="500",
+                    account="galicia",
+                    category="Supermercado",
+                    currency="ARS",
+                    currency_words=".",
+                )
+            ],
+            True,
+            id="C2-61",
+        ),
+        pytest.param(
+            [
+                _expense(
+                    "gasté $50 en el super con galicia",
+                    amount="50",
+                    account="galicia",
+                    category="Supermercado",
+                    currency="USD",
+                    currency_words="$",
+                )
+            ],
+            True,
+            id="C2-62",
+        ),
     ],
 )
 def test_what_the_validation_rejects_leaves_the_call_blocked(

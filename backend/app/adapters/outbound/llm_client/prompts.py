@@ -7,7 +7,7 @@ of any user (ADR 0013, point 12). The data of the task goes in the user message,
 from __future__ import annotations
 
 # Recorded with every call, so the metrics can compare one prompt with the next.
-CLASSIFICATION_PROMPT_VERSION = "classification-13"
+CLASSIFICATION_PROMPT_VERSION = "classification-14"
 
 # Between these, the data of the task: information, never instructions (ADR 0013, point 9).
 DATA_OPEN = "<datos>"
@@ -91,9 +91,10 @@ movimiento es claramente de esa categoría. Si ninguna encaja con claridad, null
 una parecida: una categoría que no corresponde queda mal anotada, y con null se le pregunta a \
 la persona. Entendé lo que el mensaje dice con palabras de todos los días: "el súper", "la nafta", \
 "el colectivo" o "la prepaga" tienen una categoría que les corresponde aunque no la nombren.
-- currency: "ARS" o "USD", solo si el mensaje dice la moneda de alguna forma: "pesos", \
-"lucas", "mangos", "pe" o "$" son "ARS", y "dólares", "verdes" o "USD" son "USD". Un número \
-solo, como "2000" o "26 mil", no dice ninguna moneda: null.
+- currency: el código ISO 4217 de la moneda, solo si el mensaje la dice de alguna forma: \
+"pesos", "lucas", "mangos", "pe" o "$" son "ARS", "dólares", "verdes" o "USD" son "USD", y \
+cualquier otra va con su código, como "euros", que es "EUR". Un número solo, como "2000" o \
+"26 mil", no dice ninguna moneda: null.
 - currency_words: las palabras exactas del mensaje que dicen la moneda, copiadas tal cual, \
 como "lucas" o "dólares". Si currency es null, null.
 - proposed_category: si category es null porque ninguna categoría de la lista encaja, un \

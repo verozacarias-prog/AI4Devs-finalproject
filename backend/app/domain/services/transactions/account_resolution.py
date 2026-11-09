@@ -13,6 +13,7 @@ import unicodedata
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from app import messages
 from app.domain.entities.account import Account, AccountType
 from app.domain.entities.classification import Classification
 
@@ -28,6 +29,8 @@ _OFFER_ORDER = (
 )
 # A name of more words than this can be named by its initials, as "MP" for Mercado Pago.
 _SINGLE_WORD = 1
+# The Unicode category of a currency sign, like "$" or "€": the standard says which signs are.
+_CURRENCY_SIGN = "Sc"
 
 
 @dataclass(frozen=True)
@@ -163,7 +166,7 @@ def verified_currency(classification: Classification, text: str) -> str | None:
 
     Without words, the currency counts as the model gave it: Vero decided so on 17/10/2026.
     """
-    if is_unwritten(classification.currency_words, text):
+    if currency_is_unwritten(classification.currency_words, classification.currency, text):
         return None
     return classification.currency
 
@@ -189,6 +192,21 @@ def is_unwritten(words: str | None, text: str) -> bool:
     the call counts as one whose output the validation rejected (CA-47).
     """
     return words is not None and not _written_in(words, text)
+
+
+def currency_is_unwritten(words: str | None, currency: str | None, text: str) -> bool:
+    """Whether the model returned words for the currency that the message does not write. A
+    currency sign, like "$" or "€", counts if it appears as it is, and, if it is the sign of a
+    known currency, only for that one: "$" is that of ARS, and with USD it does not count. No
+    other sign counts (CA-39).
+    """
+    if words is None:
+        return False
+    sign = words.strip()
+    if sign and all(unicodedata.category(char) == _CURRENCY_SIGN for char in sign):
+        owners = {code for code, symbol in messages.CURRENCY_SYMBOLS.items() if symbol == sign}
+        return sign not in text or (bool(owners) and currency not in owners)
+    return not _written_in(words, text)
 
 
 def _named_by_part(account: Account, mention_words: set[str]) -> bool:

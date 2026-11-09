@@ -245,7 +245,18 @@ def test_the_adapter_returns_the_currency_the_message_says() -> None:
     schema = cast(dict[str, object], output_format["schema"])
     assert "currency" in cast(list[str], schema["required"])
     properties = cast(dict[str, dict[str, object]], schema["properties"])
-    assert set(cast(list[str | None], properties["currency"]["enum"])) == {"ARS", "USD", None}
+    assert properties["currency"]["type"] == ["string", "null"]
+    assert "enum" not in properties["currency"]
+    assert properties["currency"]["pattern"] == "^[A-Z]{3}$"
+
+
+def test_the_adapter_returns_a_currency_other_than_pesos_and_dollars() -> None:
+    # Case C2-56 of FEAT-003.
+    transport = FakeTransport({**_expense("30"), "account": "MP", "currency": "EUR"})
+
+    classification = _adapter(transport).classify(REQUEST)
+
+    assert classification.currency == "EUR"
 
 
 def test_the_adapter_returns_both_sides_of_a_transfer() -> None:

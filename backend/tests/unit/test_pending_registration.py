@@ -798,3 +798,119 @@ def test_completing_an_amount_that_could_not_be_stored_adds_no_correction() -> N
     [pending] = unit_of_work.pendings.added
     assert pending.status is PendingStatus.PROMOTED
     assert pending.corrected_fields_count == 0
+
+
+def test_an_expense_in_euros_gets_the_fixed_text_and_registers_nothing() -> None:
+    # Case C2-57 of FEAT-003.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "gasté 30 euros con Mercado Pago",
+        _registration(
+            amount="30",
+            account="Mercado Pago",
+            category="Supermercado",
+            currency="EUR",
+            currency_words="euros",
+        ),
+    )
+
+    assert unit_of_work.transactions.added == []
+    assert unit_of_work.pendings.added == []
+    assert _last_reply(unit_of_work) == CANNOT_REGISTER
+
+
+def test_the_dollar_sign_says_pesos_and_chooses_the_account_in_pesos() -> None:
+    # Case C2-58 of FEAT-003.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "gasté $2000 con galicia",
+        _registration(
+            amount="2000",
+            account="galicia",
+            category="Supermercado",
+            currency="ARS",
+            currency_words="$",
+        ),
+    )
+
+    [transaction] = unit_of_work.transactions.added
+    assert transaction.account_id == lucia.accounts["Galicia pesos"]
+    assert transaction.amount == Decimal("2000")
+    assert transaction.currency == "ARS"
+
+
+def test_a_full_stop_as_the_words_of_the_type_does_not_choose_the_account() -> None:
+    # Case C2-60 of FEAT-003.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "gasté 500 en el super.",
+        Classification(
+            MessageClass.REGISTRATION,
+            registration_type=RegistrationType.EXPENSE,
+            amount=Decimal("500"),
+            account_type=AccountType.CASH,
+            account_type_words=".",
+            category="Supermercado",
+        ),
+    )
+
+    assert unit_of_work.transactions.added == []
+    assert _last_reply(unit_of_work) == (
+        "¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD."
+    )
+
+
+def test_a_full_stop_as_the_words_of_the_currency_does_not_say_it() -> None:
+    # Case C2-61 of FEAT-003.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "gasté 500 en el super con galicia.",
+        _registration(
+            amount="500",
+            account="galicia",
+            category="Supermercado",
+            currency="ARS",
+            currency_words=".",
+        ),
+    )
+
+    assert unit_of_work.transactions.added == []
+    assert _last_reply(unit_of_work) == "¿Con qué cuenta? Galicia pesos o Galicia USD."
+
+
+def test_the_dollar_sign_with_dollars_does_not_say_the_currency() -> None:
+    # Case C2-62 of FEAT-003.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "gasté $50 en el super con galicia",
+        _registration(
+            amount="50",
+            account="galicia",
+            category="Supermercado",
+            currency="USD",
+            currency_words="$",
+        ),
+    )
+
+    assert unit_of_work.transactions.added == []
+    assert _last_reply(unit_of_work) == "¿Con qué cuenta? Galicia pesos o Galicia USD."
