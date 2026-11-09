@@ -27,6 +27,7 @@ from app.domain.services.transactions.account_resolution import (
     account_candidates,
     account_words,
     chosen_account,
+    currency_is_unwritten,
     in_offer_order,
     is_unwritten,
     is_written,
@@ -463,7 +464,7 @@ def rejects_output(
         or (classification.account_type is not None and classification.account_type_words is None)
         or is_unwritten(classification.to_account, text)
         or is_unwritten(classification.to_account_type_words, text)
-        or is_unwritten(classification.currency_words, text)
+        or currency_is_unwritten(classification.currency_words, text)
         or (proposed is not None and _valid_proposal(proposed) is None)
         or (previous is not None and proposes_an_unwritten_name(previous, classification, text))
     )

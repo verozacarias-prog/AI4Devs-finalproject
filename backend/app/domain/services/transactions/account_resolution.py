@@ -28,6 +28,8 @@ _OFFER_ORDER = (
 )
 # A name of more words than this can be named by its initials, as "MP" for Mercado Pago.
 _SINGLE_WORD = 1
+# The Unicode category of a currency sign, like "$" or "€": the standard says which signs are.
+_CURRENCY_SIGN = "Sc"
 
 
 @dataclass(frozen=True)
@@ -163,7 +165,7 @@ def verified_currency(classification: Classification, text: str) -> str | None:
 
     Without words, the currency counts as the model gave it: Vero decided so on 17/10/2026.
     """
-    if is_unwritten(classification.currency_words, text):
+    if currency_is_unwritten(classification.currency_words, text):
         return None
     return classification.currency
 
@@ -191,6 +193,18 @@ def is_unwritten(words: str | None, text: str) -> bool:
     return words is not None and not _written_in(words, text)
 
 
+def currency_is_unwritten(words: str | None, text: str) -> bool:
+    """Whether the model returned words for the currency that the message does not write. A
+    currency sign, like "$" or "€", counts if it appears as it is; no other sign does (CA-39).
+    """
+    if words is None:
+        return False
+    sign = words.strip()
+    if sign and all(unicodedata.category(char) == _CURRENCY_SIGN for char in sign):
+        return sign not in text
+    return not _written_in(words, text)
+
+
 def _named_by_part(account: Account, mention_words: set[str]) -> bool:
     """Every word of the mention is in its name, or the mention is its initials."""
     name_words = _words(account.name)
@@ -202,13 +216,9 @@ def _named_by_part(account: Account, mention_words: set[str]) -> bool:
 
 
 def _written_in(mention: str, text: str) -> bool:
-    """Whether the mention appears in the message as whole words, in the same order. One with
-    no words, like the sign "$", has to appear as it is."""
+    """Whether the mention appears in the message as whole words, in the same order."""
     written = " ".join(_words(mention))
-    if not written:
-        symbol = mention.strip()
-        return bool(symbol) and symbol in text
-    return f" {written} " in f" {' '.join(_words(text))} "
+    return bool(written) and f" {written} " in f" {' '.join(_words(text))} "
 
 
 def _words(text: str) -> list[str]:
