@@ -5,7 +5,7 @@ alembic==1.20.1
 fastapi==0.162.0
 # The provider SDK, with no orchestration framework (ADR 0020, ADR 0025).
 openai==3.41.0
-psycopg[binary]==3.3.6
+psycopg[binary]==3.3.8
 pydantic==2.14.2
 SQLAlchemy==2.1.6
 uvicorn[standard]==0.54.0
