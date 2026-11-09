@@ -157,6 +157,7 @@ de 2026, 2026-10-17T18:00:00Z.
 - **C1-09, C1-21 y C1-22 cambiados, y C1-26 sumado, con las transferencias de [FEAT-006](../FEAT-006/spec.md):** Veronica Zacarias 5/11/2026
 - **C1-10 y C1-11 cambiados, con el texto fijo que nombra las transferencias de [FEAT-006](../FEAT-006/spec.md):** Veronica Zacarias 5/11/2026
 - **C1-17 cambiado, con la pregunta que va directa (CA-22):** Veronica Zacarias 5/11/2026
+- **C1-23 cambiado, con la moneda como código de tres letras de la #138:** Veronica Zacarias 9/11/2026
 - **Total:** 26 casos, 18 unitarios y 8 de integración.
 
 | Caso | Qué prueba | Tipo | Sale de |
