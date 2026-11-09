@@ -66,9 +66,6 @@ class UpdateBudgetPeriod:
             user = find_user(unit_of_work, user_id)
             memberships = unit_of_work.family_groups.list_memberships(user_id)
             period = editable_period(unit_of_work, user, period_id, memberships)
-            period_end = checked_period_end(
-                content.period_type, content.period_start, content.period_end
-            )
             check_confirmed_stays_fixed(
                 period,
                 period_type=content.period_type,
@@ -80,7 +77,9 @@ class UpdateBudgetPeriod:
                 period,
                 period_type=content.period_type,
                 period_start=content.period_start,
-                period_end=period_end,
+                period_end=checked_period_end(
+                    content.period_type, content.period_start, content.period_end
+                ),
                 primary_currency=content.primary_currency,
                 estimated_income=content.estimated_income,
             )
