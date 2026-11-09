@@ -202,9 +202,13 @@ def _named_by_part(account: Account, mention_words: set[str]) -> bool:
 
 
 def _written_in(mention: str, text: str) -> bool:
-    """Whether the mention appears in the message as whole words, in the same order."""
+    """Whether the mention appears in the message as whole words, in the same order. One with
+    no words, like the sign "$", has to appear as it is."""
     written = " ".join(_words(mention))
-    return bool(written) and f" {written} " in f" {' '.join(_words(text))} "
+    if not written:
+        symbol = mention.strip()
+        return bool(symbol) and symbol in text
+    return f" {written} " in f" {' '.join(_words(text))} "
 
 
 def _words(text: str) -> list[str]:

@@ -8,6 +8,7 @@ without any identifier. The structured output is validated here before the domai
 from __future__ import annotations
 
 import json
+import re
 from datetime import date
 from decimal import Decimal
 
@@ -26,13 +27,13 @@ from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 from app.adapters.outbound.llm_client import prompts
 from app.constants import (
+    CURRENCY_CODE_PATTERN,
     DEFAULT_LLM_TIMEOUT_SECONDS,
     LLM_MAX_OUTPUT_TOKENS,
     LLM_MODEL,
     LLM_PROVIDER,
     LLM_REASONING_EFFORT,
     LLM_SDK_RETRIES,
-    MESSAGE_CURRENCIES,
 )
 from app.domain.entities.account import AccountType
 from app.domain.entities.classification import (
@@ -74,7 +75,7 @@ _MOVEMENT_PROPERTIES: dict[str, object] = {
     "to_account_type": _ACCOUNT_TYPE,
     "to_account_type_words": _NULLABLE_TEXT,
     "category": _NULLABLE_TEXT,
-    "currency": {"type": ["string", "null"], "enum": [*MESSAGE_CURRENCIES, None]},
+    "currency": {"type": ["string", "null"], "pattern": CURRENCY_CODE_PATTERN},
     "currency_words": _NULLABLE_TEXT,
     "transaction_date": {"type": ["string", "null"], "format": "date"},
     "proposed_category": _NULLABLE_TEXT,
@@ -163,7 +164,7 @@ class _MovementOutput(BaseModel):
     @field_validator("currency")
     @classmethod
     def _known_currency(cls, value: str | None) -> str | None:
-        if value is not None and value not in MESSAGE_CURRENCIES:
+        if value is not None and re.fullmatch(CURRENCY_CODE_PATTERN, value) is None:
             raise ValueError(value)
         return value
 
@@ -205,7 +206,7 @@ class _ClassificationOutput(BaseModel):
     @field_validator("currency")
     @classmethod
     def _known_currency(cls, value: str | None) -> str | None:
-        if value is not None and value not in MESSAGE_CURRENCIES:
+        if value is not None and re.fullmatch(CURRENCY_CODE_PATTERN, value) is None:
             raise ValueError(value)
         return value
 

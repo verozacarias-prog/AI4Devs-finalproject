@@ -138,8 +138,8 @@ MAX_CHAT_TEXT_LENGTH = 4096
 # How many messages the first read of the conversation brings, the latest ones.
 CHAT_FIRST_READ_MESSAGES = 200
 
-# The currencies a message can say, as the model returns them (domain rules, § 1).
-MESSAGE_CURRENCIES = ("ARS", "USD")
+# A currency a message says, as the model returns it: its ISO 4217 code (domain rules, § 1).
+CURRENCY_CODE_PATTERN = r"^[A-Z]{3}$"
 
 # What a name the model proposes for a new category may be, checked in code before it is shown
 # or stored (ADR 0013, point 10): letters, digits, spaces, hyphens, commas and brackets. With no
