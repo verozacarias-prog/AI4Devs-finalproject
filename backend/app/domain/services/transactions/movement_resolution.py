@@ -464,7 +464,7 @@ def rejects_output(
         or (classification.account_type is not None and classification.account_type_words is None)
         or is_unwritten(classification.to_account, text)
         or is_unwritten(classification.to_account_type_words, text)
-        or currency_is_unwritten(classification.currency_words, text)
+        or currency_is_unwritten(classification.currency_words, classification.currency, text)
         or (proposed is not None and _valid_proposal(proposed) is None)
         or (previous is not None and proposes_an_unwritten_name(previous, classification, text))
     )
