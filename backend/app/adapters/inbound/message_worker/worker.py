@@ -25,12 +25,36 @@ from app.constants import MILLISECONDS_PER_SECOND, WORKER_IDLE_SECONDS, Environm
 from app.domain.entities.inbound_message import InboundMessage, RetryPolicy
 from app.domain.entities.llm_usage import UsageLimits
 from app.domain.ports.llm_port import LLMPort
-from app.domain.use_cases.messages.answer_message import AnswerNotice, LimitReached, ModelFailed
+from app.domain.use_cases.messages.answer_message import (
+    AnswerNotice,
+    LimitReached,
+    ModelFailed,
+    SeveralMovements,
+)
 from app.domain.use_cases.messages.process_next_message import ProcessNextMessage, RoundOutcome
 from app.settings import Settings, require_openai_api_key
 from app.shared.clock import Clock, SystemClock
 
 logger = logging.getLogger(LoggerName.WORKER)
+
+
+class _Notices:
+    """What the use case tells the worker of a round besides how it ended, to log it."""
+
+    def __init__(self) -> None:
+        self.model_failures: list[ModelFailed] = []
+        # Of a message with several movements, the counts its line carries (FEAT-007, CA-15).
+        self.counts: dict[str, int] = {}
+
+    def take(self, notice: AnswerNotice) -> None:
+        match notice:
+            case LimitReached():
+                logger.info(Event.USAGE_QUOTA_EXCEEDED, extra={Field.QUOTA: notice.counter})
+            case ModelFailed():
+                self.model_failures.append(notice)
+            case SeveralMovements():
+                self.counts[Field.MOVEMENTS] = notice.movements
+                self.counts[Field.BATCHED] = notice.batched
 
 
 class MessageWorker:
@@ -59,22 +83,14 @@ class MessageWorker:
             if message.user_id is not None:
                 user_id_var.set(str(message.user_id))
 
-        model_failures: list[ModelFailed] = []
-
-        def log(notice: AnswerNotice) -> None:
-            match notice:
-                case LimitReached():
-                    logger.info(Event.USAGE_QUOTA_EXCEEDED, extra={Field.QUOTA: notice.counter})
-                case ModelFailed():
-                    model_failures.append(notice)
-
+        notices = _Notices()
         started = time.monotonic()
         try:
-            outcome = self._process_next().execute(on_claimed=follow, on_notice=log)
-            if model_failures:
+            outcome = self._process_next().execute(on_claimed=follow, on_notice=notices.take)
+            if notices.model_failures:
                 # The use case dealt with it, and it is still an error: it goes to the one
                 # place that logs the errors of a round.
-                raise model_failures[0].error
+                raise notices.model_failures[0].error
         except Exception as error:
             # The use case already left the message for another attempt, or failed with its
             # notice (CA-44). Only if that failed too, or the claim did, it stays in process
@@ -84,7 +100,9 @@ class MessageWorker:
         else:
             if outcome is RoundOutcome.ANSWERED:
                 elapsed = round((time.monotonic() - started) * MILLISECONDS_PER_SECOND)
-                logger.info(Event.MESSAGE_ANSWERED, extra={Field.DURATION_MS: elapsed})
+                logger.info(
+                    Event.MESSAGE_ANSWERED, extra={Field.DURATION_MS: elapsed, **notices.counts}
+                )
             return outcome is not RoundOutcome.NOTHING_TO_TAKE
         finally:
             message_id_var.set(None)

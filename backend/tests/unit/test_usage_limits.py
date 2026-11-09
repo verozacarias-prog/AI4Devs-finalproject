@@ -35,6 +35,7 @@ from tests.support.registration_data import (
     salary_income,
     supermarket_expense,
 )
+from tests.support.replies import reply_to_pending
 
 # Sends the message of a case, on top of what the case set up.
 _Send = Callable[[InMemoryUnitOfWork, Lucia], object]
@@ -128,11 +129,7 @@ def _reply_to_the_pending(text: str, classification: Classification) -> _Send:
             True,
             _reply_to_the_pending(
                 "con MP",
-                Classification(
-                    MessageClass.REGISTRATION,
-                    account="MP",
-                    pending_reply=PendingReply.CONTINUES,
-                ),
+                reply_to_pending(account="MP"),
             ),
             True,
             id="C2-07",

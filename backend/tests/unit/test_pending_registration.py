@@ -1,6 +1,6 @@
 """What the registration asks, and how a reply continues it, with the model replaced (FEAT-003).
 
-Cases C2-02 to C2-06, C2-08 to C2-13, C2-15, C2-17, C2-18, C2-20, C2-35, C2-37, C2-38, C2-44,
+Cases C2-02 to C2-06, C2-08 to C2-11, C2-13, C2-15, C2-17, C2-18, C2-20, C2-37, C2-38, C2-44,
 C2-45, C2-46, C2-47, C2-48 to C2-51, C2-53, C2-54 and C2-55 of its spec.md.
 Each case that starts from an open pending gets it the way a user does: a first message that
 leaves it pending, and then the reply. The database is in memory; the integration tests check
@@ -31,6 +31,7 @@ from app.domain.use_cases.messages.answer_message import AnswerMessage
 from tests.support.doubles import FixedClock, InMemoryUnitOfWork
 from tests.support.fake_llm import FakeLLM
 from tests.support.registration_data import NOW, OCTOBER_16, Lucia
+from tests.support.replies import reply_to_pending
 
 ALL_ACCOUNTS = "¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD."
 CANNOT_REGISTER = (
@@ -76,15 +77,14 @@ def _reply(
     accepts_proposal: bool = False,
 ) -> Classification:
     """What the model answers to a message that comes while a pending awaits a reply."""
-    return Classification(
-        MessageClass.REGISTRATION,
-        registration_type=None,
+    if pending_reply is not PendingReply.CONTINUES:
+        return Classification(MessageClass.REGISTRATION, pending_reply=pending_reply)
+    return reply_to_pending(
         amount=None if amount is None else Decimal(amount),
         account=account,
         category=category,
         currency=currency,
         currency_words=currency_words,
-        pending_reply=pending_reply,
         accepts_proposal=accepts_proposal,
     )
 
@@ -256,14 +256,16 @@ def test_the_model_gets_the_open_pending_without_any_identifier() -> None:
 
     [request] = llm.requests
     assert request.text == "con MP"
-    assert request.open_pending is not None
-    interpreted = request.open_pending.interpreted
+    assert request.open_batch is not None
+    [pending] = request.open_batch.pendings
+    assert pending.number == 1
+    interpreted = pending.interpreted
     assert interpreted["type"] == "expense"
     assert interpreted["amount"] == "3500"
     assert interpreted["category"] == "Supermercado"
     assert interpreted["transaction_date"] == "2026-10-17"
-    assert request.open_pending.missing == ("account_id",)
-    assert request.open_pending.question == question
+    assert pending.missing == ("account_id",)
+    assert request.open_batch.question == question
     for text in _strings_in(request):
         assert not UUID_PATTERN.search(text), f"{text!r} holds an identifier"
         assert "+000000000001" not in text
@@ -336,39 +338,6 @@ def test_choosing_an_account_in_another_currency_than_the_period_does_not_regist
     assert batch.status is BatchStatus.CLOSED
     assert batch.awaiting_reply is False
     assert _last_reply(unit_of_work) == CANNOT_REGISTER
-
-
-def test_with_an_open_pending_another_movement_is_not_registered() -> None:
-    # Case C2-12.
-    unit_of_work = InMemoryUnitOfWork()
-    lucia = Lucia(unit_of_work)
-    _supermarket_without_account(unit_of_work, lucia)
-
-    _answer(
-        unit_of_work,
-        lucia,
-        "cobré 850000 de sueldo en la Galicia pesos",
-        Classification(
-            MessageClass.REGISTRATION,
-            registration_type=RegistrationType.INCOME,
-            amount=Decimal("850000"),
-            account="Galicia pesos",
-            category="Sueldo",
-            pending_reply=PendingReply.OTHER_MOVEMENT,
-        ),
-    )
-
-    assert unit_of_work.transactions.added == []
-    [pending] = unit_of_work.pendings.added
-    assert pending.status is PendingStatus.OPEN
-    reply = unit_of_work.outbound_messages.added[-1]
-    assert reply.text.splitlines() == [
-        "No anoté tu último mensaje: primero terminemos con el gasto de $3.500 en Supermercado, "
-        "y después mandámelo de nuevo.",
-        ALL_ACCOUNTS,
-    ]
-    [batch] = unit_of_work.pendings.batches
-    assert batch.question_message_id == reply.id
 
 
 def test_the_user_discards_the_pending() -> None:
@@ -493,27 +462,6 @@ def test_without_any_period_for_the_date_it_points_to_the_dashboard() -> None:
     )
 
 
-def test_a_message_with_several_movements_gets_the_fixed_text_and_stays_not_pending() -> None:
-    # Case C2-35. Several movements in a message belong to the final delivery.
-    unit_of_work = InMemoryUnitOfWork()
-    lucia = Lucia(unit_of_work)
-
-    _answer(
-        unit_of_work,
-        lucia,
-        "gasté 3500 en el súper con MP y 1200 de nafta en efectivo",
-        Classification(
-            MessageClass.REGISTRATION,
-            registration_type=RegistrationType.EXPENSE,
-            several_movements=True,
-        ),
-    )
-
-    assert unit_of_work.transactions.added == []
-    assert unit_of_work.pendings.added == []
-    assert _last_reply(unit_of_work) == CANNOT_REGISTER
-
-
 def _farmacia(unit_of_work: InMemoryUnitOfWork, lucia: Lucia) -> None:
     """The pending of C2-37: the model proposes a category that already exists."""
     _answer(
@@ -630,12 +578,7 @@ def test_a_yes_confirms_only_the_draft_the_question_showed() -> None:
         unit_of_work,
         lucia,
         "sí, pero fue el 31",
-        Classification(
-            MessageClass.REGISTRATION,
-            transaction_date=date(2026, 10, 31),
-            pending_reply=PendingReply.CONTINUES,
-            accepts_proposal=True,
-        ),
+        reply_to_pending(transaction_date=date(2026, 10, 31), accepts_proposal=True),
         now=NOVEMBER_1_NOW + timedelta(minutes=1),
     )
 
@@ -666,12 +609,7 @@ def test_a_yes_creates_the_offered_category_or_the_one_the_reply_writes_and_no_o
         unit_of_work,
         lucia,
         text,
-        Classification(
-            MessageClass.REGISTRATION,
-            proposed_category=proposed,
-            pending_reply=PendingReply.CONTINUES,
-            accepts_proposal=True,
-        ),
+        reply_to_pending(proposed_category=proposed, accepts_proposal=True),
     )
 
     new = [
@@ -824,12 +762,7 @@ def test_a_reply_that_says_only_the_type_offers_the_accounts_of_that_type() -> N
         unit_of_work,
         lucia,
         "con el banco",
-        Classification(
-            MessageClass.REGISTRATION,
-            pending_reply=PendingReply.CONTINUES,
-            account_type=AccountType.BANK_ACCOUNT,
-            account_type_words="el banco",
-        ),
+        reply_to_pending(account_type=AccountType.BANK_ACCOUNT, account_type_words="el banco"),
         now=NOW + timedelta(minutes=1),
     )
 

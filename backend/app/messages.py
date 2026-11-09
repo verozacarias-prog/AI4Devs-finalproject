@@ -65,6 +65,12 @@ REGISTERED_TRANSFER = (
     "¡Listo! Anoté una transferencia de {amount} de {from_account} a {to_account}."
 )
 TRANSFER_IS_NOT_AN_EXPENSE = "No cuenta como gasto."
+# The confirmation of a batch of several movements: each one with its number, and then what was
+# assumed of it (FEAT-007).
+REGISTERED_BATCH = "¡Listo! Anoté {count} movimientos:"
+BATCH_EXPENSE = "{position}. Un gasto de {amount} en {account}."
+BATCH_INCOME = "{position}. Un ingreso de {amount} en {account}."
+BATCH_TRANSFER = "{position}. Una transferencia de {amount} de {from_account} a {to_account}."
 CONFIRMATION_DATE = "Fecha: {date}"
 CONFIRMATION_CURRENCY = "Moneda: {currency}"
 CONFIRMATION_CATEGORY = "Categoría: {category}"
@@ -147,12 +153,48 @@ DRAFT_LIMITS = "Topes: {limits}."
 DRAFT_LIMIT = "{category} {amount}"
 DRAFT_WITHOUT_LIMITS = "Sin topes."
 NO_PERIOD = "No tenés un presupuesto para el {date}. Armalo en el dashboard y después avisame."
-# Another movement while a pending awaits its reply: one at a time in delivery 2 (CA-36).
-# It names the pending: its question alone does not say which movement it is about (CA-36).
-FINISH_THE_PENDING_FIRST = (
-    "No anoté tu último mensaje: primero terminemos con {movement}, y después mandámelo de nuevo."
-)
 PENDING_DISCARDED = "Listo, no lo anoto."
+# A batch of several pendings: the list that asks for what is missing, each one by its number,
+# with what was understood and what it lacks (FEAT-007, CA-8).
+BATCH_ITEM = "{position}. {movement}."
+BATCH_ITEM_COMPLETE = "{position}. {movement}, completo."
+BATCH_DISCARDED = "Listo, no anoto ninguno."
+# Why a pending of the batch was not registered: it expired, each at its own hours (CA-18).
+PENDING_EXPIRED = "pasaron más de {hours} horas."
+# A movement that does not enter the batch, in a line of its own (FEAT-007, CA-12): by its order
+# in the message, or by its number when a reply left it out.
+NOT_REGISTERED_BY_ORDER = "El {ordinal} movimiento no lo anoté: {reason}"
+NOT_REGISTERED_BY_NUMBER = "El {position} no lo anoté: {reason}"
+# A reply to the open batch that also brings a new movement: it is not registered (CA-22).
+NEW_MOVEMENT_IN_ANOTHER_MESSAGE = "El movimiento nuevo mandámelo en otro mensaje."
+NEW_MOVEMENTS_IN_ANOTHER_MESSAGE = "Los movimientos nuevos mandámelos en otro mensaje."
+# The only new movement of a message to an open batch, which cannot enter it (FEAT-007, CA-12).
+NOT_REGISTERED_ALONE = "Ese movimiento no lo anoté: {reason}"
+ORDINALS = (
+    "primer",
+    "segundo",
+    "tercer",
+    "cuarto",
+    "quinto",
+    "sexto",
+    "séptimo",
+    "octavo",
+    "noveno",
+    "décimo",
+)
+# More movements than fit in a batch of 10 (FEAT-007, CA-14).
+TOOK_THE_FIRST_OF_THE_MESSAGE = "Tomé solo los primeros {taken} movimientos."
+OTHERS_IN_ANOTHER_MESSAGE = "Los otros {left} mandámelos en otro mensaje."
+OTHER_IN_ANOTHER_MESSAGE = "El otro mandámelo en otro mensaje."
+TOOK_THE_FIRST_NEW = "Tomé solo el primero de los movimientos nuevos."
+TOOK_THE_FIRST_NEW_ONES = "Tomé solo los primeros {taken} de los movimientos nuevos."
+# Each number is used once per batch, also by a discarded or expired pending (CA-14).
+TOOK_NONE_OF_THE_NEW = (
+    "Esta lista ya usó sus 10 números, así que no tomé los nuevos: mandámelos cuando "
+    "terminemos con estos."
+)
+OTHER_WHEN_WE_FINISH = "El otro mandámelo cuando terminemos con estos."
+OTHERS_WHEN_WE_FINISH = "Los otros {left} mandámelos cuando terminemos con estos."
 # The model refused to interpret the message: it is not tried again (CA-40).
 MODEL_REFUSED = (
     "No pude entender ese mensaje. ¿Me lo escribís de otra forma? Por ejemplo: «gasté 3500 en "

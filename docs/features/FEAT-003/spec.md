@@ -101,7 +101,7 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 - **CA-45.** Un sí crea la categoría que la pregunta ofreció, o una con el nombre que la respuesta escribe, como "sí, pero llamala Barbería". Un nombre que el modelo devuelve sin que la pregunta lo haya ofrecido ni la respuesta lo escriba no se crea: el pendiente sigue esperando, y se vuelve a ofrecer la que se mostró ([ADR 0028](../../adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md), punto 2). Decidido por Vero el 17/10/2026, con la segunda revisión de `pr-reviewer` del corte 2. El control actúa sobre todo el sí, no solo sobre la categoría: si al pendiente le falta solo el período y el modelo devuelve igual un nombre que nadie escribió, ese sí tampoco confirma el borrador, y la pregunta se repite. Es conservador, no rompe ninguna invariante, y Vero decidió dejarlo así con la tercera revisión.
 - **CA-43.** El nombre de una categoría que propone el modelo se valida en código antes de mostrarlo o guardarlo: hasta 40 caracteres, solo letras, números, espacios, guiones, comas y paréntesis. Uno que no pasa se trata como si el modelo no hubiera propuesto ninguno ([ADR 0013](../../adr/0013-datos-minimos-al-proveedor-de-llm.md), punto 10). Sumado el 17/10/2026, con la revisión de `pr-reviewer` del corte 2.
 - **CA-25.** Un único período posible que está en borrador deja el movimiento pendiente, y la pregunta ofrece confirmar el borrador con su resumen: con un sí, el período queda confirmado y el movimiento se registra en él. Sin ningún período para esa fecha, la pregunta manda al dashboard a armarlo ([reglas de dominio § 3](../../reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio)). Ampliado el 17/10/2026, por decisión de Vero.
-- **CA-36.** Con un pendiente esperando respuesta, un mensaje que trae otro movimiento no se anota: el asistente dice que no lo anotó, pide terminar primero el anterior y volver a mandarlo después, y repite su pregunta. Al pedir que termine el anterior, lo nombra, porque la pregunta sola no dice de qué movimiento es: lo decidió Vero el 5/11/2026, cuando la pregunta dejó de repetir lo interpretado (CA-22). Que lo diga explícitamente lo decidió Vero el 3/11/2026, en la prueba a mano de la issue #125. Sumar el movimiento nuevo al lote es de la entrega final. Decidido por Vero el 17/10/2026.
+- **CA-36.** Con un pendiente esperando respuesta, un mensaje que trae otro movimiento no se anota: el asistente dice que no lo anotó, pide terminar primero el anterior y volver a mandarlo después, y repite su pregunta. Al pedir que termine el anterior, lo nombra, porque la pregunta sola no dice de qué movimiento es: lo decidió Vero el 5/11/2026, cuando la pregunta dejó de repetir lo interpretado (CA-22). Que lo diga explícitamente lo decidió Vero el 3/11/2026, en la prueba a mano de la issue #125. Sumar el movimiento nuevo al lote es de la entrega final. Decidido por Vero el 17/10/2026. Reemplazado por CA-13 de [FEAT-007](../FEAT-007/spec.md): desde su corte 2, el movimiento nuevo se suma al lote.
 - **CA-37.** El usuario puede descartar el pendiente que espera respuesta, como con "dejalo, no lo anotes": queda rechazado, su lote cerrado, y no se registra nada.
 - **CA-38.** Un pendiente vencido, a las 24 horas de creado, no se continúa: queda `expired`, y el mensaje se procesa como si no hubiera nada abierto. Las 24 horas se cuentan hasta el momento en que el usuario escribió la respuesta, no hasta el que se procesa: una respuesta escrita a tiempo y demorada por los reintentos sigue valiendo, igual que la fecha de un movimiento es el día en que se escribió (§ 1). Anotado el 17/10/2026 con el `/spec-drift` del corte 2.
 - **CA-41.** Cada respuesta que cambia un dato que ya tenía un valor —el monto, el tipo, la fecha, la categoría o la cuenta, con su moneda— suma uno al contador de correcciones del pendiente; completar un dato que faltaba no suma ([reglas de dominio § 5](../../reglas-de-dominio.md#5-pending_transaction-creación-continuación-de-la-conversación-promoción-y-expiración)). Sumado el 17/10/2026, con el `/spec-drift` del corte 2. Una fecha que se había asumido por defecto y la respuesta cambia también suma, y un monto que no se podía guardar y la respuesta completa no suma: la regla es la de § 5, que estima cuántos registros no salieron bien del primer mensaje sin buscar quién se equivocó. Decidido por Vero el 6/11/2026, con el `/spec-drift` del corte 3 de [FEAT-006](../FEAT-006/spec.md).
@@ -535,7 +535,7 @@ defecto.
 | C2-09 | Una respuesta que completa a medias pregunta solo lo que sigue faltando | Unitario | CA-22 y CA-23 |
 | C2-10 | La moneda de la respuesta elige entre las cuentas ofrecidas | Unitario | CA-20 y CA-23 |
 | C2-11 | Elegir una cuenta en otra moneda que el período no registra | Unitario | CA-23 |
-| C2-12 | Con un pendiente abierto, otro movimiento no se anota | Unitario | CA-36 |
+| C2-12 | Con un pendiente abierto, otro movimiento no se anota. Reemplazado por [FEAT-007](../FEAT-007/spec.md) | Unitario | CA-36 |
 | C2-13 | El usuario descarta el pendiente | Unitario | CA-37 |
 | C2-14 | Un pendiente vencido no se continúa | Integración | CA-38 |
 | C2-15 | Si ninguna categoría encaja, se propone una y no se crea | Unitario | CA-24 |
@@ -558,7 +558,7 @@ defecto.
 | C2-32 | Una respuesta cortada se trata como un modelo caído | Unitario | CA-40 |
 | C2-33 | Dos workers que continúan el mismo pendiente dejan un solo movimiento | Integración | CA-27 |
 | C2-34 | Con el lock no mayor que el tiempo de la llamada, ningún proceso arranca | Unitario | CA-28 |
-| C2-35 | Un mensaje con varios movimientos recibe el texto fijo y no queda pendiente | Unitario | CA-16 |
+| C2-35 | Un mensaje con varios movimientos recibe el texto fijo y no queda pendiente. Reemplazado por [FEAT-007](../FEAT-007/spec.md) | Unitario | CA-16 |
 | C2-36 | Una respuesta que cambia un dato interpretado suma una corrección | Integración | CA-41 |
 | C2-37 | Una categoría propuesta con el nombre de una que ya existe ofrece usar esa | Unitario | CA-24 |
 | C2-38 | Con un sí, se usa la categoría que ya existe y no se crea ninguna | Unitario | CA-24 |
@@ -724,7 +724,10 @@ defecto.
 - **entonces** no se registra nada ni se crea otro pendiente; el pendiente de C2-01 sigue
   `open`; y la respuesta es "No anoté tu último mensaje: primero terminemos con el gasto de
   $3.500 en Supermercado, y después mandámelo de nuevo." seguido de la pregunta de C2-02, con `question_message_id` del lote apuntando a esta respuesta.
-- **Test:** `tests/unit/test_pending_registration.py::test_with_an_open_pending_another_movement_is_not_registered`
+- **Reemplazado por [FEAT-007](../FEAT-007/spec.md):** desde su corte 2, el movimiento nuevo se
+  suma al lote (C2-10 y C2-11 de FEAT-007). El test se borró el 7/11/2026, con la aprobación de
+  los casos de ese corte.
+- **Test:** —
 
 #### C2-13 · El usuario descarta el pendiente
 
@@ -970,7 +973,9 @@ defecto.
 - **entonces** no se registra nada ni queda ningún pendiente, y la respuesta es el texto fijo de
   C1-09. Varios movimientos en un mensaje son de la entrega final; por decisión de Vero del
   17/10/2026, mientras tanto reciben ese texto.
-- **Test:** `tests/unit/test_pending_registration.py::test_a_message_with_several_movements_gets_the_fixed_text_and_stays_not_pending`
+- **Reemplazado por [FEAT-007](../FEAT-007/spec.md):** desde su corte 1, un mensaje con varios
+  movimientos los registra en un lote. El test se borró el 6/11/2026, por decisión de Vero.
+- **Test:** —
 
 #### C2-36 · Una respuesta que cambia un dato interpretado suma una corrección
 
@@ -1593,7 +1598,9 @@ monto con «¿Cuánto fue?» (issue #125):
 
 > Ese monto es más grande de lo que puedo registrar.
 
-Con un pendiente esperando respuesta, ante otro movimiento, antes de repetir la pregunta. Nombra
+Hasta el corte 2 de [FEAT-007](../FEAT-007/spec.md), que suma el movimiento nuevo al lote y
+reenvía la lista numerada, con un pendiente esperando respuesta, ante otro movimiento, antes de
+repetir la pregunta. Nombra
 el pendiente con lo ya interpretado: "el gasto", "el ingreso" o "el movimiento" si falta el
 tipo, el monto si está, la categoría con "en" y la cuenta con "con":
 
@@ -1683,10 +1690,12 @@ Los dos textos los aprobó Vero el 18/10/2026.
   el presupuesto individual y el de un grupo: una segunda versión
   ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final)). Qué responde el asistente
   ante cada uno se decide cuando se construya, salvo los varios movimientos en un mensaje, que
-  reciben el texto fijo de C1-09, por decisión de Vero del 17/10/2026, y el gasto con más de un
-  período posible, que recibe el texto de C2-52, por decisión de Vero del 19/10/2026.
-- Un lote de más de un pendiente: con uno esperando respuesta, otro movimiento no se suma, y se
-  pide terminar el anterior (CA-36).
+  recibían el texto fijo de C1-09, por decisión de Vero del 17/10/2026, hasta que llegaron con
+  [FEAT-007](../FEAT-007/spec.md), y el gasto con más de un período posible, que recibe el texto
+  de C2-52, por decisión de Vero del 19/10/2026.
+- Un lote de más de un pendiente: con uno esperando respuesta, otro movimiento no se sumaba, y se
+  pedía terminar el anterior (CA-36), hasta que el corte 2 de [FEAT-007](../FEAT-007/spec.md) lo
+  sumó al lote.
 - El recordatorio de un pendiente antes de vencer: es un proceso programado. Un pendiente
   vencido se marca al llegar el mensaje siguiente (CA-38). Si el usuario no vuelve a escribir,
   el pendiente queda `open` y su lote esperando respuesta después de las 24 horas, hasta que
@@ -1720,8 +1729,9 @@ Los dos textos los aprobó Vero el 18/10/2026.
    individual y uno de grupo para la misma fecha, y una respuesta que cita una confirmación
    ([hoja de ruta](../../hoja-de-ruta.md#decisiones-abiertas)). Pasó a la entrega final, por
    decisión de Vero del 17/10/2026; la elección entre los dos períodos pasó después a una
-   segunda versión. Varios movimientos en un mensaje reciben el texto fijo de
-   C1-09, y un período individual y uno de grupo para la misma fecha, el texto de C2-52.
+   segunda versión. Varios movimientos en un mensaje recibían el texto fijo de
+   C1-09, hasta [FEAT-007](../FEAT-007/spec.md), y un período individual y uno de grupo para la
+   misma fecha, el texto de C2-52.
 3. **Qué responde ante un gasto en una cuenta o en una moneda distinta de la del período.**
    Resuelta por "Fuera de alcance": recibe el texto fijo de C1-09, también cuando la cuenta se
    elige al contestar un pendiente (C2-11).

@@ -282,7 +282,7 @@ INSERT_PENDING_TRANSACTION = """
     )
 """
 
-# The batch of the user that awaits a reply, and its pending: in delivery 2, the only one.
+# The batch of the user that awaits a reply, and its first open pending.
 SELECT_AWAITING_PENDING = """
     SELECT b.id AS batch_id, b.user_id AS batch_user_id, b.source AS batch_source,
            b.awaiting_reply, b.question_message_id, b.confirmation_message_id,
@@ -292,9 +292,19 @@ SELECT_AWAITING_PENDING = """
            p.resolved_by, p.expires_at, p.created_at, p.corrected_fields_count
       FROM pending_batch b
       JOIN pending_transaction p ON p.batch_id = b.id
-     WHERE b.user_id = :user_id AND b.awaiting_reply
+     WHERE b.user_id = :user_id AND b.awaiting_reply AND p.status = :open
      ORDER BY p.position
      LIMIT 1
+"""
+
+SELECT_PENDINGS_IN_BATCH = """
+    SELECT id, user_id, intent, parsed_data, missing_fields, source, batch_id, position,
+           resulting_transaction_id, resulting_transfer_id, status, resolved_by, expires_at,
+           created_at, corrected_fields_count
+      FROM pending_transaction
+     WHERE batch_id = :batch_id
+       AND user_id = :user_id
+     ORDER BY position
 """
 
 UPDATE_PENDING_TRANSACTION = """

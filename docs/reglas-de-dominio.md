@@ -470,7 +470,9 @@ Cada pendiente pertenece a un lote (`PENDING_BATCH`), y un gasto suelto es un lo
   mensaje van al mismo lote.
 - **Varios mensajes seguidos convergen en un lote.** Si llega un gasto manual nuevo mientras hay
   un lote manual esperando respuesta, se suma a ese lote y el asistente reenvía la lista
-  actualizada, en vez de hacer una pregunta aparte por cada mensaje.
+  actualizada, en vez de hacer una pregunta aparte por cada mensaje. La excepción es un mensaje
+  que además contesta el lote: ahí el gasto nuevo no se anota y se pide en otro mensaje, para
+  que un pendiente repetido nunca se anote dos veces (FEAT-007, CA-22).
 - **La respuesta puede ser general o por número.** Por ejemplo, "todos al familiar", o "el 1 con
   Mercado Pago, el resto al mío". Una respuesta general cuenta como confirmación explícita del
   presupuesto de cada pendiente (§ 1) porque cada uno fue listado con su monto antes de la

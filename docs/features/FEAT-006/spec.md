@@ -275,10 +275,10 @@ un gasto; una que recibe el texto fijo de CA-14 no la gasta.
 | C2-09 | Elegir en la respuesta una cuenta en otra moneda cierra el pendiente con el texto fijo | Unitario | CA-14 |
 | C2-10 | Con fecha anterior al alta de las dos cuentas, la respuesta nombra la de origen | Unitario | CA-15 |
 | C2-11 | Con fecha anterior al alta solo del destino, la respuesta nombra el destino | Unitario | CA-15 |
-| C2-12 | Con una transferencia pendiente, otro movimiento no se anota y la respuesta la nombra | Unitario | CA-12 |
+| C2-12 | Con una transferencia pendiente, otro movimiento no se anota y la respuesta la nombra. Reemplazado por [FEAT-007](../FEAT-007/spec.md) | Unitario | CA-12 |
 | C2-13 | Un monto que no entra se vuelve a preguntar, diciendo por qué | Unitario | CA-12 |
 | C2-14 | Una moneda dicha que no es la de las cuentas recibe el texto fijo | Unitario | CA-14 |
-| C2-15 | Sin cuentas, el monto de la transferencia pendiente se nombra en la moneda dicha | Unitario | CA-12 |
+| C2-15 | Sin cuentas, el monto de la transferencia pendiente se nombra en la moneda dicha. Reemplazado por [FEAT-007](../FEAT-007/spec.md) | Unitario | CA-12 |
 
 #### C2-01 · Una transferencia sin destino queda pendiente y pregunta a qué cuenta fue
 
@@ -431,7 +431,9 @@ un gasto; una que recibe el texto fijo de CA-14 no la gasta.
   > No anoté tu último mensaje: primero terminemos con la transferencia de $20.000 de Galicia pesos, y después mandámelo de nuevo.
   > ¿A qué cuenta fue? Mercado Pago, Efectivo o Galicia USD.
 
-- **Test:** `tests/unit/test_pending_transfer.py::test_with_a_pending_transfer_another_movement_is_not_registered_and_the_reply_names_it`
+- **Reemplazado por [FEAT-007](../FEAT-007/spec.md):** desde su corte 2, el movimiento nuevo se
+  suma al lote. El test se borró el 7/11/2026, con la aprobación de los casos de ese corte.
+- **Test:** —
 
 #### C2-13 · Un monto que no entra se vuelve a preguntar, diciendo por qué
 
@@ -471,7 +473,10 @@ un gasto; una que recibe el texto fijo de CA-14 no la gasta.
 - **entonces** no se registra nada, el pendiente sigue `open`, y la primera línea de la
   respuesta es "No anoté tu último mensaje: primero terminemos con la transferencia de US$100,
   y después mandámelo de nuevo.": el monto va en la moneda que Lucía dijo, no en la primaria.
-- **Test:** `tests/unit/test_pending_transfer.py::test_without_accounts_the_amount_of_the_pending_transfer_is_named_in_the_currency_said`
+- **Reemplazado por [FEAT-007](../FEAT-007/spec.md):** la lista numerada nombra la transferencia
+  en la moneda dicha (C2-11 de FEAT-007). El test se borró el 7/11/2026, con la aprobación de los
+  casos de ese corte.
+- **Test:** —
 
 ### Corte 3 — observabilidad
 
@@ -574,7 +579,7 @@ un gasto; una que recibe el texto fijo de CA-14 no la gasta.
 | Transferencia entre monedas distintas (corte 2) | "Todavía no sé anotar una transferencia entre cuentas de distinta moneda. Por ahora, solo entre cuentas de la misma moneda." |
 | Transferencia en otra moneda que la de sus cuentas (corte 2) | "Todavía no sé anotar una transferencia en otra moneda que la de sus cuentas. Por ahora, solo en la moneda de las dos cuentas." |
 | Fecha anterior al alta de una de sus cuentas (corte 2) | El texto de CA-10 de [FEAT-003](../FEAT-003/spec.md), con "transferiste", y la cuenta de origen si la fecha es anterior al alta de las dos |
-| Otro movimiento con una transferencia pendiente (corte 2) | El texto de CA-36 de [FEAT-003](../FEAT-003/spec.md), que la nombra como "la transferencia de {monto} de {origen} a {destino}", con lo que se sabe |
+| Otro movimiento con una transferencia pendiente (corte 2) | Hasta el corte 2 de [FEAT-007](../FEAT-007/spec.md), el texto de CA-36 de [FEAT-003](../FEAT-003/spec.md); desde entonces, la lista numerada del lote, que la nombra como "la transferencia de {monto} de {origen} a {destino}", con lo que se sabe |
 
 ## Reglas de dominio bajo prueba
 

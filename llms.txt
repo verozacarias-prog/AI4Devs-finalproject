@@ -42,6 +42,7 @@ nombres de archivo de código están en inglés.
 - [Especificación — FEAT-005 · Armar y confirmar el presupuesto de un período](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/feat-005/spec/)
 - [Contrato de UI — FEAT-005 · Armar y confirmar el presupuesto](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/feat-005/ui_contract/)
 - [Especificación — FEAT-006 · Registro de una transferencia entre cuentas propias](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/feat-006/spec/)
+- [Especificación — FEAT-007 · Varios movimientos en un mensaje](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/feat-007/spec/)
 - [FEAT-XXX · <título>](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/template/pr/)
 - [Especificación — FEAT-XXX · <título>](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/template/spec/)
 - [Contrato de UI — FEAT-XXX · <pantalla>](https://verozacarias-prog.github.io/AI4Devs-finalproject/features/template/ui_contract/)

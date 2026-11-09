@@ -22,7 +22,6 @@ from app.adapters.inbound.message_worker.worker import create_worker
 from app.domain.entities.classification import (
     Classification,
     MessageClass,
-    PendingReply,
     RegistrationType,
 )
 from app.settings import Settings, load_settings
@@ -30,6 +29,7 @@ from tests.support.chat_data import inbound, status_of, user_id
 from tests.support.doubles import FixedClock
 from tests.support.fake_llm import FakeLLM
 from tests.support.registration_data import NOW, OCTOBER_17, seed_on_october_1
+from tests.support.replies import reply_to_pending
 
 pytestmark = pytest.mark.integration
 
@@ -163,11 +163,7 @@ def test_the_reply_completes_the_pending_and_registers_the_transfer(
         settings,
         engine,
         "a Mercado Pago",
-        Classification(
-            MessageClass.REGISTRATION,
-            to_account="Mercado Pago",
-            pending_reply=PendingReply.CONTINUES,
-        ),
+        reply_to_pending(to_account="Mercado Pago"),
         now=NOW + timedelta(minutes=1),
     )
 
@@ -234,12 +230,7 @@ def test_a_reply_that_changes_the_amount_of_a_pending_transfer_adds_a_correction
         settings,
         engine,
         "no, fueron 30 lucas, a Mercado Pago",
-        Classification(
-            MessageClass.REGISTRATION,
-            amount=Decimal("30000"),
-            to_account="Mercado Pago",
-            pending_reply=PendingReply.CONTINUES,
-        ),
+        reply_to_pending(amount=Decimal("30000"), to_account="Mercado Pago"),
         now=NOW + timedelta(minutes=1),
     )
 

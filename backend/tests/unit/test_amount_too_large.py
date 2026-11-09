@@ -15,7 +15,6 @@ import pytest
 from app.domain.entities.classification import (
     Classification,
     MessageClass,
-    PendingReply,
     RegistrationType,
 )
 from app.domain.entities.llm_usage import UsageCounter
@@ -24,6 +23,7 @@ from app.domain.use_cases.messages.answer_message import AnswerMessage
 from tests.support.doubles import FixedClock, InMemoryUnitOfWork
 from tests.support.fake_llm import FakeLLM
 from tests.support.registration_data import NOW, OCTOBER_17, Lucia
+from tests.support.replies import reply_to_pending
 
 TOO_LARGE = "Ese monto es más grande de lo que puedo registrar."
 ASK_AMOUNT = "¿Cuánto fue?"
@@ -100,11 +100,7 @@ def test_a_reply_with_an_amount_that_does_not_fit_asks_again() -> None:
         unit_of_work,
         lucia,
         "1000000000000000000",
-        Classification(
-            MessageClass.REGISTRATION,
-            amount=Decimal("1000000000000000000"),
-            pending_reply=PendingReply.CONTINUES,
-        ),
+        reply_to_pending(amount=Decimal("1000000000000000000")),
         now=NOW + timedelta(minutes=1),
     )
 

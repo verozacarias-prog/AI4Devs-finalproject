@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+from collections.abc import Mapping
 from datetime import date
 from decimal import Decimal
 from typing import cast
@@ -29,7 +30,8 @@ from app.domain.entities.classification import (
     Classification,
     ClassificationRequest,
     MessageClass,
-    OpenPending,
+    NumberedPending,
+    OpenBatch,
     PendingReply,
     RegistrationType,
 )
@@ -56,7 +58,7 @@ REQUEST = ClassificationRequest(
 class FakeTransport:
     """Answers every request with the same structured output, and keeps what it received."""
 
-    def __init__(self, output: dict[str, str | None]) -> None:
+    def __init__(self, output: Mapping[str, object]) -> None:
         self._output = output
         self.received: list[dict[str, object]] = []
 
@@ -97,6 +99,24 @@ class FakeTransport:
                 "tools": [],
             },
         )
+
+
+# The fields of a movement in a reply by number, all of them present as the schema requires.
+_MOVEMENT_FIELDS = (
+    "registration_type",
+    "amount",
+    "account",
+    "account_type",
+    "account_type_words",
+    "to_account",
+    "to_account_type",
+    "to_account_type_words",
+    "category",
+    "currency",
+    "currency_words",
+    "transaction_date",
+    "proposed_category",
+)
 
 
 def _adapter(transport: FakeTransport) -> OpenAILLM:
@@ -142,12 +162,17 @@ def test_the_adapter_asks_the_configured_model_for_a_structured_output() -> None
 def test_every_key_of_the_data_is_named_in_the_system_prompt() -> None:
     # Task T-1. The prompt explains the data by its keys: a key it does not name means nothing.
     transport = FakeTransport(_expense("3500"))
-    pending = OpenPending(
-        interpreted={"amount": "3500", "category": "Supermercado"},
-        missing=("account_id",),
+    batch = OpenBatch(
+        pendings=(
+            NumberedPending(
+                number=1,
+                interpreted={"amount": "3500", "category": "Supermercado"},
+                missing=("account_id",),
+            ),
+        ),
         question="¿Con qué cuenta lo pagaste?",
     )
-    request = dataclasses.replace(REQUEST, open_pending=pending)
+    request = dataclasses.replace(REQUEST, open_batch=batch)
 
     _adapter(transport).classify(request)
 
@@ -167,6 +192,10 @@ def _keys(data: dict[str, object]) -> set[str]:
     for key, value in data.items():
         if isinstance(value, dict) and key != "lo_interpretado":
             keys |= _keys(cast(dict[str, object], value))
+        if isinstance(value, list):
+            for item in value:
+                if isinstance(item, dict):
+                    keys |= _keys(cast(dict[str, object], item))
     return keys
 
 
@@ -355,9 +384,18 @@ def test_no_identifier_reaches_the_provider() -> None:
             **_expense("3500"),
             "registration_type": None,
             "amount": None,
-            "account": "MP",
+            "account": None,
             "category": None,
             "pending_reply": PendingReply.CONTINUES.value,
+            "numbered_replies": [
+                {
+                    "number": 1,
+                    "discards": False,
+                    "accepts_proposal": False,
+                    **dict.fromkeys(_MOVEMENT_FIELDS),
+                    "account": "MP",
+                }
+            ],
         }
     )
     reply = lucia.message("con MP")

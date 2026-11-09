@@ -1,6 +1,6 @@
 """A transfer that lacks something, and how a reply continues it, with the model replaced.
 
-Cases C2-02, C2-03, C2-05 to C2-07, C2-09, C2-10 to C2-15, C3-03, C3-04 and C3-06 of
+Cases C2-02, C2-03, C2-05 to C2-07, C2-09, C2-10, C2-11, C2-13, C2-14, C3-03, C3-04 and C3-06 of
 docs/features/FEAT-006/spec.md. Each case that starts from an open pending gets it the way a
 user does: a first message that leaves it pending, and then the reply. The database is in
 memory; the integration tests check the same use case against PostgreSQL.
@@ -27,6 +27,7 @@ from app.domain.use_cases.messages.answer_message import AnswerMessage
 from tests.support.doubles import FixedClock, InMemoryUnitOfWork
 from tests.support.fake_llm import FakeLLM
 from tests.support.registration_data import NOW, Lucia
+from tests.support.replies import reply_to_pending
 
 DIFFERENT_CURRENCIES = (
     "Todavía no sé anotar una transferencia entre cuentas de distinta moneda. Por ahora, solo "
@@ -64,12 +65,12 @@ def _reply(
     to_account: str | None = None,
 ) -> Classification:
     """What the model answers to a message that comes while a pending awaits a reply."""
-    return Classification(
-        MessageClass.REGISTRATION,
+    if pending_reply is not PendingReply.CONTINUES:
+        return Classification(MessageClass.REGISTRATION, pending_reply=pending_reply)
+    return reply_to_pending(
         amount=None if amount is None else Decimal(amount),
         account=account,
         to_account=to_account,
-        pending_reply=pending_reply,
     )
 
 
@@ -210,13 +211,15 @@ def test_the_model_gets_the_pending_transfer_without_any_identifier() -> None:
     )
 
     [request] = llm.requests
-    assert request.open_pending is not None
-    interpreted = request.open_pending.interpreted
+    assert request.open_batch is not None
+    [pending] = request.open_batch.pendings
+    assert pending.number == 1
+    interpreted = pending.interpreted
     assert interpreted["type"] == "transfer"
     assert interpreted["amount"] == "20000"
     assert interpreted["account"] == "Galicia pesos"
-    assert request.open_pending.missing == ("to_account_id",)
-    assert request.open_pending.question == question == WHERE_IT_WENT
+    assert pending.missing == ("to_account_id",)
+    assert request.open_batch.question == question == WHERE_IT_WENT
     for text in _strings_in(request):
         assert not UUID_PATTERN.search(text), f"{text!r} holds an identifier"
         assert "+000000000001" not in text
@@ -320,43 +323,6 @@ def test_a_date_before_only_the_destination_was_opened_names_the_destination() -
     )
 
 
-def test_with_a_pending_transfer_another_movement_is_not_registered_and_the_reply_names_it() -> (
-    None
-):
-    # Case C2-12.
-    unit_of_work = InMemoryUnitOfWork()
-    lucia = Lucia(unit_of_work)
-    _from_galicia_pesos(unit_of_work, lucia)
-    [before] = unit_of_work.pendings.added
-
-    _answer(
-        unit_of_work,
-        lucia,
-        "gasté 3500 en el súper con Mercado Pago",
-        Classification(
-            MessageClass.REGISTRATION,
-            registration_type=RegistrationType.EXPENSE,
-            amount=Decimal("3500"),
-            account="Mercado Pago",
-            category="Supermercado",
-            pending_reply=PendingReply.OTHER_MOVEMENT,
-        ),
-        now=NOW + timedelta(minutes=1),
-    )
-
-    assert unit_of_work.transfers.added == []
-    assert unit_of_work.transactions.added == []
-    [pending] = unit_of_work.pendings.added
-    assert pending.status is PendingStatus.OPEN
-    assert pending.parsed_data == before.parsed_data
-    assert pending.missing_fields == before.missing_fields
-    assert _last_reply(unit_of_work).splitlines() == [
-        "No anoté tu último mensaje: primero terminemos con la transferencia de $20.000 de "
-        "Galicia pesos, y después mandámelo de nuevo.",
-        WHERE_IT_WENT,
-    ]
-
-
 def test_an_amount_that_does_not_fit_is_asked_again_saying_why() -> None:
     # Case C2-13.
     unit_of_work = InMemoryUnitOfWork()
@@ -406,50 +372,6 @@ def test_a_currency_said_that_is_not_the_one_of_the_accounts_gets_the_fixed_text
         "solo en la moneda de las dos cuentas."
     )
     assert reply.response_kind is ResponseKind.FIXED_TEXT
-
-
-def test_without_accounts_the_amount_of_the_pending_transfer_is_named_in_the_currency_said() -> (
-    None
-):
-    # Case C2-15.
-    unit_of_work = InMemoryUnitOfWork()
-    lucia = Lucia(unit_of_work)
-    _answer(
-        unit_of_work,
-        lucia,
-        "pasé 100 dólares",
-        Classification(
-            MessageClass.REGISTRATION,
-            registration_type=RegistrationType.TRANSFER,
-            amount=Decimal("100"),
-            currency="USD",
-            currency_words="dólares",
-        ),
-    )
-
-    _answer(
-        unit_of_work,
-        lucia,
-        "gasté 3500 en el súper con Mercado Pago",
-        Classification(
-            MessageClass.REGISTRATION,
-            registration_type=RegistrationType.EXPENSE,
-            amount=Decimal("3500"),
-            account="Mercado Pago",
-            category="Supermercado",
-            pending_reply=PendingReply.OTHER_MOVEMENT,
-        ),
-        now=NOW + timedelta(minutes=1),
-    )
-
-    assert unit_of_work.transfers.added == []
-    assert unit_of_work.transactions.added == []
-    [pending] = unit_of_work.pendings.added
-    assert pending.status is PendingStatus.OPEN
-    assert _last_reply(unit_of_work).splitlines()[0] == (
-        "No anoté tu último mensaje: primero terminemos con la transferencia de US$100, y "
-        "después mandámelo de nuevo."
-    )
 
 
 def _accounts_of(unit_of_work: InMemoryUnitOfWork, transfer: Transfer) -> tuple[str, str]:

@@ -157,8 +157,8 @@ desplegar ([FEAT-003](features/FEAT-003/spec.md), CA-46):
 
 - `LLM_DAILY_CLASSIFICATION_LIMIT`: el tope diario total, cuántos mensajes se clasifican por
   día, 100 si no se define.
-- `LLM_DAILY_REGISTRATION_LIMIT`: la cuota de registro, cuántos movimientos se interpretan por
-  día, 50 si no se define.
+- `LLM_DAILY_REGISTRATION_LIMIT`: la cuota de registro, cuántos mensajes de registro se
+  interpretan por día, aunque traigan varios movimientos, 50 si no se define.
 
 `WAITING_MESSAGES_LIMIT` es cuántos mensajes puede tener un usuario esperando respuesta, 200 si
 no se define. La lee la API, que rechaza con `429` el mensaje del chat web que lo supera, y se
@@ -452,7 +452,9 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   archivo. Las páginas del contrato que sirve el framework, como `/docs` y `/openapi.json`,
   llevan su ruta como cualquier otra. El worker deja una línea `message.answered` por cada
   mensaje que respondió, con la duración: el identificador del mensaje y el del usuario los
-  lleva como toda línea escrita mientras lo procesa. Un worker que otro desplazó no la deja,
+  lleva como toda línea escrita mientras lo procesa. La de un mensaje con varios movimientos
+  dice además cuántos trajo, `movements`, y cuántos entraron al lote, `batched`: solo
+  cantidades, nunca qué eran ([FEAT-007](features/FEAT-007/spec.md), CA-15). Un worker que otro desplazó no la deja,
   porque no respondió. La API, el worker, los procesos programados y los comandos de
   operación registran igual, cada uno con su nombre de proceso.
 - **Correlación:** el identificador es el `id` del mensaje en la tabla de entrada. El worker lo

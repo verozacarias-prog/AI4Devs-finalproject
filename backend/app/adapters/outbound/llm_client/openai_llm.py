@@ -40,7 +40,9 @@ from app.domain.entities.classification import (
     ClassificationRequest,
     MessageClass,
     ModelUsage,
-    OpenPending,
+    MovementReading,
+    NumberedReply,
+    OpenBatch,
     PendingReply,
     RegistrationType,
 )
@@ -57,6 +59,52 @@ _ACCOUNT_TYPE = {
 }
 # How the Responses API says the answer did not finish.
 _INCOMPLETE = "incomplete"
+# The fields of one movement: those of the first one, at the top, and of each one after it.
+_MOVEMENT_PROPERTIES: dict[str, object] = {
+    "registration_type": {
+        "type": ["string", "null"],
+        "enum": [*(value.value for value in RegistrationType), None],
+    },
+    # Text, so that an amount never goes through float.
+    "amount": {"type": ["string", "null"], "pattern": r"^\d+(\.\d{1,2})?$"},
+    "account": _NULLABLE_TEXT,
+    "account_type": _ACCOUNT_TYPE,
+    "account_type_words": _NULLABLE_TEXT,
+    "to_account": _NULLABLE_TEXT,
+    "to_account_type": _ACCOUNT_TYPE,
+    "to_account_type_words": _NULLABLE_TEXT,
+    "category": _NULLABLE_TEXT,
+    "currency": {"type": ["string", "null"], "enum": [*MESSAGE_CURRENCIES, None]},
+    "currency_words": _NULLABLE_TEXT,
+    "transaction_date": {"type": ["string", "null"], "format": "date"},
+    "proposed_category": _NULLABLE_TEXT,
+}
+# Each movement after the first, in the order the message writes them (FEAT-007).
+_MORE_MOVEMENTS = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": list(_MOVEMENT_PROPERTIES),
+        "properties": _MOVEMENT_PROPERTIES,
+    },
+}
+# What a reply says of each pending of the open batch, by its number (FEAT-007, CA-9).
+_NUMBERED_REPLY_PROPERTIES: dict[str, object] = {
+    "number": {"type": "integer"},
+    "discards": _BOOLEAN,
+    "accepts_proposal": _BOOLEAN,
+    **_MOVEMENT_PROPERTIES,
+}
+_NUMBERED_REPLIES = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "additionalProperties": False,
+        "required": list(_NUMBERED_REPLY_PROPERTIES),
+        "properties": _NUMBERED_REPLY_PROPERTIES,
+    },
+}
 # Strict structured output: every field present, nothing else (ADR 0025).
 _CLASSIFICATION_SCHEMA: dict[str, object] = {
     "type": "object",
@@ -76,37 +124,81 @@ _CLASSIFICATION_SCHEMA: dict[str, object] = {
         "currency_words",
         "transaction_date",
         "proposed_category",
-        "several_movements",
+        "more_movements",
         "pending_reply",
-        "accepts_proposal",
+        "numbered_replies",
     ],
     "properties": {
         "message_class": {"type": "string", "enum": [value.value for value in MessageClass]},
-        "registration_type": {
-            "type": ["string", "null"],
-            "enum": [*(value.value for value in RegistrationType), None],
-        },
-        # Text, so that an amount never goes through float.
-        "amount": {"type": ["string", "null"], "pattern": r"^\d+(\.\d{1,2})?$"},
-        "account": _NULLABLE_TEXT,
-        "account_type": _ACCOUNT_TYPE,
-        "account_type_words": _NULLABLE_TEXT,
-        "to_account": _NULLABLE_TEXT,
-        "to_account_type": _ACCOUNT_TYPE,
-        "to_account_type_words": _NULLABLE_TEXT,
-        "category": _NULLABLE_TEXT,
-        "currency": {"type": ["string", "null"], "enum": [*MESSAGE_CURRENCIES, None]},
-        "currency_words": _NULLABLE_TEXT,
-        "transaction_date": {"type": ["string", "null"], "format": "date"},
-        "proposed_category": _NULLABLE_TEXT,
-        "several_movements": _BOOLEAN,
+        **_MOVEMENT_PROPERTIES,
+        "more_movements": _MORE_MOVEMENTS,
         "pending_reply": {
             "type": ["string", "null"],
             "enum": [*(value.value for value in PendingReply), None],
         },
-        "accepts_proposal": _BOOLEAN,
+        "numbered_replies": _NUMBERED_REPLIES,
     },
 }
+
+
+class _MovementOutput(BaseModel):
+    """One movement after the first, as the model must answer it."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    registration_type: RegistrationType | None
+    amount: Decimal | None
+    account: str | None
+    account_type: AccountType | None
+    account_type_words: str | None
+    to_account: str | None
+    to_account_type: AccountType | None
+    to_account_type_words: str | None
+    category: str | None
+    currency: str | None
+    currency_words: str | None
+    transaction_date: date | None
+    proposed_category: str | None
+
+    @field_validator("currency")
+    @classmethod
+    def _known_currency(cls, value: str | None) -> str | None:
+        if value is not None and value not in MESSAGE_CURRENCIES:
+            raise ValueError(value)
+        return value
+
+    def reading(self) -> MovementReading:
+        return MovementReading(
+            registration_type=self.registration_type,
+            amount=self.amount,
+            account=self.account,
+            account_type=self.account_type,
+            account_type_words=self.account_type_words,
+            to_account=self.to_account,
+            to_account_type=self.to_account_type,
+            to_account_type_words=self.to_account_type_words,
+            category=self.category,
+            currency=self.currency,
+            currency_words=self.currency_words,
+            transaction_date=self.transaction_date,
+            proposed_category=self.proposed_category,
+        )
+
+
+class _NumberedReplyOutput(_MovementOutput):
+    """What a reply says of one pending of the open batch, as the model must answer it."""
+
+    number: int
+    discards: bool
+    accepts_proposal: bool = False
+
+    def numbered_reply(self) -> NumberedReply:
+        return NumberedReply(
+            number=self.number,
+            reading=self.reading(),
+            discards=self.discards,
+            accepts_proposal=self.accepts_proposal,
+        )
 
 
 class _ClassificationOutput(BaseModel):
@@ -136,9 +228,9 @@ class _ClassificationOutput(BaseModel):
     currency_words: str | None = None
     transaction_date: date | None
     proposed_category: str | None = None
-    several_movements: bool = False
+    more_movements: tuple[_MovementOutput, ...] = ()
     pending_reply: PendingReply | None = None
-    accepts_proposal: bool = False
+    numbered_replies: tuple[_NumberedReplyOutput, ...] = ()
 
 
 class OpenAILLM:
@@ -210,9 +302,9 @@ class OpenAILLM:
             currency_words=output.currency_words,
             transaction_date=output.transaction_date,
             proposed_category=output.proposed_category,
-            several_movements=output.several_movements,
+            more_movements=tuple(movement.reading() for movement in output.more_movements),
             pending_reply=output.pending_reply,
-            accepts_proposal=output.accepts_proposal,
+            numbered_replies=tuple(reply.numbered_reply() for reply in output.numbered_replies),
             usage=_usage(response),
         )
 
@@ -248,8 +340,8 @@ def _delimited(request: ClassificationRequest) -> str:
         prompts.DATA_KEY_EXPENSE_CATEGORIES: list(request.expense_categories),
         prompts.DATA_KEY_INCOME_CATEGORIES: list(request.income_categories),
     }
-    if request.open_pending is not None:
-        data[prompts.DATA_KEY_OPEN_PENDING] = _pending_data(request.open_pending)
+    if request.open_batch is not None:
+        data[prompts.DATA_KEY_OPEN_BATCH] = _batch_data(request.open_batch)
     # Escaped as JSON allows, so that a message cannot close the delimiter with "</datos>".
     encoded = json.dumps(data, ensure_ascii=False)
     for character, escaped in prompts.DELIMITER_ESCAPES.items():
@@ -257,12 +349,20 @@ def _delimited(request: ClassificationRequest) -> str:
     return f"{prompts.DATA_OPEN}{encoded}{prompts.DATA_CLOSE}"
 
 
-def _pending_data(pending: OpenPending) -> dict[str, object]:
-    """The pending the message may answer: what was understood, what is missing, the question."""
+def _batch_data(batch: OpenBatch) -> dict[str, object]:
+    """The batch the message may answer: each pending with its number, what was understood and
+    what is missing, and the question.
+    """
     return {
-        prompts.DATA_KEY_INTERPRETED: {
-            key: value for key, value in pending.interpreted.items() if value is not None
-        },
-        prompts.DATA_KEY_MISSING: list(pending.missing),
-        prompts.DATA_KEY_QUESTION: pending.question,
+        prompts.DATA_KEY_PENDINGS: [
+            {
+                prompts.DATA_KEY_NUMBER: pending.number,
+                prompts.DATA_KEY_INTERPRETED: {
+                    key: value for key, value in pending.interpreted.items() if value is not None
+                },
+                prompts.DATA_KEY_MISSING: list(pending.missing),
+            }
+            for pending in batch.pendings
+        ],
+        prompts.DATA_KEY_QUESTION: batch.question,
     }

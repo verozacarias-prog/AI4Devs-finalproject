@@ -26,7 +26,6 @@ from app.adapters.outbound.postgres.unit_of_work import SqlAlchemyUnitOfWork
 from app.domain.entities.classification import (
     Classification,
     MessageClass,
-    PendingReply,
     RegistrationType,
 )
 from app.domain.use_cases.messages.answer_message import AnswerMessage
@@ -41,6 +40,7 @@ from tests.support.registration_data import (
     seed_on_october_1,
     supermarket_expense,
 )
+from tests.support.replies import reply_to_pending
 
 pytestmark = pytest.mark.integration
 
@@ -218,14 +218,7 @@ def test_the_metrics_script_gives_the_four_metrics(settings: Settings, engine: E
     inbound(engine, "Lucía", "con MP, y eran 3800", sent_at=NOW + timedelta(minutes=1))
     _run_round(
         settings,
-        FakeLLM(
-            Classification(
-                MessageClass.REGISTRATION,
-                amount=Decimal("3800"),
-                account="MP",
-                pending_reply=PendingReply.CONTINUES,
-            )
-        ),
+        FakeLLM(reply_to_pending(amount=Decimal("3800"), account="MP")),
         NOW + timedelta(minutes=1, seconds=5),
     )
     with engine.begin() as connection:

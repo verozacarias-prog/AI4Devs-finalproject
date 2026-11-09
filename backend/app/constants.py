@@ -150,6 +150,10 @@ CATEGORY_NAME_PATTERN = r"(?:[^\W_]|[ ,()-])+"
 # How long a pending waits for its answer before it expires: the WhatsApp window for free text,
 # so the reminder before it always fits (domain rules, § 5).
 PENDING_VALIDITY_HOURS = 24
+# How many pendings a batch holds at most: they are numbered from 1 to 10 (domain rules, § 5).
+BATCH_MAX_PENDINGS = 10
+# Between two sentences of the same line of a message.
+SENTENCE_SEPARATOR = " "
 
 # What an operation command returns to the shell.
 EXIT_OK = 0

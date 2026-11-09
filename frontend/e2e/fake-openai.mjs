@@ -23,9 +23,9 @@ const CLASSIFICATION = {
   currency_words: null,
   transaction_date: null,
   proposed_category: null,
-  several_movements: false,
+  more_movements: [],
   pending_reply: null,
-  accepts_proposal: false,
+  numbered_replies: [],
 }
 
 function response() {

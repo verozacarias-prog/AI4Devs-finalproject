@@ -20,7 +20,6 @@ from app.adapters.inbound.message_worker.worker import create_worker
 from app.domain.entities.classification import (
     Classification,
     MessageClass,
-    PendingReply,
     RegistrationType,
 )
 from app.domain.entities.llm_call import LlmOutcome
@@ -36,6 +35,7 @@ from tests.support.registration_data import (
     seed_on_october_1,
     supermarket_expense,
 )
+from tests.support.replies import reply_to_pending
 
 pytestmark = pytest.mark.integration
 
@@ -107,11 +107,7 @@ def test_no_log_line_carries_the_text_the_amount_or_the_phone(
 
     _run_round(
         settings,
-        FakeLLM(
-            Classification(
-                MessageClass.REGISTRATION, account="MP", pending_reply=PendingReply.CONTINUES
-            )
-        ),
+        FakeLLM(reply_to_pending(account="MP")),
         reply_at,
         stream,
     )
@@ -173,13 +169,7 @@ def test_no_log_line_of_a_transfer_carries_the_amount_the_text_or_an_account(
 
     _run_round(
         settings,
-        FakeLLM(
-            Classification(
-                MessageClass.REGISTRATION,
-                to_account="Mercado Pago",
-                pending_reply=PendingReply.CONTINUES,
-            )
-        ),
+        FakeLLM(reply_to_pending(to_account="Mercado Pago")),
         reply_at,
         stream,
     )
