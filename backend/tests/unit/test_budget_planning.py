@@ -311,13 +311,12 @@ def test_a_member_who_is_not_the_owner_neither_changes_nor_confirms_the_period_o
     "changed",
     [
         lambda same: replace(same, period_type=PeriodType.CUSTOM),
-        lambda same: replace(same, period_start=date(2026, 10, 11)),
-        lambda same: replace(same, period_end=date(2026, 11, 8)),
+        lambda same: replace(same, period_start=date(2026, 10, 11), period_end=None),
         lambda same: replace(same, primary_currency=DOLLARS),
     ],
-    ids=["cadence", "start", "end", "currency"],
+    ids=["cadence", "start", "currency"],
 )
-def test_in_a_confirmed_period_changing_the_cadence_the_start_the_end_or_the_currency_is_not_saved(
+def test_in_a_confirmed_period_changing_the_cadence_the_start_or_the_currency_is_not_saved(
     changed: Callable[[PeriodContent], PeriodContent],
 ) -> None:
     # Case C2-07.
@@ -556,5 +555,111 @@ def test_a_currency_that_is_not_in_the_catalog_is_not_saved() -> None:
         "currency_not_found",
         lambda: UpdateBudgetPeriod(budget.unit_of_work, _clock()).execute(
             budget.user.id, draft.id, changed
+        ),
+    )
+
+
+def test_in_a_confirmed_custom_period_changing_the_end_is_not_saved() -> None:
+    # Case C2-07. Only a custom period takes any end: in the others it answers its own code.
+    budget = lucia_budget()
+    custom = BudgetPeriod(
+        id=uuid.uuid4(),
+        user_id=budget.user.id,
+        family_group_id=None,
+        period_type=PeriodType.CUSTOM,
+        period_start=NOVEMBER_10,
+        period_end=date(2026, 11, 20),
+        primary_currency=PESOS,
+        estimated_income=Decimal("0"),
+        status=PeriodStatus.CONFIRMED,
+    )
+    budget.unit_of_work.budget_periods.add(custom)
+    content = _content(
+        budget,
+        NOVEMBER_10,
+        "0",
+        {},
+        end=date(2026, 11, 25),
+        period_type=PeriodType.CUSTOM,
+    )
+
+    _assert_refused(
+        budget,
+        "confirmed_period_fixed",
+        lambda: UpdateBudgetPeriod(budget.unit_of_work, _clock()).execute(
+            budget.user.id, custom.id, content
+        ),
+    )
+
+
+@pytest.mark.parametrize(
+    ("changed", "code"),
+    [
+        pytest.param(
+            {"end": date(2026, 10, 1)},
+            "period_dates_inverted",
+            id="inverted-dates",
+        ),
+        pytest.param(
+            {"period_type": PeriodType.BIWEEKLY},
+            "biweekly_start_invalid",
+            id="fortnight-that-starts-another-day",
+        ),
+        pytest.param(
+            {"end": date(2026, 11, 8)},
+            "period_end_not_matching",
+            id="monthly-with-another-end",
+        ),
+    ],
+)
+def test_in_a_confirmed_period_invalid_dates_answer_before_it_being_fixed(
+    changed: dict[str, date | PeriodType], code: str
+) -> None:
+    # Case C2-63.
+    budget = lucia_budget()
+    end = changed.get("end", NOVEMBER_9)
+    period_type = changed.get("period_type", PeriodType.MONTHLY)
+    assert isinstance(end, date)
+    assert isinstance(period_type, PeriodType)
+    content = _content(budget, OCTOBER_10, "1450000.00", {}, end=end, period_type=period_type)
+
+    _assert_refused(
+        budget,
+        code,
+        lambda: UpdateBudgetPeriod(budget.unit_of_work, _clock()).execute(
+            budget.user.id, budget.period.id, content
+        ),
+    )
+
+
+def test_a_confirmed_fortnight_with_another_end_answers_before_it_being_fixed() -> None:
+    # Case C2-64.
+    budget = lucia_budget()
+    fortnight = BudgetPeriod(
+        id=uuid.uuid4(),
+        user_id=budget.user.id,
+        family_group_id=None,
+        period_type=PeriodType.BIWEEKLY,
+        period_start=date(2026, 11, 16),
+        period_end=date(2026, 11, 30),
+        primary_currency=PESOS,
+        estimated_income=Decimal("0"),
+        status=PeriodStatus.CONFIRMED,
+    )
+    budget.unit_of_work.budget_periods.add(fortnight)
+    content = _content(
+        budget,
+        date(2026, 11, 16),
+        "0",
+        {},
+        end=date(2026, 11, 20),
+        period_type=PeriodType.BIWEEKLY,
+    )
+
+    _assert_refused(
+        budget,
+        "period_end_not_matching",
+        lambda: UpdateBudgetPeriod(budget.unit_of_work, _clock()).execute(
+            budget.user.id, fortnight.id, content
         ),
     )

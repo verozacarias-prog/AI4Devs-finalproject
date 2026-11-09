@@ -472,8 +472,9 @@ no es miembro de ningún grupo, y hoy es 29 de octubre de 2026.
 - **C2-49, cambiado al probar a mano:** Veronica Zacarias 01/11/2026
 - **C2-50 a C2-59, sumados en la revisión, y C1-04, C1-19, C2-07, C2-12 y C2-13, cambiados:** Veronica Zacarias 01/11/2026
 - **C2-60 a C2-62, sumados en la revisión:** Veronica Zacarias 01/11/2026
+- **C2-07 cambiado, y C2-63 y C2-64 sumados, con la #140:** Veronica Zacarias 9/11/2026
 
-Entran las validaciones de [la API](../../04-api.md), en su orden: el período de otro usuario,
+Entran las validaciones de [la API](../../04-api.md), que es la que dice su orden: el período de otro usuario,
 `404`; el período de un grupo para un miembro que no es el dueño, `403`
 (CA-16); la superposición con otro período del mismo dueño,
 `409` con `budget_period_overlap`; cambiar la cadencia, las fechas o la moneda de un período
@@ -491,7 +492,7 @@ en el corte 1: entran acá, con sus tests primero (ADR 0024). Hasta entonces, un
 categoría que no existe termina en `500`, porque la base rechaza la referencia, y lo cubre el
 `404` de la categoría ajena. Decidido por Vero el 30 de octubre de 2026.
 
-- **Total:** 62 casos, 14 unitarios, 29 de integración y 19 de componente. Además de los datos de
+- **Total:** 64 casos, 16 unitarios, 29 de integración y 19 de componente. Además de los datos de
   arriba, Pablo es el dueño del grupo "Casa" y Sofía es miembro, sin serlo; el grupo tiene un
   período confirmado del 10 de octubre al 9 de noviembre de 2026 y un borrador del 10 de
   noviembre al 9 de diciembre. Pablo tiene un período propio del 10 de octubre al 9 de noviembre
@@ -562,6 +563,8 @@ categoría que no existe termina en `500`, porque la base rechaza la referencia,
 | C2-60 | Un monto enviado como número JSON se guarda exacto | Integración | La API |
 | C2-61 | Dos pedidos simultáneos con fechas superpuestas responden `409` | Integración | La API |
 | C2-62 | Un tope que redondea a 0 y el límite exacto de un monto | Unitario | La API |
+| C2-63 | En un confirmado, las fechas inválidas responden su error antes que el de no cambiar | Unitario | La API |
+| C2-64 | Una quincena confirmada con otro fin responde `period_end_not_matching` | Unitario | La API |
 
 #### C2-01 · Cambiar o confirmar un período que no existe responde que no existe
 
@@ -616,10 +619,14 @@ categoría que no existe termina en `500`, porque la base rechaza la referencia,
 
 - **Sale de:** CA-10 · **Tipo:** unitario
 - **Dado** el período actual de Lucía, confirmado y mensual,
-- **cuando** se cambia a personalizado con sus mismas fechas, con otro `period_start`, con otro
-  `period_end` o con otra moneda, cada uno por separado,
+- **cuando** se cambia a personalizado con sus mismas fechas, con otro `period_start` sin indicar
+  el fin, o con otra moneda, cada uno por separado,
 - **entonces** el caso de uso lo rechaza con `confirmed_period_fixed`, y no escribe nada.
-- **Test:** `tests/unit/test_budget_planning.py::test_in_a_confirmed_period_changing_the_cadence_the_start_the_end_or_the_currency_is_not_saved`
+- **Dado** un período personalizado de Lucía, confirmado, **cuando** se cambia su `period_end`,
+  **entonces** se rechaza igual. Solo un personalizado acepta cualquier fin: en un mensual o un
+  quincenal, otro fin responde `period_end_not_matching`, porque las fechas se validan antes
+  ([la API](../../04-api.md)). Cambiado por Vero el 1 de noviembre de 2026.
+- **Test:** `tests/unit/test_budget_planning.py::test_in_a_confirmed_period_changing_the_cadence_the_start_or_the_currency_is_not_saved` y `tests/unit/test_budget_planning.py::test_in_a_confirmed_custom_period_changing_the_end_is_not_saved`
 
 #### C2-08 · Lucía le cambia la moneda a su período actual
 
@@ -1111,6 +1118,26 @@ un tope que un `PUT` deja afuera se borra, y si ya tiene alertas enviadas la ref
 - **cuando** se crea,
 - **entonces** `0.004` se rechaza con `budget_limit_not_positive`, `0.005` se acepta, `999999999999999999.99` se acepta, y `999999999999999999.995` se rechaza con `amount_too_large`.
 - **Test:** `tests/unit/test_budget_planning.py::test_a_limit_that_rounds_to_zero_and_the_exact_limit_of_an_amount_are_refused` y `tests/unit/test_budget_planning.py::test_the_smallest_limit_and_the_largest_amount_are_saved`
+
+#### C2-63 · En un confirmado, las fechas inválidas responden su error antes que el de no cambiar
+
+- **Sale de:** [la API](../../04-api.md) · **Tipo:** unitario
+- **Dado** el período actual de Lucía, confirmado y mensual, del 10 de octubre al 9 de noviembre,
+- **cuando** se edita con el fin antes del inicio, como quincenal empezando el 10, o como mensual
+  con fin el 8 de noviembre, cada uno por separado,
+- **entonces** el caso de uso lo rechaza con `period_dates_inverted`, `biweekly_start_invalid` o
+  `period_end_not_matching`, y no con `confirmed_period_fixed`: [la API](../../04-api.md) valida
+  las fechas antes (#140).
+- **Test:** `tests/unit/test_budget_planning.py::test_in_a_confirmed_period_invalid_dates_answer_before_it_being_fixed`
+
+#### C2-64 · Una quincena confirmada con otro fin responde `period_end_not_matching`
+
+- **Sale de:** [la API](../../04-api.md) · **Tipo:** unitario
+- **Dado** un período quincenal de Lucía, confirmado, del 16 al 30 de noviembre de 2026,
+- **cuando** se edita con fin el 20 de noviembre,
+- **entonces** el caso de uso lo rechaza con `period_end_not_matching`, y no con
+  `confirmed_period_fixed` (#140).
+- **Test:** `tests/unit/test_budget_planning.py::test_a_confirmed_fortnight_with_another_end_answers_before_it_being_fixed`
 
 ### Corte 3 — observabilidad y accesibilidad
 

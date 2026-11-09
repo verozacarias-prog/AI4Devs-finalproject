@@ -798,3 +798,50 @@ def test_completing_an_amount_that_could_not_be_stored_adds_no_correction() -> N
     [pending] = unit_of_work.pendings.added
     assert pending.status is PendingStatus.PROMOTED
     assert pending.corrected_fields_count == 0
+
+
+def test_an_expense_in_euros_gets_the_fixed_text_and_registers_nothing() -> None:
+    # Case C2-57.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "gasté 30 euros con Mercado Pago",
+        _registration(
+            amount="30",
+            account="Mercado Pago",
+            category="Supermercado",
+            currency="EUR",
+            currency_words="euros",
+        ),
+    )
+
+    assert unit_of_work.transactions.added == []
+    assert unit_of_work.pendings.added == []
+    assert _last_reply(unit_of_work) == CANNOT_REGISTER
+
+
+def test_the_dollar_sign_says_pesos_and_chooses_the_account_in_pesos() -> None:
+    # Case C2-58.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "gasté $2000 con galicia",
+        _registration(
+            amount="2000",
+            account="galicia",
+            category="Supermercado",
+            currency="ARS",
+            currency_words="$",
+        ),
+    )
+
+    [transaction] = unit_of_work.transactions.added
+    assert transaction.account_id == lucia.accounts["Galicia pesos"]
+    assert transaction.amount == Decimal("2000")
+    assert transaction.currency == "ARS"

@@ -140,6 +140,20 @@ YES_TO_ESTETICA = (
         ),
         pytest.param([PELUQUERIA, YES_TO_ESTETICA], True, id="C2-47"),
         pytest.param([(SUPERMARKET_EXPENSE, supermarket_expense())], False, id="C1-01"),
+        pytest.param(
+            [
+                _expense(
+                    "gasté $2000 con galicia",
+                    amount="2000",
+                    account="galicia",
+                    category="Supermercado",
+                    currency="ARS",
+                    currency_words="$",
+                )
+            ],
+            False,
+            id="C2-59",
+        ),
     ],
 )
 def test_what_the_validation_rejects_leaves_the_call_blocked(
