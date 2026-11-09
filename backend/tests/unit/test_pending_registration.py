@@ -801,7 +801,7 @@ def test_completing_an_amount_that_could_not_be_stored_adds_no_correction() -> N
 
 
 def test_an_expense_in_euros_gets_the_fixed_text_and_registers_nothing() -> None:
-    # Case C2-57.
+    # Case C2-57 of FEAT-003.
     unit_of_work = InMemoryUnitOfWork()
     lucia = Lucia(unit_of_work)
 
@@ -824,7 +824,7 @@ def test_an_expense_in_euros_gets_the_fixed_text_and_registers_nothing() -> None
 
 
 def test_the_dollar_sign_says_pesos_and_chooses_the_account_in_pesos() -> None:
-    # Case C2-58.
+    # Case C2-58 of FEAT-003.
     unit_of_work = InMemoryUnitOfWork()
     lucia = Lucia(unit_of_work)
 
@@ -845,3 +845,50 @@ def test_the_dollar_sign_says_pesos_and_chooses_the_account_in_pesos() -> None:
     assert transaction.account_id == lucia.accounts["Galicia pesos"]
     assert transaction.amount == Decimal("2000")
     assert transaction.currency == "ARS"
+
+
+def test_a_full_stop_as_the_words_of_the_type_does_not_choose_the_account() -> None:
+    # Case C2-60 of FEAT-003.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "gasté 500 en el super.",
+        Classification(
+            MessageClass.REGISTRATION,
+            registration_type=RegistrationType.EXPENSE,
+            amount=Decimal("500"),
+            account_type=AccountType.CASH,
+            account_type_words=".",
+            category="Supermercado",
+        ),
+    )
+
+    assert unit_of_work.transactions.added == []
+    assert _last_reply(unit_of_work) == (
+        "¿Con qué cuenta? Galicia pesos, Mercado Pago, Efectivo o Galicia USD."
+    )
+
+
+def test_a_full_stop_as_the_words_of_the_currency_does_not_say_it() -> None:
+    # Case C2-61 of FEAT-003.
+    unit_of_work = InMemoryUnitOfWork()
+    lucia = Lucia(unit_of_work)
+
+    _answer(
+        unit_of_work,
+        lucia,
+        "gasté 500 en el super con galicia.",
+        _registration(
+            amount="500",
+            account="galicia",
+            category="Supermercado",
+            currency="ARS",
+            currency_words=".",
+        ),
+    )
+
+    assert unit_of_work.transactions.added == []
+    assert _last_reply(unit_of_work) == "¿Con qué cuenta? Galicia pesos o Galicia USD."
