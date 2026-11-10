@@ -7,7 +7,7 @@ of any user (ADR 0013, point 12). The data of the task goes in the user message,
 from __future__ import annotations
 
 # Recorded with every call, so the metrics can compare one prompt with the next.
-CLASSIFICATION_PROMPT_VERSION = "classification-14"
+CLASSIFICATION_PROMPT_VERSION = "classification-15"
 
 # Between these, the data of the task: information, never instructions (ADR 0013, point 9).
 DATA_OPEN = "<datos>"
@@ -127,6 +127,12 @@ movimiento de afuera de numbered_replies van en null, salvo que el mensaje adem�
 movimiento nuevo, que no es de ningún pendiente, como "el 2 con MP, y además 500 de café en \
 efectivo": el nuevo va en esos campos, y los siguientes en more_movements. Lo que el mensaje \
 dice de un pendiente nunca va ahí, aunque repita su monto: va solo en numbered_replies. \
+Lo que ya se entendió de un pendiente ("{DATA_KEY_INTERPRETED}") tampoco se copia ahí: si el \
+mensaje solo contesta, como "con efectivo" o "fueron 12 lucas", amount, account, category, \
+currency y los demás campos de afuera de numbered_replies van en null. Un monto que contesta \
+lo que le falta a un pendiente ("{DATA_KEY_MISSING}") es de ese pendiente, y no un movimiento \
+nuevo: en "fueron 12 lucas", 12000 va solo en el amount de numbered_replies, y el amount de \
+afuera es null. \
 account se copia tal cual lo escribe el mensaje, como en un movimiento nuevo, aunque la \
 pregunta o la lista de cuentas digan el nombre completo: de "el 1 con nx" es "nx", y no \
 "Naranja X". Si el movimiento es una transferencia, la cuenta que contesta de dónde salió la \
