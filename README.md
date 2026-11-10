@@ -32,13 +32,13 @@ Platita es un asistente financiero personal y familiar que funciona por WhatsApp
 ### 0.4. URL del proyecto:
 
 https://platita-demo-web.onrender.com/app/, el entorno `demo`. Se entra con un enlace personal:
-cada persona que prueba tiene su usuario y sus datos ([operación](docs/operacion.md)). Para la
-revisión del curso, este enlace es la credencial de prueba:
+cada persona que prueba tiene su usuario y sus datos ([operación](docs/operacion.md)). La
+excepción es la revisión del curso, que usa este enlace como credencial de prueba:
 
 <https://platita-demo-web.onrender.com/app/#aYy0lIJ4MnACbts7tjPcPWaO5L7SNY5528VtjoDE6TQ>
 
-Es un entorno de prueba, con datos inventados, y lo comparte quien lea este archivo
-([ADR 0016](docs/adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Cómo recorrerlo está en
+Es un entorno de prueba, con datos inventados, y lo comparte quien lea este archivo, con su
+cuota de 50 registros por día ([ADR 0016](docs/adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Cómo recorrerlo está en
 [probar el demo](#probar-el-demo).
 
 ### 0.5. URL o archivo comprimido del repositorio

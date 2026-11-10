@@ -249,8 +249,8 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   Desde [FEAT-007](features/FEAT-007/spec.md) los registra en un lote: juntos cuando están todos
   completos, y si a alguno le falta un dato, con una lista numerada que lo pregunta.
   Un usuario con un período individual y uno de grupo para la misma fecha recibe el texto de C2-52,
-  y elegir entre los dos pasa a una segunda versión. Queda para la entrega final una respuesta que
-  cita una confirmación para corregirla o borrarla.
+  y elegir entre los dos pasa a una segunda versión, igual que una respuesta que cita una
+  confirmación para corregirla o borrarla.
 - **La memoria de la clasificación: sin decidir.** El [ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md),
   punto 9, dice que la clasificación recibe el último intercambio. El código le manda solo el
   mensaje y, si hay uno esperando respuesta, el estado del pendiente. Falta decidir si se suma

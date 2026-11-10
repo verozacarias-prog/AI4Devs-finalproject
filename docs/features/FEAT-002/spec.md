@@ -1013,7 +1013,7 @@ del canal.
 
 - La clasificación, el registro de un gasto o un ingreso, y toda llamada al modelo.
 - Los reintentos con espera creciente, el estado `failed` y su aviso: llegan con el modelo.
-- El botón "Responder" y la cita en la pantalla: entrega final.
+- El botón "Responder" y la cita en la pantalla: segunda versión, con corregir y borrar.
 - La purga del contenido de los mensajes, que es un proceso programado. Lo que entra es que un
   mensaje purgado no se muestre.
 - El webhook de WhatsApp.

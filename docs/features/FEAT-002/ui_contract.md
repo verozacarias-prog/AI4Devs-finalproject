@@ -84,7 +84,7 @@ dashboard vuelve a la entrada de desarrollo.
   y `quoted_message_id` llegan y no se usan.
 - [`POST /chat/messages`](../../04-api.md#post-chatmessages-y-get-chatmessages): manda `text`, y
   la `Idempotency-Key` que genera una vez por mensaje. No manda `quoted_message_id`: el botón
-  "Responder" llega en la entrega final.
+  "Responder" llega en una segunda versión, con corregir y borrar.
 
 ## Accesibilidad
 

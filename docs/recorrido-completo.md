@@ -496,7 +496,7 @@ sequenceDiagram
 
 ## 11. Corregir o borrar por WhatsApp
 
-**Estado:** entra en la entrega final, por el chat web, y todavía no tiene código.
+**Estado:** diseño, para una segunda versión.
 
 Un movimiento confirmado se señala citando su confirmación o describiéndolo. Por el chat web es
 igual, y la cita se hace con el botón de responder. Nunca por ser el último ([reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado)).
@@ -547,7 +547,7 @@ sequenceDiagram
 
 ## 12. Pregunta sobre los propios datos
 
-**Estado:** entra en la entrega final, por el chat web, y todavía no tiene código. Es lo primero que se cae si no alcanza el tiempo.
+**Estado:** diseño, para una segunda versión. Hoy una consulta recibe un texto fijo.
 
 El modelo no consulta la base: pide datos a funciones de solo lectura, que el caso de uso ejecuta
 filtrando por el usuario del mensaje. La misma llamada que clasifica el mensaje ya trae los
