@@ -313,14 +313,14 @@ UPDATE_PENDING_TRANSACTION = """
            resulting_transaction_id = :resulting_transaction_id,
            resulting_transfer_id = :resulting_transfer_id, status = :status,
            resolved_by = :resolved_by, corrected_fields_count = :corrected_fields_count
-     WHERE id = :id
+     WHERE id = :id AND user_id = :user_id
 """
 
 UPDATE_PENDING_BATCH = """
     UPDATE pending_batch
        SET awaiting_reply = :awaiting_reply, question_message_id = :question_message_id,
            confirmation_message_id = :confirmation_message_id, status = :status
-     WHERE id = :id
+     WHERE id = :id AND user_id = :user_id
 """
 
 INSERT_LLM_CALL = """
