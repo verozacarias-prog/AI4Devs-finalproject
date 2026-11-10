@@ -12,6 +12,7 @@ import io
 import json
 import uuid
 from collections.abc import Iterator
+from dataclasses import replace
 from datetime import timedelta
 from decimal import Decimal
 from typing import cast
@@ -29,6 +30,7 @@ from app.domain.entities.classification import (
     PendingReply,
     RegistrationType,
 )
+from app.domain.entities.pending_transaction import BatchStatus, PendingStatus
 from app.settings import Settings, load_settings
 from tests.support.chat_data import inbound, user_id
 from tests.support.doubles import FixedClock
@@ -271,3 +273,46 @@ def test_the_pendings_of_a_batch_are_not_read_with_another_user(
 
     assert of_pablo == []
     assert [pending.position for pending in of_lucia] == [1, 2]
+
+
+def test_a_pending_is_not_updated_with_another_user(settings: Settings, engine: Engine) -> None:
+    # Case T-01 of issue 154. The batch of C2-01.
+    inbound(engine, "Lucía", "gasté 3500 en el súper con MP y 1200 de nafta", sent_at=SENT_AT)
+    _run_round(
+        settings,
+        _registration(_expense("3500", "MP", "Supermercado"), _expense("1200", None, "Transporte")),
+    )
+    [batch] = _batches(engine)
+    with engine.begin() as connection:
+        pendings = PostgresPendingRepository(connection)
+        second = pendings.list_in_batch(cast(uuid.UUID, batch.id), user_id(engine, "Lucía"))[1]
+        pendings.update(
+            replace(second, status=PendingStatus.REJECTED, user_id=user_id(engine, "Pablo"))
+        )
+
+    assert [pending.status for pending in _pendings(engine)] == ["open", "open"]
+
+
+def test_a_batch_is_not_updated_with_another_user(settings: Settings, engine: Engine) -> None:
+    # Case T-02 of issue 154. The batch of C2-01.
+    inbound(engine, "Lucía", "gasté 3500 en el súper con MP y 1200 de nafta", sent_at=SENT_AT)
+    _run_round(
+        settings,
+        _registration(_expense("3500", "MP", "Supermercado"), _expense("1200", None, "Transporte")),
+    )
+    with engine.begin() as connection:
+        pendings = PostgresPendingRepository(connection)
+        awaiting = pendings.find_awaiting_reply(user_id(engine, "Lucía"))
+        assert awaiting is not None
+        batch, _ = awaiting
+        pendings.update_batch(
+            replace(
+                batch,
+                status=BatchStatus.CLOSED,
+                awaiting_reply=False,
+                user_id=user_id(engine, "Pablo"),
+            )
+        )
+
+    [stored] = _batches(engine)
+    assert (stored.status, stored.awaiting_reply) == ("open", True)
