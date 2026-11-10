@@ -156,6 +156,11 @@ para que la cookie de sesión funcione sin un dominio propio.
   lo que se acepta ahí es un aviso de prueba y no los términos del producto, y sus datos se
   pueden borrar, así que no es lugar para la contabilidad real de nadie. La seguridad de producción depende de que el arranque se niegue
   con esas opciones encendidas.
+- El enlace de la revisión de la entrega final del curso está publicado en el `README.md`, así
+  que no es de una sola persona: lo usa quien lo lea. Se acepta porque sus datos son inventados y
+  la cuota de registro por usuario acota el gasto; el tope diario total de clasificaciones, en
+  cambio, lo comparten todos, y un uso intensivo del enlace puede agotarlo. Se regenera cuando
+  termina la revisión. Decidido por Vero el 10 de noviembre de 2026.
 - Una tabla y dos comandos de operación que existen solo para el andamio, y se quitan con él.
   La tabla la crea la misma migración en todos los entornos; en producción queda vacía, porque
   ni las rutas ni los comandos existen ahí.

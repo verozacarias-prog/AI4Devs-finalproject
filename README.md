@@ -31,8 +31,15 @@ Platita es un asistente financiero personal y familiar que funciona por WhatsApp
 
 ### 0.4. URL del proyecto:
 
-https://platita-demo-web.onrender.com/app/, el entorno `demo`. Se entra con un enlace personal, que da
-la autora: cada persona que prueba tiene su usuario y sus datos ([operación](docs/operacion.md)).
+https://platita-demo-web.onrender.com/app/, el entorno `demo`. Se entra con un enlace personal:
+cada persona que prueba tiene su usuario y sus datos ([operación](docs/operacion.md)). Para la
+revisión del curso, este enlace es la credencial de prueba:
+
+<https://platita-demo-web.onrender.com/app/#aYy0lIJ4MnACbts7tjPcPWaO5L7SNY5528VtjoDE6TQ>
+
+Es un entorno de prueba, con datos inventados, y lo comparte quien lea este archivo
+([ADR 0016](docs/adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Cómo recorrerlo está en
+[probar el demo](#probar-el-demo).
 
 ### 0.5. URL o archivo comprimido del repositorio
 
@@ -83,6 +90,20 @@ La documentación se publica también como sitio navegable en
 **<https://verozacarias-prog.github.io/AI4Devs-finalproject/>**. Las decisiones de arquitectura
 están en [`docs/adr/`](docs/adr/), y las plantillas de una funcionalidad nueva, en
 [`docs/features/`](docs/features/).
+
+## Probar el demo
+
+1. Abrir el [enlace de la revisión](#04-url-del-proyecto) y aceptar el aviso de prueba. La
+   primera vez crea el usuario, con cuatro cuentas con saldo y un período confirmado.
+2. En el chat, escribir "gasté 3500 en el súper con Mercado Pago". El asistente confirma qué
+   anotó, con la fecha, la moneda, la categoría y el presupuesto. En Cuentas, Mercado Pago
+   muestra $3.500 menos.
+3. Probar lo que exige preguntar: "gasté 3500 en el súper", sin cuenta, y responder "con
+   efectivo".
+4. Una transferencia entre cuentas propias: "saqué 10000 de Galicia pesos en efectivo".
+5. Dos movimientos en un mensaje: "gasté 2000 de nafta con MP y cobré 50000 en Galicia pesos".
+   El asistente los confirma juntos, numerados.
+6. En Presupuesto, ver el período actual y armar topes por categoría.
 
 ## Cómo ejecutar localmente
 
