@@ -22,13 +22,15 @@ configuración de Meta, que no suma a lo que se evalúa. Se construye sobre lo q
 | La pantalla de presupuesto: el resumen del período con cada categoría con tope y las sin tope que tuvieron movimientos, el detalle de una categoría con sus movimientos, y un selector que abre el período que cubre hoy. Sale de `GET /budget-periods/{period_id}/summary`, `GET /budgets/{budget_id}` y la lectura de `GET /budget-periods`, que se adelanta de la HU2. Decidido el 24 de octubre de 2026, porque sin el resumen la pantalla mostraba una sola categoría y no tenía de dónde sacar su id | [HU4](05-historias-de-usuario.md), [la API](04-api.md) |
 | Armar y confirmar el presupuesto de un período individual desde el dashboard: cadencia, día de inicio, ingreso estimado y tope por categoría, en borrador hasta confirmarlo | [HU2](05-historias-de-usuario.md), [reglas de dominio § 3](reglas-de-dominio.md#3-presupuestos-individual-o-familiar-períodos-y-confirmación-previa-al-inicio), [la API](04-api.md) |
 | Transferencias entre cuentas propias en la misma moneda, por el chat: sacar efectivo, pasar de un banco a una billetera o pagar la tarjeta. Entre monedas distintas responden un texto fijo. Decidido por Vero el 4 de noviembre de 2026, para poder registrar un período completo | [FEAT-006](features/FEAT-006/spec.md), [reglas de dominio § 13](reglas-de-dominio.md#13-tarjetas-de-crédito-y-transferencias) |
-| Varios movimientos en un mensaje, con respuestas por número | [Reglas de dominio § 1 y § 5](reglas-de-dominio.md) |
-| Corregir, borrar y restaurar un movimiento confirmado, con el botón de responder un mensaje | [Reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado) |
-| Preguntas sobre los propios datos | [Reglas de dominio § 17](reglas-de-dominio.md#17-preguntas-sobre-los-propios-datos) |
+| Varios movimientos en un mensaje, con respuestas por número | [FEAT-007](features/FEAT-007/spec.md), [reglas de dominio § 1 y § 5](reglas-de-dominio.md) |
 
-**Si el tiempo no alcanza, se cae lo último de esa tabla y no lo primero.** Las preguntas sobre
-los propios datos van al final. De la HU2 quedan afuera el borrador que se arma solo y el
-recordatorio antes del inicio, que son procesos programados, y los montos recurrentes.
+**Si el tiempo no alcanza, se cae lo último de esa tabla y no lo primero.** Así se aplicó: la
+tabla terminaba con corregir, borrar y restaurar un movimiento confirmado, con el botón de
+responder un mensaje ([reglas de dominio § 15](reglas-de-dominio.md#15-corregir-borrar-y-restaurar-un-movimiento-confirmado)),
+y con las preguntas sobre los propios datos ([§ 17](reglas-de-dominio.md#17-preguntas-sobre-los-propios-datos)).
+Los dos pasan a una segunda versión, con sus reglas ya escritas. Decidido por Vero el 10 de
+noviembre de 2026. De la HU2 quedan afuera el borrador que se arma solo y el recordatorio antes
+del inicio, que son procesos programados, y los montos recurrentes.
 
 **Crear una categoría desde el dashboard entra si queda tiempo.** Una categoría se va a poder crear
 de dos formas: conversando con Platita, como hoy, y desde el dashboard, al armar un período. Lo
@@ -45,7 +47,8 @@ los centavos, como parámetros del dashboard. Cuando exista una sección de conf
 se va a poder elegir ahí; todavía no tiene fecha. Decidido por Vero el 1 de noviembre de 2026.
 
 Pasa a una segunda versión, con su diseño ya escrito en `docs/`: el adaptador de WhatsApp, el
-login por código, los números habilitados y el alta conversacional; los consejos con RAG y la
+login por código, los números habilitados y el alta conversacional; corregir, borrar y restaurar
+un movimiento confirmado, y las preguntas sobre los propios datos; los consejos con RAG y la
 base de conocimiento; los grupos familiares y la elección entre el presupuesto individual y el
 de un grupo; la multimoneda, los reintegros, las transferencias entre monedas distintas y su comisión, las
 compras con tarjeta y las reglas recurrentes; los procesos programados, entre ellos las alertas y el vencimiento de los

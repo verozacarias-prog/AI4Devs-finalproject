@@ -1774,8 +1774,8 @@ Los dos textos los aprobó Vero el 18/10/2026.
 
 ## Fuera de alcance
 
-- Varios movimientos en un mensaje, y corregir, borrar o restaurar: entrega final. Elegir entre
-  el presupuesto individual y el de un grupo: una segunda versión
+- Varios movimientos en un mensaje: entrega final, en [FEAT-007](../FEAT-007/spec.md). Corregir,
+  borrar o restaurar, y elegir entre el presupuesto individual y el de un grupo: una segunda versión
   ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final)). Qué responde el asistente
   ante cada uno se decide cuando se construya, salvo los varios movimientos en un mensaje, que
   recibían el texto fijo de C1-09, por decisión de Vero del 17/10/2026, hasta que llegaron con

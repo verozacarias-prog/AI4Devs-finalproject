@@ -26,8 +26,9 @@ No entran, y llegan con la funcionalidad siguiente, la del registro de un gasto 
   mensaje no se pudo procesar. Lo primero que puede fallar al procesar un mensaje es la llamada
   al modelo, y se prueban con ella.
 
-No entra el botón "Responder" de cada mensaje de Platita. Se decidió el 14 de octubre de 2026:
-llega en la entrega final, con corregir, borrar y restaurar, como dice la hoja de ruta. La API
+No entra el botón "Responder" de cada mensaje de Platita. Llega con corregir, borrar y
+restaurar, que el 10 de noviembre de 2026 pasaron de la entrega final a una segunda versión,
+como dice la hoja de ruta. La API
 igual acepta y valida `quoted_message_id`, porque está en su contrato, pero la pantalla no lo
 manda.
 
@@ -1039,7 +1040,8 @@ Las preguntas que se abrieron al escribir este documento, ya resueltas.
    ([ADR 0010](../../adr/0010-webhook-asincrono-con-tabla-de-entrada.md)), así que sin el worker
    ningún mensaje recibe respuesta y el corte 1 no llegaría a la pantalla.
 5. ~~El botón "Responder".~~ Resuelta el 14 de octubre de 2026: entrega final, con corregir,
-   borrar y restaurar ([Alcance](#alcance)).
+   borrar y restaurar ([Alcance](#alcance)). El 10 de noviembre de 2026 los tres pasaron a una
+   segunda versión.
 6. ~~Dónde está el texto de un mensaje en `payload`.~~ Resuelta el 15 de octubre de 2026: un
    mensaje web guarda `{"text": "..."}`, y el worker y la conversación leen el texto de esa
    clave. Un mensaje de Meta lo trae en `text.body`, así que el adaptador de WhatsApp tiene que
