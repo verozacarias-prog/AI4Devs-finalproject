@@ -119,7 +119,7 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 ### Límites y observabilidad — corte 3
 
 - **CA-29.** Con el tope diario total alcanzado, el mensaje no se clasifica y se procesa al día siguiente. El aviso de que llegó al límite sale una sola vez por día.
-- **CA-30.** Con la cuota de registro agotada, un gasto, un ingreso, una transferencia o la respuesta a un pendiente se demoran al día siguiente, con un texto fijo y sin otra llamada al modelo. Un mensaje demorado no traba a los siguientes y, al procesarse, conserva el día en que se escribió. La cuota de consultas llega con su código, en la entrega final, y la de consejos en una segunda versión, con los consejos: mientras tanto una consulta o un consejo reciben el texto fijo de C1-10 sin cobrar cuota ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final)). Decidido por Vero el 18/10/2026. La transferencia se suma el 5/11/2026, con [FEAT-006](../FEAT-006/spec.md).
+- **CA-30.** Con la cuota de registro agotada, un gasto, un ingreso, una transferencia o la respuesta a un pendiente se demoran al día siguiente, con un texto fijo y sin otra llamada al modelo. Un mensaje demorado no traba a los siguientes y, al procesarse, conserva el día en que se escribió. Las cuotas de consultas y de consejos llegan con su código, en una segunda versión: mientras tanto una consulta o un consejo reciben el texto fijo de C1-10 sin cobrar cuota ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final)). Decidido por Vero el 18/10/2026. La transferencia se suma el 5/11/2026, con [FEAT-006](../FEAT-006/spec.md).
 - **CA-46.** El tope diario total y la cuota de registro son configuración, en variables de entorno, con 100 y 50 por defecto: se cambian sin desplegar, reiniciando el worker. Decidido por Vero el 18/10/2026; resuelve la contradicción entre [2.5](../../02-arquitectura.md#25-seguridad) y las [reglas de dominio § 12](../../reglas-de-dominio.md#12-límites-de-uso-del-asistente).
 - **CA-47.** Cuando la validación en código rechaza algo que devolvió el modelo, la fila de su llamada en `LLM_CALL` pasa a `blocked` ([ADR 0023](../../adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md), punto 6). Sumado el 18/10/2026: el corte 2 valida la salida pero deja la fila en `ok`. Cuenta como rechazo tanto un nombre de categoría que no pasa la validación (CA-43) como algo que el modelo devuelve sin que esté escrito: una mención de la cuenta (CA-9), las palabras de la moneda (CA-39) o un nombre de categoría que nadie escribió (CA-45). Así la métrica de alucinaciones ve también lo que el modelo inventa. Decidido por Vero el 18/10/2026. Desde el 5/11/2026 cuentan también las palabras del tipo de una cuenta, como "el banco", y la mención de la cuenta de destino de una transferencia ([FEAT-006](../FEAT-006/spec.md)), cuando el mensaje no las escribe.
 - **CA-31.** Ninguna línea de los registros lleva el texto, el monto ni el teléfono.
@@ -1774,8 +1774,8 @@ Los dos textos los aprobó Vero el 18/10/2026.
 
 ## Fuera de alcance
 
-- Varios movimientos en un mensaje, y corregir, borrar o restaurar: entrega final. Elegir entre
-  el presupuesto individual y el de un grupo: una segunda versión
+- Varios movimientos en un mensaje: entrega final, en [FEAT-007](../FEAT-007/spec.md). Corregir,
+  borrar o restaurar, y elegir entre el presupuesto individual y el de un grupo: una segunda versión
   ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final)). Qué responde el asistente
   ante cada uno se decide cuando se construya, salvo los varios movimientos en un mensaje, que
   recibían el texto fijo de C1-09, por decisión de Vero del 17/10/2026, hasta que llegaron con
@@ -1798,8 +1798,7 @@ Los dos textos los aprobó Vero el 18/10/2026.
   duplicado entre miembros: reciben el texto fijo de C1-09. Las transferencias llegan con
   [FEAT-006](../FEAT-006/spec.md).
 - Las consultas y los consejos: reciben el texto fijo de C1-10. Sus cuotas, y el texto de una
-  cuota agotada, llegan con su código: la de consultas en la entrega final y la de consejos en
-  una segunda versión (CA-30).
+  cuota agotada, llegan con su código, en una segunda versión (CA-30).
 - El evento `llm.output_blocked`: según [Operación](../../operacion.md#63-registros) llega con
   las consultas y los consejos. En el corte 3 una salida rechazada solo marca su fila en
   `LLM_CALL` (CA-47).

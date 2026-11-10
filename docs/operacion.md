@@ -260,7 +260,9 @@ despliega cuando pasan sus controles.
    Los dos devuelven el enlace completo, armado con `PUBLIC_ROOT_URL`, que `render.yaml` fija en
    la dirección del servicio web; si el servicio tiene otro nombre, hay que cambiarla ahí. Sin esa
    variable, devuelven solo `/app/#…`. El enlace no se guarda en ningún lado: se copia y se manda
-   en ese momento.
+   en ese momento. La única excepción es el de la revisión del curso, con la etiqueta
+   `Revisión AI4Devs`: está publicado en el `README.md`, lo comparte quien lo lea, y se regenera
+   cuando termina la revisión ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 
 Un staging igual a producción no está al lanzamiento: duplicaría el costo, y el riesgo principal que cubriría, una
 migración que rompe, lo cubre la CI probando la migración desde el esquema de la versión
