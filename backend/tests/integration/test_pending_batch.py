@@ -2,8 +2,10 @@
 
 Cases C2-01, C2-02 and C2-10 of its spec.md: a message with an incomplete movement registers
 none and lists them by number, the reply by number completes the batch, and another movement
-joins the batch that awaits a reply. The worker runs whole rounds, the way its process does,
-with the model replaced by a double: no test reaches the provider.
+joins the batch that awaits a reply. Case C2-25, and cases T-01 and T-02 of issue 154: the
+pendings of a batch are not read, and neither a pending nor its batch is updated, with another
+user. The worker runs whole rounds, the way its process does, with the model replaced by a
+double: no test reaches the provider.
 """
 
 from __future__ import annotations
