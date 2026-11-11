@@ -601,7 +601,7 @@ Registra un movimiento manualmente desde el dashboard. `amount`, `type`, `catego
 Lo que el cliente **no** manda:
 
 - `user_id` no viaja en el cuerpo: sale de la sesión autenticada. Aceptarlo del cliente sería dejar que cualquiera escriba movimientos en la cuenta de otro.
-- `source` lo fija el servidor en `"manual"`, ignorando cualquier valor recibido. Los movimientos `automatic` —el motor de recurrentes y, cuando se implemente, la carga por email— nacen del caso de uso `RegisterTransaction` por dentro, no de este endpoint. Lo que el usuario escribe por WhatsApp y confirma también es `manual`, igual que lo cargado acá, porque lo ingresó él (ver [HU3](05-historias-de-usuario.md)). Así, así que la trazabilidad de origen ([reglas de dominio § 9](reglas-de-dominio.md#9-trazabilidad-de-origen-source)) no depende de la buena fe del cliente.
+- `source` lo fija el servidor en `"manual"`, ignorando cualquier valor recibido. Los movimientos `automatic` —el motor de recurrentes y, cuando se implemente, la carga por email— nacen por dentro del caso de uso que registra un movimiento, no de este endpoint. Lo que el usuario escribe por WhatsApp y confirma también es `manual`, igual que lo cargado acá, porque lo ingresó él (ver [HU3](05-historias-de-usuario.md)). Así, así que la trazabilidad de origen ([reglas de dominio § 9](reglas-de-dominio.md#9-trazabilidad-de-origen-source)) no depende de la buena fe del cliente.
 
 `refund_of` es opcional y solo vale en un ingreso: el gasto del mismo usuario que ese ingreso devuelve. En un gasto, o apuntando a algo que no es un gasto, se rechaza con `422`. Apuntando a un movimiento de otro usuario, `404`.
 
@@ -611,7 +611,7 @@ Validaciones de pertenencia, antes de insertar: `account_id` tiene que ser una c
 
 La conversión a la moneda del presupuesto sí ocurre acá. Si la moneda de la cuenta es distinta de la del período, `exchange_rate` es obligatorio: es la cotización que el dashboard le sugirió al usuario y que él confirmó o corrigió en pantalla ([reglas de dominio § 6](reglas-de-dominio.md#6-multimoneda-y-cotización)). El servidor la guarda tal como llega y no la reemplaza por otra. Si las monedas difieren y falta, o si coinciden y viene informada, se rechaza con `422`, antes de que el trigger de la base la rechace igual.
 
-El chequeo de duplicados contra la vía automática **no corre en esta entrega**: depende de la carga por email, que es could-have, y el [Ticket 1](06-tickets.md) lo deja fuera de alcance dejando identificado el punto de inserción dentro del caso de uso. Por eso `duplicate_of` viene siempre `null` en la respuesta por ahora. El criterio, para cuando llegue, está en [reglas de dominio § 7](reglas-de-dominio.md#7-chequeo-de-duplicados-entre-origen-manual-y-automático) (ver también [3.2](03-modelo-de-datos.md#transaction) y [HU1](05-historias-de-usuario.md)).
+El chequeo de duplicados contra la vía automática **no corre en la primera versión de este endpoint**: depende de la carga por email, que es could-have, y el [Ticket 1](06-tickets.md) lo deja fuera de alcance dejando identificado el punto de inserción dentro del caso de uso. Por eso `duplicate_of` viene siempre `null` en la respuesta por ahora. El criterio, para cuando llegue, está en [reglas de dominio § 7](reglas-de-dominio.md#7-chequeo-de-duplicados-entre-origen-manual-y-automático) (ver también [3.2](03-modelo-de-datos.md#transaction) y [HU1](05-historias-de-usuario.md)).
 
 ```yaml
 parameters:

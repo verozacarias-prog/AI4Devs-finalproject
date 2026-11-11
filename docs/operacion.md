@@ -326,8 +326,8 @@ Las herramientas nuevas se justifican porque hoy no hay ninguna herramienta de c
 mypy y pytest son las de base para Python, y gitleaks y pip-audit cubren lo que ningún
 verificador del repositorio mira. Sentry entra porque nada de lo instalado agrupa errores ni
 avisa cuando aparece uno nuevo. pip-tools entra porque pip no genera un archivo de requisitos con todo
-el árbol y sus hashes, y queda solo en desarrollo: no entra en la imagen. Con qué herramienta se escanea la imagen se elige en la entrega
-final.
+el árbol y sus hashes, y queda solo en desarrollo: no entra en la imagen. Con qué herramienta se escanea la imagen se elige en una segunda
+versión, con el escaneo.
 
 ## 4. Despliegue y vuelta atrás
 

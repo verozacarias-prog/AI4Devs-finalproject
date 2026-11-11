@@ -6,7 +6,7 @@ Reducir la fricción de llevar un control financiero personal y familiar real, y
 
 ### **1.2. Características y funcionalidades principales:**
 
-Las funcionalidades están clasificadas por prioridad de entrega. El MVP comprometido son las **must-have**: son las que estarán completas, testeadas y desplegadas. Las **should-have** entran si el tiempo lo permite. Las **could-have** están diseñadas en este documento (modelo de datos y arquitectura las contemplan) pero **no se implementan en esta primera versión** — se documentan acá para dejar explícito que la decisión fue de alcance, no un olvido.
+Las funcionalidades están clasificadas por prioridad de entrega. El MVP del producto son las **must-have**: son las que van a estar completas, testeadas y desplegadas antes del lanzamiento. Las **should-have** entran si el tiempo lo permite. Las **could-have** están diseñadas en este documento (modelo de datos y arquitectura las contemplan) pero **no se implementan en esta primera versión** — se documentan acá para dejar explícito que la decisión fue de alcance, no un olvido.
 
 #### Must-have — el flujo end-to-end comprometido
 

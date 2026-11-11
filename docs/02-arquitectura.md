@@ -194,7 +194,7 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
 /backend
   /app
     /domain
-      /entities         # User, Session, DevAccessLink, Account, Currency, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, Transfer, PendingTransaction, PendingBatch, InboundMessage, OutboundMessage, ChatMessage, Classification, LlmCall, LlmUsage
+      /entities         # User, Session, DevAccessLink, Account, Currency, BudgetPeriod, FamilyGroup, Membership, FinancialProfile, Budget, Transaction, Category, Transfer, PendingTransaction, PendingBatch, InboundMessage, OutboundMessage, ChatMessage, Classification, LlmCall, and the usage limits and counters (llm_usage.py)
                         # second version: RecurringRule, CardStatement, AdviceDocument, AdviceChunk
       /use_cases         # one folder per feature, such as sessions/, messages/ or accounts/: CreateTestUser, SeedTestData, ListTestUsers, CreatePersonalLink, RegeneratePersonalLink, OpenDevSession, AuthenticateSession, ValidateSession, CloseSession, CloseEverySession, ListAccounts, GetBudgetStatus, GetPeriodSummary, ListBudgetPeriods, CreateBudgetPeriod, UpdateBudgetPeriod, ConfirmBudgetPeriod, ListExpenseCategories, ListCurrencies, SendChatMessage, ListChatMessages, ClaimNextMessage, AnswerMessage, ProcessNextMessage, CheckReadiness, CheckQueue
                          # registering a movement, a transfer or a batch lives in messages/, called by AnswerMessage
@@ -365,10 +365,10 @@ Cómo se opera —entornos, pipeline de la aplicación, vuelta atrás de un desp
 - **El prompt de sistema se escribe como si fuera público**: no lleva secretos ni datos de ningún usuario ([ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md)).
 - **La respuesta del modelo se muestra como texto**: el chat web nunca la interpreta como HTML ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 - **Los diez riesgos de una aplicación con LLM**, uno por uno, con lo que los cubre y lo que falta, están en [seguridad de la capa de IA](seguridad-llm.md).
-- **Números habilitados**: Platita solo le responde a los números que quien la opera habilitó antes ([reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos)).
+- **Números habilitados** *(segunda versión, con WhatsApp)*: Platita solo le responde a los números que quien la opera habilitó antes ([reglas de dominio § 11](reglas-de-dominio.md#11-alta-de-usuario-consentimiento-y-mensajes-proactivos)).
 - **Secretos fuera del código**: credenciales de WhatsApp, LLM y base de datos vía variables de entorno, nunca hardcodeadas ni versionadas.
 - **HTTPS** en toda comunicación externa.
-- Validación de entrada tanto en el webhook de WhatsApp como en los endpoints propios del frontend (cliente y servidor).
+- Validación de entrada en los endpoints propios del frontend (cliente y servidor), y en el webhook de WhatsApp cuando exista.
 
 ### **2.6. Tests**
 

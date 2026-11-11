@@ -143,8 +143,9 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
   que 2.4 prohíbe: dos procesos que arrancan a la vez compiten por aplicar la misma migración.
 - **Una imagen para la API y otra para el worker:** cada una más chica, a cambio de dos
   construcciones que pueden quedar en versiones distintas del mismo código.
-- **Escanear la imagen desde el inicio:** es parte de la propuesta de Operación. Se posterga
-  porque hasta el primer despliegue la imagen no sale de la máquina de desarrollo.
+- **Escanear la imagen desde el inicio:** es parte de la propuesta de Operación. Se posterga:
+  primero porque hasta el primer despliegue la imagen no salía de la máquina de desarrollo, y
+  desde el despliegue del entorno `demo`, a una segunda versión (punto 12).
 - **Referenciar las acciones por su etiqueta de versión mayor,** como estaban: se actualizan
   solas, pero también si alguien reescribe la etiqueta.
 

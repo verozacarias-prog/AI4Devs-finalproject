@@ -585,10 +585,9 @@ sequenceDiagram
 
 ## 13. Lo que el recorrido deja a la vista
 
-Los diagramas marcan dos puntos que la especificación todavía no resuelve:
+Los diagramas marcan un punto que la especificación todavía no resuelve: **las alertas usan el
+LLM, pero los procesos programados no llegan a él** (§ 8). Ya está en las decisiones abiertas de
+la [hoja de ruta](hoja-de-ruta.md#decisiones-abiertas).
 
-- **Las alertas usan el LLM, pero los procesos programados no llegan a él** (§ 8). Ya está en
-  las decisiones abiertas de la [hoja de ruta](hoja-de-ruta.md#decisiones-abiertas).
-
-El alta de cuentas desde el dashboard, que pide la HU1, tampoco tiene endpoint en
-[la API](04-api.md), que por ahora documenta solo los endpoints principales.
+El alta de cuentas desde el dashboard, que pide la HU1, no tiene endpoint en [la API](04-api.md):
+es de una segunda versión ([hoja de ruta](hoja-de-ruta.md#alcance-de-la-entrega-final)).
