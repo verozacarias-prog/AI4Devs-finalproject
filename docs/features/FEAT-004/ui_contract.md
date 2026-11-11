@@ -42,7 +42,7 @@ Salen de `frontend/src/design-tokens.css`, con las excepciones que admite el
 | Cargando | Se abre la pantalla, se elige otro período, se abre un detalle o se aprieta Reintentar | "Consultando tu presupuesto…", sin montos ni barras | Llega la respuesta, o falla |
 | Con contenido: resumen | Llegaron los períodos y el resumen del elegido | El selector, el aviso si es un borrador, los ingresos, el total gastado y una fila por categoría | Elegir otro período, o una categoría con tope |
 | Con contenido: detalle | Se eligió una categoría con tope y llegó su detalle | El tope, lo gastado, el porcentaje y los movimientos | "Volver al resumen", al mismo período |
-| Vacío: sin períodos | `GET /budget-periods` trae la lista vacía | "Todavía no tenés un presupuesto" y qué va a ver cuando arme uno, sin selector ni alerta | — |
+| Vacío: sin períodos | `GET /budget-periods` trae la lista vacía | "Todavía no tenés un presupuesto" y qué va a ver cuando arme uno, sin selector ni alerta. Desde [FEAT-005](../FEAT-005/ui_contract.md), también la entrada para armar uno | Armar un período, con FEAT-005 |
 | Vacío: período sin topes ni gastos | El resumen del elegido no trae categorías | "Este período todavía no tiene topes ni gastos" y que los gastos se cuentan por el chat, sin alerta; el selector sigue a la vista. Los tres montos se muestran si alguno no es cero, como un ingreso estimado cargado sin topes | Elegir otro período |
 | Error | La API responde con un error, no responde a tiempo o no se llega a ella, en cualquiera de las consultas | "No se pudo consultar tu presupuesto", la causa y Reintentar, sin ningún monto | Reintentar vuelve a Cargando y repite solo la consulta que falló |
 
@@ -52,8 +52,8 @@ Sin sesión no es un estado de esta pantalla: como en la de cuentas, un `401` vu
 ## Datos que consume
 
 - [`GET /budget-periods`](../../04-api.md): de cada período usa `id`, `family_group_name`,
-  `period_start`, `period_end`, `status` e `is_current`. No usa `can_edit`, porque editar es de
-  la HU2.
+  `period_start`, `period_end`, `status` e `is_current`. Desde [FEAT-005](../FEAT-005/ui_contract.md)
+  usa también `can_edit`, para mostrar "Editar".
 - `GET /budget-periods/{period_id}/summary`: `estimated_income`, `actual_income`, `total_spent`,
   `primary_currency` y, de cada categoría, `category`, `budget_id`, `limit_amount`,
   `spent_amount` y `used_percentage`.

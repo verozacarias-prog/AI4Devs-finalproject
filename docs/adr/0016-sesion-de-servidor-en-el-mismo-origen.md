@@ -176,7 +176,9 @@ para que la cookie de sesión funcione sin un dominio propio.
 
 - Una consulta a la base por request autenticada. A este volumen, sobre una clave indexada, no
   se nota.
-- Una tabla más, y un proceso programado que borre las sesiones vencidas.
+- Una tabla más, y un proceso programado que borre las sesiones vencidas. Ese proceso es de una
+  segunda versión, con los demás procesos programados: mientras tanto una sesión vencida no sirve,
+  y solo se acumulan filas.
 - El dashboard se sirve desde Python y pierde la red de distribución del Static Site. Con pocos
   usuarios no se nota.
 - El dashboard y la API se despliegan juntos: un cambio solo visual reinicia también el servicio

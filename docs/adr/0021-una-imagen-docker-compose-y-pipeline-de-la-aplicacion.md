@@ -93,8 +93,10 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
     ([ADR 0016](0016-sesion-de-servidor-en-el-mismo-origen.md)). `main`, que recibe solo
     entregas cerradas, despliega `production` cuando exista. Cada entorno tiene su propia base.
     Dónde se aloja `demo` lo decide el [ADR 0029](0029-el-entorno-demo-en-render-en-planes-pagos.md); el de `production` sigue sin decidir.
-12. **Quedan para la entrega final:** el escaneo de la imagen, la prueba de la migración desde
-    el esquema de la versión anterior y el inventario de componentes de la imagen.
+12. **Quedan para una segunda versión:** el escaneo de la imagen, la prueba de la migración desde
+    el esquema de la versión anterior y el inventario de componentes de la imagen. Estaban
+    previstos para la entrega final y se pasaron el 11/11/2026, por decisión de Vero: sumarlos el
+    día antes de la entrega arriesgaba trabar el merge de todo lo demás.
 
 ## Consecuencias
 
@@ -125,7 +127,7 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
   una vulnerabilidad baja, si tiene arreglo.
 - `gitleaks` marca ejemplos que no son secretos. Los seis que encontró en el historial, cinco
   heredados del repositorio del curso, están exceptuados uno por uno en `.gitleaksignore`.
-- Hasta la entrega final nadie revisa las vulnerabilidades de la imagen base.
+- Hasta la segunda versión nadie revisa las vulnerabilidades de la imagen base.
 - CodeQL es el único control que escribe en el repositorio, y suma tres trabajos a cada
   corrida. Puede marcar algo que no es un problema: esa alerta se descarta en GitHub con su
   motivo, nunca desactivando la consulta.

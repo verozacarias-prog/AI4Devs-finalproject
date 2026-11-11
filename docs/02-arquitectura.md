@@ -111,7 +111,7 @@ flowchart TB
     end
 
     subgraph DOMAIN["Dominio — núcleo hexagonal"]
-        UC["<b>Casos de uso</b><br/>AnswerMessage · GetBudgetStatus<br/>ListAccounts · UpdateBudgetPeriod<br/><i>por construir: GenerateAlert</i>"]
+        UC["<b>Casos de uso</b><br/>AnswerMessage · GetBudgetStatus<br/>ListAccounts · UpdateBudgetPeriod<br/><i>segunda versión: GenerateProactiveAlert</i>"]
         ENT["<b>Entidades</b><br/>User · Account · Budget<br/>Transaction · Category"]
         PORTS["<b>Puertos</b><br/>interfaces que el dominio declara<br/>y no implementa"]
     end
@@ -174,14 +174,14 @@ El recorrido de un usuario de punta a punta, con el tipo de llamada y las tablas
 |---|---|---|
 | Backend API | Python + FastAPI | Adaptador de entrada: expone la API REST y traduce requests HTTP a casos de uso del dominio |
 | Dominio | Python puro (sin dependencias de framework) | Entidades, casos de uso y puertos — la lógica de negocio en sí |
-| Auth | Código de un solo uso enviado por WhatsApp + sesión de servidor en PostgreSQL, en una cookie | Login del dashboard web sin contraseñas, reutilizando el teléfono ya verificado como identidad, con sesiones que se pueden revocar (ver [2.5](#25-seguridad)) |
-| Integración WhatsApp | API oficial de WhatsApp Business (Meta Cloud API / Twilio) | Adaptador de entrada/salida: recibe y envía mensajes vía webhook |
+| Auth | Código de un solo uso enviado por WhatsApp + sesión de servidor en PostgreSQL, en una cookie | Login del dashboard web sin contraseñas, reutilizando el teléfono ya verificado como identidad, con sesiones que se pueden revocar (ver [2.5](#25-seguridad)). La sesión está construida; el código por WhatsApp es de una segunda versión, y en `demo` se entra con un enlace personal ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)) |
+| Integración WhatsApp | API oficial de WhatsApp Business (Meta Cloud API / Twilio) | Adaptador de entrada/salida: recibe y envía mensajes vía webhook. Segunda versión: hoy el chat web hace de WhatsApp |
 | Parser de emails *(could-have)* | Python (reglas + LLM para casos ambiguos) | Adaptador de entrada: detecta movimientos financieros en la casilla de correo del usuario (con consentimiento explícito). Diseñado, no implementado en el MVP — ver [1.2](01-producto.md#12-características-y-funcionalidades-principales) |
-| Motor RAG | LLM, embeddings por API y búsqueda sobre pgvector, cada uno detrás de su puerto, sin framework de orquestación | Responde consultas financieras y genera alertas proactivas a partir de la base de conocimiento curada por el producto. Cómo se carga, se parte y se recupera el contenido está en el [ADR 0019](adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md), y por qué no hay framework, en el [ADR 0020](adr/0020-sin-framework-de-orquestacion-de-ia.md) |
+| Motor RAG | LLM, embeddings por API y búsqueda sobre pgvector, cada uno detrás de su puerto, sin framework de orquestación | Responde consultas financieras y genera alertas proactivas a partir de la base de conocimiento curada por el producto. Cómo se carga, se parte y se recupera el contenido está en el [ADR 0019](adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md), y por qué no hay framework, en el [ADR 0020](adr/0020-sin-framework-de-orquestacion-de-ia.md). Segunda versión |
 | Clasificación y memoria | Una llamada inicial al LLM, con salida estructurada | Decide si el mensaje es un registro, una consulta o un consejo antes de cobrar la cuota, y acota cuánta conversación ve el modelo ([ADR 0018](adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md)) |
 | Base de datos relacional | PostgreSQL | Adaptador de salida: usuarios, cuentas, grupos familiares, presupuestos, movimientos, categorías |
-| Base de datos vectorial | pgvector (extensión de PostgreSQL) | Adaptador de salida: embeddings de los fragmentos del contenido de consejos financieros |
-| Frontend | Aplicación web responsiva | Dashboard de visualización, configuración y correcciones, y canal secundario de carga de gastos, ingresos y transferencias |
+| Base de datos vectorial | pgvector (extensión de PostgreSQL) | Adaptador de salida: embeddings de los fragmentos del contenido de consejos financieros. La extensión está instalada; las tablas llegan con los consejos, en una segunda versión |
+| Frontend | Aplicación web responsiva | Dashboard de visualización y configuración. Hoy muestra cuentas, presupuestos y el chat web, y arma los períodos; las correcciones y la carga de gastos, ingresos y transferencias desde un formulario son de una segunda versión |
 | Chat web | Pantalla del dashboard, detrás de una opción de configuración | Andamio de desarrollo y demostración: entra por el mismo camino asíncrono que WhatsApp y está apagado en producción ([ADR 0002](adr/0002-whatsapp-como-canal-principal.md)) |
 
 *(pgvector sobre PostgreSQL en vez de una base vectorial dedicada, como decisión de arranque — no definitiva, y aislada detrás de un puerto propio para poder reemplazarla. Ver [ADR 0004](adr/0004-postgres-con-pgvector-como-unico-almacen.md).)*
@@ -194,11 +194,14 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
 /backend
   /app
     /domain
-      /entities         # User, Session, Account, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, RecurringRule, CardStatement, Transfer, PendingTransaction, PendingBatch, AdviceDocument, AdviceChunk, InboundMessage, OutboundMessage, ChatMessage, Classification, LlmCall, LlmUsage
-      /use_cases         # one folder per feature, such as sessions/, messages/ or accounts/: CreateTestUser, SeedTestData, ListTestUsers, OpenDevSession, AuthenticateSession, CloseSession, RegisterTransaction, GetBudgetStatus, GetPeriodSummary, ListBudgetPeriods, ListAccounts, SendChatMessage, ListChatMessages, ClaimNextMessage, AnswerMessage, ProcessNextMessage, ValidateSession, CheckReadiness, CheckQueue, GenerateProactiveAlert...
+      /entities         # User, Session, DevAccessLink, Account, Currency, BudgetPeriod, FamilyGroup, FinancialProfile, Budget, Transaction, Category, Transfer, PendingTransaction, PendingBatch, InboundMessage, OutboundMessage, ChatMessage, Classification, LlmCall, LlmUsage
+                        # second version: RecurringRule, CardStatement, AdviceDocument, AdviceChunk
+      /use_cases         # one folder per feature, such as sessions/, messages/ or accounts/: CreateTestUser, SeedTestData, ListTestUsers, CreatePersonalLink, RegeneratePersonalLink, OpenDevSession, AuthenticateSession, ValidateSession, CloseSession, CloseEverySession, ListAccounts, GetBudgetStatus, GetPeriodSummary, ListBudgetPeriods, CreateBudgetPeriod, UpdateBudgetPeriod, ConfirmBudgetPeriod, ListExpenseCategories, ListCurrencies, SendChatMessage, ListChatMessages, ClaimNextMessage, AnswerMessage, ProcessNextMessage, CheckReadiness, CheckQueue
+                         # registering a movement, a transfer or a batch lives in messages/, called by AnswerMessage
+                         # second version: GenerateProactiveAlert
       /ports             # interfaces the domain depends on but does not implement
         - unit_of_work_port.py
-        - one <name>_repository_port.py per repository: user, session, account, transaction, transfer,
+        - one <name>_repository_port.py per repository: user, session, dev_access_link, account, transaction, transfer,
           category, currency, budget_period, budget, family_group, financial_profile, pending, inbound_message,
           outbound_message, chat_message and llm_usage
         - llm_port.py
@@ -209,7 +212,7 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
           exchange_rate_port.py, with the features that need them
       /services          # domain services: business rules that belong to no single entity, as functions, one folder per topic
         /accounts        # the balance of an account
-        /budgets         # what a period spent and received, and who reads and edits a period
+        /budgets         # what a period spent and received, who reads and edits a period, when it ends, and what its content has to meet
         /transactions    # which account a message names, whether a movement can be registered without asking, and its confirmation
         /dates           # which day it is for a user, in the time zone of that user
       errors.py          # the errors a business rule foresees, each with a stable code and a category; the only file loose in domain/
@@ -217,21 +220,22 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
       /inbound
         /api               # the HTTP side: building the app, its middleware and error answers; main.py is the entry point of the API process
           /routers         # one file per group of endpoints — translate HTTP into use case calls
-        /whatsapp_webhook   # translate WhatsApp payloads into use case calls
+        /whatsapp_webhook   # translate WhatsApp payloads into use case calls; not built yet: second version
         /message_worker     # the worker: takes stored messages, calls use cases; main.py is the entry point of its process
-        /scheduler          # scheduled jobs entry point: calls use cases, never raw SQL
-        /operator_commands  # commands an operator runs by hand: local test data, knowledge base load, enabling phone numbers, personal links for the demo
+        /scheduler          # scheduled jobs entry point: calls use cases, never raw SQL; not built yet: second version
+        /operator_commands  # commands an operator runs by hand: local test data and personal links for the demo;
+                            # second version: knowledge base load and enabling phone numbers
       /outbound
         /postgres           # unit of work, connection setup, queries.py with all the SQL written by hand, the translation of
                             # a rejected write (rejections.py), and the health checks of the database and of the queue
           /repositories    # one file per repository, each implementing its port
-        /pgvector            # VectorStorePort implementation
-        /whatsapp_client      # sends outbound WhatsApp messages
+        /pgvector            # VectorStorePort implementation; not built yet: second version
+        /whatsapp_client      # sends outbound WhatsApp messages; not built yet: second version
         /email_reader          # IMAP/Gmail integration (could-have, not in the MVP)
-        /exchange_rate_client   # currency quote provider
+        /exchange_rate_client   # currency quote provider; not built yet: second version
         /llm_client              # LLM client: classification, interpretation and answers, provider SDK only
-        /embedding_client         # embeddings provider client
-        /text_splitter             # the only place that imports langchain-text-splitters
+        /embedding_client         # embeddings provider client; not built yet: second version
+        /text_splitter             # the only place that imports langchain-text-splitters; not built yet: second version
       /observability              # wrappers of the LLM and embedding ports that record each call, and the JSON log format with its redaction filter
     /shared              # small technical utilities, standard library only: clock.py is the first
     constants.py         # environments, environment variable names and default values
@@ -246,7 +250,7 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
     /pages               # one file per screen, with its test next to it
     /components          # the pieces several screens share, such as the side menu, with their test next to them
       /ui                # the shadcn/ui components, copied into the project and owned by it
-    /lib                 # small helpers of the components: class-names.ts joins class names
+    /lib                 # small helpers of the screens: class names, amount and budget texts, and the start of the next period
     messages.ts          # every text the dashboard shows
     constants.ts         # every other value of the dashboard that is not a text nor an API path
     design-tokens.css    # design tokens: the only place with colours, sizes and spacing
@@ -347,13 +351,13 @@ Cómo se opera —entornos, pipeline de la aplicación, vuelta atrás de un desp
 
 ### **2.5. Seguridad**
 
-- **Login sin contraseñas**: código de un solo uso por WhatsApp intercambiado por una sesión guardada en la base, que viaja en una cookie que ningún script puede leer y que se puede revocar, con límites por número y por IP que no revelan si el número está registrado ([ADR 0017](adr/0017-limites-del-login-y-codigos-con-proposito.md)). El dashboard se sirve desde el mismo origen que la API, así que la API no habilita CORS. El contrato y los límites concretos están en [la API](04-api.md). El fundamento de la decisión está en el [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md), que reemplaza al [ADR 0003](adr/0003-login-por-codigo-unico.md).
-- **Consentimiento explícito y revocable** para el acceso a la casilla de email (configuración de usuario, no un permiso obligatorio del sistema).
-- **Verificación de firma del webhook de WhatsApp** en cada request entrante, para descartar mensajes falsificados.
+- **Login sin contraseñas** *(el código por WhatsApp es de una segunda versión; la sesión, la cookie y el mismo origen están construidos)*: código de un solo uso por WhatsApp intercambiado por una sesión guardada en la base, que viaja en una cookie que ningún script puede leer y que se puede revocar, con límites por número y por IP que no revelan si el número está registrado ([ADR 0017](adr/0017-limites-del-login-y-codigos-con-proposito.md)). El dashboard se sirve desde el mismo origen que la API, así que la API no habilita CORS. El contrato y los límites concretos están en [la API](04-api.md). El fundamento de la decisión está en el [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md), que reemplaza al [ADR 0003](adr/0003-login-por-codigo-unico.md).
+- **Consentimiento explícito y revocable** para el acceso a la casilla de email (configuración de usuario, no un permiso obligatorio del sistema). Llega con la lectura de emails, que es could-have.
+- **Verificación de firma del webhook de WhatsApp** en cada request entrante, para descartar mensajes falsificados. Llega con el webhook, en una segunda versión.
 - **Nunca loggear en crudo** número de teléfono, montos ni texto de usuario sin enmascarar. Los registros salen en JSON, pasan por un filtro que quita los datos personales, y los eventos de seguridad son eventos de ese mismo registro ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
 - **Cada llamada al modelo queda registrada sin contenido**: propósito, modelo, tokens, duración, costo y resultado, nunca el texto. No se usa una plataforma externa de observabilidad de LLM, porque recibiría los prompts y las respuestas ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md)).
-- **Retención limitada**: el texto de los mensajes se borra pasado un plazo configurable, y al proveedor de LLM nunca se le envían identificadores ([reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos), [ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md)).
-- **Configuración en YAML versionado**: el plazo de retención de mensajes (`message_retention_days`, 60 por defecto), el plazo de gracia del borrado de cuenta (`account_deletion_grace_days`, 7 por defecto), los dos valores de la memoria de conversación (3 intercambios y 30 minutos), los parámetros de partición y de recuperación de la base de conocimiento, los umbrales de las alertas de presupuesto y las fuentes de cotización viven en archivos YAML del repositorio, no en el código ni en la base.
+- **Retención limitada**: el texto de los mensajes se borra pasado un plazo configurable (el proceso que lo borra es de una segunda versión), y al proveedor de LLM nunca se le envían identificadores ([reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos), [ADR 0013](adr/0013-datos-minimos-al-proveedor-de-llm.md)).
+- **Configuración en YAML versionado**: el plazo de retención de mensajes (`message_retention_days`, 60 por defecto), el plazo de gracia del borrado de cuenta (`account_deletion_grace_days`, 7 por defecto), los dos valores de la memoria de conversación (3 intercambios y 30 minutos), los parámetros de partición y de recuperación de la base de conocimiento, los umbrales de las alertas de presupuesto y las fuentes de cotización viven en archivos YAML del repositorio, no en el código ni en la base. **Estado:** diseño, para una segunda versión, con las funcionalidades que usan esos valores. Hoy lo configurable va por variables de entorno, con su valor por defecto en `constants.py`.
 - **Precios del modelo en el código**: el precio por millón de tokens del modelo de lenguaje, con el que se estima el costo de cada llamada ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md), punto 8), es una constante de `backend/app/constants.py`, junto al nombre del modelo. Hoy es un solo modelo y un solo precio. Nada comprueba que siga al día: se revisa a mano contra la página de precios del proveedor.
 - **Límites de uso en variables de entorno**: el tope diario total y las cuotas del asistente ([reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente)) se leen de variables de entorno, con su valor por defecto en el código, para poder bajarlos ante un abuso reiniciando el proceso, sin desplegar. Decidido el 18 de octubre de 2026 ([FEAT-003](features/FEAT-003/spec.md), CA-46).
 - **Entorno declarado y andamios que no arrancan en producción**: la configuración dice si el entorno es `local`, `demo` o `production`. El chat web y la entrada de desarrollo, que abre una sesión sin código, se habilitan solo en los dos primeros; con alguno encendido en `production`, ningún proceso arranca. En `demo` se entra solo con un enlace personal, y la primera vez hay que aceptar un aviso de prueba; cada persona que prueba ve únicamente sus datos ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).

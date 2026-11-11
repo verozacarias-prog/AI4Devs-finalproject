@@ -10,6 +10,10 @@ Las funcionalidades están clasificadas por prioridad de entrega. El MVP comprom
 
 #### Must-have — el flujo end-to-end comprometido
 
+Esta lista describe el producto completo. Qué entra en la entrega final y qué pasa a una segunda
+versión, también dentro de las must-have, está en la
+[hoja de ruta](hoja-de-ruta.md#alcance-de-la-entrega-final).
+
 - **Registro conversacional por WhatsApp**: cargar gastos e ingresos hablándole al asistente en tono coloquial, sin formularios. El asistente contesta en español rioplatense, con voseo y vocabulario local, cálido y corto.
 - **Qué se asume y qué se confirma**: el asistente completa solo lo que puede resolver sin adivinar (fecha, moneda y categoría) y exige confirmación del usuario para el monto, el tipo cuando es ambiguo, la cuenta y, cuando hay más de uno posible, el presupuesto al que se imputa el gasto. Todo lo asumido queda listado en el mensaje de confirmación. La regla completa, con el detalle campo por campo, está en [reglas de dominio § 1](reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma).
 - **Cuentas configurables con saldo calculado**: el usuario da de alta sus cuentas (ej. "Galicia en dólares", "Banco Nación", "Mercado Pago", un broker como Balanz) con su tipo y moneda, y el sistema calcula cuánto hay en cada una a partir del saldo inicial más los movimientos registrados — no es un dato que el usuario tenga que actualizar a mano.

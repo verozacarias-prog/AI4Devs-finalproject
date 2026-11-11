@@ -105,10 +105,18 @@ desde [`features/TEMPLATE/pr.md`](features/TEMPLATE/pr.md).
 
 ## Entrega final
 
-Los tres cortes de la funcionalidad de la entrega final se enlazan acá cuando estén integrados.
+Cuatro funcionalidades nuevas, cada una partida en cortes verticales, y las tareas que las
+acompañaron. Los pull requests de Dependabot no se listan.
 
-| # | Corte | Pull request |
-|---|---|---|
-| 1 | Camino feliz y carga | `[pendiente]` |
-| 2 | Errores, estado vacío y confirmaciones | `[pendiente]` |
-| 3 | Observabilidad, multimoneda y accesibilidad | `[pendiente]` |
+| Qué | Pull requests |
+|---|---|
+| [FEAT-004](features/FEAT-004/spec.md), la pantalla de presupuesto: camino feliz, errores y estado vacío, observabilidad y accesibilidad | [#90](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/90), [#102](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/102) y [#103](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/103) |
+| [FEAT-005](features/FEAT-005/spec.md), armar y confirmar un período de presupuesto | [#123](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/123) y [#124](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/124) |
+| [FEAT-006](features/FEAT-006/spec.md), las transferencias entre cuentas propias, en tres cortes | [#145](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/145), [#147](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/147) y [#150](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/150) |
+| [FEAT-007](features/FEAT-007/spec.md), varios movimientos en un mensaje | [#155](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/155) |
+| El test de punta a punta del flujo principal, con Playwright | [#88](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/88) y [#89](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/89) |
+| El despliegue del entorno `demo` en Render, y el rol de la aplicación en la base | [#105](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/105), [#106](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/106), [#108](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/108), [#130](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/130), [#131](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/131), [#132](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/132) y [#142](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/142) |
+| Seguridad: los topes de tamaño, los topes del asistente, las dependencias con hashes y las escrituras filtradas por usuario | [#107](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/107), [#109](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/109), [#137](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/137) y [#179](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/179) |
+| Correcciones: el estado del período confirmado, y la moneda escrita y las fechas | [#133](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/133) y [#175](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/175) |
+| La forma de trabajo: la rama de la entrega, el comando `/ticket` y la hoja de ruta | [#68](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/68), [#104](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/104) y [#141](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/141) |
+| El cierre: el acceso del evaluador, `prompts.md` y el ajuste del prompt del producto | [#87](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/87), [#176](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/176) y [#180](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/180) |

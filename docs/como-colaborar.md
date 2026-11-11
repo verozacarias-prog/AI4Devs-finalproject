@@ -11,7 +11,8 @@ En el backend se trabaja con tests primero ([ADR 0024](adr/0024-tests-primero-en
 **Ramas.** Cada entrega tiene su rama (`feature/entrega-N-VNZ`; la final, `final-project-VNZ`),
 que sale de `main` y vuelve a `main` cuando la entrega se cierra. El trabajo no se hace ahí: cada
 cambio va en una rama corta que sale de la rama de la entrega y vuelve a ella por pull request. La
-rama de la entrega despliega el entorno de pruebas, y `main`, producción. El porqué está en
+rama de la entrega despliega el entorno de pruebas, y `main` va a desplegar producción cuando
+exista. El porqué está en
 [documentación viva](documentacion-viva.md#7-el-modelo-de-ramas).
 
 | Rama | Sale de | Nombre | Ejemplo |

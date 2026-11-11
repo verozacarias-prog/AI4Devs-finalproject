@@ -4,7 +4,7 @@
 
 **Aislamiento entre usuarios, en todo endpoint autenticado.** El usuario sale siempre de la sesión autenticada, nunca del cuerpo, de la ruta ni de un parámetro. Toda lectura o escritura se limita a los recursos de ese usuario y de los grupos familiares a los que pertenece, según [reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad). Un recurso que existe pero es de otro usuario responde `404`, igual que uno que no existe, para no confirmar su existencia. Cada endpoint lo detalla para sus propios recursos, pero la regla vale aunque no lo diga.
 
-**Cuerpo de un error.** Toda respuesta de error es JSON y tiene la misma forma: un campo `error` con el código del error, una palabra corta en minúsculas que no cambia, como `period_overlaps`. Es el mismo código que queda en los registros. El dashboard elige qué mostrar por ese código, nunca por un texto. Un error suma otros campos, con nombre propio, solo cuando el cliente los necesita para seguir, y cada endpoint los documenta: por ejemplo `missing_fields` en `POST /transactions`. El cuerpo nunca repite lo que el cliente mandó ni describe la falla. Las rutas de salud son la única excepción: su `503` no es un error del pedido sino el estado del servicio, y responde con el mismo cuerpo que su `200`, como dice [su sección](#get-healthz-get-readyz-y-get-queuez). Lo que el servidor responde antes de llegar a un endpoint tiene la misma forma, con el nombre del estado como código: `not_found` para una ruta que no existe, `method_not_allowed`, con `405`, para un método que la ruta no acepta, y `content_too_large`, con `413`, para un cuerpo de más de 64 KiB.
+**Cuerpo de un error.** Toda respuesta de error es JSON y tiene la misma forma: un campo `error` con el código del error, una palabra corta en minúsculas que no cambia, como `period_overlaps`. Es el mismo código que queda en los registros. El dashboard elige qué mostrar por ese código, nunca por un texto. Un error suma otros campos, con nombre propio, solo cuando el cliente los necesita para seguir, y cada endpoint los documenta: por ejemplo `missing_fields` en `POST /transactions`. El cuerpo nunca repite lo que el cliente mandó ni describe la falla. Las rutas de salud son la única excepción: su `503` no es un error del pedido sino el estado del servicio, y responde con el mismo cuerpo que su `200`, como dice [su sección](#get-healthz-get-readyz-y-get-queuez). Lo que el servidor responde antes de llegar a un endpoint tiene la misma forma, con el nombre del estado como código: `not_found` para una ruta que no existe, `method_not_allowed`, con `405`, para un método que la ruta no acepta, `content_too_large`, con `413`, para un cuerpo de más de 64 KiB, y `forbidden`, con `403`, para un pedido que no pasa el control de origen.
 
 **Tamaño de un pedido.** El cuerpo de un pedido, en cualquier ruta, tiene como máximo 64 KiB. Si el pedido declara un tamaño mayor en `Content-Length`, se rechaza sin leerlo y antes del control de origen. Si no lo declara, se rechaza en cuanto lo leído pasa el máximo.
 
@@ -22,6 +22,8 @@
 **Referencia de cada respuesta.** Toda respuesta, también la de un error, lleva el header `X-Request-Id` con el identificador del pedido. Es el mismo que queda en los registros ([Operación 6.3](operacion.md#63-registros)), y no dice nada del usuario ni del pedido.
 
 ### `POST /webhook/whatsapp`
+
+**Estado:** diseño, para una segunda versión ([hoja de ruta](hoja-de-ruta.md#alcance-de-la-entrega-final)).
 
 Recibe los mensajes entrantes desde la Cloud API de Meta. **No los procesa**: verifica la firma, los guarda y confirma la recepción. La interpretación por IA, el registro y la respuesta al usuario ocurren después, en el worker, y la respuesta viaja por WhatsApp, no en este response. El fundamento está en el [ADR 0010](adr/0010-webhook-asincrono-con-tabla-de-entrada.md).
 
@@ -147,11 +149,11 @@ responses:
 
 ### `GET /accounts`
 
-Lista las cuentas del usuario autenticado con su saldo calculado, para la pantalla de cuentas del dashboard. El saldo no se guarda: se calcula con los movimientos y las transferencias con fecha hasta hoy ([reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado)). Dar de alta o editar una cuenta no tiene endpoint: se hace conversando.
+Lista las cuentas del usuario autenticado con su saldo calculado, para la pantalla de cuentas del dashboard. El saldo no se guarda: se calcula con los movimientos y las transferencias con fecha hasta hoy ([reglas de dominio § 2](reglas-de-dominio.md#2-cuentas-y-saldo-calculado)). Dar de alta o editar una cuenta no tiene endpoint: es de una segunda versión, conversando o desde el dashboard ([hoja de ruta](hoja-de-ruta.md#alcance-de-la-entrega-final)).
 
 - Devuelve solo las cuentas del usuario de la sesión.
 - En una cuenta de inversión, `balance` es lo aportado neto y `balance_kind` lo dice, para que la pantalla no lo sume a ningún total.
-- Las cuentas "Me deben" vienen marcadas por su `type`, para mostrarlas en su sección.
+- Las cuentas "Me deben" vienen marcadas por su `type`. Hoy el dashboard las deja afuera; su sección es de una segunda versión ([FEAT-001](features/FEAT-001/spec.md), CA-15).
 - Vienen ordenadas: primero las de la moneda primaria del usuario, después las demás monedas por su código, y dentro de cada moneda por nombre, sin distinguir mayúsculas. El dashboard las muestra en ese orden.
 
 ```yaml
@@ -590,6 +592,8 @@ responses:
 
 ### `POST /transactions`
 
+**Estado:** diseño, para una segunda versión ([hoja de ruta](hoja-de-ruta.md#alcance-de-la-entrega-final)).
+
 Registra un movimiento manualmente desde el dashboard. `amount`, `type`, `category_id`, `account_id` y `budget_period_id` son obligatorios: si falta alguno se rechaza con `422`. Los dos últimos no se derivan acá porque dependen de una decisión del usuario, que se resuelve antes de llegar a este endpoint.
 
 **Un pedido repetido no crea un segundo movimiento.** El cliente manda un header `Idempotency-Key` con un UUID que genera una sola vez por cada movimiento que el usuario quiere cargar, y lo reenvía igual si repite el pedido, por un doble clic o porque se cortó la conexión antes de recibir la respuesta. El servidor lo guarda en `client_request_id`, con una clave única por usuario. Si llega una clave que ese usuario ya usó, no inserta nada y responde `200` con el movimiento que creó la primera vez. Si llegan dos pedidos con la misma clave a la vez, la clave única hace que uno solo inserte. Sin el header, `422`.
@@ -654,6 +658,8 @@ responses:
 
 ### `POST /transfers`
 
+**Estado:** diseño, para una segunda versión ([hoja de ruta](hoja-de-ruta.md#alcance-de-la-entrega-final)).
+
 Registra una transferencia entre dos cuentas del usuario desde el dashboard: sacar efectivo, pasar
 plata a una billetera, comprar dólares, aportar a una cuenta de inversión o pagar una tarjeta. No
 es un gasto ni un ingreso, así que no lleva categoría ni presupuesto
@@ -709,7 +715,7 @@ responses:
 
 El login del dashboard, sin contraseñas: el usuario pide un código, lo recibe por WhatsApp y lo canjea por una sesión. Los dos endpoints del código se construyen junto con el adaptador de WhatsApp; hasta entonces el andamio entra por `POST /dev/session`, más abajo. El fundamento está en el [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md), los límites en el [ADR 0017](adr/0017-limites-del-login-y-codigos-con-proposito.md), y las restricciones del código y de la sesión en [LOGIN_CODE, SESSION y AUTH_THROTTLE](03-modelo-de-datos.md#32-descripción-de-entidades-principales).
 
-**Cómo viaja la sesión.** En una cookie `__Host-sid` con `HttpOnly`, `Secure`, `SameSite=Strict` y `Path=/`, sin `Domain`. El dashboard se sirve desde el mismo origen que la API, bajo `/app`, y la API no habilita CORS. Todo pedido con un método que no sea `GET`, `HEAD` u `OPTIONS` responde `403` si su `Origin` no es el de Platita, si no trae `Origin`, o si su `Content-Type` no es `application/json`. El `Origin` se compara con el `Host` del pedido, sin el esquema: detrás de un proxy la API no ve el que usó el navegador. El control corre antes de leer el cuerpo, así que un pedido de otro sitio responde `403` también con un cuerpo mal formado. Un pedido a una ruta que no existe, o con un método que la ruta no acepta, responde su `404` o su `405`. La excepción es el dashboard, bajo `/app`: ahí un pedido de otro origen que modifica algo responde `403`, cualquiera sea su método. `/webhook/whatsapp` está exceptuado, porque Meta lo llama sin cookie y firma cada pedido. Una request con una sesión inexistente, revocada o vencida responde `401`.
+**Cómo viaja la sesión.** En una cookie `__Host-sid` con `HttpOnly`, `Secure`, `SameSite=Strict` y `Path=/`, sin `Domain`. El dashboard se sirve desde el mismo origen que la API, bajo `/app`, y la API no habilita CORS. Todo pedido con un método que no sea `GET`, `HEAD` u `OPTIONS` responde `403` si su `Origin` no es el de Platita, si no trae `Origin`, o si su `Content-Type` no es `application/json`. El `Origin` se compara con el `Host` del pedido, sin el esquema: detrás de un proxy la API no ve el que usó el navegador. El control corre antes de leer el cuerpo, así que un pedido de otro sitio responde `403` también con un cuerpo mal formado. Un pedido a una ruta que no existe, o con un método que la ruta no acepta, responde su `404` o su `405`. La excepción es el dashboard, bajo `/app`: ahí un pedido de otro origen que modifica algo responde `403`, cualquiera sea su método. `/webhook/whatsapp`, cuando exista, va a estar exceptuado, porque Meta lo llama sin cookie y firma cada pedido. Una request con una sesión inexistente, revocada o vencida responde `401`.
 
 `POST /auth/code` pide un código para un número. Responde `202` **siempre igual**, exista o no un usuario con ese número, para no revelar quién usa Platita; solo si existe se genera y se envía un código de propósito `login`. Admite como mucho 3 pedidos por número cada 15 minutos y 20 por IP por hora, contados exista o no el usuario: pasado cualquiera de los dos responde `429` y no envía nada, porque cada envío es un mensaje de plantilla que se paga y que el dueño del número recibe.
 
@@ -856,6 +862,8 @@ responses:
 
 ### `GET /family-groups`, `POST /family-groups`, `POST /family-groups/{family_group_id}/invitations` y `DELETE /family-groups/{family_group_id}/invitations/{invitation_id}`
 
+**Estado:** diseño, para una segunda versión ([hoja de ruta](hoja-de-ruta.md#alcance-de-la-entrega-final)).
+
 Crear un grupo, sea una familia o una actividad, e invitar miembros. Aceptar una invitación no
 tiene endpoint: se hace solo por WhatsApp, porque es lo que verifica que el número es del
 invitado. La regla completa está en
@@ -911,6 +919,8 @@ responses:
 
 ### `GET /family-groups/{family_group_id}/export`
 
+**Estado:** diseño, para una segunda versión ([hoja de ruta](hoja-de-ruta.md#alcance-de-la-entrega-final)).
+
 Descarga la exportación de un grupo familiar en Excel, con las hojas "Movimientos" y
 "Presupuestos" descritas en [reglas de dominio § 10](reglas-de-dominio.md#10-grupos-familiares-administración-salida-y-visibilidad).
 El archivo se genera en el momento y no se guarda. Incluye solo los períodos que el usuario
@@ -931,6 +941,8 @@ responses:
 ```
 
 ### `GET /me/export`, `POST /me/deletion/code`, `POST /me/deletion` y `DELETE /me/deletion`
+
+**Estado:** diseño, para una segunda versión ([hoja de ruta](hoja-de-ruta.md#alcance-de-la-entrega-final)).
 
 Los derechos de acceso y supresión de [reglas de dominio § 14](reglas-de-dominio.md#14-privacidad-retención-borrado-de-cuenta-y-derechos).
 
