@@ -37,7 +37,7 @@ una persona.
 
 ## Verificación automática
 
-Dos scripts que corren solos en el hook de pre-commit. Lo que se responde con sí o no va acá; lo
+Tres scripts que corren solos en el hook de pre-commit. Lo que se responde con sí o no va acá; lo
 que requiere criterio es un command.
 
 | Script | Qué valida |

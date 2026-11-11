@@ -176,8 +176,8 @@ ningún otro entorno se define.
 
 | Entorno | Para qué | En qué se diferencia | Cómo se promueve |
 |---|---|---|---|
-| Local | Desarrollo y pruebas manuales del flujo por WhatsApp | Docker Compose con la imagen `pgvector/pgvector:pg16`, el número de prueba gratuito de Meta detrás de un túnel, y datos semilla que se niegan a correr contra producción | Pull request |
-| CI, efímero | Tests de integración y migraciones contra un PostgreSQL real, y el test de punta a punta | PostgreSQL como contenedor del job, sin secretos, con dobles de prueba para Meta, el LLM, los embeddings y las cotizaciones. El test de punta a punta levanta todo con Docker Compose, con un proveedor del modelo simulado | Merge a la rama de despliegue con todos los checks en verde |
+| Local | Desarrollo y pruebas manuales del flujo conversacional, hoy por el chat web | Docker Compose con la imagen `pgvector/pgvector:pg16` y datos semilla que se niegan a correr contra producción. Con WhatsApp, en una segunda versión, se suma el número de prueba gratuito de Meta detrás de un túnel | Pull request |
+| CI, efímero | Tests de integración y migraciones contra un PostgreSQL real, y el test de punta a punta | PostgreSQL como contenedor del job, sin secretos, con un doble de prueba para el LLM. Los de Meta, los embeddings y las cotizaciones se suman con sus adaptadores, en una segunda versión. El test de punta a punta levanta todo con Docker Compose, con un proveedor del modelo simulado | Merge a la rama de despliegue con todos los checks en verde |
 | Demostración y pruebas | Mostrar el flujo conversacional por el chat web, sin WhatsApp, y que lo pruebe otra persona | Entorno `demo`: usuarios de prueba, chat web encendido y entrada por un enlace personal, uno por persona, con un aviso de prueba que se acepta la primera vez ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Tiene su propia base. Se aloja en Render ([ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md)) | Con cada integración a la rama de la entrega |
 | Producción | Usuarios | Entorno `production`: Render, con los secretos en un Environment Group y registros en nivel INFO. No arranca con el chat web ni la entrada de desarrollo encendidos | Despliegue automático de Render cuando pasan los checks |
 
@@ -265,8 +265,8 @@ despliega cuando pasan sus controles.
    cuando termina la revisión ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 
 Un staging igual a producción no está al lanzamiento: duplicaría el costo, y el riesgo principal que cubriría, una
-migración que rompe, lo cubre la CI probando la migración desde el esquema de la versión
-anterior. Cuándo agregarlo está en [7](#7-cuándo-crecer).
+migración que rompe, lo va a cubrir la CI probando la migración desde el esquema de la versión
+anterior, un control de la segunda versión que tiene que estar antes del lanzamiento. Cuándo agregarlo está en [7](#7-cuándo-crecer).
 
 ## 3. Pipeline de la aplicación
 
@@ -294,8 +294,8 @@ obligatorios.
 | Actualización de dependencias | Dependabot, una vez por semana | No: abre un pull request | Decidido, control 5. Ya corre para las acciones, el portal, el backend, el dashboard y la imagen del Dockerfile. Las imágenes de Compose y los archivos del backend con hashes están configurados, y falta comprobarlos en su primera corrida |
 | Dependencias e imágenes fijadas | Todo el árbol del backend con sus hashes, generado con pip-tools por `scripts/lock_backend_dependencies.sh` e instalado con `--require-hashes`, y las imágenes por digest. La imagen de pgvector se repite en `app-quality.yml` y un test falla si difiere de la de Compose | El build, si lo que baja no coincide | Decidido, [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md). Ya corre |
 | Análisis de seguridad del código | CodeQL, sobre el backend, el dashboard y los flujos de GitHub Actions. También corre una vez por semana | El merge, ante una alerta nueva de severidad alta o crítica | Decidido, control 6. Ya corre |
-| Migraciones desde el esquema de la versión anterior | `alembic upgrade head` sobre el esquema anterior, más `alembic check` | El merge | Entrega final |
-| Imagen | build de Docker, escaneo e inventario de componentes | El merge, si hay críticas con arreglo | Entrega final |
+| Migraciones desde el esquema de la versión anterior | `alembic upgrade head` sobre el esquema anterior, más `alembic check` | El merge | Segunda versión, antes del lanzamiento ([ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md), punto 12) |
+| Imagen | build de Docker, escaneo e inventario de componentes | El merge, si hay críticas con arreglo | El build ya corre en el test de punta a punta; el escaneo y el inventario, segunda versión ([ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md), punto 12) |
 | Migración en producción | `preDeployCommand` de Render | El despliegue | Propuesto |
 | Chequeo de salud | `/readyz` | El cambio de tráfico a la versión nueva | Propuesto |
 
@@ -326,8 +326,8 @@ Las herramientas nuevas se justifican porque hoy no hay ninguna herramienta de c
 mypy y pytest son las de base para Python, y gitleaks y pip-audit cubren lo que ningún
 verificador del repositorio mira. Sentry entra porque nada de lo instalado agrupa errores ni
 avisa cuando aparece uno nuevo. pip-tools entra porque pip no genera un archivo de requisitos con todo
-el árbol y sus hashes, y queda solo en desarrollo: no entra en la imagen. Con qué herramienta se escanea la imagen se elige en la entrega
-final.
+el árbol y sus hashes, y queda solo en desarrollo: no entra en la imagen. Con qué herramienta se escanea la imagen se elige en una segunda
+versión, con el escaneo.
 
 ## 4. Despliegue y vuelta atrás
 

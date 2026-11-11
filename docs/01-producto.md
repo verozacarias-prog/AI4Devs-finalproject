@@ -6,9 +6,13 @@ Reducir la fricción de llevar un control financiero personal y familiar real, y
 
 ### **1.2. Características y funcionalidades principales:**
 
-Las funcionalidades están clasificadas por prioridad de entrega. El MVP comprometido son las **must-have**: son las que estarán completas, testeadas y desplegadas. Las **should-have** entran si el tiempo lo permite. Las **could-have** están diseñadas en este documento (modelo de datos y arquitectura las contemplan) pero **no se implementan en esta primera versión** — se documentan acá para dejar explícito que la decisión fue de alcance, no un olvido.
+Las funcionalidades están clasificadas por prioridad de entrega. El MVP del producto son las **must-have**: son las que van a estar completas, testeadas y desplegadas antes del lanzamiento. Las **should-have** entran si el tiempo lo permite. Las **could-have** están diseñadas en este documento (modelo de datos y arquitectura las contemplan) pero **no se implementan en esta primera versión** — se documentan acá para dejar explícito que la decisión fue de alcance, no un olvido.
 
 #### Must-have — el flujo end-to-end comprometido
+
+Esta lista describe el producto completo. Qué entra en la entrega final y qué pasa a una segunda
+versión, también dentro de las must-have, está en la
+[hoja de ruta](hoja-de-ruta.md#alcance-de-la-entrega-final).
 
 - **Registro conversacional por WhatsApp**: cargar gastos e ingresos hablándole al asistente en tono coloquial, sin formularios. El asistente contesta en español rioplatense, con voseo y vocabulario local, cálido y corto.
 - **Qué se asume y qué se confirma**: el asistente completa solo lo que puede resolver sin adivinar (fecha, moneda y categoría) y exige confirmación del usuario para el monto, el tipo cuando es ambiguo, la cuenta y, cuando hay más de uno posible, el presupuesto al que se imputa el gasto. Todo lo asumido queda listado en el mensaje de confirmación. La regla completa, con el detalle campo por campo, está en [reglas de dominio § 1](reglas-de-dominio.md#1-registro-de-un-movimiento-qué-se-asume-y-qué-se-confirma).

@@ -4,8 +4,8 @@ Qué queda por hacer, cuándo se desbloquea y por qué importa. No es una lista 
 punto salió de una decisión ya tomada y documentada, y está acá porque **depende de que exista
 código** y no se puede adelantar sin inventar.
 
-Los pendientes del registro de uso de IA —qué prompts falta documentar, el MCP de GitHub— viven
-en [`prompts.md`](../prompts.md), no acá.
+El registro del uso de IA está en [`prompts.md`](../prompts.md) y, completo, en
+[`registro-ia.md`](registro-ia.md).
 
 ## Alcance de la entrega final
 
@@ -38,7 +38,7 @@ segundo necesita un endpoint nuevo y va después de terminar la HU2. Decidido po
 noviembre de 2026.
 
 **La línea de estado oculta cuando está vacía, si queda tiempo.** Tiene `empty:hidden` en las
-pantallas de presupuesto, cuentas y chat. En presupuesto, "Reintentar" le pasa el foco cuando está
+pantallas de presupuesto, cuentas, chat y el formulario del período. En presupuesto, "Reintentar" le pasa el foco cuando está
 vacía, y el foco se pierde; y algunos lectores de pantalla podrían no anunciar lo que aparece en
 ella. Los tests no lo detectan, porque no cargan los estilos.
 
@@ -52,7 +52,10 @@ un movimiento confirmado, y las preguntas sobre los propios datos; los consejos 
 base de conocimiento; los grupos familiares y la elección entre el presupuesto individual y el
 de un grupo; la multimoneda, los reintegros, las transferencias entre monedas distintas y su comisión, las
 compras con tarjeta y las reglas recurrentes; los procesos programados, entre ellos las alertas y el vencimiento de los
-pendientes; la sección "Me deben"; y que el contador de correcciones no cuente un valor asumido,
+pendientes; la sección "Me deben"; dar de alta y editar una cuenta, conversando o desde el
+dashboard; la carga de gastos, ingresos y transferencias desde un formulario del dashboard; la
+configuración regional (país, moneda primaria, fuente de inflación y cotización de referencia);
+y que el contador de correcciones no cuente un valor asumido,
 como la fecha, que el usuario cambia al responder (FEAT-003, CA-41).
 
 El entorno `demo` llega en la entrega final. Se despliega desde la rama de la entrega y hace de
@@ -209,9 +212,8 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   forma, sin reintentar. Una respuesta que el proveedor corta se trata como un modelo caído y se
   reintenta ([FEAT-003](features/FEAT-003/spec.md), CA-40).
 - **La documentación automática de la API: sin decidir.** El framework publica `/docs` y
-  `/openapi.json` sin pedir sesión, en todos los entornos. Hoy solo describen las rutas de
-  salud. Falta decidir si en `production` se apagan o piden sesión, antes de que describan los
-  endpoints del producto. La referencia pública de la API tiene su propio punto en la lista de
+  `/openapi.json` sin pedir sesión, en todos los entornos, también en `demo`. Ya describen los
+  endpoints del producto. Falta decidir si en `production` se apagan o piden sesión. La referencia pública de la API tiene su propio punto en la lista de
   arriba.
 - **El tope del cuerpo de un pedido en el webhook de WhatsApp: sin decidir.** Hoy es de 64 KiB en
   cualquier ruta ([contrato de la API](04-api.md)), y el webhook todavía no existe. Un lote de

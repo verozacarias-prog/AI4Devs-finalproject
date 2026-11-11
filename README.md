@@ -27,7 +27,7 @@ Verónica Noemi Zacarías
 
 ### 0.3. Descripción breve del proyecto:
 
-Platita es un asistente financiero personal y familiar que funciona por WhatsApp: el usuario registra gastos, ingresos y presupuestos conversando en lenguaje natural, y una capa de IA interpreta, categoriza y guarda cada movimiento en la cuenta correspondiente. Más adelante, un módulo complementario leerá los emails de notificación bancaria y de servicios para reducir la carga manual; no forma parte del MVP. Toda la información —incluyendo cuentas y su saldo, presupuestos multimoneda y consejos financieros generados con RAG— se visualiza en detalle desde una aplicación web con dashboards. La comparación contra la inflación queda prevista para una versión futura.
+Platita es un asistente financiero personal y familiar que funciona por WhatsApp: el usuario registra gastos, ingresos y presupuestos conversando en lenguaje natural, y una capa de IA interpreta, categoriza y guarda cada movimiento en la cuenta correspondiente. Más adelante, un módulo complementario leerá los emails de notificación bancaria y de servicios para reducir la carga manual; no forma parte del MVP. Toda la información —cuentas y su saldo, y presupuestos— se visualiza en detalle desde una aplicación web con dashboards. Los presupuestos multimoneda y los consejos financieros generados con RAG llegan en una segunda versión. La comparación contra la inflación queda prevista para una versión futura.
 
 ### 0.4. URL del proyecto:
 

@@ -1,7 +1,7 @@
 # Especificación — FEAT-003 · Registro de un gasto y de un ingreso
 
 - **Historia de usuario:** [HU3](../../05-historias-de-usuario.md)
-- **Estado:** aprobada para los tres cortes: C1-01 a C1-25, C2-01 a C2-55 y C3-01 a C3-25
+- **Estado:** aprobada para los tres cortes: C1-01 a C1-26, C2-01 a C2-62 y C3-01 a C3-25
 - **Fecha:** 2026-10-16
 
 ## Alcance

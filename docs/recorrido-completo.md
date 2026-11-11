@@ -193,7 +193,7 @@ sequenceDiagram
 
 ## 5. Registro de un movimiento por WhatsApp
 
-**Estado:** el registro de un gasto, un ingreso o una transferencia entre cuentas propias en la misma moneda está construido, por el [chat web](#por-el-chat-web), también cuando le falta algo y se pregunta ([FEAT-006](features/FEAT-006/spec.md)). El webhook y el envío por WhatsApp, elegir entre un presupuesto individual y uno familiar, las transferencias entre monedas distintas y las reglas recurrentes son de una segunda versión.
+**Estado:** el registro de un gasto, un ingreso o una transferencia entre cuentas propias en la misma moneda está construido, por el [chat web](#por-el-chat-web), también cuando le falta algo y se pregunta ([FEAT-006](features/FEAT-006/spec.md)). El webhook y el envío por WhatsApp, elegir entre un presupuesto individual y uno familiar, las transferencias entre monedas distintas, las reglas recurrentes y la carga desde un formulario del dashboard son de una segunda versión.
 
 El camino más frecuente. La versión centrada en la experiencia está en
 [1.3](01-producto.md#13-diseño-y-experiencia-de-usuario); esta muestra procesos y tablas.
@@ -230,7 +230,7 @@ sequenceDiagram
     U->>M: "Galicia, el de Familia"
     M->>API: HTTPS POST /webhook/whatsapp
     API->>DB: SQL INSERT INBOUND_MESSAGE
-    W->>L: HTTPS clasifica e interpreta la respuesta,<br/>con el último intercambio y el pendiente abierto
+    W->>L: HTTPS clasifica e interpreta la respuesta,<br/>con el lote abierto y su pregunta
     rect rgb(240, 246, 252)
         Note over W,DB: Una sola transacción SQL
         W->>DB: UPDATE INBOUND_MESSAGE processed, con el mismo fencing,<br/>y UPDATE LLM_USAGE
@@ -247,9 +247,9 @@ mensaje vuelve a `pending` para el día siguiente, se encola el texto fijo y los
 posteriores del remitente se siguen procesando
 ([reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente)).
 
-Desde el formulario del dashboard, el mismo movimiento entra por `POST /transactions` y el
+En una segunda versión, desde un formulario del dashboard, el mismo movimiento va a entrar por `POST /transactions` y el
 servicio web escribe `TRANSACTION` en una sola transacción SQL, sin pendiente, porque la pantalla
-ya pidió todos los datos ([la API](04-api.md)). Una transferencia entra igual por
+ya pidió todos los datos ([la API](04-api.md)). Una transferencia va a entrar igual por
 `POST /transfers`. Las compras con tarjeta y las reglas recurrentes se cargan solo conversando
 ([ADR 0002](adr/0002-whatsapp-como-canal-principal.md)).
 
@@ -585,10 +585,9 @@ sequenceDiagram
 
 ## 13. Lo que el recorrido deja a la vista
 
-Los diagramas marcan dos puntos que la especificación todavía no resuelve:
+Los diagramas marcan un punto que la especificación todavía no resuelve: **las alertas usan el
+LLM, pero los procesos programados no llegan a él** (§ 8). Ya está en las decisiones abiertas de
+la [hoja de ruta](hoja-de-ruta.md#decisiones-abiertas).
 
-- **Las alertas usan el LLM, pero los procesos programados no llegan a él** (§ 8). Ya está en
-  las decisiones abiertas de la [hoja de ruta](hoja-de-ruta.md#decisiones-abiertas).
-
-El alta de cuentas desde el dashboard, que pide la HU1, tampoco tiene endpoint en
-[la API](04-api.md), que por ahora documenta solo los endpoints principales.
+El alta de cuentas desde el dashboard, que pide la HU1, no tiene endpoint en [la API](04-api.md):
+es de una segunda versión ([hoja de ruta](hoja-de-ruta.md#alcance-de-la-entrega-final)).
