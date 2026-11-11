@@ -13,8 +13,8 @@
 | Código de la entrega 2 y de la final | Claude Code | Claude Opus 5.5, contexto 1M | Tests primero: la IA propone los casos, la autora los aprueba, los tests fallan y recién entonces se implementa |
 | Revisión | Claude Code: agente `pr-reviewer` y commands del repositorio | Claude Opus 5.5, en un contexto separado | Revisar cada pull request sin conocer la conversación que lo escribió, y comparar la especificación con el código |
 | Elección del modelo del producto | [`scripts/llm_eval/`](scripts/llm_eval/run_eval.py) | GPT-5.4 mini, GPT-5.4 nano y Claude Haiku 5.5 | 30 casos con resultados esperados aprobados por la autora ([ADR 0025](docs/adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)) |
-| Interpretación de los mensajes, dentro del producto | API de OpenAI | GPT-5.4 mini | Clasificar cada mensaje y devolver los campos de un gasto o un ingreso, con el prompt `classification-5` |
-| Despliegue | *(pendiente, entrega final)* | | |
+| Interpretación de los mensajes, dentro del producto | API de OpenAI | GPT-5.4 mini | Clasificar cada mensaje y devolver los campos de cada movimiento: gastos, ingresos, transferencias entre cuentas propias y varios movimientos en un mensaje. Hoy con el prompt `classification-15` |
+| Despliegue del demo | Claude Code y el panel de Render | Claude Opus 5.5, contexto 1M | El entorno `demo` en Render, con su base, el worker y los enlaces personales ([ADR 0029](docs/adr/0029-el-entorno-demo-en-render-en-planes-pagos.md) y [ADR 0030](docs/adr/0030-rol-de-la-aplicacion-en-la-base.md)) |
 
 ## Metodología
 
@@ -64,6 +64,50 @@ Todo está versionado en el repositorio. El detalle está en el
 | `/ui-states` | Command | Verifica que una pantalla implementa y testea sus cuatro estados |
 | `domain-rules` | Skill | Se activa solo cuando un trabajo toca movimientos, cuentas, presupuestos o categorías, y dice qué reglas aplican |
 | Tres verificadores y un hook de pre-commit | Scripts | Enlaces y duplicación de la documentación, regla hexagonal, y la referencia de la API contra `docs/04-api.md`. Rompen el commit |
+| `/ticket` | Command | Recorre el flujo de un corte, de la issue al pull request, con una pausa en cada punto que decide una persona |
+
+## Workflows de la entrega final
+
+En la entrega final casi no hubo prompts largos. El trabajo se hizo con el flujo de arriba, y cada prompt
+abre o cierra una de sus pausas: aprobar casos, pedir un commit, elegir qué se corrige ahora y
+qué va a una issue. Los dos recorridos que siguen son reales y están completos, con los prompts
+textuales de la autora.
+
+### Workflow 1 — Un corte de una historia, de la issue al merge
+
+FEAT-006, corte 2: lo que le falta a una transferencia entre cuentas propias se pregunta, y lo
+que no se puede anotar recibe un texto fijo. Se integró con el
+[pull request #147](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/147) el 5/11/2026.
+
+| Paso | Prompt de la autora | Qué hizo la IA y qué se decidió |
+|---|---|---|
+| Arrancar | "seguimos con los cortes que faltan de la tarea de transferencias", y `/ticket FEAT-006 corte 2 (transferencias: errores y lo que exige confirmación)` | Creó la rama desde la de la entrega con el corte 1 integrado, leyó el `spec.md` y las [reglas de dominio](docs/reglas-de-dominio.md), y propuso 13 casos. Avisó que el prompt del producto tenía que cambiar (`classification-8`) y qué quedaba sin caso, y por qué |
+| Aprobar los casos | "si" y, después de completar ella la línea de aprobación en el `spec.md`, "listo, ya lo aprobé, seguí con los tests" | La IA escribe los casos en el `spec.md` con la aprobación en "pendiente": la línea la completa la autora, nunca la IA ([ADR 0024](docs/adr/0024-tests-primero-en-el-backend.md)). Escribió los tests, los corrió y mostró que fallaban |
+| Implementar | "si, commit de los tests y seguí con la implementación" | El commit de los tests va antes que el del código. Al terminar, la IA avisó de un caso que no estaba aprobado y no tocó: "pasé 100 dólares de Galicia pesos a Mercado Pago" se anotaba como $100 en pesos |
+| Un caso que faltaba | "como no salio en el corte 1 este caso de dolares?" | La IA explicó que la especificación no lo pedía en ningún lado y que por eso ni los tests ni el revisor lo encontraban: comparan el código contra una especificación que no lo decía. Propuso escribir primero la regla y después el caso |
+| | "sumalo a este corte como C2-14" → "listo, ya lo aprobé, seguí con el test de C2-14" → "si, commit del test y seguí con la implementación" | La regla entró en el criterio CA-14 y el caso C2-14 pasó por el mismo ciclo: aprobado, test en rojo, implementación. En git, la línea de aprobación del `spec.md` entró después del test: lo marcó el revisor y quedó dicho en la descripción del pull request |
+| Comparar con la especificación | "si, corré el spec-drift del corte" | `/spec-drift` encontró dos diferencias y propuso una issue para cada una. No corrige nada por su cuenta |
+| | "b ahora, a issue" | La autora eligió: la B, tres líneas de texto, se corrigió en la misma rama; la A pasó a la [issue #146](https://github.com/verozacarias-prog/AI4Devs-finalproject/issues/146) |
+| Revisar | "si, corré el pr-reviewer" | El agente, en un contexto separado, encontró tres problemas que frenaban el merge, los tres de documentación, y siete observaciones. Uno era un texto aprobado que se había cambiado para que coincidiera con el código, lo que va contra [AGENTS.md § 10](AGENTS.md#10-especificación-contra-código) |
+| | "si, seguí así" | La IA recomendó qué resolver en la rama y qué no, y la autora aceptó el plan: los tres problemas que frenaban el merge se corrigieron, y una observación, el monto en dólares que se mostraba como pesos en la pregunta, volvió al paso de aprobar como el caso C2-15 |
+| Cerrar | "listo, ya lo aprobé, seguí con el test de C2-15" → "si, hacé los dos commits y la descripción del PR" → "si, subí la rama" | La IA escribe la descripción del pull request con los casos aprobados y el veredicto del revisor. El pull request lo abre la autora |
+| Integrar | "ya se mergeo" | El merge siempre lo hace la autora, después de probar a mano en el demo |
+
+### Workflow 2 — De la prueba manual a un ajuste del prompt del producto
+
+El 10/11/2026, dos días antes de la entrega, la autora recorrió en el demo los pasos que el
+README le da al evaluador. Resultado: el [pull request #176](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/176)
+y la [issue #177](https://github.com/verozacarias-prog/AI4Devs-finalproject/issues/177).
+
+| Paso | Prompt de la autora | Qué hizo la IA y qué se decidió |
+|---|---|---|
+| Probar | "dame las pruebas que tengo que hacer en el usuario de prueba" | La IA armó la lista a partir del README, con lo que tenía que verse en cada paso y con un usuario de prueba propio, para no usar el enlace del evaluador |
+| Encontrar | "esto me parece no esta bien", con la conversación pegada: a "gasté 3500 en el súper" Platita preguntó la cuenta, la respuesta fue "con efectivo", y la confirmación terminó con "El movimiento nuevo mandámelo en otro mensaje." | La IA siguió el error hasta el código: el modelo copiaba el monto del pendiente en los campos de un movimiento nuevo, y el código, con razón, lo tomaba como otro movimiento. Es interpretación, así que el arreglo va en el prompt y no en una regla del código ([ADR 0028](docs/adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md)), y descartó comparar montos porque es una heurística |
+| Medir | "si avanza, el resto de los casos salieron todos bien" | La IA comparó el prompt anterior con el nuevo contra el modelo real, con las mismas respuestas: contestar la cuenta pasó de fallar en 10 de 18 pruebas a 0 de 48 |
+| Un límite | "como consumiste tanto?", con el panel de uso de OpenAI | La medición fueron unas 400 llamadas pagas, y el saldo se agotó. Costó US$ 0,71, pero si el demo usaba la misma clave, el evaluador iba a encontrarlo roto. Desde entonces la IA dice cuántas llamadas va a hacer y espera el ok. Las dos mediciones que faltaban se hicieron con 10 llamadas |
+| Cerrar | "si dale" | El commit del prompt `classification-15`, y lo que quedó sin resolver anotado en la issue |
+| Revisar | "si" al plan del revisor | `pr-reviewer` encontró seis lugares de `docs/` que seguían diciendo "entrega final" para lo que había pasado a una segunda versión. También pidió medir un caso de riesgo, y la medición, con 5 llamadas, mostró que el problema ya existía con el prompt anterior y que el nuevo lo reduce. Quedó en la [issue #178](https://github.com/verozacarias-prog/AI4Devs-finalproject/issues/178) |
+| Comprobar | "ya probé, salió bien" | La autora repitió el paso en el demo desplegado, y recién ahí se cerró la issue |
 
 ---
 
@@ -248,7 +292,19 @@ sin proteger la rama a mano. Salieron los ADR 0021 (imagen, Compose y pipeline),
 revisor) y 0023 (observabilidad de las llamadas al modelo), el agente `pr-reviewer`, el command
 `/security-audit`, `gitleaks` y Dependabot.
 
-*(El prompt del despliegue de `demo` se suma con la entrega final.)*
+**Prompt 3** — *Claude Code · el despliegue del demo en Render*
+
+> "porque no el plan free?"
+>
+> *(al crear el primer enlace personal en el Shell de Render)* "es muy molesto que al armar el link personal me devuelva solo la ultima parte, tengo que andar armandolo, deberia devolver la url completa"
+>
+> *(sobre el nombre de la variable que propuso la IA)* "public_base_url parece url de base de datos, pone algo mas tipo public_root_url o algo asi"
+
+*Qué se decidió:* el plan gratuito no tiene workers, y el [ADR 0010](docs/adr/0010-webhook-asincrono-con-tabla-de-entrada.md)
+exige uno aparte; además el servicio se duerme y la base vence a los 30 días. La autora mantuvo
+el plan pago mínimo ([ADR 0029](docs/adr/0029-el-entorno-demo-en-render-en-planes-pagos.md)).
+Los dos comandos de operación, el que crea un enlace y el que lo regenera, devuelven desde
+entonces el enlace completo, con una variable cuyo nombre no se confunde con la URL de la base.
 
 ### 2.5. Seguridad
 
@@ -317,7 +373,18 @@ eran errores que los tests en verde no detectaban: un gasto en dólares se regis
 dos usuarios no podían registrar nada y un texto fijo gastaba la cuota. Cada corrección pasó por
 casos aprobados antes del test, en el [pull request #65](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/65).
 
-*(El prompt del test end-to-end del flujo principal se suma con la entrega final.)*
+**Prompt 3** — *Claude Code · probar con el modelo real lo que los tests no ven*
+
+> "esto me parece no esta bien"
+>
+> *(ante el panel de uso de OpenAI, después de que la IA midiera el prompt nuevo)* "como consumiste tanto?"
+
+*Qué se decidió:* los tests usan un modelo simulado, así que un error de interpretación solo
+aparece probando con el modelo real. El test de punta a punta con Playwright cubre el flujo
+principal, con el modelo simulado: un gasto en el chat baja el saldo
+([issue #79](https://github.com/verozacarias-prog/AI4Devs-finalproject/issues/79)). El recorrido
+completo de este prompt, con la medición contra el modelo real y el límite a las llamadas pagas,
+está en el [workflow 2](#workflow-2--de-la-prueba-manual-a-un-ajuste-del-prompt-del-producto).
 
 ---
 
@@ -481,11 +548,22 @@ pull request de la rama, la IA comparó su protección con la de la entrega 2: f
 obligatorio, y una aprobación exigida habría trabado todos los merges. Los pull requests de cada entrega están en
 [`docs/07-pull-requests.md`](docs/07-pull-requests.md).
 
+**Prompt 3** — *Claude Code · qué se hace con lo que encuentra el agente revisor*
+
+> "si, hacé los commits, pero las observaciones damelas todas juntas,no una a una"
+>
+> *(cuando la IA propuso dejar en la descripción del pull request algo para revisar más adelante)* "si tiene que ser revisado mas adelante, con un comentario en el pr nadie lo va a tomar"
+
+*Qué se decidió:* los hallazgos de `pr-reviewer` se presentan todos juntos, ordenados por
+gravedad, y la autora decide de una vez qué se corrige en la rama y qué no. Lo que queda para
+después no se anota en el pull request: va a una issue o a la [hoja de ruta](docs/hoja-de-ruta.md),
+que es donde se busca cuando se retoma el tema.
+
 ---
 
 ## Ajustes humanos sobre el output de la IA — resumen
 
-Los más representativos de cada fase. La tabla completa, con los 64, está en el
+Los más representativos de cada fase. La tabla completa, con los 69, está en el
 [registro completo](docs/registro-ia.md#ajustes-humanos-sobre-el-output-de-la-ia--resumen).
 
 | Qué propuso la IA | Qué se corrigió y por qué |
@@ -501,6 +579,11 @@ Los más representativos de cada fase. La tabla completa, con los 64, está en e
 | Una regla de código para cada forma de nombrar una cuenta | Las formas de hablar no se terminan. Interpretar es del modelo y el código controla las invariantes (ADR 0028) |
 | Registrar de un error solo su tipo y su línea | No alcanzaba para reproducirlo. La IA sostuvo no registrar datos personales y se acordó qué sí registrar |
 | Commitear los tests antes de la aprobación de sus casos | Lo marcó el agente revisor. Desde entonces la autora firma la aprobación en el `spec.md`, y la IA no la escribe nunca |
+| Un período "mensual" sin límite de duración, del 10/11/2026 al 10/11/2030 | "el tema es que son datos inconsistentes": si dice mensual, dura un mes. Salió la regla de que los datos sean verdaderos y coherentes, la primera de [AGENTS.md § 5](AGENTS.md#5-invariantes-que-un-asistente-rompe-por-defecto) |
+| Dejar una lista de palabras en el código (`ACCOUNT_TYPE_WORDS`) y no un umbral, "porque es una regla atada a un valor" | "no es lo mismo un valor de umbrales que un valor de string!!!!". Un umbral configurable no interpreta; una lista de palabras sí. La lista salió en la misma rama |
+| Proponer como decisión nueva una regla con "el pendiente más viejo" | La regla ya estaba escrita: un pendiente vence a las 24 horas. Desde entonces la IA lee la regla antes de proponer, y no elige "el último" ni "el más viejo" |
+| Una columna `movement_count` en `LLM_CALL` | Lo que importa es cuántas veces se llama al modelo, que ya cuentan las cuotas. La columna medía otra cosa |
+| Medir un prompt contra el modelo real con unas 400 llamadas, sin avisar | Se agotó el saldo de la API, que podía ser el mismo del demo. Ahora la IA dice cuántas llamadas son y espera el ok |
 
 **Los patrones que se repiten**, y la pregunta que los desarma:
 

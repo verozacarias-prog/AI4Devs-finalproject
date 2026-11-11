@@ -60,8 +60,8 @@ dejó, en síntesis:
 | Elección del modelo de lenguaje | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`). Modelos evaluados: GPT-5.4 mini, GPT-5.4 nano y Claude Haiku 5.5 | Armar con la autora los casos y sus resultados esperados, escribir y correr la evaluación contra los tres modelos, y registrar la elección en un ADR |
 | Migración del esquema inicial, con tests primero | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`). El agente `pr-reviewer` corrió dos veces, en un contexto separado | Proponer los casos de test y esperar la aprobación de la autora, escribir los tests y verlos fallar, escribir la migración, y cerrar con `/spec-drift` y el agente revisor |
 | Código de la entrega 2: scaffold, pantalla de cuentas, chat web con worker y registro de gastos | Claude Code | Claude Opus 5.5, contexto 1M (`claude-opus-5-5[1m]`). El agente `pr-reviewer` corrió sobre los cortes de las historias y las tareas con código, en un contexto separado | Proponer los casos de cada corte y esperar la aprobación de la autora, escribir los tests y verlos fallar, implementar, y cerrar con `/spec-drift`, el agente revisor y `/security-audit` |
-| Interpretación de los mensajes, dentro del producto | API de OpenAI | GPT-5.4 mini, elegido en el [ADR 0025](adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md) | Clasificar cada mensaje y devolver los campos de un gasto o un ingreso, con el prompt `classification-5` |
-| Despliegue | *(pendiente — Entrega final)* | | |
+| Interpretación de los mensajes, dentro del producto | API de OpenAI | GPT-5.4 mini, elegido en el [ADR 0025](adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md) | Clasificar cada mensaje y devolver los campos de cada movimiento: gastos, ingresos, transferencias entre cuentas propias y varios movimientos en un mensaje. Hoy con el prompt `classification-15` |
+| Despliegue del demo | Claude Code y el panel de Render | Claude Opus 5.5, contexto 1M | El entorno `demo` en Render, con su base, el worker y los enlaces personales ([ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md) y [ADR 0030](adr/0030-rol-de-la-aplicacion-en-la-base.md)) |
 
 La auditoría de repos de referencia (ver §1, Prompt 2) recomendó configurar y versionar las rules antes de empezar a codear, porque **ninguno de los dos proyectos de ejemplo del curso lo había hecho**. Esa recomendación se siguió al cierre de la Entrega 1. La configuración resultante —contratos, skill, commands, verificadores y hook— está descrita en [`docs/flujo-de-trabajo-con-ia.md`](flujo-de-trabajo-con-ia.md) y no se repite acá.
 
@@ -825,6 +825,11 @@ los dejó para el primer despliegue, en la entrega final.
 | 62 | Una rama por cada divergencia de `/spec-drift` | La autora pidió una sola rama, o pocos grupos. Las 34 entraron en un solo pull request |
 | 63 | Guardar en un pendiente la moneda de la cuenta como si el usuario la hubiera dicho | Lo marcó el agente revisor: una respuesta como "con la galicia" elegía la cuenta en pesos sin preguntar. Se corrigió con un caso nuevo, aprobado antes del test |
 | 64 | Commitear los tests de un corte antes de la línea de aprobación de sus casos | Lo marcó el agente revisor contra el ADR 0024. Desde entonces la autora completa la aprobación en el `spec.md` antes de que se escriba un test, y la IA no la escribe nunca |
+| 65 | Dejar sin límite la duración de un período "mensual", como del 10/11/2026 al 10/11/2030 | Un dato que dice mensual y dura cuatro años miente. Se resolvió como personalizado y salió la regla de que los datos sean verdaderos y coherentes, en `AGENTS.md` § 5 |
+| 66 | Mantener la lista `ACCOUNT_TYPE_WORDS` y rechazar un umbral por ser "una regla atada a un valor" | Un umbral configurable no interpreta; una lista de palabras sí, y nunca se termina. La lista salió en la misma rama (ADR 0028) |
+| 67 | Proponer como decisión nueva una regla con "el pendiente más viejo" | § 5 ya decía que un pendiente vence a las 24 horas. La IA lee la regla antes de proponer, y no elige por "el último" ni "el más viejo" |
+| 68 | Una columna `movement_count` en `LLM_CALL` | Lo que cuida el costo es cuántas veces se llama al modelo, que ya cuentan las cuotas por mensaje. Se replanteó CA-16 |
+| 69 | Medir un prompt contra el modelo real con unas 400 llamadas, sin avisar | Se agotó el saldo de la API, que podía ser el del demo. La IA dice cuántas llamadas son y espera el ok |
 
 El patrón que se repite: la IA tiende a **resolver la ambigüedad por su cuenta** eligiendo un valor por defecto razonable, y a **justificar decisiones técnicas por el esfuerzo** que ahorran en vez de por sus propiedades de diseño. Las dos cosas hay que detectarlas leyendo, porque el resultado siempre suena defendible.
 
@@ -914,3 +919,47 @@ La autora mantuvo la diferencia entre ticket y tarea, que la IA había propuesto
 fecha del milestone salió un día antes en el huso de la autora, porque GitHub guarda solo el día
 en UTC, y se corrigió.
 
+**Prompt 3** — *Claude Code · el modelo interpreta, el código controla, y lo que no es una lista de palabras*
+
+> "el modelo no entrega un valor que indique con que seguridad se calcula un valor? porque "retire del cajero" es mas seguro que saco efectivo, otra cosa no puede sacar, que solo "saque", no quiero crear en el codigo excepciones que esten atadas a un valor"
+>
+> *(cuando la IA respondió que un umbral también era "una regla del código atada a un valor")* ""si supera 0,8, se registra". Eso es justo lo que no querés: una regla del código atada a un valor." no es lo mismo un valor de umbrales que un valor de string!!!! y esto " ACCOUNT_TYPE_WORDS en account_resolution.py:18 ("banco", "billetera", "efectivo")" nunca me cerro lo acepte porque ya estabamos cortos de tiempo"
+
+*Qué devolvió y qué se decidió:* la IA reconoció que había mezclado dos cosas: un umbral
+configurable no interpreta el mensaje, y una lista de palabras sí. `ACCOUNT_TYPE_WORDS` salió en
+la misma rama, y el modelo pasó a devolver el tipo de cuenta junto con las palabras que lo
+prueban, que el código comprueba que estén escritas
+([ADR 0028](adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md)).
+
+**Prompt 4** — *Claude Code · lo que la especificación ya decía*
+
+> "1-porque me propusiste lo del pendiente mas viejo cuando en la doc ya decia que los pendientes vencen a las 24hs? a mi me parece bien que venzan a las 24hs"
+>
+> "No entiendo igual como  los pendientes se pueden dar en distintos momentos? la idea de los mensajes en lote es anotar varios gastos juntos"
+
+*Qué devolvió y qué se decidió:* la IA reconoció que § 5 de las reglas de dominio ya lo
+decidía y que tenía que haberlo leído antes de proponer. La issue pasó a ser un error del código,
+no una decisión nueva ([FEAT-007](features/FEAT-007/spec.md)).
+
+**Prompt 5** — *Claude Code · los datos verdaderos y coherentes*
+
+> "el tema es que son datos inconsistentes, si el periodo dice que es mensual debe respetar eso, si dice que es quincenal debe respetar eso, si dura x dias entonces deberia ser un periodo personalizado, no me parece que los datos no reflejen lo que en realidad es"
+>
+> "si, vamos con personalizado, y suma  una regla para que esto no vuelva a pasar que lo mas importante es la veracidad y coherencia de los datos, como fue este caso"
+
+*Qué devolvió y qué se decidió:* la IA había recomendado dejar sin límite la duración de un
+período mensual. El período pasó a personalizado y la regla quedó primera en `AGENTS.md` § 5 y en
+las [reglas de dominio](reglas-de-dominio.md): antes de proponer o aceptar un valor, se comprueba
+que el nombre y el contenido digan lo mismo.
+
+**Prompt 6** — *Claude Code · transferencias y tarjetas, lo que faltaba para un período completo*
+
+> "en realidad yo agregaria algo que me permita a mi como usuario completar por ejemplo un periodo completo, y eso seria poder hacer pagos con tarjetas de credito y transferencias, porque no se puso antes?"
+
+*Qué devolvió y qué se decidió:* la IA explicó que tarjetas y transferencias se habían recortado
+el 15/10 para llegar a la entrega. De ahí salió [FEAT-006](features/FEAT-006/spec.md), las
+transferencias entre cuentas propias. Las tarjetas siguen para una segunda versión.
+
+Los dos recorridos completos de la entrega final, un corte de una historia de la issue al merge y
+una prueba manual que terminó en un ajuste del prompt del producto, están en
+[`prompts.md`](../prompts.md#workflows-de-la-entrega-final).
