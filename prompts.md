@@ -77,7 +77,7 @@ textuales de la autora.
 
 FEAT-006, corte 2: lo que le falta a una transferencia entre cuentas propias se pregunta, y lo
 que no se puede anotar recibe un texto fijo. Se integró con el
-[pull request #147](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/147) el 6/11/2026.
+[pull request #147](https://github.com/verozacarias-prog/AI4Devs-finalproject/pull/147) el 5/11/2026.
 
 | Paso | Prompt de la autora | Qué hizo la IA y qué se decidió |
 |---|---|---|
@@ -85,7 +85,7 @@ que no se puede anotar recibe un texto fijo. Se integró con el
 | Aprobar los casos | "si" y, después de completar ella la línea de aprobación en el `spec.md`, "listo, ya lo aprobé, seguí con los tests" | La IA escribe los casos en el `spec.md` con la aprobación en "pendiente": la línea la completa la autora, nunca la IA ([ADR 0024](docs/adr/0024-tests-primero-en-el-backend.md)). Escribió los tests, los corrió y mostró que fallaban |
 | Implementar | "si, commit de los tests y seguí con la implementación" | El commit de los tests va antes que el del código. Al terminar, la IA avisó de un caso que no estaba aprobado y no tocó: "pasé 100 dólares de Galicia pesos a Mercado Pago" se anotaba como $100 en pesos |
 | Un caso que faltaba | "como no salio en el corte 1 este caso de dolares?" | La IA explicó que la especificación no lo pedía en ningún lado y que por eso ni los tests ni el revisor lo encontraban: comparan el código contra una especificación que no lo decía. Propuso escribir primero la regla y después el caso |
-| | "sumalo a este corte como C2-14" → "listo, ya lo aprobé, seguí con el test de C2-14" → "si, commit del test y seguí con la implementación" | La regla entró en el criterio CA-14 y el caso C2-14 pasó por el mismo ciclo: aprobado, test en rojo, implementación |
+| | "sumalo a este corte como C2-14" → "listo, ya lo aprobé, seguí con el test de C2-14" → "si, commit del test y seguí con la implementación" | La regla entró en el criterio CA-14 y el caso C2-14 pasó por el mismo ciclo: aprobado, test en rojo, implementación. En git, la línea de aprobación del `spec.md` entró después del test: lo marcó el revisor y quedó dicho en la descripción del pull request |
 | Comparar con la especificación | "si, corré el spec-drift del corte" | `/spec-drift` encontró dos diferencias y propuso una issue para cada una. No corrige nada por su cuenta |
 | | "b ahora, a issue" | La autora eligió: la B, tres líneas de texto, se corrigió en la misma rama; la A pasó a la [issue #146](https://github.com/verozacarias-prog/AI4Devs-finalproject/issues/146) |
 | Revisar | "si, corré el pr-reviewer" | El agente, en un contexto separado, encontró tres problemas que frenaban el merge, los tres de documentación, y siete observaciones. Uno era un texto aprobado que se había cambiado para que coincidiera con el código, lo que va contra [AGENTS.md § 10](AGENTS.md#10-especificación-contra-código) |
@@ -303,8 +303,8 @@ revisor) y 0023 (observabilidad de las llamadas al modelo), el agente `pr-review
 *Qué se decidió:* el plan gratuito no tiene workers, y el [ADR 0010](docs/adr/0010-webhook-asincrono-con-tabla-de-entrada.md)
 exige uno aparte; además el servicio se duerme y la base vence a los 30 días. La autora mantuvo
 el plan pago mínimo ([ADR 0029](docs/adr/0029-el-entorno-demo-en-render-en-planes-pagos.md)).
-El comando de operación devuelve desde entonces el enlace completo, con una variable cuyo nombre
-no se confunde con la URL de la base.
+Los dos comandos de operación, el que crea un enlace y el que lo regenera, devuelven desde
+entonces el enlace completo, con una variable cuyo nombre no se confunde con la URL de la base.
 
 ### 2.5. Seguridad
 
