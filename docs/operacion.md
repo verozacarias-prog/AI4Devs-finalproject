@@ -264,6 +264,16 @@ despliega cuando pasan sus controles.
    `Revisión AI4Devs`: está publicado en el `README.md`, lo comparte quien lo lea, y se regenera
    cuando termina la revisión ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 
+   **Riesgos aceptados del `demo`, del `/security-audit` del 12/11/2026.** La API no limita
+   cuántos pedidos recibe. Con el enlace compartido, un script puede repetir `POST /dev/session`,
+   que crea una sesión en cada entrada, que no se borra hasta la segunda versión, o consultar `GET /readyz`, que toca la base
+   sin sesión, hasta que el servicio responda lento. No obtiene datos ni accesos nuevos. Se acepta
+   porque el `demo` dura lo que la revisión y el abuso requiere un script deliberado. El arreglo es
+   el límite por IP que el [ADR 0017](adr/0017-limites-del-login-y-codigos-con-proposito.md)
+   diseña para el login por código, extendido a `/dev/session`, en una segunda versión. Cómo se
+   acota el gasto del modelo mientras dura la revisión está en el
+   [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md).
+
 Un staging igual a producción no está al lanzamiento: duplicaría el costo, y el riesgo principal que cubriría, una
 migración que rompe, lo va a cubrir la CI probando la migración desde el esquema de la versión
 anterior, un control de la segunda versión que tiene que estar antes del lanzamiento. Cuándo agregarlo está en [7](#7-cuándo-crecer).
