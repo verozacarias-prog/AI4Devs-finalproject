@@ -163,7 +163,14 @@ para que la cookie de sesión funcione sin un dominio propio.
   la cuota de registro por usuario acota el gasto. Esa cuota, de 50 registros por día, la
   comparten todos los que usan el enlace, y quien la agote deja sin registro al resto hasta el
   día siguiente; el tope diario total de clasificaciones también lo comparten todos, y un uso
-  intensivo del enlace puede agotarlo. Se regenera cuando
+  intensivo del enlace puede agotarlo. La cuota no acota todo el gasto: una llamada que clasifica
+  y que el proveedor corta o devuelve inválida, por un mensaje armado así, se reintenta sin contar
+  para ningún tope por usuario, y solo la corta el tope mensual del proveedor (issue #196, del
+  `/security-audit` del 12/11/2026). Mientras dura la revisión, el worker del `demo` hace un solo
+  intento por mensaje (`MESSAGE_MAX_ATTEMPTS=1`) y la cuenta del proveedor avisa por mail al llegar
+  a 3 dólares; si el gasto se dispara, se suspende el worker. Con un solo intento, una caída
+  pasajera del proveedor deja el mensaje fallido, sin el reintento con espera de
+  [FEAT-003](../features/FEAT-003/spec.md), CA-26. Se regenera cuando
   termina la revisión. Decidido por Vero el 10 de noviembre de 2026.
 - Una tabla y dos comandos de operación que existen solo para el andamio, y se quitan con él.
   La tabla la crea la misma migración en todos los entornos; en producción queda vacía, porque

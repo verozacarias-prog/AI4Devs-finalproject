@@ -623,7 +623,7 @@ Códigos de un solo uso para entrar al dashboard, enviados por WhatsApp ([ADR 00
 
 ##### SESSION
 
-Sesión del dashboard, creada al canjear un código de login. El token viaja en una cookie y la base guarda solo su hash, así que una filtración de la tabla no permite entrar. Existe como fila, y no como un token firmado que se valida solo, para que cerrar sesión, cerrar todas o pedir el borrado de la cuenta corten el acceso en el momento ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Un proceso programado borra las vencidas o revocadas.
+Sesión del dashboard, creada al canjear un código de login. El token viaja en una cookie y la base guarda solo su hash, así que una filtración de la tabla no permite entrar. Existe como fila, y no como un token firmado que se valida solo, para que cerrar sesión, cerrar todas o pedir el borrado de la cuenta corten el acceso en el momento ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)). Un proceso programado borra las vencidas o revocadas; es de una segunda versión, y hasta entonces las filas se acumulan ([ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md)).
 
 **Restricciones:**
 

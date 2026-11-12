@@ -266,14 +266,13 @@ despliega cuando pasan sus controles.
 
    **Riesgos aceptados del `demo`, del `/security-audit` del 12/11/2026.** La API no limita
    cuántos pedidos recibe. Con el enlace compartido, un script puede repetir `POST /dev/session`,
-   que crea una sesión en cada entrada y nadie borra, o consultar `GET /readyz`, que toca la base
+   que crea una sesión en cada entrada, que no se borra hasta la segunda versión, o consultar `GET /readyz`, que toca la base
    sin sesión, hasta que el servicio responda lento. No obtiene datos ni accesos nuevos. Se acepta
    porque el `demo` dura lo que la revisión y el abuso requiere un script deliberado. El arreglo es
    el límite por IP que el [ADR 0017](adr/0017-limites-del-login-y-codigos-con-proposito.md)
-   diseña para el login por código, extendido a `/dev/session`, en una segunda versión. Mientras
-   dura la revisión, el worker hace un solo intento por mensaje (`MESSAGE_MAX_ATTEMPTS=1`) y la
-   cuenta del proveedor tiene una alerta de gasto
-   ([#196](https://github.com/verozacarias-prog/AI4Devs-finalproject/issues/196)). Si el gasto se dispara, se suspende el worker en Render.
+   diseña para el login por código, extendido a `/dev/session`, en una segunda versión. Cómo se
+   acota el gasto del modelo mientras dura la revisión está en el
+   [ADR 0016](adr/0016-sesion-de-servidor-en-el-mismo-origen.md).
 
 Un staging igual a producción no está al lanzamiento: duplicaría el costo, y el riesgo principal que cubriría, una
 migración que rompe, lo va a cubrir la CI probando la migración desde el esquema de la versión
