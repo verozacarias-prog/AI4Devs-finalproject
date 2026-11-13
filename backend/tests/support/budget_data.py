@@ -55,7 +55,11 @@ class LuciaBudget:
     def own_category(self, name: str) -> Category:
         """A category of Lucía, of expenses, that she confirmed."""
         category = Category(
-            id=uuid.uuid4(), name=name, kind=TransactionType.EXPENSE, user_id=self.user.id
+            id=uuid.uuid4(),
+            name=name,
+            kind=TransactionType.EXPENSE,
+            user_id=self.user.id,
+            is_base=False,
         )
         self.unit_of_work.categories.add(category)
         self.categories[name] = category
@@ -229,7 +233,7 @@ def lucia_budget() -> LuciaBudget:
         (BASE_INCOMES, TransactionType.INCOME),
     ):
         for name in names:
-            category = Category(id=uuid.uuid4(), name=name, kind=kind, user_id=None)
+            category = Category(id=uuid.uuid4(), name=name, kind=kind, user_id=None, is_base=True)
             unit_of_work.categories.add(category)
             categories[name] = category
     period = add_period(

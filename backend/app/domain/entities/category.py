@@ -15,3 +15,5 @@ class Category:
     kind: TransactionType
     # None for the base catalog, which every user has (domain rules, § 4).
     user_id: uuid.UUID | None
+    # True only for the base catalog: the database keeps it equal to an empty user_id.
+    is_base: bool

@@ -22,6 +22,7 @@ class PostgresCategoryRepository:
                 "id": category.id,
                 "name": category.name,
                 "user_id": category.user_id,
+                "is_base": category.is_base,
                 "kind": category.kind,
             },
         )
@@ -40,4 +41,10 @@ class PostgresCategoryRepository:
 
 
 def _category_from(row: Row[tuple[object, ...]]) -> Category:
-    return Category(id=row.id, name=row.name, kind=TransactionType(row.kind), user_id=row.user_id)
+    return Category(
+        id=row.id,
+        name=row.name,
+        kind=TransactionType(row.kind),
+        user_id=row.user_id,
+        is_base=row.is_base,
+    )
