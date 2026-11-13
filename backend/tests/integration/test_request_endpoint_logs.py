@@ -1,7 +1,7 @@
 """Which endpoint a request line is about (docs/operacion.md, 6.3).
 
-Cases 68 to 72, 74, 80 and 83. The line carries the method and the route as the code declares it,
-never the address that was asked for.
+Cases 68 to 72, 74, 80 and 83, and T-1 and T-2 of issue 197. The line carries the method and
+the route as the code declares it, never the address that was asked for.
 """
 
 from __future__ import annotations
@@ -29,8 +29,13 @@ def stream() -> io.StringIO:
     return io.StringIO()
 
 
-def _app(database_url: str, stream: io.StringIO, dashboard_dir: Path | None = None) -> FastAPI:
-    environ = {"DATABASE_URL": database_url, "APP_ENV": "production", "APP_VERSION": "test"}
+def _app(
+    database_url: str,
+    stream: io.StringIO,
+    dashboard_dir: Path | None = None,
+    environment: str = "production",
+) -> FastAPI:
+    environ = {"DATABASE_URL": database_url, "APP_ENV": environment, "APP_VERSION": "test"}
     if dashboard_dir is not None:
         environ["DASHBOARD_DIR"] = str(dashboard_dir)
     return create_app(load_settings(environ), log_stream=stream)
@@ -97,16 +102,30 @@ def test_a_route_that_does_not_exist_is_logged_with_its_method_alone(
 def test_the_pages_of_the_contract_are_logged_with_their_route(
     database_url: str, stream: io.StringIO, path: str
 ) -> None:
-    # Case 80. The framework serves them, and they are routes like any other.
-    response = TestClient(_app(database_url, stream)).get(path)
+    # Case 80, and T-1 of issue 197. The framework serves them in local only, and there they
+    # are routes like any other.
+    response = TestClient(_app(database_url, stream, environment="local")).get(path)
 
     assert response.status_code == 200
     assert _request_line(stream)["endpoint"] == f"GET {path}"
 
 
+@pytest.mark.parametrize("environment", ["demo", "production"])
+@pytest.mark.parametrize("path", ["/docs", "/openapi.json"])
+def test_outside_local_the_pages_of_the_contract_do_not_exist(
+    database_url: str, stream: io.StringIO, environment: str, path: str
+) -> None:
+    # T-2 of issue 197. The reference stays in the versioned contract.
+    response = TestClient(_app(database_url, stream, environment=environment)).get(path)
+
+    assert response.status_code == 404
+    assert response.json() == {"error": "not_found"}
+
+
 def test_the_reference_has_one_page_only(database_url: str, stream: io.StringIO) -> None:
-    # Case 83. The second page the framework offers shows the same contract, so it is off.
-    response = TestClient(_app(database_url, stream)).get("/redoc")
+    # Case 83. The second page the framework offers shows the same contract, so it is off. It
+    # runs in local, the only environment with a contract for that page to show.
+    response = TestClient(_app(database_url, stream, environment="local")).get("/redoc")
 
     assert response.status_code == 404
     assert response.json() == {"error": "not_found"}
