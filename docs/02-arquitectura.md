@@ -162,7 +162,7 @@ flowchart TB
 
 **Patrón elegido:** **arquitectura hexagonal (ports & adapters)**, con el dominio (entidades + casos de uso) aislado de los detalles de infraestructura detrás de puertos, y **backend y frontend desacoplados**, comunicados únicamente por API REST.
 
-**Acceso a la base de datos:** solo el backend la toca. Desde afuera se entra únicamente por la API HTTP; adentro, la API, el worker, los procesos programados y los comandos de operación pasan por los casos de uso, ninguno llama a otro por HTTP, y el SQL vive solo en los repositorios. Las excepciones son las migraciones y el acceso operativo. El script de datos de prueba es un comando de operación más: pasa por sus casos de uso.
+**Acceso a la base de datos:** solo el backend la toca. Desde afuera se entra únicamente por la API HTTP; adentro, la API, el worker, los procesos programados y los comandos de operación pasan por los casos de uso, ninguno llama a otro por HTTP, y el SQL vive solo en los repositorios. Las excepciones son las migraciones, el acceso operativo y los scripts de prueba manual de `scripts/`, que corren solo en `local`. El comando de datos de prueba es un comando de operación más: pasa por sus casos de uso.
 
 El contexto que llevó a elegirlo, sus beneficios, los sacrificios asumidos, las alternativas descartadas y el detalle de quién accede a la base están en el [ADR 0001](adr/0001-arquitectura-hexagonal.md).
 

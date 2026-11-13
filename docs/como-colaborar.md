@@ -75,8 +75,9 @@ cd site && npm install                # solo para ver o regenerar el portal
    último corte de una historia, se repasan las filas de la [hoja de ruta](hoja-de-ruta.md) que
    esa historia resolvió o desbloqueó.
 10. **Probar el corte a mano,** en local y como lo usaría una persona: `docker compose up
-   --build`, los datos de prueba y la pantalla o el chat. Lo que la aplicación todavía no deja
-   cargar sale de un script de `scripts/`, como `budget_test_data.sql` para el presupuesto. Lo
+   --build`, los datos de prueba y la pantalla o el chat. Para ver una pantalla con datos sin
+   cargarlos uno por uno, hay scripts en `scripts/`, como `budget_test_data.sql` para el
+   presupuesto, solo para `local`. Lo
    que surge al probar se corrige en la misma rama, y los pasos y lo que se vio van en la
    descripción del pull request.
 11. **Abrir el pull request contra la rama de la entrega,** con el corte en verde y una
