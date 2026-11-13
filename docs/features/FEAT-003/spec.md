@@ -506,7 +506,7 @@ de 2026, 2026-10-17T18:00:00Z.
 - **C2-60 y C2-61, sumados con la revisión de `pr-reviewer` de la #139:** Veronica Zacarias 9/11/2026
 - **C2-62, sumado con la segunda revisión de `pr-reviewer` de la #139:** Veronica Zacarias 09/11/2026
 - **C2-02 a C2-06, C2-09, C2-12, C2-15, C2-18, C2-37, C2-44, C2-45 y C2-47 cambiados, con la pregunta que va directa (CA-22):** Veronica Zacarias 05/11/2026
-- **C2-20 cambiado, con la pregunta que va directa (CA-22):** Veronica Zacarias 05/11/2026 
+- **C2-20 cambiado, con la pregunta que va directa (CA-22):** Veronica Zacarias 05/11/2026
 - **C2-32 cambiado, con la issue #196:** Veronica Zacarias 13/11/2026
 - **Total:** 62 casos, 45 unitarios y 17 de integración.
 
