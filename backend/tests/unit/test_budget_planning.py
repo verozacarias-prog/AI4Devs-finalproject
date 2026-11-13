@@ -474,6 +474,7 @@ def test_a_limit_on_an_income_category_is_not_saved() -> None:
         name="Clases particulares",
         kind=TransactionType.INCOME,
         user_id=budget.user.id,
+        is_base=False,
     )
     budget.unit_of_work.categories.add(private_classes)
     limit = (LimitContent(private_classes.id, Decimal("10000.00")),)

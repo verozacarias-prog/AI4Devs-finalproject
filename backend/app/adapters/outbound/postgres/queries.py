@@ -183,7 +183,7 @@ SELECT_PERIODS_COVERING = """
 # A category of a user: the base catalog is created by the migrations.
 INSERT_CATEGORY = """
     INSERT INTO category (id, name, user_id, is_base, kind)
-    VALUES (:id, :name, :user_id, FALSE, :kind)
+    VALUES (:id, :name, :user_id, :is_base, :kind)
 """
 
 # Only a draft: the query protects itself, whatever the use case checked before.
@@ -237,7 +237,7 @@ SELECT_BUDGET_PERIODS_OWNED_BY = (
 )
 
 SELECT_CATEGORIES_AVAILABLE = """
-    SELECT id, name, kind, user_id
+    SELECT id, name, kind, user_id, is_base
       FROM category
      WHERE user_id IS NULL OR user_id = :user_id
 """
@@ -255,7 +255,7 @@ SELECT_CURRENCY = """
 """
 
 SELECT_CATEGORIES_BY_IDS = """
-    SELECT id, name, kind, user_id
+    SELECT id, name, kind, user_id, is_base
       FROM category
      WHERE id = ANY(:ids)
 """

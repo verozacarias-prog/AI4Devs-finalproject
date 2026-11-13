@@ -160,7 +160,9 @@ def _category_named(
     ]
     if existing:
         return existing[0]
-    created = Category(id=uuid.uuid4(), name=name.strip(), kind=kind, user_id=context.user.id)
+    created = Category(
+        id=uuid.uuid4(), name=name.strip(), kind=kind, user_id=context.user.id, is_base=False
+    )
     unit_of_work.categories.add(created)
     context.categories.append(created)
     return created

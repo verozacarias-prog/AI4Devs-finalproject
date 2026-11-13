@@ -116,7 +116,7 @@ class Lucia:
             category_id = uuid.uuid4()
             self.categories[name] = category_id
             unit_of_work.categories.add(
-                Category(id=category_id, name=name, kind=kind, user_id=None)
+                Category(id=category_id, name=name, kind=kind, user_id=None, is_base=True)
             )
         self.period = BudgetPeriod(
             id=uuid.uuid4(),
@@ -138,7 +138,7 @@ class Lucia:
         category_id = uuid.uuid4()
         self.categories[name] = category_id
         self._unit_of_work.categories.add(
-            Category(id=category_id, name=name, kind=kind, user_id=None)
+            Category(id=category_id, name=name, kind=kind, user_id=None, is_base=True)
         )
         return category_id
 

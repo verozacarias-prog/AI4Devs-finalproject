@@ -13,6 +13,7 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
+from sqlalchemy.exc import IntegrityError
 
 pytestmark = pytest.mark.integration
 
@@ -119,3 +120,64 @@ def test_the_migration_leaves_as_custom_the_periods_that_do_not_match_their_cade
         off_calendar: ("custom", date(2026, 9, 10), date(2026, 9, 24)),
         whole_month: ("monthly", date(2026, 10, 10), date(2026, 11, 9)),
     }
+
+
+def test_the_migration_keeps_the_categories_that_exist_and_can_be_undone(
+    empty_database_url: str,
+) -> None:
+    # Case T-3 of issue 189.
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "migrations"))
+    config.set_main_option("sqlalchemy.url", empty_database_url)
+    command.upgrade(config, "0009")
+
+    engine = create_engine(empty_database_url)
+    with engine.begin() as connection:
+        user_id = connection.execute(
+            text(
+                "INSERT INTO app_user (name, whatsapp_phone, country, time_zone, "
+                "primary_currency, terms_accepted_at, terms_version, onboarding_status) VALUES "
+                "('Lucía', '+000000000001', 'AR', 'America/Argentina/Buenos_Aires', 'ARS', now(), "
+                "'1', 'completed') RETURNING id"
+            )
+        ).scalar_one()
+        own = connection.execute(
+            text(
+                "INSERT INTO category (name, user_id, is_base, kind) "
+                "VALUES ('clases de inglés', :user_id, FALSE, 'expense') RETURNING id"
+            ),
+            {"user_id": user_id},
+        ).scalar_one()
+        before = {
+            row.id: (row.user_id, row.is_base)
+            for row in connection.execute(text("SELECT id, user_id, is_base FROM category"))
+        }
+
+    command.upgrade(config, "head")
+
+    with engine.connect() as connection:
+        after = {
+            row.id: (row.user_id, row.is_base)
+            for row in connection.execute(text("SELECT id, user_id, is_base FROM category"))
+        }
+    assert after == before
+    assert after[own] == (user_id, False)
+    assert sum(1 for (owner, is_base) in after.values() if owner is None and is_base) > 0
+    with pytest.raises(IntegrityError, match="ck_category_is_base"), engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO category (name, user_id, is_base, kind) "
+                "VALUES ('Sin dueño', NULL, FALSE, 'expense')"
+            )
+        )
+
+    command.downgrade(config, "0009")
+
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO category (name, user_id, is_base, kind) "
+                "VALUES ('Sin dueño', NULL, FALSE, 'expense')"
+            )
+        )
+    engine.dispose()

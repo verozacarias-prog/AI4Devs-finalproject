@@ -45,7 +45,7 @@ def build_categories_router(
         identify_user(request, user.id)
         return CategoryList(
             categories=[
-                CategoryItem(id=category.id, name=category.name, is_base=category.user_id is None)
+                CategoryItem(id=category.id, name=category.name, is_base=category.is_base)
                 for category in list_expense_categories().execute(user.id)
             ]
         )
