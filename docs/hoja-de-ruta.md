@@ -208,16 +208,7 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   pausa, y qué se le avisa al usuario. Sin eso, el alquiler de un mes puede no registrarse sin que nadie se entere.
 - **Qué recibe el usuario si el modelo se niega a responder: decidido el 17 de octubre de
   2026.** Una negativa del modelo recibe enseguida un texto fijo que pide escribirlo de otra
-  forma, sin reintentar. Una respuesta que el proveedor corta por el tope de tokens de salida
-  recibe otro texto fijo, que pide mandar el mensaje en partes, y tampoco se reintenta; una
-  cortada por otro motivo se trata como un modelo caído. Lo segundo lo cambió Vero el 13 de
-  noviembre de 2026 ([FEAT-003](features/FEAT-003/spec.md), CA-40).
-- **La documentación automática de la API: decidido el 13 de noviembre de 2026.** `/docs` y
-  `/openapi.json` existen solo en `local`. La página de `/docs` carga Swagger UI de otro sitio,
-  sin una versión fija, y en `demo` correría con la sesión de quien la abra (hallazgo 2 del
-  `/security-audit` del 12/11/2026). `/openapi.json` no carga código de afuera, pero describe
-  toda la API sin pedir sesión. En `demo` y en `production` la referencia es el contrato
-  versionado. La referencia pública de la API tiene su propio punto en la lista de arriba.
+  forma, sin reintentar ([FEAT-003](features/FEAT-003/spec.md), CA-40).
 - **El tope del cuerpo de un pedido en el webhook de WhatsApp: sin decidir.** Hoy es de 64 KiB en
   cualquier ruta ([contrato de la API](04-api.md)), y el webhook todavía no existe. Un lote de
   Meta de más de 64 KiB recibiría `413` y sus mensajes se podrían perder. Antes de construirlo hay
