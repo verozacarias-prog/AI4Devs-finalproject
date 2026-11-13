@@ -57,15 +57,22 @@ la API: son los tres procesos que comparten el código del dominio.
 6. **Excepciones, y son todas.** Tocan la base sin pasar por un caso de uso solamente:
    - las migraciones de Alembic, que cambian el esquema en el paso previo al despliegue;
    - el acceso operativo de una persona para copias, restauraciones y diagnóstico, descrito en
-     [Operación](../operacion.md). Ninguna funcionalidad del producto puede depender de él.
+     [Operación](../operacion.md). Ninguna funcionalidad del producto puede depender de él. Las
+     consultas de `scripts/llm_metrics.sql` son diagnóstico: solo leen;
+   - los scripts de prueba manual de `scripts/`, como `budget_test_data.sql`, que cargan con
+     SQL datos para ver una pantalla con contenido en `local` sin cargarlos uno por uno,
+     aunque la aplicación ya deje cargarlos. Entran con el dueño de las tablas y no con el rol
+     de la aplicación ([ADR 0030](0030-rol-de-la-aplicacion-en-la-base.md)), y por eso
+     corren solo en `local`, sobre los usuarios inventados de los datos de prueba. Es una regla
+     de uso: el script no lo controla. Ningún test ni ningún proceso depende de ellos.
 
    El proceso de borrado de cuenta no es una excepción: es un proceso programado más, que usa
    su propio rol de base con permiso de `DELETE`
    ([ADR 0015](0015-borrado-logico-de-movimientos.md)).
 7. **Solo los procesos del backend reciben la credencial.** La variable de conexión a la base se
    configura en el servicio web, en el worker, en los procesos programados, en los comandos de
-   operación y en el paso de las migraciones, y en ningún otro lado. El script de datos de prueba
-   es un comando de operación: pasa por sus casos de uso, y se niega a correr fuera de `local`. El proveedor de LLM tampoco accede a la base
+   operación y en el paso de las migraciones, y en ningún otro lado. El comando de datos de prueba,
+   `seed_test_data`, es un comando de operación: pasa por sus casos de uso, y se niega a correr fuera de `local`. El proveedor de LLM tampoco accede a la base
    ([ADR 0013](0013-datos-minimos-al-proveedor-de-llm.md)).
 
 **Lo que comparten las capas.** Hay dos cosas que usan a la vez el dominio y los adaptadores, y
