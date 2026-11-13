@@ -19,9 +19,9 @@ import pytest
 from sqlalchemy import Engine, create_engine, text
 
 from app.adapters.inbound.message_worker.worker import create_worker
-from app.domain.entities.classification import Classification, MessageClass
+from app.domain.entities.classification import Classification, MessageClass, ModelUsage
 from app.domain.entities.llm_call import LlmOutcome
-from app.domain.errors import ModelCallFailedError, ModelRefusedError
+from app.domain.errors import ModelAnswerCutError, ModelCallFailedError, ModelRefusedError
 from app.settings import Settings, load_settings
 from tests.support.chat_data import inbound, status_of, user_id
 from tests.support.doubles import FixedClock
@@ -365,3 +365,55 @@ def test_a_message_put_off_with_a_notice_is_answered_and_one_put_off_in_silence_
     assert _answered(stream, with_the_notice) == 1
     assert _answered(stream, over_the_quota) == 1
     assert _answered(stream, in_silence) == 0
+
+
+def _paid() -> ModelUsage:
+    """What the provider charged for a call that gave no answer to use."""
+    return ModelUsage(
+        provider="openai",
+        model="gpt-5.4-mini",
+        prompt_version="test-1",
+        input_tokens=900,
+        output_tokens=2000,
+    )
+
+
+def _outcomes(engine: Engine) -> list[str]:
+    with engine.connect() as connection:
+        return list(connection.execute(text("SELECT outcome FROM llm_call")).scalars())
+
+
+def test_an_answer_cut_by_its_output_cap_gets_its_fixed_text_and_counts(
+    settings: Settings, engine: Engine
+) -> None:
+    # Case T-3 of issue 196, of CA-40 and CA-49. Nothing is registered, it is not tried again,
+    # and the provider charged for it.
+    _set_usage(engine, OCTOBER_17, "classification", 7)
+    message = inbound(engine, "Lucía", SUPERMARKET_EXPENSE, sent_at=SENT_AT)
+
+    _run_round(settings, FakeLLM(supermarket_expense(), error=ModelAnswerCutError(_paid())))
+
+    assert status_of(engine, message) == ("processed", 1)
+    assert _count(engine, "SELECT count(*) FROM transaction") == 0
+    [reply] = _replies_to(engine, message)
+    assert reply["text"] == (
+        "Tu mensaje es muy largo y no llegué a leerlo entero, así que no anoté nada. "
+        "¿Me lo mandás en partes más cortas?"
+    )
+    assert reply["response_kind"] == "fixed_text"
+    assert _outcomes(engine) == ["truncated"]
+    assert _usage(engine, OCTOBER_17, "classification") == (8, 900, 2000)
+
+
+def test_an_invalid_output_the_provider_charged_for_is_retried_and_counts(
+    settings: Settings, engine: Engine
+) -> None:
+    # Case T-4 of issue 196, of CA-49.
+    _set_usage(engine, OCTOBER_17, "classification", 7)
+    message = inbound(engine, "Lucía", SUPERMARKET_EXPENSE, sent_at=SENT_AT)
+    invalid = ModelCallFailedError(LlmOutcome.INVALID_OUTPUT, _paid())
+
+    _run_round(settings, FakeLLM(supermarket_expense(), error=invalid))
+
+    assert status_of(engine, message) == ("pending", 1)
+    assert _usage(engine, OCTOBER_17, "classification") == (8, 900, 2000)

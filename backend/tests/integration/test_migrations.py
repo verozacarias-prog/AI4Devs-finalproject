@@ -181,3 +181,44 @@ def test_the_migration_keeps_the_categories_that_exist_and_can_be_undone(
             )
         )
     engine.dispose()
+
+
+def test_the_migration_keeps_the_model_calls_and_accepts_truncated_until_undone(
+    empty_database_url: str,
+) -> None:
+    # Case T-5 of issue 196.
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "migrations"))
+    config.set_main_option("sqlalchemy.url", empty_database_url)
+    command.upgrade(config, "0010")
+    insert = text(
+        "INSERT INTO llm_call (purpose, provider, model, prompt_version, outcome, duration_ms) "
+        "VALUES ('classification', 'openai', 'gpt-5.4-mini', '1', :outcome, 900) RETURNING id"
+    )
+
+    engine = create_engine(empty_database_url)
+    with engine.begin() as connection:
+        refused = connection.execute(insert, {"outcome": "refused"}).scalar_one()
+        before = {
+            row.id: row.outcome
+            for row in connection.execute(text("SELECT id, outcome FROM llm_call"))
+        }
+
+    command.upgrade(config, "head")
+
+    with engine.begin() as connection:
+        after = {
+            row.id: row.outcome
+            for row in connection.execute(text("SELECT id, outcome FROM llm_call"))
+        }
+        connection.execute(insert, {"outcome": "truncated"})
+    assert after == before == {refused: "refused"}
+
+    command.downgrade(config, "0010")
+
+    with engine.connect() as connection:
+        undone = sorted(connection.execute(text("SELECT outcome FROM llm_call")).scalars())
+    assert undone == ["provider_error", "refused"]
+    with pytest.raises(IntegrityError, match="ck_llm_call_outcome"), engine.begin() as connection:
+        connection.execute(insert, {"outcome": "truncated"})
+    engine.dispose()

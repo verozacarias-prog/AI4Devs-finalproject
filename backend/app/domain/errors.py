@@ -213,6 +213,17 @@ class ModelCallFailedError(DomainError):
         self.usage = usage
 
 
+class ModelAnswerCutError(Exception):
+    """The answer reached the cap of its output before it ended: the message is too long.
+
+    Trying again would cut it the same way. The provider charged for it (CA-40).
+    """
+
+    def __init__(self, usage: ModelUsage | None = None) -> None:
+        super().__init__()
+        self.usage = usage
+
+
 class ModelRefusedError(Exception):
     """The model refused to interpret the message: trying again would get the same answer."""
 
