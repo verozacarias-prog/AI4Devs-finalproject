@@ -123,6 +123,18 @@ def test_a_category_is_of_expense_or_of_income(rows: Rows) -> None:
         rows.category(user, kind="transfer")
 
 
+def test_a_category_without_a_user_is_of_the_base_catalog(rows: Rows) -> None:
+    # Case T-1 of issue 189.
+    with rows.rejected_by("ck_category_is_base"):
+        rows.category(None, is_base=False)
+
+
+def test_a_category_of_a_user_is_not_of_the_base_catalog(rows: Rows) -> None:
+    # Case T-2 of issue 189.
+    with rows.rejected_by("ck_category_is_base"):
+        rows.category(rows.user(), is_base=True)
+
+
 def test_a_budget_period_belongs_to_a_user_or_to_a_group_never_to_none(rows: Rows) -> None:
     # Case 29.
     rows.period(user=rows.user())
