@@ -19,7 +19,7 @@ código que describe, y algo automático se queja cuando se desactualiza.
 
 La referencia de la API se genera desde el código: el contrato versionado está en
 [`frontend/src/api/openapi.json`](../frontend/src/api/openapi.json), y `/docs` lo muestra con la API
-corriendo. Falta publicarla en el portal. La documentación del código, con su generador, todavía no
+corriendo en `local`. Falta publicarla en el portal. La documentación del código, con su generador, todavía no
 existe. Ver la [hoja de ruta](hoja-de-ruta.md#pendientes).
 
 ## 2. Una sola fuente

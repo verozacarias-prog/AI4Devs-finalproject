@@ -130,7 +130,7 @@ Cómo levantar Platita y probar el flujo está en el
 - Si ya tenías un `.env` de antes, comparalo con `.env.example`: una variable nueva no llega
   sola. La que enciende la entrada de desarrollo es `DEV_ENTRY_ENABLED=true`, y la que enciende
   el chat web, `WEB_CHAT_ENABLED=true`.
-- En Swagger se prueban las rutas de lectura. Las que modifican algo se prueban desde el
+- En Swagger, que existe solo en `local`, se prueban las rutas de lectura. Las que modifican algo se prueban desde el
   dashboard, porque exigen venir de su página y como JSON.
 - Para trabajar en el dashboard con recarga automática, con Compose levantado:
 

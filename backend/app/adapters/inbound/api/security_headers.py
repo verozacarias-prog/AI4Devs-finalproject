@@ -23,7 +23,8 @@ COMMON_HEADERS = {
 
 # Sent with the dashboard only. Everything the page loads comes from its own origin: no
 # inline code, no other site, and no other page may embed it. The interactive API docs are
-# not under this policy, because they load their code from elsewhere.
+# not under this policy, because they load their code from elsewhere: that is why they exist
+# in local only.
 CONTENT_SECURITY_POLICY = "; ".join(
     (
         "default-src 'self'",

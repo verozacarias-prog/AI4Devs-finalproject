@@ -7,6 +7,10 @@ from typing import Literal
 
 from app.constants import DASHBOARD_PREFIX as DASHBOARD_PREFIX
 
+# The reference the framework serves, in local only (docs/04-api.md).
+DOCS = "/docs"
+OPENAPI = "/openapi.json"
+
 HEALTHZ = "/healthz"
 READYZ = "/readyz"
 QUEUEZ = "/queuez"
