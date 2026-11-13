@@ -461,8 +461,8 @@ decidido ([ADR 0023](adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-
   escrito. Un pedido a una ruta que no existe lleva solo el método. Uno rechazado
   por su origen se responde antes de resolver su ruta, y lleva igual la ruta declarada que
   coincide con la dirección pedida. Uno al dashboard lleva `GET /app`, sin el
-  archivo. Las páginas del contrato que sirve el framework, como `/docs` y `/openapi.json`,
-  llevan su ruta como cualquier otra. El worker deja una línea `message.answered` por cada
+  archivo. Las páginas del contrato que sirve el framework, `/docs` y `/openapi.json`, existen
+  solo en `local`, y ahí llevan su ruta como cualquier otra. El worker deja una línea `message.answered` por cada
   mensaje que respondió, con la duración: el identificador del mensaje y el del usuario los
   lleva como toda línea escrita mientras lo procesa. La de un mensaje con varios movimientos
   dice además cuántos trajo, `movements`, y cuántos entraron al lote, `batched`: solo

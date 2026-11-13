@@ -121,7 +121,7 @@ docker compose exec api python -m app.adapters.inbound.operator_commands.seed_te
 | Dirección | Qué es |
 |---|---|
 | <http://127.0.0.1:8000/app/> | El dashboard, con la entrada de desarrollo: se elige un usuario de prueba y se abre una sesión real, sin código. Mejor en Chrome o Firefox, que aceptan la cookie `Secure` sin HTTPS en la propia máquina |
-| <http://127.0.0.1:8000/docs> | La referencia de la API en Swagger, generada desde el código |
+| <http://127.0.0.1:8000/docs> | La referencia de la API en Swagger, generada desde el código. Existe solo en `local` |
 | `127.0.0.1:5433` | PostgreSQL, con el usuario, la clave y la base de `.env` |
 
 Qué trae cada usuario de prueba está en [operación](docs/operacion.md#2-entornos).

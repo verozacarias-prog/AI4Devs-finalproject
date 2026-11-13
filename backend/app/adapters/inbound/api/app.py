@@ -9,7 +9,7 @@ from typing import TextIO
 
 from fastapi import FastAPI
 
-from app.adapters.inbound.api import reference
+from app.adapters.inbound.api import reference, routes
 from app.adapters.inbound.api.body_limit import (
     CountedBody,
     refuse_declared_bodies_over_the_limit,
@@ -70,11 +70,16 @@ def create_app(
         # One for each request: it holds the connection of its transaction.
         return SqlAlchemyUnitOfWork(engine)
 
+    in_local = settings.environment is Environment.LOCAL
     app = FastAPI(
         title=APP_TITLE,
         version=settings.version,
         description=reference.API_DESCRIPTION,
         openapi_tags=reference.TAGS,
+        # The page loads its code from another site, so it lives in local only. Elsewhere the
+        # reference is the versioned contract, which is exported by code and not by this route.
+        docs_url=routes.DOCS if in_local else None,
+        openapi_url=routes.OPENAPI if in_local else None,
         # One page for the reference is enough: the other one shows the same contract.
         redoc_url=None,
     )
@@ -145,7 +150,6 @@ def create_app(
         # Said at every start, so that nobody leaves it on without knowing (ADR 0016).
         logger.warning(Event.DEV_SCAFFOLD_ENABLED)
     if settings.dev_entry_enabled:
-        in_local = settings.environment is Environment.LOCAL
         app.include_router(
             build_dev_entry_router(
                 lambda: OpenDevSession(
