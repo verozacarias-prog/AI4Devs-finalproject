@@ -1004,6 +1004,13 @@ el usuario de WhatsApp está en la [hoja de ruta](hoja-de-ruta.md#decisiones-abi
 que suma al tope diario total aunque el registro falle, quede el mensaje `failed` o se reintente.
 Cada reintento vuelve a clasificar y vuelve a sumar: cuenta cada clasificación pagada.
 
+**Una llamada que el proveedor cobró cuenta, aunque falle.** Una salida que no se puede validar
+suma al tope diario total y se reintenta. Una respuesta que se corta por el tope de tokens de
+salida dice que el mensaje es demasiado largo: suma, no se reintenta, no se anota nada y el
+usuario recibe un texto fijo que le pide mandarlo en partes. Solo una llamada sin tokens, como un
+tiempo agotado o un error de conexión, no suma, porque es una caída del proveedor
+([FEAT-003](features/FEAT-003/spec.md), CA-40 y CA-49).
+
 **Un tope global mensual como corte de emergencia.** Además de las cuotas por usuario, la cuenta
 del proveedor de LLM tiene un límite de gasto mensual de 20 dólares, configurado en la consola
 del proveedor y no en Platita. Es el último resguardo: si algo se sale de control, la factura no

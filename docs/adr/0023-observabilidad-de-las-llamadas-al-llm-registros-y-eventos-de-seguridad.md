@@ -38,7 +38,7 @@ Lo que ya está decidido acota la solución:
    que la originó, el propósito (clasificar, interpretar, consulta, consejo o embedding), el
    proveedor, el modelo, la versión del prompt, los tokens de entrada y de salida, la duración,
    el costo estimado y el resultado: bien, salida inválida, bloqueada por la validación, negada
-   por el modelo, error del proveedor o tiempo agotado. Nunca texto, montos ni nombres. Las
+   por el modelo, cortada por el tope de tokens de salida, error del proveedor o tiempo agotado. Nunca texto, montos ni nombres. Las
    columnas están en el [modelo de datos](../03-modelo-de-datos.md#llm_call).
 2. **Un campo reservado para la recuperación.** Guarda qué fragmentos de la base de conocimiento
    se trajeron y con qué similitud. Queda vacío hasta que existan los consejos. Para llenarlo,

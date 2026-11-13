@@ -1,4 +1,5 @@
-"""Exchange rates, indicators and the two tables of model usage: cases 102 to 110, and 132."""
+"""Exchange rates, indicators and the two tables of model usage: cases 102 to 110, and 132, and
+T-5 of issue 196."""
 
 from __future__ import annotations
 
@@ -83,3 +84,8 @@ def test_a_model_call_uses_the_closed_sets_and_has_no_negative_duration_or_cost(
 
     with rows.rejected_by(f"ck_llm_call_{column}"):
         rows.llm_call(**{column: value})
+
+
+def test_a_model_call_cut_by_its_output_cap_is_truncated(rows: Rows) -> None:
+    # Case T-5 of issue 196.
+    rows.llm_call(outcome="truncated")

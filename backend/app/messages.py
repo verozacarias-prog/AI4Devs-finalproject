@@ -195,6 +195,11 @@ TOOK_NONE_OF_THE_NEW = (
 )
 OTHER_WHEN_WE_FINISH = "El otro mandámelo cuando terminemos con estos."
 OTHERS_WHEN_WE_FINISH = "Los otros {left} mandámelos cuando terminemos con estos."
+# The answer of the model was cut by the cap of its output: it is not tried again (CA-40).
+MESSAGE_TOO_LONG = (
+    "Tu mensaje es muy largo y no llegué a leerlo entero, así que no anoté nada. ¿Me lo mandás "
+    "en partes más cortas?"
+)
 # The model refused to interpret the message: it is not tried again (CA-40).
 MODEL_REFUSED = (
     "No pude entender ese mensaje. ¿Me lo escribís de otra forma? Por ejemplo: «gasté 3500 en "

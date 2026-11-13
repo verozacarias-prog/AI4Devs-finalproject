@@ -27,7 +27,12 @@ from app.domain.entities.pending_transaction import (
 )
 from app.domain.entities.transaction import TransactionType
 from app.domain.entities.user import User
-from app.domain.errors import ModelCallFailedError, ModelRefusedError, StoreUnavailableError
+from app.domain.errors import (
+    ModelAnswerCutError,
+    ModelCallFailedError,
+    ModelRefusedError,
+    StoreUnavailableError,
+)
 from app.domain.ports.llm_call_log_port import LlmCallLogPort
 from app.domain.ports.llm_port import LLMPort
 from app.domain.ports.unit_of_work_port import UnitOfWorkPort
@@ -121,8 +126,8 @@ class _Usage:
 @dataclass(frozen=True)
 class _PaidCall:
     """The call that classified the message, which counts against the cap of the day with the
-    tokens it took. One the model refused counts too; one that failed does not (ADR 0018,
-    point 3).
+    tokens it took. One the model refused or cut counts too, and so does one that failed if the
+    provider charged for it; one with no tokens does not (ADR 0018, point 3).
     """
 
     usage: _Usage
@@ -244,10 +249,19 @@ class AnswerMessage:
                 ResponseKind.FIXED_TEXT,
                 _PaidCall(usage, error.usage),
             )
+        except ModelAnswerCutError as error:
+            return self._store_reply(
+                message,
+                messages.MESSAGE_TOO_LONG,
+                ResponseKind.FIXED_TEXT,
+                _PaidCall(usage, error.usage),
+            )
         except ModelCallFailedError as error:
             notify(ModelFailed(error))
-            # A fall of the provider does not use up the cap of the user (ADR 0018, point 3).
-            return self._try_again_later(message)
+            # A call the provider charged for counts against the cap, and one it did not, as a
+            # fall of the provider, does not (ADR 0018, point 3).
+            paid = _PaidCall(usage, error.usage) if _charged(error.usage) else None
+            return self._try_again_later(message, paid)
         attempt.paid = _PaidCall(usage, classification.usage)
         return self._settle_message(message, loaded, classification, notify)
 
@@ -517,9 +531,16 @@ def _count(
     )
 
 
+def _charged(model_usage: ModelUsage | None) -> bool:
+    """Whether the provider reported tokens for the call: a call that gave none cost nothing."""
+    return model_usage is not None and (
+        model_usage.input_tokens is not None or model_usage.output_tokens is not None
+    )
+
+
 def _count_paid(unit_of_work: UnitOfWorkPort, paid: _PaidCall | None) -> None:
-    """A message the model refused, or that failed or is retried after classifying, still counts
-    against the cap of the day.
+    """A message the model refused or cut, or that failed or is retried after a call the
+    provider charged for, still counts against the cap of the day.
     """
     if paid is not None:
         _count(unit_of_work, paid.usage, UsageCounter.CLASSIFICATION, paid.model)

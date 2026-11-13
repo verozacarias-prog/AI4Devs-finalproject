@@ -22,6 +22,9 @@ class LlmOutcome(StrEnum):
     BLOCKED = "blocked"
     # The model refused to interpret the message: no hallucination, and no retry (CA-40).
     REFUSED = "refused"
+    # The answer reached the cap of its output: the message was too long, and it is not tried
+    # again (CA-40).
+    TRUNCATED = "truncated"
     PROVIDER_ERROR = "provider_error"
     TIMEOUT = "timeout"
 

@@ -1,8 +1,11 @@
 """The OpenAI adapter, with the HTTP transport of the SDK replaced (FEAT-003, its spec.md).
 
 Cases C1-14, C1-15 and C1-23: what the adapter sends, and how it reads the amount and the
-currency back. Case C1-08 of FEAT-006: both sides of a transfer. Case C2-32: an answer the
-provider cut. Case C2-39: a call that fails, recorded.
+currency back. Case C1-08 of FEAT-006: both sides of a transfer. Case C2-32, changed by case
+T-1 of issue 196: an answer cut by its output cap. Cases T-2 and T-6 of issue 196, not the T-1
+and T-2 below: an answer cut for another reason, and how many items the arrays of the output may
+have. Case C2-39: a call
+that fails, recorded.
 Case C3-13: the system prompt is the same for every user. Case C3-14: no identifier reaches
 the provider.
 Outside the spec, T-1: every key of the data is one the system prompt names. T-2: the
@@ -36,7 +39,7 @@ from app.domain.entities.classification import (
     RegistrationType,
 )
 from app.domain.entities.llm_call import LlmOutcome
-from app.domain.errors import ModelCallFailedError, ModelRefusedError
+from app.domain.errors import ModelAnswerCutError, ModelCallFailedError, ModelRefusedError
 from app.domain.use_cases.messages.answer_message import AnswerMessage
 from tests.support.doubles import FixedClock, InMemoryLlmCallLog, InMemoryUnitOfWork
 from tests.support.fake_llm import FakeLLM
@@ -296,25 +299,57 @@ def test_the_adapter_returns_both_sides_of_a_transfer() -> None:
         assert set(cast(list[str | None], properties[field]["enum"])) == catalog
 
 
-def test_a_cut_answer_is_treated_as_a_model_that_is_down() -> None:
-    # Case C2-32. The provider stopped the answer halfway: what came is not a refusal.
+def _cut_by(reason: str) -> OpenAILLM:
+    """The adapter, with a provider that stops the answer halfway for that reason."""
+
     def cut(request: httpx2.Request) -> httpx2.Response:
         response = FakeTransport(_expense("3500")).handle(request)
         body = json.loads(response.content)
         body["status"] = "incomplete"
-        body["incomplete_details"] = {"reason": "max_output_tokens"}
+        body["incomplete_details"] = {"reason": reason}
         body["output"][0]["status"] = "incomplete"
         body["output"][0]["content"][0]["text"] = '{"message_class": "regis'
         return httpx2.Response(200, json=body)
 
-    client = httpx2.Client(transport=httpx2.MockTransport(cut))
-    adapter = OpenAILLM(api_key="test-key", http_client=client)
+    return OpenAILLM(
+        api_key="test-key", http_client=httpx2.Client(transport=httpx2.MockTransport(cut))
+    )
 
+
+def test_an_answer_cut_by_its_output_cap_is_its_own_error_with_what_it_cost() -> None:
+    # Case C2-32, changed by T-1 of issue 196. The message was too long for the answer: it is
+    # neither a model that is down nor a refusal, and the provider charged for it.
+    with pytest.raises(ModelAnswerCutError) as error:
+        _cut_by("max_output_tokens").classify(REQUEST)
+
+    assert not isinstance(error.value, ModelCallFailedError)
+    assert not isinstance(error.value, ModelRefusedError)
+    assert error.value.usage is not None
+    assert (error.value.usage.input_tokens, error.value.usage.output_tokens) == (812, 64)
+
+
+def test_an_answer_cut_for_another_reason_is_a_model_that_is_down_with_what_it_cost() -> None:
+    # Case T-2 of issue 196.
     with pytest.raises(ModelCallFailedError) as error:
-        adapter.classify(REQUEST)
+        _cut_by("content_filter").classify(REQUEST)
 
     assert error.value.outcome is LlmOutcome.PROVIDER_ERROR
-    assert not isinstance(error.value, ModelRefusedError)
+    assert error.value.usage is not None
+    assert (error.value.usage.input_tokens, error.value.usage.output_tokens) == (812, 64)
+
+
+def test_the_replies_by_number_are_ten_at_most_and_the_movements_have_no_cap() -> None:
+    # Case T-6 of issue 196. A batch has 10 pendings at most; a movement left out of a long
+    # message would be lost without a word, so the cap of those is the one of the output.
+    transport = FakeTransport(_expense("3500"))
+    _adapter(transport).classify(REQUEST)
+
+    [sent] = transport.received
+    output_format = cast(dict[str, dict[str, object]], sent["text"])["format"]
+    schema = cast(dict[str, object], output_format["schema"])
+    properties = cast(dict[str, dict[str, object]], schema["properties"])
+    assert properties["numbered_replies"]["maxItems"] == 10
+    assert "maxItems" not in properties["more_movements"]
 
 
 def test_a_call_that_fails_records_the_provider_and_the_model() -> None:
