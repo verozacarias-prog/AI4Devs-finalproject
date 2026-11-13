@@ -114,11 +114,12 @@ Lo que se puede resolver a la vista se registra en un solo mensaje.
 - **CA-44.** Cualquier otro fallo al procesar un mensaje se trata según su tipo ([ADR 0010](../../adr/0010-webhook-asincrono-con-tabla-de-entrada.md), punto 4). Uno pasajero, que puede salir bien al rato, como la base caída o dos transacciones que chocan, se reintenta igual que un fallo del modelo. Uno permanente, cuyo estado no va a cambiar, como una escritura que la base rechaza, datos guardados que rompen una regla o un error del código, no se reintenta: el mensaje queda `failed` enseguida, el usuario recibe el aviso y su siguiente mensaje se procesa. Ningún mensaje queda tomado sin fin. Decidido por Vero el 17/10/2026, con la revisión de `pr-reviewer` del corte 2.
 - **CA-27.** Si dos workers terminan el mismo mensaje, queda un solo movimiento.
 - **CA-28.** Si el tiempo máximo de la llamada al modelo no es menor que la duración del lock, ningún proceso arranca.
-- **CA-40.** Si el modelo se niega a interpretar el mensaje, el usuario recibe enseguida un texto fijo que le pide escribirlo de otra forma, sin reintentar, y la llamada queda `refused`, aparte de lo que bloquea la validación (CA-47). Una respuesta que el proveedor corta a la mitad se trata como un modelo caído (CA-26). Decidido por Vero el 17/10/2026, y resuelve la pregunta abierta 1. El resultado `refused` lo decidió Vero el 18/10/2026, con la revisión de `pr-reviewer` del corte 3, para que la métrica de alucinaciones no cuente las negativas.
+- **CA-40.** Si el modelo se niega a interpretar el mensaje, el usuario recibe enseguida un texto fijo que le pide escribirlo de otra forma, sin reintentar, y la llamada queda `refused`, aparte de lo que bloquea la validación (CA-47). Si el proveedor corta la respuesta por `max_output_tokens`, el mensaje recibe el texto fijo de un mensaje largo y la llamada queda `truncated`, como manda [§ 12](../../reglas-de-dominio.md#12-límites-de-uso-del-asistente). Si la corta por otro motivo, es un modelo caído (CA-26). Cambiado por Vero el 13/11/2026 con la issue #196: otro intento la cortaría igual y pagaría tres llamadas. Decidido por Vero el 17/10/2026, y resuelve la pregunta abierta 1. El resultado `refused` lo decidió Vero el 18/10/2026, con la revisión de `pr-reviewer` del corte 3, para que la métrica de alucinaciones no cuente las negativas.
 
 ### Límites y observabilidad — corte 3
 
 - **CA-29.** Con el tope diario total alcanzado, el mensaje no se clasifica y se procesa al día siguiente. El aviso de que llegó al límite sale una sola vez por día.
+- **CA-49.** Lo que el proveedor cobró suma al tope diario total, también cuando la llamada falla, como manda el [ADR 0018](../../adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), punto 3; lo que no cobró, no. Sumado el 13/11/2026 con la issue #196.
 - **CA-30.** Con la cuota de registro agotada, un gasto, un ingreso, una transferencia o la respuesta a un pendiente se demoran al día siguiente, con un texto fijo y sin otra llamada al modelo. Un mensaje demorado no traba a los siguientes y, al procesarse, conserva el día en que se escribió. Las cuotas de consultas y de consejos llegan con su código, en una segunda versión: mientras tanto una consulta o un consejo reciben el texto fijo de C1-10 sin cobrar cuota ([hoja de ruta](../../hoja-de-ruta.md#alcance-de-la-entrega-final)). Decidido por Vero el 18/10/2026. La transferencia se suma el 5/11/2026, con [FEAT-006](../FEAT-006/spec.md).
 - **CA-46.** El tope diario total y la cuota de registro son configuración, en variables de entorno, con 100 y 50 por defecto: se cambian sin desplegar, reiniciando el worker. Decidido por Vero el 18/10/2026; resuelve la contradicción entre [2.5](../../02-arquitectura.md#25-seguridad) y las [reglas de dominio § 12](../../reglas-de-dominio.md#12-límites-de-uso-del-asistente).
 - **CA-47.** Cuando la validación en código rechaza algo que devolvió el modelo, la fila de su llamada en `LLM_CALL` pasa a `blocked` ([ADR 0023](../../adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md), punto 6). Sumado el 18/10/2026: el corte 2 valida la salida pero deja la fila en `ok`. Cuenta como rechazo tanto un nombre de categoría que no pasa la validación (CA-43) como algo que el modelo devuelve sin que esté escrito: una mención de la cuenta (CA-9), las palabras de la moneda (CA-39) o un nombre de categoría que nadie escribió (CA-45). Así la métrica de alucinaciones ve también lo que el modelo inventa. Decidido por Vero el 18/10/2026. Desde el 5/11/2026 cuentan también las palabras del tipo de una cuenta, como "el banco", y la mención de la cuenta de destino de una transferencia ([FEAT-006](../FEAT-006/spec.md)), cuando el mensaje no las escribe.
@@ -505,7 +506,8 @@ de 2026, 2026-10-17T18:00:00Z.
 - **C2-60 y C2-61, sumados con la revisión de `pr-reviewer` de la #139:** Veronica Zacarias 9/11/2026
 - **C2-62, sumado con la segunda revisión de `pr-reviewer` de la #139:** Veronica Zacarias 09/11/2026
 - **C2-02 a C2-06, C2-09, C2-12, C2-15, C2-18, C2-37, C2-44, C2-45 y C2-47 cambiados, con la pregunta que va directa (CA-22):** Veronica Zacarias 05/11/2026
-- **C2-20 cambiado, con la pregunta que va directa (CA-22):** Veronica Zacarias 05/11/2026
+- **C2-20 cambiado, con la pregunta que va directa (CA-22):** Veronica Zacarias 05/11/2026 
+- **C2-32 cambiado, con la issue #196:** Veronica Zacarias 13/11/2026
 - **Total:** 62 casos, 45 unitarios y 17 de integración.
 
 Cómo se continúa un pendiente, para leer los casos
@@ -561,7 +563,7 @@ defecto.
 | C2-29 | Agotados los intentos, el mensaje queda `failed` y el usuario recibe el aviso | Integración | CA-26 |
 | C2-30 | Después de un mensaje `failed`, el siguiente se procesa | Integración | CA-26 |
 | C2-31 | Si el modelo se niega, sale el texto fijo y no se reintenta | Integración | CA-40 |
-| C2-32 | Una respuesta cortada se trata como un modelo caído | Unitario | CA-40 |
+| C2-32 | Una respuesta cortada por el tope de salida tiene su propio error, con lo que costó | Unitario | CA-40 |
 | C2-33 | Dos workers que continúan el mismo pendiente dejan un solo movimiento | Integración | CA-27 |
 | C2-34 | Con el lock no mayor que el tiempo de la llamada, ningún proceso arranca | Unitario | CA-28 |
 | C2-35 | Un mensaje con varios movimientos recibe el texto fijo y no queda pendiente. Reemplazado por [FEAT-007](../FEAT-007/spec.md) | Unitario | CA-16 |
@@ -948,14 +950,17 @@ defecto.
   `LLM_CALL` tiene `outcome = 'refused'`.
 - **Test:** `tests/integration/test_message_retries.py::test_if_the_model_refuses_the_fixed_text_goes_out_and_it_is_not_retried`
 
-#### C2-32 · Una respuesta cortada se trata como un modelo caído
+#### C2-32 · Una respuesta cortada por el tope de salida tiene su propio error, con lo que costó
 
 - **Sale de:** CA-40 · **Tipo:** unitario
 - **Dado** el adaptador de OpenAI con un transporte HTTP doble que responde con la respuesta
-  incompleta, cortada por el proveedor,
+  incompleta, cortada por el proveedor por `max_output_tokens`,
 - **cuando** el adaptador clasifica,
-- **entonces** lanza el error de un proveedor caído, el mismo de C2-25, y no el de una negativa.
-- **Test:** `tests/unit/test_openai_llm.py::test_a_cut_answer_is_treated_as_a_model_that_is_down`
+- **entonces** lanza el error de una respuesta cortada, que no es el de un proveedor caído de
+  C2-25 ni el de una negativa, con los tokens que el proveedor cobró.
+- **Test:** `tests/unit/test_openai_llm.py::test_an_answer_cut_by_its_output_cap_is_its_own_error_with_what_it_cost`
+- Cambiado con la issue #196. Una respuesta cortada por otro motivo sigue siendo la de un
+  proveedor caído: `tests/unit/test_openai_llm.py::test_an_answer_cut_for_another_reason_is_a_model_that_is_down_with_what_it_cost`.
 
 #### C2-33 · Dos workers que continúan el mismo pendiente dejan un solo movimiento
 
@@ -1305,6 +1310,7 @@ defecto.
 - **C3-25, sumado con la revisión de `pr-reviewer` del corte 1 de [FEAT-006](../FEAT-006/spec.md):** Veronica Zacarias 05/11/2026
 - **C3-06 cambiado, con las transferencias de [FEAT-006](../FEAT-006/spec.md):** Veronica Zacarias 05/11/2026
 - **C3-25 cambiado, con el tipo que el modelo devuelve sin palabras:** Veronica Zacarias 05/11/2026
+- **C3-21 cambiado y CA-49 sumado, con la issue #196:** Veronica Zacarias 13/11/2026
 - **Total:** 25 casos, 10 unitarios y 15 de integración.
 
 Cómo se cuentan los límites, para leer los casos
@@ -1313,7 +1319,8 @@ Cómo se cuentan los límites, para leer los casos
 
 - `LLM_USAGE` tiene una fila por usuario, por día y por contador. El contador
   `classification` es el tope diario total: suma uno por cada mensaje clasificado, con sus
-  tokens, también el que el modelo se niega a interpretar; una llamada que falla no suma
+  tokens, también el que el modelo se niega a interpretar y la llamada que falla si el proveedor la
+  cobró; una sin tokens no suma
   ([ADR 0018](../../adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), punto 3).
   El contador `registration` es la cuota de registro.
 - El día es el del momento en que el mensaje se procesa, en la zona horaria del usuario. La
@@ -1350,7 +1357,7 @@ Cómo se cuentan los límites, para leer los casos
 | C3-18 | Lo que la validación rechaza deja la llamada `blocked` | Unitario | CA-47 |
 | C3-19 | El script de métricas da las cuatro métricas | Integración | CA-35 |
 | C3-20 | Un mensaje que se deja para otro intento no se registra como respondido | Integración | CA-26 y CA-31 |
-| C3-21 | Una llamada que falla no suma al tope, y una negativa del modelo sí | Integración | CA-29 |
+| C3-21 | Una llamada que el proveedor no cobró no suma al tope, y una negativa del modelo sí | Integración | CA-29 |
 | C3-22 | Un mensaje demorado con aviso queda como respondido, y uno demorado en silencio no | Integración | CA-29, CA-30 y CA-31 |
 | C3-23 | La métrica de alucinaciones no cuenta las negativas, que tienen su propia cifra | Integración | CA-35 y CA-40 |
 | C3-24 | Un gasto que recibe un texto fijo porque todavía no se puede anotar no gasta la cuota de registro | Unitario | CA-30 |
@@ -1572,11 +1579,12 @@ Cómo se cuentan los límites, para leer los casos
   error con la clase del error del dominio, su código y el `message_id`, sin su mensaje.
 - **Test:** `tests/integration/test_registration_logs.py::test_a_message_left_for_another_attempt_is_not_logged_as_answered`
 
-#### C3-21 · Una llamada que falla no suma al tope, y una negativa del modelo sí
+#### C3-21 · Una llamada que el proveedor no cobró no suma al tope, y una negativa del modelo sí
 
 - **Sale de:** CA-29 · **Tipo:** integración
 - **Dado** que Lucía tiene 7 clasificaciones el 17/10/2026 y el mensaje de C1-01 pendiente,
-- **cuando** el worker hace una ronda y el modelo falla con un error del proveedor, o se niega
+- **cuando** el worker hace una ronda y el modelo falla con un error del proveedor sin
+  tokens, o se niega
   a interpretarlo como en C2-31,
 - **entonces** con el error del proveedor el mensaje vuelve a `pending` para otro intento y el
   contador `classification` sigue en 7; con la negativa, el mensaje queda `processed` y el
@@ -1706,6 +1714,12 @@ Cuando el usuario descarta el pendiente:
 
 En la confirmación, un movimiento imputado al período de un grupo dice "Presupuesto: el de
 Casa, del 1/10/2026 al 31/10/2026".
+
+Cuando la respuesta del modelo se corta por el tope de tokens de salida, porque el mensaje es
+demasiado largo (CA-40):
+
+> Tu mensaje es muy largo y no llegué a leerlo entero, así que no anoté nada. ¿Me lo mandás en
+> partes más cortas?
 
 Cuando el modelo se niega a interpretar el mensaje:
 

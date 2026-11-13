@@ -26,7 +26,7 @@ from app.domain.entities.classification import (
     RegistrationType,
 )
 from app.domain.entities.llm_call import LlmCall, LlmOutcome, LlmPurpose, OutputField
-from app.domain.errors import ModelCallFailedError, ModelRefusedError
+from app.domain.errors import ModelAnswerCutError, ModelCallFailedError, ModelRefusedError
 from app.domain.ports.llm_call_log_port import LlmCallLogPort
 from app.domain.ports.llm_port import LLMPort
 
@@ -59,6 +59,11 @@ class RecordedLLM:
         except ModelRefusedError as error:
             self._calls.record(
                 _call(LlmPurpose.CLASSIFICATION, error.usage, started, LlmOutcome.REFUSED)
+            )
+            raise
+        except ModelAnswerCutError as error:
+            self._calls.record(
+                _call(LlmPurpose.CLASSIFICATION, error.usage, started, LlmOutcome.TRUNCATED)
             )
             raise
         call = replace(

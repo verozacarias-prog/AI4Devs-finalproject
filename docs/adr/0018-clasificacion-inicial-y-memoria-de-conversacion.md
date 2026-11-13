@@ -31,10 +31,15 @@ Los mensajes ya se guardan, por otros motivos, en `INBOUND_MESSAGE` y `OUTBOUND_
 3. **Antes de clasificar hay un tope diario total por usuario.** Cuenta los mensajes
    clasificados del día, en un contador propio de `LLM_USAGE`, y no descuenta de ninguna de las
    tres cuotas. Cuenta también el mensaje que el modelo se niega a interpretar, que se procesa
-   con su texto fijo. Una llamada que falla y se reintenta no cuenta: una caída del proveedor
-   no le consume el tope al usuario, y su costo lo acota el tope mensual de la cuenta del
-   proveedor (reglas de dominio § 12). Decidido por Vero el 18/10/2026, con la revisión de
-   `pr-reviewer` del corte 3 de [FEAT-003](../features/FEAT-003/spec.md). Vale 100 por día, y es
+   con su texto fijo. Una llamada que falla y se reintenta no cuenta si el proveedor no la
+   cobró: una caída del proveedor no le consume el tope al usuario, y su costo lo acota el tope
+   mensual de la cuenta del proveedor (reglas de dominio § 12). Decidido por Vero el 18/10/2026,
+   con la revisión de `pr-reviewer` del corte 3 de [FEAT-003](../features/FEAT-003/spec.md).
+   Una que el proveedor cobró, como una salida inválida o una respuesta cortada, sí cuenta, y
+   una cortada por el tope de tokens de salida no se reintenta: un mensaje armado para que la
+   respuesta no valide o se corte se reintentaba sin que ningún tope por usuario lo frenara.
+   Decidido por Vero el 13/11/2026, con la issue #196, el hallazgo 1 del `/security-audit` del
+   12/11/2026. Vale 100 por día, y es
    configuración. Un mensaje que llega con el tope alcanzado
    no se clasifica: se guarda y se procesa al día siguiente, y el usuario recibe un solo aviso
    por día.
@@ -90,6 +95,8 @@ Los mensajes ya se guardan, por otros motivos, en `INBOUND_MESSAGE` y `OUTBOUND_
 - La memoria depende de una ventana de tiempo. Una repregunta que llega pasados los 30 minutos
   se procesa sin contexto, y el conteo de la insistencia se reinicia: el usuario recibe otra vez
   la explicación en vez del texto fijo. Nunca recibe un veredicto.
+- Un mensaje con tantos movimientos que la respuesta pasa el tope de tokens de salida no se
+  anota: el usuario tiene que mandarlo en partes, y esa llamada suma al tope diario igual.
 - Que un mensaje es una insistencia lo sigue detectando el modelo. El código garantiza la
   secuencia, no la detección.
 - El historial enviado contiene respuestas anteriores, con cifras del usuario.

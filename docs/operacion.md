@@ -149,7 +149,9 @@ aceptan lo mismo:
   cuatro veces la anterior, hasta la más larga.
 
 Una negativa del modelo no se reintenta: el usuario recibe enseguida un texto que le pide
-escribirlo de otra forma ([FEAT-003](features/FEAT-003/spec.md), CA-40).
+escribirlo de otra forma. Una respuesta cortada por el tope de tokens de salida tampoco: el
+usuario recibe un texto que le pide mandarlo en partes ([FEAT-003](features/FEAT-003/spec.md),
+CA-40).
 
 Los límites de uso de cada usuario ([reglas de dominio § 12](reglas-de-dominio.md#12-límites-de-uso-del-asistente))
 también son variables opcionales que aceptan lo mismo, y se cambian reiniciando el worker, sin

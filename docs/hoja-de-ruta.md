@@ -208,8 +208,10 @@ con sus opciones y una recomendación. Las de esta lista son las que no salieron
   pausa, y qué se le avisa al usuario. Sin eso, el alquiler de un mes puede no registrarse sin que nadie se entere.
 - **Qué recibe el usuario si el modelo se niega a responder: decidido el 17 de octubre de
   2026.** Una negativa del modelo recibe enseguida un texto fijo que pide escribirlo de otra
-  forma, sin reintentar. Una respuesta que el proveedor corta se trata como un modelo caído y se
-  reintenta ([FEAT-003](features/FEAT-003/spec.md), CA-40).
+  forma, sin reintentar. Una respuesta que el proveedor corta por el tope de tokens de salida
+  recibe otro texto fijo, que pide mandar el mensaje en partes, y tampoco se reintenta; una
+  cortada por otro motivo se trata como un modelo caído. Lo segundo lo cambió Vero el 13 de
+  noviembre de 2026 ([FEAT-003](features/FEAT-003/spec.md), CA-40).
 - **La documentación automática de la API: decidido el 13 de noviembre de 2026.** `/docs` y
   `/openapi.json` existen solo en `local`. La página de `/docs` carga Swagger UI de otro sitio,
   sin una versión fija, y en `demo` correría con la sesión de quien la abra (hallazgo 2 del

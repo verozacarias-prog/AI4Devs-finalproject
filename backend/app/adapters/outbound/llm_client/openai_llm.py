@@ -27,6 +27,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 from app.adapters.outbound.llm_client import prompts
 from app.constants import (
+    BATCH_MAX_PENDINGS,
     CURRENCY_CODE_PATTERN,
     DEFAULT_LLM_TIMEOUT_SECONDS,
     LLM_MAX_OUTPUT_TOKENS,
@@ -48,7 +49,7 @@ from app.domain.entities.classification import (
     RegistrationType,
 )
 from app.domain.entities.llm_call import LlmOutcome
-from app.domain.errors import ModelCallFailedError, ModelRefusedError
+from app.domain.errors import ModelAnswerCutError, ModelCallFailedError, ModelRefusedError
 
 _SCHEMA_NAME = "classification"
 _NULLABLE_TEXT = {"type": ["string", "null"]}
@@ -60,6 +61,7 @@ _ACCOUNT_TYPE = {
 }
 # How the Responses API says the answer did not finish.
 _INCOMPLETE = "incomplete"
+_CUT_BY_THE_OUTPUT_CAP = "max_output_tokens"
 # The fields of one movement: those of the first one, at the top, and of each one after it.
 _MOVEMENT_PROPERTIES: dict[str, object] = {
     "registration_type": {
@@ -99,6 +101,9 @@ _NUMBERED_REPLY_PROPERTIES: dict[str, object] = {
 }
 _NUMBERED_REPLIES = {
     "type": "array",
+    # One for each pending of the batch at most. The movements have no cap of their own: one left
+    # out would be lost without a word, so their cap is the one of the output (issue 196).
+    "maxItems": BATCH_MAX_PENDINGS,
     "items": {
         "type": "object",
         "additionalProperties": False,
@@ -275,7 +280,12 @@ class OpenAILLM:
         except APIError:
             raise ModelCallFailedError(LlmOutcome.PROVIDER_ERROR, _NO_TOKENS) from None
         if response.status == _INCOMPLETE:
-            # The provider cut the answer halfway: the model is down, not refusing (CA-40).
+            details = response.incomplete_details
+            if details is not None and details.reason == _CUT_BY_THE_OUTPUT_CAP:
+                # The message asked for more than the answer may hold: the same message would
+                # be cut again (CA-40).
+                raise ModelAnswerCutError(_usage(response))
+            # Cut halfway for another reason: the model is down, not refusing (CA-40).
             raise ModelCallFailedError(LlmOutcome.PROVIDER_ERROR, _usage(response))
         if any(
             isinstance(part, ResponseOutputRefusal)
