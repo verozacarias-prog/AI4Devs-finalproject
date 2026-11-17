@@ -14,6 +14,9 @@ extend-exclude = ["migrations/versions"]
 select = ["E", "F", "I", "B", "UP", "ANN", "S", "DTZ", "C901"]
 ignore = ["S101"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["app", "evals", "tests"]
+
 [tool.ruff.lint.mccabe]
 max-complexity = 10
 
@@ -23,6 +26,6 @@ max-complexity = 10
 [tool.mypy]
 strict = true
 python_version = "3.14"
-files = ["app", "tests", "migrations"]
+files = ["app", "tests", "migrations", "evals"]
 disallow_any_explicit = true
 plugins = ["pydantic.mypy"]

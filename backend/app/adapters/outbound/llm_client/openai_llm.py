@@ -52,18 +52,36 @@ from app.domain.entities.llm_call import LlmOutcome
 from app.domain.errors import ModelAnswerCutError, ModelCallFailedError, ModelRefusedError
 
 _SCHEMA_NAME = "classification"
-_NULLABLE_TEXT = {"type": ["string", "null"]}
-_BOOLEAN = {"type": "boolean"}
+_NULLABLE_TEXT: dict[str, object] = {"type": ["string", "null"]}
+_BOOLEAN: dict[str, object] = {"type": "boolean"}
 # Only a type of the catalog of ACCOUNT.type, or none.
-_ACCOUNT_TYPE = {
+_ACCOUNT_TYPE: dict[str, object] = {
     "type": ["string", "null"],
     "enum": [*(value.value for value in AccountType), None],
 }
 # How the Responses API says the answer did not finish.
 _INCOMPLETE = "incomplete"
 _CUT_BY_THE_OUTPUT_CAP = "max_output_tokens"
+
+
+def _described(properties: dict[str, dict[str, object]]) -> dict[str, dict[str, object]]:
+    """Each field with what it is, which the model reads in the schema (issue 157)."""
+    return {
+        name: {**spec, "description": prompts.CLASSIFICATION_FIELD_DESCRIPTIONS[name]}
+        for name, spec in properties.items()
+    }
+
+
+def _pointing_up(properties: dict[str, dict[str, object]]) -> dict[str, dict[str, object]]:
+    """The fields of a movement inside a list: the description says where the full one is."""
+    return {
+        name: {**spec, "description": prompts.NESTED_FIELD_DESCRIPTION.format(field=name)}
+        for name, spec in properties.items()
+    }
+
+
 # The fields of one movement: those of the first one, at the top, and of each one after it.
-_MOVEMENT_PROPERTIES: dict[str, object] = {
+_MOVEMENT_FIELDS: dict[str, dict[str, object]] = {
     "registration_type": {
         "type": ["string", "null"],
         "enum": [*(value.value for value in RegistrationType), None],
@@ -82,24 +100,27 @@ _MOVEMENT_PROPERTIES: dict[str, object] = {
     "transaction_date": {"type": ["string", "null"], "format": "date"},
     "proposed_category": _NULLABLE_TEXT,
 }
+_MOVEMENT_PROPERTIES = _described(_MOVEMENT_FIELDS)
+# Inside a list, each field points to its description at the top: the schema goes with every call.
+_LISTED_MOVEMENT_PROPERTIES = _pointing_up(_MOVEMENT_FIELDS)
 # Each movement after the first, in the order the message writes them (FEAT-007).
-_MORE_MOVEMENTS = {
+_MORE_MOVEMENTS: dict[str, object] = {
     "type": "array",
     "items": {
         "type": "object",
         "additionalProperties": False,
-        "required": list(_MOVEMENT_PROPERTIES),
-        "properties": _MOVEMENT_PROPERTIES,
+        "required": list(_LISTED_MOVEMENT_PROPERTIES),
+        "properties": _LISTED_MOVEMENT_PROPERTIES,
     },
 }
 # What a reply says of each pending of the open batch, by its number (FEAT-007, CA-9).
-_NUMBERED_REPLY_PROPERTIES: dict[str, object] = {
-    "number": {"type": "integer"},
-    "discards": _BOOLEAN,
-    "accepts_proposal": _BOOLEAN,
-    **_MOVEMENT_PROPERTIES,
+_NUMBERED_REPLY_PROPERTIES = {
+    **_described(
+        {"number": {"type": "integer"}, "discards": _BOOLEAN, "accepts_proposal": _BOOLEAN}
+    ),
+    **_LISTED_MOVEMENT_PROPERTIES,
 }
-_NUMBERED_REPLIES = {
+_NUMBERED_REPLIES: dict[str, object] = {
     "type": "array",
     # One for each pending of the batch at most. The movements have no cap of their own: one left
     # out would be lost without a word, so their cap is the one of the output (issue 196).
@@ -135,14 +156,20 @@ _CLASSIFICATION_SCHEMA: dict[str, object] = {
         "numbered_replies",
     ],
     "properties": {
-        "message_class": {"type": "string", "enum": [value.value for value in MessageClass]},
+        **_described(
+            {"message_class": {"type": "string", "enum": [value.value for value in MessageClass]}}
+        ),
         **_MOVEMENT_PROPERTIES,
-        "more_movements": _MORE_MOVEMENTS,
-        "pending_reply": {
-            "type": ["string", "null"],
-            "enum": [*(value.value for value in PendingReply), None],
-        },
-        "numbered_replies": _NUMBERED_REPLIES,
+        **_described(
+            {
+                "more_movements": _MORE_MOVEMENTS,
+                "pending_reply": {
+                    "type": ["string", "null"],
+                    "enum": [*(value.value for value in PendingReply), None],
+                },
+                "numbered_replies": _NUMBERED_REPLIES,
+            }
+        ),
     },
 }
 

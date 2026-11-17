@@ -1,0 +1,1664 @@
+{
+  "prompt_version": "classification-15",
+  "runs": 5,
+  "calls": 580,
+  "blocked": 10,
+  "outcomes": {
+    "blocked": 10,
+    "ok": 570
+  },
+  "field_hits": {
+    "message_class": [
+      395,
+      400
+    ],
+    "registration_type": [
+      373,
+      385
+    ],
+    "amount": [
+      369,
+      380
+    ],
+    "account": [
+      343,
+      365
+    ],
+    "category": [
+      221,
+      230
+    ],
+    "transaction_date": [
+      55,
+      55
+    ],
+    "currency": [
+      108,
+      110
+    ],
+    "account_type": [
+      25,
+      25
+    ],
+    "account_type_words": [
+      10,
+      10
+    ],
+    "pending_reply": [
+      203,
+      235
+    ],
+    "numbered_replies.length": [
+      185,
+      195
+    ],
+    "numbered_replies.0.number": [
+      178,
+      180
+    ],
+    "numbered_replies.0.account": [
+      67,
+      75
+    ],
+    "numbered_replies.0.amount": [
+      49,
+      50
+    ],
+    "numbered_replies.0.currency": [
+      20,
+      30
+    ],
+    "numbered_replies.0.currency_words": [
+      5,
+      15
+    ],
+    "proposed_category": [
+      9,
+      10
+    ],
+    "numbered_replies.0.accepts_proposal": [
+      35,
+      35
+    ],
+    "numbered_replies.0.category": [
+      5,
+      5
+    ],
+    "numbered_replies.0.transaction_date": [
+      4,
+      5
+    ],
+    "numbered_replies.0.proposed_category": [
+      6,
+      10
+    ],
+    "currency_words": [
+      45,
+      45
+    ],
+    "numbered_replies.0.account_type": [
+      5,
+      5
+    ],
+    "numbered_replies.0.account_type_words": [
+      5,
+      5
+    ],
+    "to_account": [
+      75,
+      80
+    ],
+    "to_account_type": [
+      15,
+      15
+    ],
+    "to_account_type_words": [
+      5,
+      5
+    ],
+    "numbered_replies.0.to_account": [
+      19,
+      20
+    ],
+    "more_movements.length": [
+      51,
+      55
+    ],
+    "more_movements.0.registration_type": [
+      50,
+      50
+    ],
+    "more_movements.0.amount": [
+      36,
+      40
+    ],
+    "more_movements.0.account": [
+      32,
+      40
+    ],
+    "more_movements.0.category": [
+      20,
+      20
+    ],
+    "more_movements.0.currency": [
+      10,
+      10
+    ],
+    "more_movements.0.transaction_date": [
+      10,
+      10
+    ],
+    "more_movements.0.to_account": [
+      2,
+      5
+    ],
+    "more_movements.1.registration_type": [
+      7,
+      10
+    ],
+    "more_movements.1.amount": [
+      5,
+      5
+    ],
+    "more_movements.1.account": [
+      5,
+      5
+    ],
+    "numbered_replies.1.number": [
+      10,
+      10
+    ],
+    "numbered_replies.1.account": [
+      5,
+      5
+    ],
+    "numbered_replies.0.discards": [
+      10,
+      10
+    ],
+    "numbered_replies.1.discards": [
+      5,
+      5
+    ]
+  },
+  "case_hits": {
+    "FEAT-003 C1-01": [
+      30,
+      30
+    ],
+    "FEAT-003 C1-02": [
+      30,
+      30
+    ],
+    "FEAT-003 C1-07": [
+      30,
+      30
+    ],
+    "FEAT-003 C1-09": [
+      10,
+      10
+    ],
+    "FEAT-003 C1-10": [
+      5,
+      5
+    ],
+    "FEAT-003 C1-11": [
+      5,
+      5
+    ],
+    "FEAT-003 C1-12": [
+      5,
+      5
+    ],
+    "FEAT-003 C1-17": [
+      30,
+      30
+    ],
+    "FEAT-003 C1-18": [
+      30,
+      30
+    ],
+    "FEAT-003 C1-19": [
+      30,
+      30
+    ],
+    "FEAT-003 C1-20": [
+      30,
+      30
+    ],
+    "FEAT-003 C1-21": [
+      39,
+      40
+    ],
+    "FEAT-003 C1-22": [
+      40,
+      40
+    ],
+    "FEAT-003 C1-24": [
+      35,
+      35
+    ],
+    "FEAT-003 C1-25": [
+      30,
+      30
+    ],
+    "FEAT-003 C1-26": [
+      30,
+      30
+    ],
+    "FEAT-003 C2-01": [
+      25,
+      25
+    ],
+    "FEAT-003 C2-03": [
+      30,
+      30
+    ],
+    "FEAT-003 C2-04": [
+      25,
+      25
+    ],
+    "FEAT-003 C2-05": [
+      10,
+      10
+    ],
+    "FEAT-003 C2-06": [
+      30,
+      30
+    ],
+    "FEAT-003 C2-07": [
+      20,
+      20
+    ],
+    "FEAT-003 C2-09": [
+      25,
+      25
+    ],
+    "FEAT-003 C2-10": [
+      15,
+      25
+    ],
+    "FEAT-003 C2-11": [
+      15,
+      25
+    ],
+    "FEAT-003 C2-12": [
+      26,
+      30
+    ],
+    "FEAT-003 C2-13": [
+      5,
+      5
+    ],
+    "FEAT-003 C2-14": [
+      5,
+      20
+    ],
+    "FEAT-003 C2-15": [
+      30,
+      30
+    ],
+    "FEAT-003 C2-16": [
+      20,
+      20
+    ],
+    "FEAT-003 C2-17": [
+      20,
+      20
+    ],
+    "FEAT-003 C2-18": [
+      25,
+      25
+    ],
+    "FEAT-003 C2-19": [
+      20,
+      20
+    ],
+    "FEAT-003 C2-24": [
+      20,
+      20
+    ],
+    "FEAT-003 C2-36": [
+      25,
+      25
+    ],
+    "FEAT-003 C2-37": [
+      20,
+      20
+    ],
+    "FEAT-003 C2-38": [
+      20,
+      20
+    ],
+    "FEAT-003 C2-40a": [
+      28,
+      30
+    ],
+    "FEAT-003 C2-40b": [
+      20,
+      20
+    ],
+    "FEAT-003 C2-44": [
+      25,
+      25
+    ],
+    "FEAT-003 C2-45": [
+      25,
+      25
+    ],
+    "FEAT-003 C2-46": [
+      24,
+      25
+    ],
+    "FEAT-003 C2-47a": [
+      25,
+      25
+    ],
+    "FEAT-003 C2-47b": [
+      21,
+      25
+    ],
+    "FEAT-003 C2-48": [
+      35,
+      35
+    ],
+    "FEAT-003 C2-49": [
+      34,
+      35
+    ],
+    "FEAT-003 C2-50": [
+      35,
+      35
+    ],
+    "FEAT-003 C2-51a": [
+      35,
+      35
+    ],
+    "FEAT-003 C2-51b": [
+      24,
+      25
+    ],
+    "FEAT-003 C2-53": [
+      25,
+      25
+    ],
+    "FEAT-003 C2-54": [
+      35,
+      35
+    ],
+    "FEAT-003 C2-55a": [
+      25,
+      25
+    ],
+    "FEAT-003 C2-55b": [
+      20,
+      20
+    ],
+    "FEAT-003 C2-57": [
+      30,
+      30
+    ],
+    "FEAT-003 C2-58": [
+      30,
+      30
+    ],
+    "FEAT-003 C2-60": [
+      30,
+      30
+    ],
+    "FEAT-003 C2-61": [
+      30,
+      30
+    ],
+    "FEAT-003 C2-62": [
+      30,
+      30
+    ],
+    "FEAT-003 C3-25b": [
+      25,
+      25
+    ],
+    "FEAT-006 C1-01": [
+      43,
+      45
+    ],
+    "FEAT-006 C1-05": [
+      34,
+      35
+    ],
+    "FEAT-006 C1-06": [
+      25,
+      25
+    ],
+    "FEAT-006 C1-07": [
+      30,
+      30
+    ],
+    "FEAT-006 C2-01": [
+      30,
+      30
+    ],
+    "FEAT-006 C2-02": [
+      25,
+      25
+    ],
+    "FEAT-006 C2-03": [
+      21,
+      25
+    ],
+    "FEAT-006 C2-04": [
+      20,
+      20
+    ],
+    "FEAT-006 C2-05": [
+      20,
+      20
+    ],
+    "FEAT-006 C2-07": [
+      25,
+      25
+    ],
+    "FEAT-006 C2-08": [
+      25,
+      25
+    ],
+    "FEAT-006 C2-09": [
+      20,
+      20
+    ],
+    "FEAT-006 C2-10": [
+      30,
+      30
+    ],
+    "FEAT-006 C2-12": [
+      25,
+      30
+    ],
+    "FEAT-006 C2-13": [
+      25,
+      25
+    ],
+    "FEAT-006 C2-14": [
+      35,
+      35
+    ],
+    "FEAT-006 C2-15a": [
+      34,
+      35
+    ],
+    "FEAT-006 C3-02": [
+      25,
+      25
+    ],
+    "FEAT-006 C3-03a": [
+      25,
+      25
+    ],
+    "FEAT-006 C3-03b": [
+      24,
+      30
+    ],
+    "FEAT-006 C3-04a": [
+      25,
+      25
+    ],
+    "FEAT-006 C3-04b": [
+      20,
+      20
+    ],
+    "FEAT-006 C3-06a": [
+      25,
+      25
+    ],
+    "FEAT-006 C3-06b": [
+      20,
+      20
+    ],
+    "FEAT-007 C1-01": [
+      69,
+      70
+    ],
+    "FEAT-007 C1-03": [
+      57,
+      60
+    ],
+    "FEAT-007 C1-05": [
+      52,
+      55
+    ],
+    "FEAT-007 C1-08": [
+      60,
+      60
+    ],
+    "FEAT-007 C1-09": [
+      40,
+      40
+    ],
+    "FEAT-007 C1-10": [
+      25,
+      25
+    ],
+    "FEAT-007 C2-01": [
+      50,
+      50
+    ],
+    "FEAT-007 C2-02": [
+      15,
+      15
+    ],
+    "FEAT-007 C2-03": [
+      30,
+      30
+    ],
+    "FEAT-007 C2-04": [
+      20,
+      20
+    ],
+    "FEAT-007 C2-05": [
+      19,
+      20
+    ],
+    "FEAT-007 C2-06": [
+      6,
+      10
+    ],
+    "FEAT-007 C2-07": [
+      35,
+      35
+    ],
+    "FEAT-007 C2-08": [
+      17,
+      20
+    ],
+    "FEAT-007 C2-09": [
+      20,
+      20
+    ],
+    "FEAT-007 C2-10": [
+      21,
+      25
+    ],
+    "FEAT-007 C2-11": [
+      25,
+      30
+    ],
+    "FEAT-007 C2-14": [
+      16,
+      20
+    ],
+    "FEAT-007 C2-19": [
+      25,
+      25
+    ],
+    "FEAT-007 C2-20a": [
+      30,
+      30
+    ],
+    "FEAT-007 C2-20b": [
+      26,
+      30
+    ],
+    "FEAT-007 C2-23": [
+      39,
+      45
+    ],
+    "FEAT-007 C2-24": [
+      11,
+      15
+    ],
+    "FEAT-007 C2-26": [
+      50,
+      50
+    ],
+    "FEAT-007 C2-27": [
+      35,
+      35
+    ],
+    "FEAT-007 C2-28": [
+      22,
+      25
+    ],
+    "FEAT-007 C2-29": [
+      36,
+      60
+    ],
+    "FEAT-007 C3-01": [
+      51,
+      55
+    ],
+    "FEAT-007 C3-03": [
+      20,
+      20
+    ],
+    "#134 efectio": [
+      16,
+      20
+    ],
+    "#178 respuesta con monto": [
+      30,
+      30
+    ],
+    "#178 movimiento distinto": [
+      7,
+      30
+    ],
+    "#85 dólares en el súper": [
+      35,
+      35
+    ]
+  },
+  "misses": [
+    {
+      "case": "FEAT-003 C1-21",
+      "field": "account",
+      "expected": "None",
+      "got": "el banco"
+    },
+    {
+      "case": "FEAT-003 C2-10",
+      "field": "numbered_replies.0.currency",
+      "expected": "ARS",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-10",
+      "field": "numbered_replies.0.currency_words",
+      "expected": "pesos",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-10",
+      "field": "numbered_replies.0.currency",
+      "expected": "ARS",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-10",
+      "field": "numbered_replies.0.currency_words",
+      "expected": "pesos",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-10",
+      "field": "numbered_replies.0.currency",
+      "expected": "ARS",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-10",
+      "field": "numbered_replies.0.currency_words",
+      "expected": "pesos",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-10",
+      "field": "numbered_replies.0.currency",
+      "expected": "ARS",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-10",
+      "field": "numbered_replies.0.currency_words",
+      "expected": "pesos",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-10",
+      "field": "numbered_replies.0.currency",
+      "expected": "ARS",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-10",
+      "field": "numbered_replies.0.currency_words",
+      "expected": "pesos",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-11",
+      "field": "numbered_replies.0.currency",
+      "expected": "USD",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-11",
+      "field": "numbered_replies.0.currency_words",
+      "expected": "dólares",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-11",
+      "field": "numbered_replies.0.currency",
+      "expected": "USD",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-11",
+      "field": "numbered_replies.0.currency_words",
+      "expected": "dólares",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-11",
+      "field": "numbered_replies.0.currency",
+      "expected": "USD",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-11",
+      "field": "numbered_replies.0.currency_words",
+      "expected": "dólares",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-11",
+      "field": "numbered_replies.0.currency",
+      "expected": "USD",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-11",
+      "field": "numbered_replies.0.currency_words",
+      "expected": "dólares",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-11",
+      "field": "numbered_replies.0.currency",
+      "expected": "USD",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-11",
+      "field": "numbered_replies.0.currency_words",
+      "expected": "dólares",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-12",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-12",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-12",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-12",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-14",
+      "field": "message_class",
+      "expected": "registration",
+      "got": "none"
+    },
+    {
+      "case": "FEAT-003 C2-14",
+      "field": "registration_type",
+      "expected": "expense",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-14",
+      "field": "account",
+      "expected": "MP",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-14",
+      "field": "message_class",
+      "expected": "registration",
+      "got": "none"
+    },
+    {
+      "case": "FEAT-003 C2-14",
+      "field": "registration_type",
+      "expected": "expense",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-14",
+      "field": "account",
+      "expected": "MP",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-14",
+      "field": "message_class",
+      "expected": "registration",
+      "got": "none"
+    },
+    {
+      "case": "FEAT-003 C2-14",
+      "field": "registration_type",
+      "expected": "expense",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-14",
+      "field": "account",
+      "expected": "MP",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-14",
+      "field": "message_class",
+      "expected": "registration",
+      "got": "none"
+    },
+    {
+      "case": "FEAT-003 C2-14",
+      "field": "registration_type",
+      "expected": "expense",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-14",
+      "field": "account",
+      "expected": "MP",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-14",
+      "field": "message_class",
+      "expected": "registration",
+      "got": "none"
+    },
+    {
+      "case": "FEAT-003 C2-14",
+      "field": "registration_type",
+      "expected": "expense",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-14",
+      "field": "account",
+      "expected": "MP",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-40a",
+      "field": "category",
+      "expected": "None",
+      "got": "Impuestos y trámites"
+    },
+    {
+      "case": "FEAT-003 C2-40a",
+      "field": "proposed_category",
+      "expected": "Honorarios",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-46",
+      "field": "numbered_replies.0.transaction_date",
+      "expected": "2026-10-31",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-003 C2-47b",
+      "field": "numbered_replies.0.proposed_category",
+      "expected": "None",
+      "got": "Peluquería"
+    },
+    {
+      "case": "FEAT-003 C2-47b",
+      "field": "numbered_replies.0.proposed_category",
+      "expected": "None",
+      "got": "Peluquería"
+    },
+    {
+      "case": "FEAT-003 C2-47b",
+      "field": "numbered_replies.0.proposed_category",
+      "expected": "None",
+      "got": "Peluquería"
+    },
+    {
+      "case": "FEAT-003 C2-47b",
+      "field": "numbered_replies.0.proposed_category",
+      "expected": "None",
+      "got": "Peluquería"
+    },
+    {
+      "case": "FEAT-003 C2-49",
+      "field": "account",
+      "expected": "Galicia pesos",
+      "got": "la Galicia pesos"
+    },
+    {
+      "case": "FEAT-003 C2-51b",
+      "field": "numbered_replies.0.account",
+      "expected": "galicia",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-006 C1-01",
+      "field": "currency",
+      "expected": "None",
+      "got": "ARS"
+    },
+    {
+      "case": "FEAT-006 C1-01",
+      "field": "currency",
+      "expected": "None",
+      "got": "ARS"
+    },
+    {
+      "case": "FEAT-006 C1-05",
+      "field": "to_account",
+      "expected": "None",
+      "got": "cajero"
+    },
+    {
+      "case": "FEAT-006 C2-03",
+      "field": "to_account",
+      "expected": "galicia",
+      "got": "la galicia"
+    },
+    {
+      "case": "FEAT-006 C2-03",
+      "field": "to_account",
+      "expected": "galicia",
+      "got": "la galicia"
+    },
+    {
+      "case": "FEAT-006 C2-03",
+      "field": "to_account",
+      "expected": "galicia",
+      "got": "la galicia"
+    },
+    {
+      "case": "FEAT-006 C2-03",
+      "field": "to_account",
+      "expected": "galicia",
+      "got": "la galicia"
+    },
+    {
+      "case": "FEAT-006 C2-12",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-006 C2-12",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-006 C2-12",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-006 C2-12",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-006 C2-12",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-006 C2-15a",
+      "field": "registration_type",
+      "expected": "transfer",
+      "got": "expense"
+    },
+    {
+      "case": "FEAT-006 C3-03b",
+      "field": "pending_reply",
+      "expected": "continues",
+      "got": "other_movement"
+    },
+    {
+      "case": "FEAT-006 C3-03b",
+      "field": "numbered_replies.length",
+      "expected": "1",
+      "got": "0"
+    },
+    {
+      "case": "FEAT-006 C3-03b",
+      "field": "numbered_replies.0.number",
+      "expected": "1",
+      "got": "<ausente>"
+    },
+    {
+      "case": "FEAT-006 C3-03b",
+      "field": "numbered_replies.0.amount",
+      "expected": "20000",
+      "got": "<ausente>"
+    },
+    {
+      "case": "FEAT-006 C3-03b",
+      "field": "numbered_replies.0.account",
+      "expected": "Efectivo",
+      "got": "<ausente>"
+    },
+    {
+      "case": "FEAT-006 C3-03b",
+      "field": "numbered_replies.0.to_account",
+      "expected": "Galicia pesos",
+      "got": "<ausente>"
+    },
+    {
+      "case": "FEAT-007 C1-01",
+      "field": "more_movements.0.account",
+      "expected": "efectivo",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C1-03",
+      "field": "more_movements.0.to_account",
+      "expected": "efectivo",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C1-03",
+      "field": "more_movements.0.to_account",
+      "expected": "efectivo",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C1-03",
+      "field": "more_movements.0.to_account",
+      "expected": "efectivo",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C1-05",
+      "field": "more_movements.0.account",
+      "expected": "efectivo",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C1-05",
+      "field": "more_movements.0.account",
+      "expected": "efectivo",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C1-05",
+      "field": "more_movements.0.account",
+      "expected": "efectivo",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-05",
+      "field": "pending_reply",
+      "expected": "continues",
+      "got": "discards"
+    },
+    {
+      "case": "FEAT-007 C2-06",
+      "field": "pending_reply",
+      "expected": "discards",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-06",
+      "field": "numbered_replies.length",
+      "expected": "0",
+      "got": "2"
+    },
+    {
+      "case": "FEAT-007 C2-06",
+      "field": "numbered_replies.length",
+      "expected": "0",
+      "got": "2"
+    },
+    {
+      "case": "FEAT-007 C2-06",
+      "field": "numbered_replies.length",
+      "expected": "0",
+      "got": "2"
+    },
+    {
+      "case": "FEAT-007 C2-08",
+      "field": "registration_type",
+      "expected": "card_purchase",
+      "got": "expense"
+    },
+    {
+      "case": "FEAT-007 C2-08",
+      "field": "registration_type",
+      "expected": "card_purchase",
+      "got": "expense"
+    },
+    {
+      "case": "FEAT-007 C2-08",
+      "field": "registration_type",
+      "expected": "card_purchase",
+      "got": "expense"
+    },
+    {
+      "case": "FEAT-007 C2-10",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "continues"
+    },
+    {
+      "case": "FEAT-007 C2-10",
+      "field": "amount",
+      "expected": "1200",
+      "got": "3500"
+    },
+    {
+      "case": "FEAT-007 C2-10",
+      "field": "category",
+      "expected": "Transporte",
+      "got": "Supermercado"
+    },
+    {
+      "case": "FEAT-007 C2-10",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-11",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-11",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-11",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-11",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-11",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-14",
+      "field": "pending_reply",
+      "expected": "continues",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-14",
+      "field": "numbered_replies.length",
+      "expected": "1",
+      "got": "0"
+    },
+    {
+      "case": "FEAT-007 C2-14",
+      "field": "numbered_replies.0.number",
+      "expected": "5",
+      "got": "<ausente>"
+    },
+    {
+      "case": "FEAT-007 C2-14",
+      "field": "numbered_replies.0.account",
+      "expected": "MP",
+      "got": "<ausente>"
+    },
+    {
+      "case": "FEAT-007 C2-20b",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-20b",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-20b",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-20b",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-23",
+      "field": "numbered_replies.0.account",
+      "expected": "efectivo",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-23",
+      "field": "category",
+      "expected": "Comida afuera y delivery",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-23",
+      "field": "numbered_replies.0.account",
+      "expected": "efectivo",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-23",
+      "field": "amount",
+      "expected": "500",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-23",
+      "field": "account",
+      "expected": "MP",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-23",
+      "field": "category",
+      "expected": "Comida afuera y delivery",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-24",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-24",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-24",
+      "field": "registration_type",
+      "expected": "card_purchase",
+      "got": "expense"
+    },
+    {
+      "case": "FEAT-007 C2-24",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-28",
+      "field": "amount",
+      "expected": "500",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-28",
+      "field": "account",
+      "expected": "MP",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-28",
+      "field": "category",
+      "expected": "Comida afuera y delivery",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "numbered_replies.0.account",
+      "expected": "efectivo",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "registration_type",
+      "expected": "expense",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "amount",
+      "expected": "500",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "account",
+      "expected": "MP",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "more_movements.length",
+      "expected": "1",
+      "got": "2"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "more_movements.0.amount",
+      "expected": "800",
+      "got": "500"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "more_movements.0.account",
+      "expected": "MP",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "account",
+      "expected": "MP",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "amount",
+      "expected": "500",
+      "got": "1200"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "account",
+      "expected": "MP",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "more_movements.length",
+      "expected": "1",
+      "got": "2"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "more_movements.0.amount",
+      "expected": "800",
+      "got": "500"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "more_movements.0.account",
+      "expected": "MP",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "numbered_replies.0.account",
+      "expected": "efectivo",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "amount",
+      "expected": "500",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "account",
+      "expected": "MP",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "more_movements.length",
+      "expected": "1",
+      "got": "2"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "more_movements.0.amount",
+      "expected": "800",
+      "got": "500"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "numbered_replies.0.account",
+      "expected": "efectivo",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "amount",
+      "expected": "500",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "account",
+      "expected": "MP",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "more_movements.length",
+      "expected": "1",
+      "got": "2"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "more_movements.0.amount",
+      "expected": "800",
+      "got": "500"
+    },
+    {
+      "case": "FEAT-007 C2-29",
+      "field": "more_movements.0.account",
+      "expected": "MP",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C3-01",
+      "field": "more_movements.1.registration_type",
+      "expected": "card_purchase",
+      "got": "expense"
+    },
+    {
+      "case": "FEAT-007 C3-01",
+      "field": "more_movements.0.account",
+      "expected": "efectivo",
+      "got": "None"
+    },
+    {
+      "case": "FEAT-007 C3-01",
+      "field": "more_movements.1.registration_type",
+      "expected": "card_purchase",
+      "got": "expense"
+    },
+    {
+      "case": "FEAT-007 C3-01",
+      "field": "more_movements.1.registration_type",
+      "expected": "card_purchase",
+      "got": "expense"
+    },
+    {
+      "case": "#134 efectio",
+      "field": "account",
+      "expected": "efectio",
+      "got": "None"
+    },
+    {
+      "case": "#134 efectio",
+      "field": "account",
+      "expected": "efectio",
+      "got": "None"
+    },
+    {
+      "case": "#134 efectio",
+      "field": "account",
+      "expected": "efectio",
+      "got": "None"
+    },
+    {
+      "case": "#134 efectio",
+      "field": "account",
+      "expected": "efectio",
+      "got": "None"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "continues"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "numbered_replies.length",
+      "expected": "0",
+      "got": "1"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "amount",
+      "expected": "12000",
+      "got": "None"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "account",
+      "expected": "MP",
+      "got": "None"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "category",
+      "expected": "Transporte",
+      "got": "None"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "continues"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "numbered_replies.length",
+      "expected": "0",
+      "got": "1"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "registration_type",
+      "expected": "expense",
+      "got": "None"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "amount",
+      "expected": "12000",
+      "got": "None"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "account",
+      "expected": "MP",
+      "got": "None"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "category",
+      "expected": "Transporte",
+      "got": "None"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "continues"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "numbered_replies.length",
+      "expected": "0",
+      "got": "1"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "amount",
+      "expected": "12000",
+      "got": "None"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "account",
+      "expected": "MP",
+      "got": "None"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "category",
+      "expected": "Transporte",
+      "got": "None"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "continues"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "numbered_replies.length",
+      "expected": "0",
+      "got": "1"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "amount",
+      "expected": "12000",
+      "got": "None"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "account",
+      "expected": "MP",
+      "got": "None"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "category",
+      "expected": "Transporte",
+      "got": "None"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "pending_reply",
+      "expected": "other_movement",
+      "got": "continues"
+    },
+    {
+      "case": "#178 movimiento distinto",
+      "field": "numbered_replies.length",
+      "expected": "0",
+      "got": "1"
+    }
+  ],
+  "input_tokens": 1907595,
+  "output_tokens": 141512,
+  "cost": "2.06750025",
+  "stopped_at": null
+}
