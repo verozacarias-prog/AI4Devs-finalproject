@@ -10,6 +10,8 @@ Case C3-13: the system prompt is the same for every user. Case C3-14: no identif
 the provider.
 Outside the spec, T-1: every key of the data is one the system prompt names. T-2: the
 provider is asked not to keep the answer.
+Issue 157, cases B1 to B3: every field of the schema is described, the system prompt has its
+sections in a fixed order, and every example of it is a valid output.
 Nothing here reaches the provider.
 """
 
@@ -467,3 +469,82 @@ def test_no_identifier_reaches_the_provider() -> None:
         assert identifier.hex not in body
     assert "000000000001" not in body
     assert "Lucía" not in body
+
+
+def _schema_nodes(node: Mapping[str, object], path: str) -> list[tuple[str, Mapping[str, object]]]:
+    """Every object of the schema that has properties, with where it is."""
+    nodes: list[tuple[str, Mapping[str, object]]] = []
+    if "properties" in node:
+        nodes.append((path, node))
+        for name, child in cast(Mapping[str, Mapping[str, object]], node["properties"]).items():
+            nodes += _schema_nodes(child, f"{path}.{name}")
+    if "items" in node:
+        nodes += _schema_nodes(cast(Mapping[str, object], node["items"]), f"{path}[]")
+    return nodes
+
+
+def _sent_schema() -> Mapping[str, object]:
+    transport = FakeTransport(_expense("3500"))
+    _adapter(transport).classify(REQUEST)
+    [sent] = transport.received
+    output_format = cast(dict[str, dict[str, object]], sent["text"])["format"]
+    return cast(Mapping[str, object], output_format["schema"])
+
+
+def test_every_field_of_the_output_schema_says_what_it_is() -> None:
+    # Case B1 of issue 157. The fields are described in the schema, and the prompt keeps only
+    # the rules.
+    nodes = _schema_nodes(_sent_schema(), "$")
+    assert any(path == "$.more_movements[]" for path, _ in nodes)
+    assert any(path == "$.numbered_replies[]" for path, _ in nodes)
+    for path, node in nodes:
+        properties = cast(Mapping[str, Mapping[str, object]], node["properties"])
+        for name, field in properties.items():
+            description = field.get("description")
+            assert isinstance(description, str), f"{path}.{name} has no description"
+            assert description.strip(), f"{path}.{name} has an empty description"
+
+
+def test_the_system_prompt_has_its_sections_in_a_fixed_order() -> None:
+    # Case B2 of issue 157.
+    headings = (
+        "# Rol",
+        "# Datos que llegan",
+        "# Clases de mensaje",
+        "# Cómo se escribe un movimiento",
+        "# Respuestas a pendientes",
+        "# Ejemplos",
+    )
+    lines = prompts.CLASSIFICATION_SYSTEM_PROMPT.splitlines()
+    found = [line for line in lines if line.startswith("# ")]
+    assert tuple(found) == headings
+
+
+def _missing_required(node: Mapping[str, object], value: object, path: str) -> list[str]:
+    """The fields the schema requires and the example leaves out, nested ones included."""
+    missing: list[str] = []
+    if "properties" in node and isinstance(value, Mapping):
+        properties = cast(Mapping[str, Mapping[str, object]], node["properties"])
+        for name in cast(list[str], node.get("required", [])):
+            if name not in value:
+                missing.append(f"{path}.{name}")
+            else:
+                missing += _missing_required(properties[name], value[name], f"{path}.{name}")
+    if "items" in node and isinstance(value, list):
+        for index, item in enumerate(value):
+            items = cast(Mapping[str, object], node["items"])
+            missing += _missing_required(items, item, f"{path}[{index}]")
+    return missing
+
+
+def test_every_example_of_the_prompt_is_a_valid_output_of_the_schema() -> None:
+    # Case B3 of issue 157. An example that names a field the schema no longer has, or leaves
+    # out one it requires, teaches the model an answer that is rejected.
+    schema = _sent_schema()
+    assert prompts.CLASSIFICATION_EXAMPLES, "the prompt has no examples"
+    for example in prompts.CLASSIFICATION_EXAMPLES:
+        assert json.dumps(example.output, ensure_ascii=False) in (
+            prompts.CLASSIFICATION_SYSTEM_PROMPT
+        ), f"the example {example.message!r} is not in the prompt"
+        assert _missing_required(schema, example.output, "$") == [], example.message
+        _adapter(FakeTransport(example.output)).classify(REQUEST)
