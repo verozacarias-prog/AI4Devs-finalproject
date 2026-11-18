@@ -13,7 +13,7 @@
 | Código de la entrega 2 y de la final | Claude Code | Claude Opus 5.5, contexto 1M | Tests primero: la IA propone los casos, la autora los aprueba, los tests fallan y recién entonces se implementa |
 | Revisión | Claude Code: agente `pr-reviewer` y commands del repositorio | Claude Opus 5.5, en un contexto separado | Revisar cada pull request sin conocer la conversación que lo escribió, y comparar la especificación con el código |
 | Elección del modelo del producto | [`scripts/llm_eval/`](scripts/llm_eval/run_eval.py) | GPT-5.4 mini, GPT-5.4 nano y Claude Haiku 5.5 | 30 casos con resultados esperados aprobados por la autora ([ADR 0025](docs/adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)) |
-| Interpretación de los mensajes, dentro del producto | API de OpenAI | GPT-5.4 mini | Clasificar cada mensaje y devolver los campos de cada movimiento: gastos, ingresos, transferencias entre cuentas propias y varios movimientos en un mensaje. Hoy con el prompt `classification-15` |
+| Interpretación de los mensajes, dentro del producto | API de OpenAI | GPT-5.4 mini | Clasificar cada mensaje y devolver los campos de cada movimiento: gastos, ingresos, transferencias entre cuentas propias y varios movimientos en un mensaje. Hoy con el prompt `classification-19` |
 | Despliegue del demo | Claude Code y el panel de Render | Claude Opus 5.5, contexto 1M | El entorno `demo` en Render, con su base, el worker y los enlaces personales ([ADR 0029](docs/adr/0029-el-entorno-demo-en-render-en-planes-pagos.md) y [ADR 0030](docs/adr/0030-rol-de-la-aplicacion-en-la-base.md)) |
 
 ## Metodología

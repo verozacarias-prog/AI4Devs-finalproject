@@ -250,6 +250,13 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   ([convenciones de desarrollo](docs/convenciones-de-desarrollo.md#1-cortes-verticales)).
   El sexto, el análisis de seguridad con CodeQL, corre en `.github/workflows/codeql.yml` y no
   tiene comando local: una alerta que no es un problema se descarta en GitHub con su motivo.
+- Prompt de clasificación, desde `backend/`: `python -m evals.classification.run` dice
+  cuántas llamadas al modelo haría el set de regresión y cuánto costarían, sin llamar a nada, y
+  con `--run` lo corre contra el modelo real, con `OPENAI_API_KEY`, guarda el informe en
+  `evals/classification/results/` y lo compara con el último de otra versión del prompt. Cuesta
+  plata y usa la misma clave que el demo: no está en el pipeline, y antes de correrlo se dice
+  cuántas llamadas son y se espera el ok. Un cambio de prompt se mide antes y después
+  ([#157](https://github.com/verozacarias-prog/AI4Devs-finalproject/issues/157)).
 - Dashboard, desde `frontend/`: `npm test` corre los tests de las pantallas, `npm run lint` el
   linter, `npm run typecheck` los tipos, `npm run build` la compilación y
   `npm audit --audit-level=high` las vulnerabilidades. `npm run test:e2e` corre el test de punta
