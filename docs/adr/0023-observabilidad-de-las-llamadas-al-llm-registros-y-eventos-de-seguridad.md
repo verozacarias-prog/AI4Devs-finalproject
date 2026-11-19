@@ -47,6 +47,15 @@ Lo que ya está decidido acota la solución:
    envuelve. Hay uno para el puerto del LLM y otro para el de embeddings. Los puntos de entrada
    inyectan siempre el envoltorio, así que ninguna llamada lo saltea, y un test lo comprueba.
    El propósito sale del método del puerto que se llamó, no de un parámetro.
+
+   La única excepción son las evaluaciones que se corren a mano contra el modelo real: el set
+   de regresión del prompt de clasificación, en `backend/evals/classification/`
+   ([#157](https://github.com/verozacarias-prog/AI4Devs-finalproject/issues/157)), y la
+   evaluación de modelos de `scripts/llm_eval/`
+   ([ADR 0025](0025-gpt-5-4-mini-como-modelo-de-lenguaje.md)). No nacen de un mensaje, no
+   usan datos de ningún usuario y no necesitan la base. Cada corrida guarda su propio informe,
+   con los tokens y el costo, y antes de correr dice cuántas llamadas hará y cuánto costarán.
+   Gastan el tope mensual del proveedor, pero no aparecen en `LLM_CALL` ni en sus métricas.
 4. **El envoltorio escribe por un puerto propio.** No importa ninguna librería de base de
    datos: usa un puerto de registro de llamadas, que implementa el adaptador de PostgreSQL.
 5. **La fila se guarda en su propia transacción corta,** fuera de la transacción final del
