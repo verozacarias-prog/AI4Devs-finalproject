@@ -71,7 +71,7 @@ warn() {
 is_secret_path() {
   local name
   [[ "$(relative "$1")" == "frontend/e2e/compose.env" ]] && return 1
-  name=$(basename "$1")
+  name=${1##*/}
   case "$name" in
     .env.example) return 1 ;;
     .env | .env.* | *.env) return 0 ;;

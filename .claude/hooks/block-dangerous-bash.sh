@@ -18,11 +18,15 @@ matches() { printf '%s' "$COMMAND" | grep -qE -e "$1"; }
 #   - quoted text becomes Q, so a commit message that mentions "-n" or "--force"
 #     is not taken for the flag itself;
 #   - the global options between git and its subcommand (-C <dir>, -c <k=v>,
-#     --git-dir=…, --no-pager…) are dropped, so "git -C . push" is a push.
-GIT=$(printf '%s' "$COMMAND" | sed -E "s/\"[^\"]*\"/Q/g; s/'[^']*'/Q/g")
+#     --git-dir …, --no-pager…) are dropped, so "git -C . push" is a push.
+# Short flags can come together (-fu, -anm); a value-taking flag (-m, -o) ends
+# the group, so what follows it is its value, not more flags.
+UNQUOTED=$(printf '%s' "$COMMAND" | sed -E "s/\"[^\"]*\"/Q/g; s/'[^']*'/Q/g")
+unquoted_matches() { printf '%s' "$UNQUOTED" | grep -qE -e "$1"; }
+GIT=$UNQUOTED
 while :; do
   NEXT=$(printf '%s' "$GIT" | sed -E \
-    's/(^|[^[:alnum:]_-])git[[:space:]]+(-[Cc][[:space:]]+[^[:space:]]+|--[a-z-]+(=[^[:space:]]+)?|-P)/\1git/g')
+    's/(^|[^[:alnum:]_-])git[[:space:]]+(-[Cc][[:space:]]+[^[:space:]]+|--(git-dir|work-tree|namespace|exec-path|config-env)[[:space:]]+[^-[:space:]][^[:space:]]*|--[a-z-]+(=[^[:space:]]+)?|-P)/\1git/g')
   [[ "$NEXT" == "$GIT" ]] && break
   GIT=$NEXT
 done
@@ -57,7 +61,7 @@ if matches "${S}(cat|less|more|head|tail|grep|rg|bat|nl|awk|sed|xxd|strings|base
 fi
 
 # 3. History rewriting and force push, in any of its forms.
-if git_matches "${S}git[[:space:]]+push([[:space:]].*)?[[:space:]](--force|-f([[:space:]]|$)|\+[^[:space:]])"; then
+if git_matches "${S}git[[:space:]]+push([[:space:]].*)?[[:space:]](--force|-[a-np-zA-Z]*f|\+[^[:space:]])"; then
   deny "El push forzado (--force, --force-with-lease, -f o +rama) no está permitido: lo hace una persona o no se hace."
 fi
 if git_matches "${S}git[[:space:]]+filter-branch"; then
@@ -65,7 +69,7 @@ if git_matches "${S}git[[:space:]]+filter-branch"; then
 fi
 
 # 4. Skipping the pre-commit hook, and merging.
-if git_matches "${S}git[[:space:]]+commit([[:space:]].*)?[[:space:]](--no-verify|-n)([[:space:]]|$)"; then
+if git_matches "${S}git[[:space:]]+commit([[:space:]].*)?[[:space:]](--no-verify([[:space:]]|$)|-[a-ln-zA-Z]*n)"; then
   deny "git commit --no-verify saltea el hook de pre-commit, que corre los tres verificadores (AGENTS.md § 11). Saltearlo lo decide una persona, a mano."
 fi
 if matches "${S}gh[[:space:]]+pr[[:space:]]+merge" || matches "${S}gh[[:space:]]+api[[:space:]].*/merge([^[:alnum:]_-]|$)"; then
@@ -73,8 +77,9 @@ if matches "${S}gh[[:space:]]+pr[[:space:]]+merge" || matches "${S}gh[[:space:]]
 fi
 
 # 5. Production and deploys. Naming the word, as in a grep, is not operating on it:
-#    what counts is an environment set to it (APP_ENV=production, --env production).
-if matches '(ENV|env)(=|[[:space:]]+)production([^[:alnum:]_-]|$)' \
+#    what counts is an environment set to it (APP_ENV=production, --env production),
+#    outside quotes.
+if unquoted_matches '(ENV|env)(=|[[:space:]]+)production([^[:alnum:]_-]|$)' \
   || matches "${S}render[[:space:]]+deploys?([[:space:]]|$)"; then
   deny "Ningún asistente opera contra production ni despliega: lo aprueba y lo hace una persona."
 fi
@@ -82,10 +87,11 @@ fi
 # ── Asked ────────────────────────────────────────────────────────────────────
 
 # 6. Deleting or rewriting a test from the shell: the same rule as the edit hook.
-if matches "${S}(rm|unlink|mv)[[:space:]].*${TEST_PATH}" \
-  || matches "${S}(sed|perl)[[:space:]](.*[[:space:]])?-[a-zA-Z]*i.*${TEST_PATH}" \
+#    Each rule stays inside one command: it does not cross ; & or |.
+if matches "${S}(rm|unlink|mv)[[:space:]][^;&|]*${TEST_PATH}" \
+  || matches "${S}(sed|perl)[[:space:]]([^;&|]*[[:space:]])?-[a-zA-Z]*i[^;&|]*${TEST_PATH}" \
   || matches ">[[:space:]]*${TEST_PATH}" \
-  || git_matches "${S}git[[:space:]]+(checkout|restore|rm)[[:space:]].*${TEST_PATH}"; then
+  || git_matches "${S}git[[:space:]]+(checkout|restore|rm)[[:space:]][^;&|]*${TEST_PATH}"; then
   ask "Este comando borra o cambia un test. Un test no se modifica, no se deshabilita y no se borra sin la aprobación de una persona (ADR 0024, punto 6). Confirmá solo si la persona lo decidió."
 fi
 
