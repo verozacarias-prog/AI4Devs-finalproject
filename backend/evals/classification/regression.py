@@ -1,8 +1,9 @@
 """Runs the regression set against a model and scores what it answers (issue 157).
 
 The model is the real adapter in a run, and a double in the tests. What the code would drop is
-decided by the same check the worker uses, so the rate of blocked answers says what would
-happen in the product.
+decided by the same check the worker uses, on the same readings: each movement of a new
+message, or each pending a reply names, against what that pending had understood (FEAT-007,
+CA-19). The set has no expired pendings, so a batch of one is always answered alone.
 """
 
 from __future__ import annotations
@@ -10,23 +11,33 @@ from __future__ import annotations
 import json
 from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+from datetime import date
 from decimal import Decimal
 
 from app.constants import LLM_PRICES_USD_PER_MILLION_TOKENS, TOKENS_PER_MILLION
-from app.domain.entities.classification import Classification, ModelUsage
+from app.domain.entities.classification import (
+    Classification,
+    ModelUsage,
+    NumberedPending,
+    PendingReply,
+)
 from app.domain.entities.llm_call import LlmOutcome
+from app.domain.entities.pending_transaction import PendingIntent
 from app.domain.errors import ModelAnswerCutError, ModelCallFailedError, ModelRefusedError
 from app.domain.ports.llm_port import LLMPort
-from app.domain.services.transactions.movement_resolution import rejects_output
+from app.domain.services.transactions.movement_resolution import (
+    Interpretation,
+    ParsedKey,
+    from_parsed_data,
+    rejects_output,
+)
 from evals.classification import constants
 from evals.classification.regression_case import RegressionCase
 
 # A rate: how many runs got the field right, out of how many checked it.
 Rate = tuple[int, int]
 _NO_RATE: Rate = (0, 0)
-# What a path gives when the answer has nothing there, as a list shorter than the position.
-_ABSENT = "<ausente>"
 
 
 @dataclass(frozen=True)
@@ -169,6 +180,41 @@ class _Tally:
         )
 
 
+def _readings(
+    case: RegressionCase, answer: Classification
+) -> list[tuple[Classification, Interpretation | None]]:
+    """What the worker checks of an answer, each with what its pending had understood."""
+    request = case.request
+    batch = request.open_batch
+    if batch is None:
+        # No batch is open: the worker reads the message as new, whatever the model says.
+        answer = replace(answer, pending_reply=None, numbered_replies=())
+        return [(answer.of_movement(movement), None) for movement in answer.movements()]
+    alone = (
+        len(batch.pendings) == 1
+        and answer.pending_reply is not PendingReply.OTHER_MOVEMENT
+        and not answer.brought_movements()
+    )
+    if alone:
+        pending = batch.pendings[0]
+        return [(answer.for_pending(pending.number), _understood(pending, request.today))]
+    if answer.pending_reply is PendingReply.CONTINUES:
+        named = {reply.number for reply in answer.numbered_replies}
+        return [
+            (answer.for_pending(pending.number), _understood(pending, request.today))
+            for pending in batch.pendings
+            if pending.number in named
+        ]
+    return [(answer.of_movement(movement), None) for movement in answer.movements()]
+
+
+def _understood(pending: NumberedPending, today: date) -> Interpretation | None:
+    """What a pending had understood; a transfer has no category a reply could propose."""
+    if pending.interpreted.get(ParsedKey.TYPE) == PendingIntent.TRANSFER:
+        return None
+    return from_parsed_data(pending.interpreted, today)
+
+
 def run_regression(llm: LLMPort, cases: Sequence[RegressionCase], runs: int) -> RegressionReport:
     """Asks the model each case `runs` times and scores every answer.
 
@@ -195,7 +241,10 @@ def run_regression(llm: LLMPort, cases: Sequence[RegressionCase], runs: int) -> 
                 tally.outcomes[LlmOutcome.TRUNCATED.value] += 1
                 continue
             tally.charge(answer.usage)
-            blocked = rejects_output(answer, case.request.text, case.previous)
+            blocked = any(
+                rejects_output(reading, case.request.text, previous)
+                for reading, previous in _readings(case, answer)
+            )
             tally.blocked += int(blocked)
             outcome = constants.OUTCOME_BLOCKED if blocked else constants.OUTCOME_OK
             tally.outcomes[outcome] += 1
@@ -239,8 +288,8 @@ def value_at(answer: Classification, path: str) -> object:
     value: object = answer
     for part in path.split(constants.PATH_SEPARATOR):
         value = _step(value, part)
-        if value is _ABSENT:
-            return _ABSENT
+        if value is constants.ABSENT:
+            return constants.ABSENT
     return value
 
 
@@ -249,13 +298,13 @@ def _step(value: object, part: str) -> object:
         if part == constants.LENGTH_PART:
             return len(value)
         position = int(part)
-        return value[position] if position < len(value) else _ABSENT
+        return value[position] if position < len(value) else constants.ABSENT
     if hasattr(value, part):
         return getattr(value, part)
-    reading = getattr(value, "reading", None)
+    reading = getattr(value, constants.READING_ATTRIBUTE, None)
     if reading is not None and hasattr(reading, part):
         return getattr(reading, part)
-    return _ABSENT
+    return constants.ABSENT
 
 
 def _added(rate: Rate, hit: bool) -> Rate:

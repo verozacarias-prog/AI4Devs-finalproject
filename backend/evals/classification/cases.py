@@ -41,9 +41,9 @@ def _batch(data: dict[str, object] | None) -> OpenBatch | None:
     return OpenBatch(
         pendings=tuple(
             NumberedPending(
-                number=pending["number"],
-                interpreted=pending["interpreted"],
-                missing=tuple(pending["missing"]),
+                number=pending[constants.NUMBER_KEY],
+                interpreted=pending[constants.INTERPRETED_KEY],
+                missing=tuple(pending[constants.MISSING_KEY]),
             )
             for pending in pendings
         ),
@@ -52,14 +52,14 @@ def _batch(data: dict[str, object] | None) -> OpenBatch | None:
 
 
 def _case(data: dict[str, object]) -> RegressionCase:
-    today = data.get("today") or constants.DEFAULT_TODAY
-    batch = data.get("open_batch")
-    expected = data["expected"]
+    today = data.get(constants.TODAY_KEY) or constants.DEFAULT_TODAY
+    batch = data.get(constants.OPEN_BATCH_KEY)
+    expected = data[constants.EXPECTED_KEY]
     assert isinstance(expected, dict)
     return RegressionCase(
-        name=str(data["name"]),
+        name=str(data[constants.NAME_KEY]),
         request=ClassificationRequest(
-            text=str(data["message"]),
+            text=str(data[constants.MESSAGE_KEY]),
             accounts=constants.ACCOUNTS,
             expense_categories=constants.EXPENSE_CATEGORIES,
             income_categories=constants.INCOME_CATEGORIES,

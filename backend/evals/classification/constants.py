@@ -8,14 +8,18 @@ from decimal import Decimal
 DEFAULT_RUNS = 5
 
 # What one call of the classification prompt takes, rounded up, to announce a run before it starts.
-ESTIMATED_INPUT_TOKENS = 3000
-ESTIMATED_OUTPUT_TOKENS = 400
+ESTIMATED_INPUT_TOKENS = 5200
+ESTIMATED_OUTPUT_TOKENS = 250
 ESTIMATE_QUANTUM = Decimal("0.01")
 
 # The path of a field: its parts are split by this, a number is a position in a list, and this
 # last part counts the items of a list.
 PATH_SEPARATOR = "."
 LENGTH_PART = "length"
+# What a path gives when the answer has nothing there, as a list shorter than the position.
+ABSENT = "<ausente>"
+# The attribute of a reply to a pending that holds the movement it reads.
+READING_ATTRIBUTE = "reading"
 # The outcome of a call that gave an answer the code would use, or would drop.
 OUTCOME_OK = "ok"
 OUTCOME_BLOCKED = "blocked"
@@ -50,8 +54,16 @@ REPORT_SAVED = "Informe guardado en {path}."
 
 # The cases, next to this file, and the keys of cases.json that are not paths of the answer.
 CASES_FILE_NAME = "cases.json"
+NAME_KEY = "name"
+MESSAGE_KEY = "message"
+TODAY_KEY = "today"
+OPEN_BATCH_KEY = "open_batch"
+EXPECTED_KEY = "expected"
 PENDINGS_KEY = "pendings"
 QUESTION_KEY = "question"
+NUMBER_KEY = "number"
+INTERPRETED_KEY = "interpreted"
+MISSING_KEY = "missing"
 AMOUNT_FIELD = "amount"
 DATE_FIELD = "transaction_date"
 # The day of the cases that do not say one, as in the specs: 17/10/2026.
