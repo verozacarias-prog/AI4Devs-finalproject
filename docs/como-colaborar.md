@@ -15,11 +15,18 @@ rama de la entrega despliega el entorno de pruebas, y `main` va a desplegar prod
 exista. El porqué está en
 [documentación viva](documentacion-viva.md#7-el-modelo-de-ramas).
 
+**Hoy la base es `platita-v2`.** La entrega final quedó congelada en `final-project-VNZ` el 13
+de noviembre de 2026, después del pull request #201: no recibe más cambios y sigue desplegando
+`demo`. El trabajo de la segunda versión se integra en `platita-v2`, que salió de ahí: las ramas
+de trabajo salen de `platita-v2` y vuelven a ella por pull request. `platita-v2` no despliega
+ningún entorno.
+
 | Rama | Sale de | Nombre | Ejemplo |
 |---|---|---|---|
 | De entrega | `main` | `feature/entrega-<N>-VNZ`, y `final-project-VNZ` para la final | `final-project-VNZ` |
-| De un corte de una historia | La rama de la entrega | `hu<N>-c<corte>-<tema>` | `hu3-c1-registro-de-gasto` |
-| De lo que no es una historia | La rama de la entrega | `tarea-<tema>` | `tarea-scaffold-y-docker` |
+| De la segunda versión | `final-project-VNZ` | `platita-v2` | `platita-v2` |
+| De un corte de una historia | `platita-v2` | `hu<N>-c<corte>-<tema>` | `hu3-c1-registro-de-gasto` |
+| De lo que no es una historia | `platita-v2` | `tarea-<tema>` | `tarea-scaffold-y-docker` |
 
 **Issues.** Cada historia de usuario y cada ticket de trabajo es una issue de GitHub, en el
 milestone de la entrega, y su avance se sigue en el
@@ -49,7 +56,7 @@ máquina. Qué controla cada uno, y cómo apagar el de los tests para explorar e
 
 **Para incluir un cambio.**
 
-1. **Crear la rama** desde la rama de la entrega, con el nombre de la tabla, y pasar la
+1. **Crear la rama** desde `platita-v2`, con el nombre de la tabla, y pasar la
    tarjeta de su issue a "En curso". Una historia son
    tres ramas, una por [corte vertical](convenciones-de-desarrollo.md#1-cortes-verticales).
 2. **Leer antes de escribir.** [`AGENTS.md`](../AGENTS.md) es el contrato, y su sección 12 dice qué
@@ -84,7 +91,7 @@ máquina. Qué controla cada uno, y cómo apagar el de los tests para explorar e
    presupuesto, solo para `local`. Lo
    que surge al probar se corrige en la misma rama, y los pasos y lo que se vio van en la
    descripción del pull request.
-11. **Abrir el pull request contra la rama de la entrega,** con el corte en verde y una
+11. **Abrir el pull request contra `platita-v2`,** con el corte en verde y una
    descripción armada desde la plantilla [`pr.md`](features/TEMPLATE/pr.md), con el
    [Definition of Done](07-pull-requests.md#definition-of-done) y `Closes #N`.
    Correr el agente `pr-reviewer` y resumir su informe.
