@@ -63,7 +63,7 @@ if [[ -n "$FAILURES" && "$SECOND_ATTEMPT" == "true" ]]; then
   warn "El turno cerró con la suite en rojo: el asistente no la pudo poner en verde después del primer aviso. Revisalo antes de seguir.${NOT_RUN}${FAILURES}"
 fi
 if [[ -n "$FAILURES" ]]; then
-  block "La suite falla y el turno todavía no se cierra. Implementá lo mínimo para que pase; nunca modifiques, deshabilites ni borres un test para lograrlo (AGENTS.md § 13).${FAILURES}"
+  block "La suite falla y el turno todavía no se cierra. Implementá lo mínimo para que pase; nunca modifiques, deshabilites ni borres un test para lograrlo (AGENTS.md § 13).${NOT_RUN}${FAILURES}"
 fi
 if [[ -n "$NOT_RUN" ]]; then
   warn "${NOT_RUN# }"

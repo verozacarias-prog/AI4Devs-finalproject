@@ -24,6 +24,13 @@ fi
 REL=$(relative "$FILE")
 ABS=$(absolute "$FILE")
 
+# The hooks and their configuration: changing them changes what is controlled.
+case "$REL" in
+  .claude/hooks/* | .claude/settings.json | .claude/settings.local.json)
+    ask "Vas a cambiar los hooks del asistente o su configuración ($REL), que deciden qué se controla (ADR 0031). Apagar un control, como PLATITA_PERMITIR_ROJO, lo decide una persona. Confirmá solo si te lo pidió."
+    ;;
+esac
+
 # adds_lines($o; $n): $n keeps $o whole and only puts complete lines around it.
 # Text added inside a line of $o, like "or True" after an assertion, is a change.
 ADDS_LINES='def adds_lines($o; $n):
@@ -83,7 +90,7 @@ esac
 # Lines that skip, expect to fail or single out a test: adding one disables others.
 disablers() {
   printf '%s\n' "$1" | grep -cE \
-    '@pytest\.mark\.(skip|skipif|xfail)|pytest\.(skip|xfail)\(|unittest\.skip|(^|[^[:alnum:]_])(it|test|describe)\.(skip|only|todo|fixme)|(^|[^[:alnum:]_])x(it|test|describe)\('
+    '(^|[^[:alnum:]_])(pytest\.)?mark\.(skip|skipif|xfail)|pytest\.(skip|xfail)\(|unittest\.skip|(^|[^[:alnum:]_])(it|test|describe)\.(skip|only|todo|fixme)|(^|[^[:alnum:]_])x(it|test|describe)\('
 }
 if $is_test && [[ -f "$ABS" ]]; then
   if (( $(disablers "$ADDED") > $(disablers "$REMOVED") )); then

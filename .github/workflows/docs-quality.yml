@@ -7,12 +7,13 @@
 name: Documentación — calidad
 
 on:
-  # El trabajo entra a la rama de la entrega por pull requests dentro del
+  # El trabajo entra a la rama integradora por pull requests dentro del
   # fork, desde ramas cortas (hu<N>-c<corte>-<tema> o tarea-<tema>): ahí
-  # corre pull_request. El push cubre main y la rama de la entrega, que es
-  # donde queda lo integrado. Ver docs/documentacion-viva.md, sección 7.
+  # corre pull_request. El push cubre main, las ramas de entrega y
+  # platita-v2, la integradora de hoy, que es donde queda lo integrado. Ver
+  # docs/documentacion-viva.md, sección 7.
   push:
-    branches: [main, 'feature/entrega-*', 'final-project-*']
+    branches: [main, 'feature/entrega-*', 'final-project-*', platita-v2]
   pull_request:
   schedule:
     # Los enlaces externos se rompen sin que nadie toque la documentación.

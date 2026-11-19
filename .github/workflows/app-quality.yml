@@ -7,7 +7,7 @@ name: Aplicación — calidad
 
 on:
   push:
-    branches: [main, 'feature/entrega-*', 'final-project-*']
+    branches: [main, 'feature/entrega-*', 'final-project-*', platita-v2]
   pull_request:
 
 permissions:
