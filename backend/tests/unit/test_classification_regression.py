@@ -1,8 +1,9 @@
 """The regression set of the classification prompt, with the model replaced (issue 157).
 
-Cases A1 to A10 of the task, approved on 17/11/2026: how the set announces a run, scores what
-the model returned, counts what the code would drop, the calls that gave no answer and what
-they cost, and compares two runs. Nothing here reaches the provider.
+Cases A1 to A10 of the task, approved on 17/11/2026, and A11, approved on 19/11/2026: how the
+set announces a run, scores what the model returned, counts what the code would drop, the calls
+that gave no answer and what they cost, and compares two runs. Nothing here reaches the
+provider.
 """
 
 from __future__ import annotations
@@ -22,6 +23,10 @@ from app.domain.entities.classification import (
     MessageClass,
     ModelUsage,
     MovementReading,
+    NumberedPending,
+    NumberedReply,
+    OpenBatch,
+    PendingReply,
     RegistrationType,
 )
 from app.domain.entities.llm_call import LlmOutcome
@@ -239,3 +244,77 @@ def test_two_runs_of_different_prompts_show_the_change_by_field_and_the_cases_th
     assert comparison.field_changes["account"] == ((4, 4), (2, 4))
     assert comparison.field_changes["amount"] == ((4, 4), (4, 4))
     assert comparison.worse_cases == ("otro",)
+
+
+def _reply_case(text: str, pendings: tuple[NumberedPending, ...]) -> RegressionCase:
+    return RegressionCase(
+        name=text,
+        request=replace(
+            REQUEST,
+            text=text,
+            open_batch=OpenBatch(pendings=pendings, question="¿Con qué cuenta?"),
+        ),
+        expected={"pending_reply": "continues"},
+    )
+
+
+def _continues(*replies: NumberedReply) -> Classification:
+    return Classification(
+        message_class=MessageClass.REGISTRATION,
+        pending_reply=PendingReply.CONTINUES,
+        numbered_replies=replies,
+    )
+
+
+def test_a_reply_by_number_with_an_account_the_message_does_not_write_counts_as_blocked() -> None:
+    # Case A11. The fields of the answer itself are empty: what it says goes in each reply.
+    pending = {"type": "expense", "amount": "3500", "category": "Supermercado"}
+    case = _reply_case(
+        "el 1 con Mercado Pago",
+        (
+            NumberedPending(number=1, interpreted=pending, missing=("account_id",)),
+            NumberedPending(number=2, interpreted=pending, missing=("account_id",)),
+        ),
+    )
+    written = _continues(NumberedReply(number=1, reading=MovementReading(account="Mercado Pago")))
+    unwritten = _continues(NumberedReply(number=1, reading=MovementReading(account="MP")))
+    llm = ScriptedLLM([written, unwritten])
+
+    report = run_regression(llm, (case,), runs=2)
+
+    assert report.blocked == 1
+
+
+def test_a_reply_is_checked_against_what_its_pending_had_understood() -> None:
+    # Case A11. The question offered "Barbería": a yes that brings another name nobody offered
+    # nor wrote creates nothing (FEAT-003, CA-45).
+    case = _reply_case(
+        "sí",
+        (
+            NumberedPending(
+                number=1,
+                interpreted={
+                    "type": "expense",
+                    "amount": "3500",
+                    "account": "Mercado Pago",
+                    "proposed_category": "Barbería",
+                },
+                missing=("category_id",),
+            ),
+        ),
+    )
+    offered = _continues(
+        NumberedReply(
+            number=1, reading=MovementReading(proposed_category="Barbería"), accepts_proposal=True
+        )
+    )
+    unoffered = _continues(
+        NumberedReply(
+            number=1, reading=MovementReading(proposed_category="Peluquería"), accepts_proposal=True
+        )
+    )
+    llm = ScriptedLLM([offered, unoffered])
+
+    report = run_regression(llm, (case,), runs=2)
+
+    assert report.blocked == 1
