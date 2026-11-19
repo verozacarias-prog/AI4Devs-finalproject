@@ -155,7 +155,7 @@ y protegerla. **Cerrarla** es correr `/security-audit` y `/spec-drift proyecto`,
 de ruta fila por fila,
 dejar al día `prompts.md` e integrar la rama a `main` por pull request.
 
-Que los controles impidan un merge depende, además, de proteger la rama de la entrega con esos
+Que los controles impidan un merge depende, además, de proteger la rama integradora con esos
 controles como obligatorios ([ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md)).
 
 Si se agrega un documento a `docs/`, hay que sumarlo a la barra lateral en `site/astro.config.mjs`

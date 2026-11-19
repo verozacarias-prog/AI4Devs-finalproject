@@ -38,7 +38,12 @@ OpenSpec, que Platita no usa.
    - Sumar líneas enteras a un test existente es libre, con cualquier herramienta. Cambiar o
      borrar algo de uno pregunta, y también agregar texto dentro de una línea, como `or True`
      al final de una aserción.
-   - Deshabilitar un test pregunta: `skip`, `xfail`, `.only` y sus variantes.
+   - Deshabilitar un test pregunta: `skip`, `xfail`, `.only` y sus variantes, incluidos
+     `pytestmark` y `@mark.skip`.
+   - Borrar o cambiar un test desde la shell también pregunta: `rm`, `mv`, `sed -i`, una
+     redirección con `>`, y `git checkout`, `restore` o `rm` sobre un test.
+   - Cambiar los hooks o su configuración, `.claude/hooks/` y `.claude/settings*.json`,
+     pregunta.
    - El asistente no puede completar la línea «Aprobado por» de un `spec.md`.
    - Editar una migración que ya está en git pregunta.
    - Los archivos de entorno no se editan, ni una ruta con `..`.
@@ -52,14 +57,15 @@ OpenSpec, que Platita no usa.
    - Si a una mitad le falta con qué correr, `backend/.venv` o `frontend/node_modules`, el
      turno cierra con un aviso.
 5. **Comandos.**
-   - Se rechazan el borrado recursivo (`rm -r`), `mkfs`, `dd`, `chmod 777`, el push forzado,
-     `git filter-branch`, `git commit --no-verify`, `gh pr merge` y desplegar. También operar
+   - Se rechazan el borrado recursivo (`rm -r`), `mkfs`, `dd`, `chmod 777`, el push forzado
+     (`--force`, `--force-with-lease`, `-f` o `+rama`), `git filter-branch`,
+     `git commit --no-verify`, el merge (`gh pr merge` o `gh api …/merge`) y desplegar. También operar
      contra `production`, que se reconoce como un entorno puesto en `production`
      (`APP_ENV=production`, `--env production`), no como la palabra suelta.
    - Preguntan `git commit`, `git push`, `git reset --hard`, `git clean -f`, el set de regresión
      del prompt con `--run` y la instalación de un paquete.
-   - Las banderas de git se leen sin el texto entre comillas, para que el mensaje de un commit no
-     se confunda con una bandera.
+   - Git se lee sin el texto entre comillas, para que el mensaje de un commit no se confunda con
+     una bandera, y sin sus opciones globales, para que `git -C <dir> push` sea un push.
 6. **Una salida para explorar en local:** `PLATITA_PERMITIR_ROJO=1`, en el `env` de
    `.claude/settings.local.json`, apaga el control del cierre del turno. Nunca dentro de una
    entrega.
@@ -82,8 +88,18 @@ OpenSpec, que Platita no usa.
 - Cerrar un turno que tocó código tarda unos 6 s si cambió el backend, y unos 25 s si cambiaron
   las dos mitades.
 - Cada commit y cada push piden una confirmación.
-- Los hooks miran el texto del comando. Un `rm -rf` dentro del mensaje de un commit se rechaza
-  igual, y un comando armado para esquivarlos puede pasar. No reemplazan la lectura de la persona.
+- **Hasta dónde llegan.** Los hooks frenan lo que un asistente haría en el curso normal del
+  trabajo, no lo que se arma para esquivarlos. Miran el texto del comando o de la edición, no lo
+  que hace, y no hay forma de que esa lista sea completa:
+  - Un `rm -rf` dentro del mensaje de un commit se rechaza igual.
+  - Pasan sin preguntar los secretos leídos con un comando que no está en la lista, como
+    `python -c`, y un comodín como `cat .e*`.
+  - También pasa un test anulado con lógica y no con `skip`: un `return` al principio, una
+    función redefinida con el mismo nombre, o un `conftest.py` que vacía la colección.
+  - Lo mismo vale para la línea «Aprobado por» escrita con otro formato o desde la shell.
+
+  Para todo eso están el agente revisor, que lee el cambio entero, y la persona. Los hooks no
+  los reemplazan.
 - El cierre del turno frena una sola vez. Si el asistente no logra el verde, el turno cierra en
   rojo y lo que queda es el aviso.
 - Sin `jq`, los hooks se apagan solos en lugar de romper la sesión: el control se pierde sin aviso.
