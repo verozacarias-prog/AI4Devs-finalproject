@@ -274,6 +274,12 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   veredicto se resume en el pull request
   ([ADR 0022](docs/adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md)).
 - Antes de cada entrega se corre `/security-audit`.
+- Cuatro hooks del asistente, en `.claude/hooks/`, controlan con código parte de este archivo
+  mientras trabajás: los secretos (§ 7), los tests, la línea de aprobación y las migraciones
+  (§ 8 y § 13), la suite en verde al cerrar el turno, y el commit, el push, el merge y las evals
+  con `--run` (§ 11 y § 13). Si un hook rechaza o pregunta, no busques otro camino para hacer
+  lo mismo: la decisión es de la persona. Sus casos se corren con
+  `scripts/test_assistant_hooks.sh` ([ADR 0031](docs/adr/0031-hooks-del-asistente.md)).
 
 ## 12. Qué leer antes de qué
 

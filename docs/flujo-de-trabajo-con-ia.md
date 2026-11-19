@@ -82,11 +82,26 @@ solo cuando una persona se lo pide.
 
 ## Hooks
 
-El único hook es el de pre-commit, en [`.githooks/`](../.githooks/). Se activa con
-`git config core.hooksPath .githooks`, una vez por clon. Cuando exista el código se suma un
-segundo hook, del asistente y no de git, que corre los tests unitarios después de cada edición
-en `backend/` ([ADR 0024](adr/0024-tests-primero-en-el-backend.md)). El revisor no corre en un hook, por lo
-que explica el [ADR 0022](adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md).
+Hay dos tipos. El de git es el de pre-commit, en [`.githooks/`](../.githooks/), y se activa con
+`git config core.hooksPath .githooks`, una vez por clon. Los del asistente son cuatro, en
+[`.claude/hooks/`](../.claude/hooks/), y Claude Code los corre solo, sin activarlos: actúan en el
+momento en que el asistente lee, edita, corre un comando o termina un turno, antes de que el
+error quede escrito ([ADR 0031](adr/0031-hooks-del-asistente.md)). Necesitan `jq`; sin él se
+apagan.
+
+| Hook | Cuándo corre | Qué hace |
+|---|---|---|
+| `block-secret-reads.sh` | Antes de leer un archivo | Rechaza `.env`, claves y credenciales. `.env.example` se lee |
+| `protect-tests-and-specs.sh` | Antes de editar o escribir | Pregunta antes de cambiar o borrar algo de un test existente o de editar una migración versionada, y rechaza completar la línea «Aprobado por» de un `spec.md` y editar un archivo de entorno. Sumar a un test es libre |
+| `block-dangerous-bash.sh` | Antes de un comando | Rechaza borrados masivos, push forzado, `git commit --no-verify`, `gh pr merge`, `production` y despliegues, y leer `.env` por la shell. Pregunta antes de `git commit`, `git push`, `evals.classification.run --run` y de instalar un paquete |
+| `verify-tests-on-stop.sh` | Al terminar el turno | Corre los tests unitarios del backend o del dashboard, solo la mitad que cambió, y no deja cerrar en rojo. Si lo único que cambió en una mitad son tests, es la fase en rojo y pasa |
+
+Para explorar en local con la suite en rojo, `PLATITA_PERMITIR_ROJO=1` en el `env` de
+`.claude/settings.local.json` apaga el último. Nunca dentro de una entrega. El pipeline prueba
+los cuatro con `scripts/test_assistant_hooks.sh`.
+
+El revisor no corre en un hook, por lo que explica el
+[ADR 0022](adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md).
 
 ## Plugin
 

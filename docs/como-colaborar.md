@@ -43,6 +43,10 @@ git config core.hooksPath .githooks   # activa el hook de pre-commit
 cd site && npm install                # solo para ver o regenerar el portal
 ```
 
+Los hooks del asistente no se activan: Claude Code los corre solo, y necesitan `jq` en la
+máquina. Qué controla cada uno, y cómo apagar el de los tests para explorar en local, está en el
+[flujo de trabajo con IA](flujo-de-trabajo-con-ia.md#hooks).
+
 **Para incluir un cambio.**
 
 1. **Crear la rama** desde la rama de la entrega, con el nombre de la tabla, y pasar la
