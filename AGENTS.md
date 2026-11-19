@@ -319,8 +319,9 @@ En el backend el test va antes que el código
 
 Nadie escribe directo en la rama de la entrega, `feature/entrega-N-VNZ` o, en la final,
 `final-project-VNZ`, ni en `platita-v2`, la de la segunda versión, de la que hoy salen las ramas
-de trabajo. `final-project-VNZ` quedó congelada con lo entregado. Las ramas de trabajo se llaman `hu<N>-c<corte>-<tema>` para un corte de una
-historia y `tarea-<tema>` para el resto, y entran por pull request. Los pasos están en [cómo colaborar](docs/como-colaborar.md).
+de trabajo. `final-project-VNZ` quedó congelada con lo entregado. Las ramas de trabajo se
+llaman `hu<N>-c<corte>-<tema>` para un corte de una historia y `tarea-<tema>` para el resto, y
+entran por pull request. Los pasos están en [cómo colaborar](docs/como-colaborar.md).
 
 Un asistente hace commit solo cuando una persona se lo pide, y nunca hace merge: la aprobación
 final de un pull request es de una persona.

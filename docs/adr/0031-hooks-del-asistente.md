@@ -31,22 +31,35 @@ OpenSpec, que Platita no usa.
    `.claude/settings.json`, para que valgan en cualquier clon. Son scripts de bash que leen con
    `jq` lo que Claude Code les pasa.
 2. **Secretos.** Ningún archivo de entorno, clave ni credencial se lee, ni con la herramienta de
-   lectura ni por la shell. `.env.example` se puede leer.
+   lectura ni por la shell: `.env` y sus variantes, `credentials*`, `id_rsa`, `id_ed25519`,
+   `*.pem`, `*.key` y `service-account*.json`. Se pueden leer `.env.example` y
+   `frontend/e2e/compose.env`, que están versionados y no tienen secretos.
 3. **Tests, especificación y migraciones.**
-   - Sumar a un test existente es libre; cambiar o borrar algo de uno pregunta.
+   - Sumar líneas enteras a un test existente es libre, con cualquier herramienta. Cambiar o
+     borrar algo de uno pregunta, y también agregar texto dentro de una línea, como `or True`
+     al final de una aserción.
+   - Deshabilitar un test pregunta: `skip`, `xfail`, `.only` y sus variantes.
    - El asistente no puede completar la línea «Aprobado por» de un `spec.md`.
    - Editar una migración que ya está en git pregunta.
-   - Los archivos de entorno no se editan.
+   - Los archivos de entorno no se editan, ni una ruta con `..`.
 4. **Cierre del turno.** Al terminar cada turno corren los tests unitarios del backend, si
    cambió `backend/app/` o `backend/tests/`, y los del dashboard, si cambió `frontend/src/`. Se
-   cuentan los archivos nuevos todavía sin agregar. Si alguno falla, el turno no se cierra. Una
-   mitad cuyos únicos cambios son tests es la fase en rojo, y pasa. Reemplaza el punto 8 del
-   ADR 0024.
+   cuentan los archivos nuevos todavía sin agregar. Una mitad cuyos únicos cambios son tests es
+   la fase en rojo, y pasa. Reemplaza el punto 8 del ADR 0024.
+   - Si alguno falla, el turno no se cierra y el asistente recibe el fallo.
+   - Si en el segundo intento sigue fallando, el turno cierra, pero con un aviso a la persona:
+     bloquear otra vez podría dejar al asistente en un bucle con un test que no sabe arreglar.
+   - Si a una mitad le falta con qué correr, `backend/.venv` o `frontend/node_modules`, el
+     turno cierra con un aviso.
 5. **Comandos.**
-   - Se rechazan los borrados masivos, el push forzado, `git commit --no-verify`, `gh pr merge`,
-     operar contra `production` y desplegar.
-   - Preguntan `git commit`, `git push`, el set de regresión del prompt con `--run` y la
-     instalación de un paquete.
+   - Se rechazan el borrado recursivo (`rm -r`), `mkfs`, `dd`, `chmod 777`, el push forzado,
+     `git filter-branch`, `git commit --no-verify`, `gh pr merge` y desplegar. También operar
+     contra `production`, que se reconoce como un entorno puesto en `production`
+     (`APP_ENV=production`, `--env production`), no como la palabra suelta.
+   - Preguntan `git commit`, `git push`, `git reset --hard`, `git clean -f`, el set de regresión
+     del prompt con `--run` y la instalación de un paquete.
+   - Las banderas de git se leen sin el texto entre comillas, para que el mensaje de un commit no
+     se confunda con una bandera.
 6. **Una salida para explorar en local:** `PLATITA_PERMITIR_ROJO=1`, en el `env` de
    `.claude/settings.local.json`, apaga el control del cierre del turno. Nunca dentro de una
    entrega.
@@ -60,7 +73,8 @@ OpenSpec, que Platita no usa.
 
 - Cuatro reglas de `AGENTS.md` dejan de depender de que el modelo las recuerde.
 - El error se frena antes de escribirse, no al commitear ni en el pull request.
-- La fase en rojo del ADR 0024 sigue funcionando, y el resto de los turnos no puede cerrar en rojo.
+- La fase en rojo del ADR 0024 sigue funcionando, y el resto de los turnos no cierra en rojo
+  sin que la persona se entere.
 - El dashboard entra en el control, que el ADR 0024 dejaba afuera.
 
 ### Negativas y costos asumidos
@@ -70,7 +84,10 @@ OpenSpec, que Platita no usa.
 - Cada commit y cada push piden una confirmación.
 - Los hooks miran el texto del comando. Un `rm -rf` dentro del mensaje de un commit se rechaza
   igual, y un comando armado para esquivarlos puede pasar. No reemplazan la lectura de la persona.
+- El cierre del turno frena una sola vez. Si el asistente no logra el verde, el turno cierra en
+  rojo y lo que queda es el aviso.
 - Sin `jq`, los hooks se apagan solos en lugar de romper la sesión: el control se pierde sin aviso.
+  Lo mismo pasa con el cierre del turno si los tests tardan más de los 300 s de su límite.
 - Solo valen en Claude Code. Otra herramienta sigue leyendo `AGENTS.md`, sin ningún control.
 
 ## Alternativas descartadas

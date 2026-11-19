@@ -91,10 +91,10 @@ apagan.
 
 | Hook | Cuándo corre | Qué hace |
 |---|---|---|
-| `block-secret-reads.sh` | Antes de leer un archivo | Rechaza `.env`, claves y credenciales. `.env.example` se lee |
-| `protect-tests-and-specs.sh` | Antes de editar o escribir | Pregunta antes de cambiar o borrar algo de un test existente o de editar una migración versionada, y rechaza completar la línea «Aprobado por» de un `spec.md` y editar un archivo de entorno. Sumar a un test es libre |
-| `block-dangerous-bash.sh` | Antes de un comando | Rechaza borrados masivos, push forzado, `git commit --no-verify`, `gh pr merge`, `production` y despliegues, y leer `.env` por la shell. Pregunta antes de `git commit`, `git push`, `evals.classification.run --run` y de instalar un paquete |
-| `verify-tests-on-stop.sh` | Al terminar el turno | Corre los tests unitarios del backend o del dashboard, solo la mitad que cambió, y no deja cerrar en rojo. Si lo único que cambió en una mitad son tests, es la fase en rojo y pasa |
+| `block-secret-reads.sh` | Antes de leer un archivo | Rechaza `.env`, claves y credenciales. `.env.example` y `frontend/e2e/compose.env` se leen |
+| `protect-tests-and-specs.sh` | Antes de editar o escribir | Pregunta antes de cambiar, borrar o deshabilitar algo de un test existente o de editar una migración versionada, y rechaza completar la línea «Aprobado por» de un `spec.md` y editar un archivo de entorno. Sumar líneas enteras a un test es libre |
+| `block-dangerous-bash.sh` | Antes de un comando | Rechaza `rm -r`, push forzado, reescribir la historia, `git commit --no-verify`, `gh pr merge`, `production` y despliegues, y leer secretos por la shell. Pregunta antes de `git commit`, `git push`, descartar trabajo local, `evals.classification.run --run` y de instalar un paquete |
+| `verify-tests-on-stop.sh` | Al terminar el turno | Corre los tests unitarios del backend o del dashboard, solo la mitad que cambió. En rojo frena una vez, y si sigue en rojo cierra con un aviso. Si lo único que cambió en una mitad son tests, es la fase en rojo y pasa |
 
 Para explorar en local con la suite en rojo, `PLATITA_PERMITIR_ROJO=1` en el `env` de
 `.claude/settings.local.json` apaga el último. Nunca dentro de una entrega. El pipeline prueba

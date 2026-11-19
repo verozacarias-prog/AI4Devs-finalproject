@@ -51,8 +51,8 @@ integración y al menos uno de punta a punta.
    El agente revisor comprueba que el commit de implementación tenga antes el de sus tests. Un
    corte que no toca el backend tiene un solo commit. Los pull requests se integran con un
    commit de merge, no aplastados en uno, para que ese orden no se pierda.
-8. **Un hook del asistente corre los tests unitarios al cerrar cada turno** que tocó código, y
-   no lo deja cerrar en rojo, salvo en la fase en rojo, cuando lo único que cambió son tests.
+8. **Un hook del asistente corre los tests unitarios al cerrar cada turno** que tocó código. En
+   rojo frena el cierre, salvo en la fase en rojo, cuando lo único que cambió son tests.
    Lo decide el [ADR 0031](0031-hooks-del-asistente.md), que reemplaza lo que este punto preveía:
    un hook después de cada edición, que solo informaba.
 9. **La cobertura no es un objetivo.** No se exige un porcentaje. Lo que se exige es que cada
