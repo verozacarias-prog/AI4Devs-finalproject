@@ -10,11 +10,17 @@ COMMAND=$(field "$INPUT" '.tool_input.command')
 
 matches() { printf '%s' "$COMMAND" | grep -qE -e "$1"; }
 
+# The git flags are read without the quoted text, so a commit message that
+# mentions "-n" or "--force" is not taken for the flag itself.
+UNQUOTED=$(printf '%s' "$COMMAND" | sed -E "s/\"[^\"]*\"//g; s/'[^']*'//g")
+flag_matches() { printf '%s' "$UNQUOTED" | grep -qE -e "$1"; }
+
 # Start of a command: beginning of the line or after a separator.
 S='(^|[;&|(][[:space:]]*|[[:space:]])'
 
-# 1. Mass deletion, device destruction and wide-open permissions.
-if matches "${S}rm[[:space:]]+(-[a-zA-Z]*[rf][a-zA-Z]*[[:space:]]+)+|${S}mkfs|${S}dd[[:space:]]+if=|:\(\)\{.*\};:"; then
+# 1. Recursive deletion, device destruction and wide-open permissions.
+#    Deleting one file with rm or rm -f is not mass deletion.
+if matches "${S}rm[[:space:]]+(-[^[:space:]]+[[:space:]]+)*(-[a-zA-Z]*[rR]|--recursive)|${S}mkfs|${S}dd[[:space:]]+if=|:\(\)\{.*\};:"; then
   deny "Comando destructivo bloqueado: $COMMAND"
 fi
 if matches "${S}chmod[[:space:]]+(-R[[:space:]]+)?777"; then
@@ -22,27 +28,29 @@ if matches "${S}chmod[[:space:]]+(-R[[:space:]]+)?777"; then
 fi
 
 # 2. Reading a secrets file through the shell (the Read tool has its own hook).
-if matches "${S}(cat|less|more|head|tail|grep|rg|bat|nl|awk|sed|xxd|strings|base64|source|\.)[[:space:]]"; then
+#    The same rule as the Read hook, on every word that looks like a file: it has
+#    a dot or a slash, so a bare word like "credentials" in a grep stays free.
+if matches "${S}(cat|less|more|head|tail|grep|rg|bat|nl|awk|sed|xxd|strings|base64|cp|scp|source|\.)[[:space:]]"; then
   while IFS= read -r token; do
-    if [[ -n "$token" ]] && is_secret_path "$token"; then
-      deny "Lectura bloqueada: $token tiene secretos y no se carga en el contexto del modelo (AGENTS.md § 7). Si necesitás saber qué variables existen, leé .env.example."
+    if [[ "$token" == *[./]* ]] && is_secret_path "$token"; then
+      deny "Lectura bloqueada: $token tiene secretos o credenciales y no se carga en el contexto del modelo (AGENTS.md § 7). Si necesitás saber qué variables existen, leé .env.example."
     fi
-  done < <(printf '%s' "$COMMAND" | grep -oE "[^[:space:]\"';|&<>()]*\.env[^[:space:]\"';|&<>()]*")
+  done < <(printf '%s' "$COMMAND" | grep -oE "[^[:space:]\"';|&<>()]+")
 fi
 
 # 3. History rewriting and force push.
-if matches "${S}git[[:space:]]+push.*(--force([^-]|$)|[[:space:]]-f([[:space:]]|$))"; then
+if flag_matches "${S}git[[:space:]]+push.*(--force([^-]|$)|[[:space:]]-f([[:space:]]|$))"; then
   deny "git push --force no está permitido: un push forzado lo hace una persona o no se hace."
 fi
 if matches "${S}git[[:space:]]+filter-branch"; then
   deny "git filter-branch reescribe la historia: lo hace una persona o no se hace."
 fi
-if matches "${S}git[[:space:]]+(reset[[:space:]]+--hard|clean[[:space:]]+-[a-zA-Z]*f)"; then
+if flag_matches "${S}git[[:space:]]+(reset[[:space:]]+--hard|clean[[:space:]]+-[a-zA-Z]*f)"; then
   ask "Este comando descarta trabajo local sin vuelta atrás. Confirmalo a mano."
 fi
 
 # 4. Commits, pushes and merges belong to the person (AGENTS.md § 13).
-if matches "${S}git[[:space:]]+commit([[:space:]].*)?[[:space:]](--no-verify|-n)([[:space:]]|$)"; then
+if flag_matches "${S}git[[:space:]]+commit([[:space:]].*)?[[:space:]](--no-verify|-n)([[:space:]]|$)"; then
   deny "git commit --no-verify saltea el hook de pre-commit, que corre los tres verificadores (AGENTS.md § 11). Saltearlo lo decide una persona, a mano."
 fi
 if matches "${S}gh[[:space:]]+pr[[:space:]]+merge"; then
@@ -55,8 +63,10 @@ if matches "${S}git[[:space:]]+push([[:space:]]|$)" && ! matches '--dry-run'; th
   ask "Un asistente hace push solo cuando una persona se lo pide (AGENTS.md § 13). Confirmá que te lo pidieron."
 fi
 
-# 5. Production and deploys.
-if matches 'APP_ENV=production' || matches "${S}render[[:space:]]+deploys?([[:space:]]|$)"; then
+# 5. Production and deploys. Naming the word, as in a grep, is not operating on it:
+#    what counts is an environment set to it (APP_ENV=production, --env production).
+if matches '(ENV|env)(=|[[:space:]]+)production([^[:alnum:]_-]|$)' \
+  || matches "${S}render[[:space:]]+deploys?([[:space:]]|$)"; then
   deny "Ningún asistente opera contra production ni despliega: lo aprueba y lo hace una persona."
 fi
 

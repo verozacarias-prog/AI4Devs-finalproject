@@ -57,12 +57,20 @@ block() {
   exit 0
 }
 
+# warn <message> → let the turn close, and show the message to the person.
+warn() {
+  jq -n --arg message "$1" '{systemMessage: $message}'
+  exit 0
+}
+
 # ── Rules shared by more than one hook ───────────────────────────────────────
 
 # is_secret_path <path> → success when the file holds secrets or credentials.
-# .env.example is the documented, secret-free template and stays readable.
+# .env.example is the documented, secret-free template and stays readable, and so
+# does frontend/e2e/compose.env: versioned, with invented values for the e2e stack.
 is_secret_path() {
   local name
+  [[ "$(relative "$1")" == "frontend/e2e/compose.env" ]] && return 1
   name=$(basename "$1")
   case "$name" in
     .env.example) return 1 ;;

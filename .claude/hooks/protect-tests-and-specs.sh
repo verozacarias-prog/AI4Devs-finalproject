@@ -24,24 +24,39 @@ fi
 REL=$(relative "$FILE")
 ABS=$(absolute "$FILE")
 
+# adds_lines($o; $n): $n keeps $o whole and only puts complete lines around it.
+# Text added inside a line of $o, like "or True" after an assertion, is a change.
+ADDS_LINES='def adds_lines($o; $n):
+  ($n | split($o)) as $parts
+  | if ($parts | length) < 2 then false
+    else ($parts[0]) as $before | ($parts[1:] | join($o)) as $after
+      | ($before == "" or ($before | endswith("\n")) or ($o | startswith("\n")))
+        and ($after == "" or ($after | startswith("\n")) or ($o | endswith("\n")))
+    end;'
+
 # The text the edit removes and the text it leaves, joined across edits.
 case "$TOOL" in
   MultiEdit)
     REMOVED=$(printf '%s' "$INPUT" | jq -r '[.tool_input.edits[]?.old_string] | join("\n")')
     ADDED=$(printf '%s' "$INPUT" | jq -r '[.tool_input.edits[]?.new_string] | join("\n")')
     ONLY_ADDS=$(printf '%s' "$INPUT" | jq -r \
-      '[.tool_input.edits[]? | .new_string as $n | .old_string as $o | $n | contains($o)] | all')
+      "$ADDS_LINES"' [.tool_input.edits[]? | adds_lines(.old_string; .new_string)] | all')
     ;;
   Write)
     REMOVED=$([[ -f "$ABS" ]] && cat "$ABS")
     ADDED=$(field "$INPUT" '.tool_input.content')
-    ONLY_ADDS=$([[ -f "$ABS" ]] && echo false || echo true)
+    if [[ -f "$ABS" ]]; then
+      ONLY_ADDS=$(printf '%s' "$INPUT" | jq -r --rawfile current "$ABS" \
+        "$ADDS_LINES"' adds_lines($current | sub("\n+$"; ""); .tool_input.content)')
+    else
+      ONLY_ADDS=true
+    fi
     ;;
   *)
     REMOVED=$(field "$INPUT" '.tool_input.old_string')
     ADDED=$(field "$INPUT" '.tool_input.new_string')
     ONLY_ADDS=$(printf '%s' "$INPUT" | jq -r \
-      '.tool_input.new_string as $n | .tool_input.old_string as $o | $n | contains($o)')
+      "$ADDS_LINES"' adds_lines(.tool_input.old_string; .tool_input.new_string)')
     ;;
 esac
 
@@ -65,8 +80,18 @@ case "$REL" in
   backend/tests/* | frontend/e2e/*) is_test=true ;;
   frontend/src/*.test.ts | frontend/src/*.test.tsx) is_test=true ;;
 esac
-if $is_test && [[ -f "$ABS" && "$ONLY_ADDS" != "true" ]]; then
-  ask "Vas a cambiar o borrar algo de un test existente ($REL). Nunca se modifica un test para que la suite pase (AGENTS.md § 13): si el test está mal, frená y mostralo. Confirmá solo si la persona lo decidió."
+# Lines that skip, expect to fail or single out a test: adding one disables others.
+disablers() {
+  printf '%s\n' "$1" | grep -cE \
+    '@pytest\.mark\.(skip|skipif|xfail)|pytest\.(skip|xfail)\(|unittest\.skip|(^|[^[:alnum:]_])(it|test|describe)\.(skip|only|todo|fixme)|(^|[^[:alnum:]_])x(it|test|describe)\('
+}
+if $is_test && [[ -f "$ABS" ]]; then
+  if (( $(disablers "$ADDED") > $(disablers "$REMOVED") )); then
+    ask "Vas a deshabilitar un test de $REL (skip, xfail u only). Un test no se deshabilita sin la aprobación de una persona (ADR 0024, punto 6). Confirmá solo si la persona lo decidió."
+  fi
+  if [[ "$ONLY_ADDS" != "true" ]]; then
+    ask "Vas a cambiar o borrar algo de un test existente ($REL). Nunca se modifica un test para que la suite pase (AGENTS.md § 13): si el test está mal, frená y mostralo. Confirmá solo si la persona lo decidió."
+  fi
 fi
 
 # 4. Migrations already in git.
