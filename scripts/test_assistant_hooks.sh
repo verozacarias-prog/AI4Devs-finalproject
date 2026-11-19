@@ -61,6 +61,11 @@ stop_json() { jq -n --argjson a "${1:-false}" '{hook_event_name: "Stop", stop_ho
 warning() {
   printf '%s' "$2" | bash "$HOOKS/$1" 2>/dev/null | jq -r '.systemMessage // empty' 2>/dev/null
 }
+# reason <hook file> <json> → the reason the hook gives the assistant, or nothing.
+reason() {
+  printf '%s' "$2" | bash "$HOOKS/$1" 2>/dev/null \
+    | jq -r '.reason // .hookSpecificOutput.permissionDecisionReason // empty' 2>/dev/null
+}
 # mentions <text> <pattern> → yes | no
 mentions() { printf '%s' "$1" | grep -qE -e "$2" && echo yes || echo no; }
 
@@ -180,6 +185,20 @@ def test_e() -> None:
     assert 5 == 5")")"
 expect "H2-15 Write removes a line" ask \
   "$(decision $H "$(write_json "$TEST_FILE" 'def test_a() -> None:')")"
+expect "H2-16 module-level pytestmark skip" ask \
+  "$(decision $H "$(edit_json "$TEST_FILE" 'def test_a' 'pytestmark = pytest.mark.skip(reason="later")
+
+
+def test_a')")"
+expect "H2-16 @mark.skip after from pytest import mark" ask \
+  "$(decision $H "$(edit_json "$TEST_FILE" 'def test_a' '@mark.skip
+def test_a')")"
+expect "H2-17 edit a hook" ask \
+  "$(decision $H "$(edit_json "$S/.claude/hooks/lib.sh" 'exit 0' 'exit 1')")"
+expect "H2-17 edit settings.json" ask \
+  "$(decision $H "$(edit_json "$S/.claude/settings.json" '{}' '{"hooks": {}}')")"
+expect "H2-17 write settings.local.json" ask \
+  "$(decision $H "$(write_json "$S/.claude/settings.local.json" '{"env": {"PLATITA_PERMITIR_ROJO": "1"}}')")"
 
 # ── Hook 3: verify-tests-on-stop.sh ──────────────────────────────────────────
 
@@ -259,6 +278,16 @@ expect "H3-14 no vitest: warns" yes \
   "$(mentions "$(warning $H "$(stop_json)")" 'node_modules')"
 mv "$S/frontend/node_modules-aside" "$S/frontend/node_modules"
 
+reset_marks; restore_tree; touch "$S/.backend-red"
+mv "$S/frontend/node_modules" "$S/frontend/node_modules-aside"
+printf '\n# changed\n' >> "$S/backend/app/service.py"
+printf '\n// changed\n' >> "$S/frontend/src/Page.tsx"
+expect "H3-15 backend red, frontend cannot run: blocks" block "$(decision $H "$(stop_json)")"
+H3_15_REASON=$(reason $H "$(stop_json)")
+expect "H3-15 the reason names the failure" yes "$(mentions "$H3_15_REASON" 'FAILED')"
+expect "H3-15 the reason names what did not run" yes "$(mentions "$H3_15_REASON" 'node_modules')"
+mv "$S/frontend/node_modules-aside" "$S/frontend/node_modules"
+
 reset_marks; restore_tree
 
 # ── Hook 4: block-dangerous-bash.sh ──────────────────────────────────────────
@@ -291,6 +320,20 @@ expect "H4-17 rm -rf"             deny  "$(decision $H "$(bash_json 'rm -rf carp
 expect "H4-18 --env production"   deny  "$(decision $H "$(bash_json 'render services --env production')")"
 expect "H4-18 --env=production"   deny  "$(decision $H "$(bash_json 'render services --env=production')")"
 expect "H4-19 grep production"    allow "$(decision $H "$(bash_json 'grep -rn production docs/')")"
+expect "H4-20 git -C commit -n"   deny  "$(decision $H "$(bash_json 'git -C . commit -n -m x')")"
+expect "H4-20 git -c commit --no-verify" deny \
+  "$(decision $H "$(bash_json 'git -c core.hooksPath=/dev/null commit --no-verify -m x')")"
+expect "H4-21 git -C commit"      ask   "$(decision $H "$(bash_json 'git -C . commit -m x')")"
+expect "H4-21 git -C push"        ask   "$(decision $H "$(bash_json 'git -C /ruta/al/repo push')")"
+expect "H4-22 git -C push --force" deny "$(decision $H "$(bash_json 'git -C . push --force origin x')")"
+expect "H4-22 --force-with-lease" deny  "$(decision $H "$(bash_json 'git push --force-with-lease')")"
+expect "H4-22 push +branch"       deny  "$(decision $H "$(bash_json 'git push origin +rama')")"
+expect "H4-23 gh api merge"       deny  "$(decision $H "$(bash_json 'gh api -X PUT repos/o/r/pulls/1/merge')")"
+expect "H4-24 rm a backend test"  ask   "$(decision $H "$(bash_json 'rm backend/tests/unit/test_x.py')")"
+expect "H4-24 rm -f a dashboard test" ask "$(decision $H "$(bash_json 'rm -f frontend/src/A.test.tsx')")"
+expect "H4-25 sed -i a test"      ask   "$(decision $H "$(bash_json "sed -i '' 's/a/b/' backend/tests/x.py")")"
+expect "H4-25 git checkout tests" ask   "$(decision $H "$(bash_json 'git checkout -- backend/tests/')")"
+expect "H4-26 rm -f build.log"    allow "$(decision $H "$(bash_json 'rm -f build.log')")"
 
 # ── Summary ──────────────────────────────────────────────────────────────────
 
