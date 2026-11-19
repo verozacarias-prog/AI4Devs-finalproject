@@ -57,6 +57,13 @@ write_json() {
 bash_json() { jq -n --arg c "$1" '{tool_name: "Bash", tool_input: {command: $c}}'; }
 stop_json() { jq -n --argjson a "${1:-false}" '{hook_event_name: "Stop", stop_hook_active: $a}'; }
 
+# warning <hook file> <json> → the message the hook shows the person, or nothing.
+warning() {
+  printf '%s' "$2" | bash "$HOOKS/$1" 2>/dev/null | jq -r '.systemMessage // empty' 2>/dev/null
+}
+# mentions <text> <pattern> → yes | no
+mentions() { printf '%s' "$1" | grep -qE -e "$2" && echo yes || echo no; }
+
 # Suite stubs: each one leaves a mark when it runs and fails if its red flag exists.
 reset_marks() { rm -f "$SANDBOX"/.backend-ran "$SANDBOX"/.frontend-ran "$SANDBOX"/.backend-red "$SANDBOX"/.frontend-red; }
 ran() { [[ -f "$SANDBOX/.$1-ran" ]] && echo yes || echo no; }
@@ -76,6 +83,8 @@ printf 'export const Page = () => null;\n' > "$S/frontend/src/Page.tsx"
 printf 'it("renders", () => {});\n' > "$S/frontend/src/Page.test.tsx"
 printf 'APP_ENV=local\n' > "$S/.env.example"
 printf 'APP_ENV=local\n' > "$S/backend/app/constants.py"
+mkdir -p "$S/frontend/e2e" "$S/otra/carpeta"
+printf 'POSTGRES_USER=platita\n' > "$S/frontend/e2e/compose.env"
 
 cat > "$S/backend/.venv/bin/python" <<'STUB'
 #!/bin/sh
@@ -103,6 +112,8 @@ expect "H1-1 .env"             deny  "$(decision $H "$(read_json "$S/.env")")"
 expect "H1-1 backend/.env.local" deny "$(decision $H "$(read_json "$S/backend/.env.local")")"
 expect "H1-2 .env.example"     allow "$(decision $H "$(read_json "$S/.env.example")")"
 expect "H1-3 constants.py"     allow "$(decision $H "$(read_json "$S/backend/app/constants.py")")"
+expect "H1-4 e2e compose.env"  allow "$(decision $H "$(read_json "$S/frontend/e2e/compose.env")")"
+expect "H1-5 other compose.env" deny "$(decision $H "$(read_json "$S/otra/carpeta/compose.env")")"
 
 # ── Hook 2: protect-tests-and-specs.sh ───────────────────────────────────────
 
@@ -137,6 +148,38 @@ expect "H2-9 edit .env" deny \
   "$(decision $H "$(edit_json "$S/.env" 'A=1' 'A=2')")"
 expect "H2-9 path with .." deny \
   "$(decision $H "$(write_json "$S/backend/../../outside.py" 'x = 1')")"
+
+FRONT_TEST="$S/frontend/src/Page.test.tsx"
+expect "H2-10 add @pytest.mark.skip" ask \
+  "$(decision $H "$(edit_json "$TEST_FILE" 'def test_a' '@pytest.mark.skip
+def test_a')")"
+expect "H2-11 it.skip" ask \
+  "$(decision $H "$(edit_json "$FRONT_TEST" 'it(' 'it.skip(')")"
+expect "H2-11 it.only" ask \
+  "$(decision $H "$(edit_json "$FRONT_TEST" 'it(' 'it.only(')")"
+expect "H2-11 add @pytest.mark.xfail" ask \
+  "$(decision $H "$(edit_json "$TEST_FILE" 'def test_a' '@pytest.mark.xfail
+def test_a')")"
+expect "H2-11 add pytest.skip()" ask \
+  "$(decision $H "$(edit_json "$TEST_FILE" '    assert 1 == 1' '    pytest.skip("later")
+    assert 1 == 1')")"
+expect "H2-12 append inside a line" ask \
+  "$(decision $H "$(edit_json "$TEST_FILE" 'assert 1 == 1' 'assert 1 == 1 or True')")"
+expect "H2-13 append a whole test function" allow \
+  "$(decision $H "$(edit_json "$TEST_FILE" 'def test_a() -> None:
+    assert 1 == 1' 'def test_a() -> None:
+    assert 1 == 1
+
+
+def test_d() -> None:
+    assert 4 == 4')")"
+expect "H2-14 Write keeps the content and adds a test" allow \
+  "$(decision $H "$(write_json "$TEST_FILE" "$(cat "$TEST_FILE")
+
+def test_e() -> None:
+    assert 5 == 5")")"
+expect "H2-15 Write removes a line" ask \
+  "$(decision $H "$(write_json "$TEST_FILE" 'def test_a() -> None:')")"
 
 # ── Hook 3: verify-tests-on-stop.sh ──────────────────────────────────────────
 
@@ -191,6 +234,31 @@ printf 'def helper() -> int:\n    return 2\n' > "$S/backend/app/new_module.py"
 expect "H3-10 new file not yet added to git, red" block "$(decision $H "$(stop_json)")"
 expect "H3-10 pytest ran" yes "$(ran backend)"
 
+reset_marks; restore_tree; touch "$S/.backend-red"
+printf '\n# changed\n' >> "$S/backend/app/service.py"
+expect "H3-11 second attempt, red: does not block" allow "$(decision $H "$(stop_json true)")"
+expect "H3-11 second attempt, red: warns the person" yes \
+  "$(mentions "$(warning $H "$(stop_json true)")" 'rojo')"
+
+reset_marks
+expect "H3-12 second attempt, green: no warning" "" "$(warning $H "$(stop_json true)")"
+
+reset_marks; restore_tree
+mv "$S/backend/.venv" "$S/backend/.venv-aside"
+printf '\n# changed\n' >> "$S/backend/app/service.py"
+expect "H3-13 no backend/.venv: does not block" allow "$(decision $H "$(stop_json)")"
+expect "H3-13 no backend/.venv: warns" yes \
+  "$(mentions "$(warning $H "$(stop_json)")" 'backend/\.venv')"
+mv "$S/backend/.venv-aside" "$S/backend/.venv"
+
+reset_marks; restore_tree
+mv "$S/frontend/node_modules" "$S/frontend/node_modules-aside"
+printf '\n// changed\n' >> "$S/frontend/src/Page.tsx"
+expect "H3-14 no vitest: does not block" allow "$(decision $H "$(stop_json)")"
+expect "H3-14 no vitest: warns" yes \
+  "$(mentions "$(warning $H "$(stop_json)")" 'node_modules')"
+mv "$S/frontend/node_modules-aside" "$S/frontend/node_modules"
+
 reset_marks; restore_tree
 
 # ── Hook 4: block-dangerous-bash.sh ──────────────────────────────────────────
@@ -210,6 +278,19 @@ expect "H4-8 cat .env"            deny  "$(decision $H "$(bash_json 'cat .env')"
 expect "H4-9 git status"          allow "$(decision $H "$(bash_json 'git status')")"
 expect "H4-9 pytest"              allow "$(decision $H "$(bash_json 'pytest')")"
 expect "H4-9 ruff check"          allow "$(decision $H "$(bash_json 'ruff check .')")"
+expect "H4-10 cat id_rsa"         deny  "$(decision $H "$(bash_json 'cat ~/.ssh/id_rsa')")"
+expect "H4-11 cat a .pem"         deny  "$(decision $H "$(bash_json 'cat certs/server.pem')")"
+expect "H4-12 head credentials"   deny  "$(decision $H "$(bash_json 'head credentials.json')")"
+expect "H4-13 cat e2e compose.env" allow "$(decision $H "$(bash_json 'cat frontend/e2e/compose.env')")"
+expect "H4-14 -n inside the message" ask \
+  "$(decision $H "$(bash_json 'git commit -m "docs: quitar el -n del ejemplo"')")"
+expect "H4-15 git commit -n"      deny  "$(decision $H "$(bash_json 'git commit -n -m "x"')")"
+expect "H4-16 rm -f one file"     allow "$(decision $H "$(bash_json 'rm -f build.log')")"
+expect "H4-17 rm -r"              deny  "$(decision $H "$(bash_json 'rm -r carpeta')")"
+expect "H4-17 rm -rf"             deny  "$(decision $H "$(bash_json 'rm -rf carpeta')")"
+expect "H4-18 --env production"   deny  "$(decision $H "$(bash_json 'render services --env production')")"
+expect "H4-18 --env=production"   deny  "$(decision $H "$(bash_json 'render services --env=production')")"
+expect "H4-19 grep production"    allow "$(decision $H "$(bash_json 'grep -rn production docs/')")"
 
 # ── Summary ──────────────────────────────────────────────────────────────────
 
