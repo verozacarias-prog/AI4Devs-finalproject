@@ -334,6 +334,28 @@ expect "H4-24 rm -f a dashboard test" ask "$(decision $H "$(bash_json 'rm -f fro
 expect "H4-25 sed -i a test"      ask   "$(decision $H "$(bash_json "sed -i '' 's/a/b/' backend/tests/x.py")")"
 expect "H4-25 git checkout tests" ask   "$(decision $H "$(bash_json 'git checkout -- backend/tests/')")"
 expect "H4-26 rm -f build.log"    allow "$(decision $H "$(bash_json 'rm -f build.log')")"
+expect "H4-27 git push -fu"       deny  "$(decision $H "$(bash_json 'git push -fu origin x')")"
+expect "H4-27 git push -uf"       deny  "$(decision $H "$(bash_json 'git push -uf origin x')")"
+expect "H4-28 git commit -nm"     deny  "$(decision $H "$(bash_json 'git commit -nm wip')")"
+expect "H4-28 git commit -anm"    deny  "$(decision $H "$(bash_json 'git commit -anm wip')")"
+expect "H4-28 git commit -am"     ask   "$(decision $H "$(bash_json 'git commit -am "x"')")"
+expect "H4-29 checkout && pytest tests" allow \
+  "$(decision $H "$(bash_json 'git checkout main && pytest backend/tests/unit -q')")"
+expect "H4-29 mv && pytest tests" allow \
+  "$(decision $H "$(bash_json 'mv a.txt b.txt && pytest backend/tests/unit')")"
+expect "H4-29 rm -f && vitest a test" allow \
+  "$(decision $H "$(bash_json 'rm -f build.log && npx vitest run src/App.test.tsx')")"
+expect "H4-29 rm a test after &&" ask \
+  "$(decision $H "$(bash_json 'ls && rm backend/tests/unit/test_x.py')")"
+expect "H4-30 grep a quoted APP_ENV=production" allow \
+  "$(decision $H "$(bash_json 'grep -n "APP_ENV=production" docs/operacion.md')")"
+expect "H4-30 APP_ENV=production uvicorn" deny \
+  "$(decision $H "$(bash_json 'APP_ENV=production uvicorn app.main:app')")"
+expect "H4-31 git --git-dir .git push --force" deny \
+  "$(decision $H "$(bash_json 'git --git-dir .git push --force')")"
+expect "H4-32 sed -i.bak" allow   "$(decision $H "$(bash_json "sed -i.bak 's/a/b/' x.py")")"
+expect "H4-32 sed -i.bak writes no errors" "" \
+  "$(bash_json "sed -i.bak 's/a/b/' x.py" | bash "$HOOKS/$H" 2>&1 >/dev/null)"
 
 # ── Summary ──────────────────────────────────────────────────────────────────
 
