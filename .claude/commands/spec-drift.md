@@ -10,7 +10,8 @@ se ajustan entre sí automáticamente.**
 
 ## Los dos modos
 
-- **`corte`** (por defecto): lo que cambió la rama actual contra la rama de la entrega. Leé el
+- **`corte`** (por defecto): lo que cambió la rama actual contra la rama integradora, hoy
+  `platita-v2`. Leé el
   diff con `git diff` y, de `docs/`, lo que ese cambio toca: `04-api.md` para endpoints,
   `03-modelo-de-datos.md` para entidades y columnas, `reglas-de-dominio.md` para comportamiento,
   y la `spec.md` de la funcionalidad. Buscá además, con `grep` sobre `docs/`, todo documento que

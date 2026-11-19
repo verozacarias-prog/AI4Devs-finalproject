@@ -274,6 +274,12 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   veredicto se resume en el pull request
   ([ADR 0022](docs/adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md)).
 - Antes de cada entrega se corre `/security-audit`.
+- Cuatro hooks del asistente, en `.claude/hooks/`, controlan con código parte de este archivo
+  mientras trabajás: los secretos (§ 7), los tests, la línea de aprobación y las migraciones
+  (§ 8 y § 13), la suite en verde al cerrar el turno, y el commit, el push, el merge y las evals
+  con `--run` (§ 11 y § 13). Si un hook rechaza o pregunta, no busques otro camino para hacer
+  lo mismo: la decisión es de la persona. Sus casos se corren con
+  `scripts/test_assistant_hooks.sh` ([ADR 0031](docs/adr/0031-hooks-del-asistente.md)).
 
 ## 12. Qué leer antes de qué
 
@@ -312,8 +318,10 @@ En el backend el test va antes que el código
   escribir código.
 
 Nadie escribe directo en la rama de la entrega, `feature/entrega-N-VNZ` o, en la final,
-`final-project-VNZ`. Las ramas de trabajo se llaman `hu<N>-c<corte>-<tema>` para un corte de una
-historia y `tarea-<tema>` para el resto, y entran por pull request. Los pasos están en [cómo colaborar](docs/como-colaborar.md).
+`final-project-VNZ`, ni en `platita-v2`, la de la segunda versión, de la que hoy salen las ramas
+de trabajo. `final-project-VNZ` quedó congelada con lo entregado. Las ramas de trabajo se
+llaman `hu<N>-c<corte>-<tema>` para un corte de una historia y `tarea-<tema>` para el resto, y
+entran por pull request. Los pasos están en [cómo colaborar](docs/como-colaborar.md).
 
 Un asistente hace commit solo cuando una persona se lo pide, y nunca hace merge: la aprobación
 final de un pull request es de una persona.

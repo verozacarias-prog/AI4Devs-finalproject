@@ -10,16 +10,23 @@ En el backend se trabaja con tests primero ([ADR 0024](adr/0024-tests-primero-en
 
 **Ramas.** Cada entrega tiene su rama (`feature/entrega-N-VNZ`; la final, `final-project-VNZ`),
 que sale de `main` y vuelve a `main` cuando la entrega se cierra. El trabajo no se hace ahí: cada
-cambio va en una rama corta que sale de la rama de la entrega y vuelve a ella por pull request. La
-rama de la entrega despliega el entorno de pruebas, y `main` va a desplegar producción cuando
-exista. El porqué está en
+cambio va en una rama corta que sale de la rama integradora y vuelve a ella por pull request.
+Durante las entregas, la integradora era la rama de cada entrega. La rama de la entrega despliega
+el entorno de pruebas, y `main` va a desplegar producción cuando exista. El porqué está en
 [documentación viva](documentacion-viva.md#7-el-modelo-de-ramas).
+
+**Hoy la base es `platita-v2`.** La entrega final quedó congelada en `final-project-VNZ` el 13
+de noviembre de 2026, después del pull request #201: no recibe más cambios y sigue desplegando
+`demo`. El trabajo de la segunda versión se integra en `platita-v2`, que salió de ahí: las ramas
+de trabajo salen de `platita-v2` y vuelven a ella por pull request. `platita-v2` no despliega
+ningún entorno.
 
 | Rama | Sale de | Nombre | Ejemplo |
 |---|---|---|---|
 | De entrega | `main` | `feature/entrega-<N>-VNZ`, y `final-project-VNZ` para la final | `final-project-VNZ` |
-| De un corte de una historia | La rama de la entrega | `hu<N>-c<corte>-<tema>` | `hu3-c1-registro-de-gasto` |
-| De lo que no es una historia | La rama de la entrega | `tarea-<tema>` | `tarea-scaffold-y-docker` |
+| De la segunda versión | `final-project-VNZ` | `platita-v2` | `platita-v2` |
+| De un corte de una historia | `platita-v2` | `hu<N>-c<corte>-<tema>` | `hu3-c1-registro-de-gasto` |
+| De lo que no es una historia | `platita-v2` | `tarea-<tema>` | `tarea-scaffold-y-docker` |
 
 **Issues.** Cada historia de usuario y cada ticket de trabajo es una issue de GitHub, en el
 milestone de la entrega, y su avance se sigue en el
@@ -43,9 +50,13 @@ git config core.hooksPath .githooks   # activa el hook de pre-commit
 cd site && npm install                # solo para ver o regenerar el portal
 ```
 
+Los hooks del asistente no se activan: Claude Code los corre solo, y necesitan `jq` en la
+máquina. Qué controla cada uno, y cómo apagar el de los tests para explorar en local, está en el
+[flujo de trabajo con IA](flujo-de-trabajo-con-ia.md#hooks).
+
 **Para incluir un cambio.**
 
-1. **Crear la rama** desde la rama de la entrega, con el nombre de la tabla, y pasar la
+1. **Crear la rama** desde `platita-v2`, con el nombre de la tabla, y pasar la
    tarjeta de su issue a "En curso". Una historia son
    tres ramas, una por [corte vertical](convenciones-de-desarrollo.md#1-cortes-verticales).
 2. **Leer antes de escribir.** [`AGENTS.md`](../AGENTS.md) es el contrato, y su sección 12 dice qué
@@ -80,7 +91,7 @@ cd site && npm install                # solo para ver o regenerar el portal
    presupuesto, solo para `local`. Lo
    que surge al probar se corrige en la misma rama, y los pasos y lo que se vio van en la
    descripción del pull request.
-11. **Abrir el pull request contra la rama de la entrega,** con el corte en verde y una
+11. **Abrir el pull request contra `platita-v2`,** con el corte en verde y una
    descripción armada desde la plantilla [`pr.md`](features/TEMPLATE/pr.md), con el
    [Definition of Done](07-pull-requests.md#definition-of-done) y `Closes #N`.
    Correr el agente `pr-reviewer` y resumir su informe.

@@ -287,8 +287,8 @@ en GitHub Actions. Todas las etapas corren en paralelo y apuntan a menos de diez
 
 Las etapas marcadas como decididas son los seis controles del [ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md). Corren con
 permiso de solo lectura, salvo CodeQL, que escribe sus alertas, y el flujo que publica el portal, que conserva los permisos de Pages, y con cada acción fijada al hash de su commit. Para que bloqueen un
-merge, la rama de la entrega tiene que estar protegida en GitHub con esos controles como
-obligatorios.
+merge, la rama integradora, hoy `platita-v2`, tiene que estar protegida en GitHub con esos
+controles como obligatorios.
 
 | Etapa | Herramienta | ¿Bloquea? | Estado |
 |---|---|---|---|

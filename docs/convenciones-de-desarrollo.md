@@ -77,7 +77,7 @@ Tres reglas acompañan ese orden:
 - **Se integra con un commit de merge.** Aplastar los commits del pull request en uno borraría
   el orden entre tests e implementación.
 - **El pull request se abre con el corte en verde.** El commit de los tests deja la rama de
-  trabajo en rojo a propósito; la rama de la entrega no lo ve nunca así.
+  trabajo en rojo a propósito; la rama integradora no lo ve nunca así.
 
 Qué va primero según la capa:
 

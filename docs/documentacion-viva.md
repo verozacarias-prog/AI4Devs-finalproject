@@ -107,25 +107,30 @@ npm run build        # construye, y regenera llms.txt
 ```
 
 El portal se publica solo, con `.github/workflows/docs.yml`, en cada integración a la rama de la
-entrega en curso, y otra vez al cerrarla, cuando esa rama llega a `main`.
+entrega en curso, y otra vez al cerrarla, cuando esa rama llega a `main`. Lo que se integra a
+`platita-v2` no se publica: hasta la devolución de la entrega final, el portal sigue mostrando lo
+entregado.
 
 ## 7. El modelo de ramas
 
-Este repositorio es un fork del repositorio del curso, y se entrega tres veces. De ahí sale un
-modelo de ramas con dos niveles:
+Este repositorio es un fork del repositorio del curso, y se entregó tres veces. De ahí sale un
+modelo de ramas en el que las ramas de trabajo cuelgan de una rama integradora. Mientras duraron
+las entregas, la integradora fue la rama de cada entrega. Desde el 13 de noviembre de 2026 es
+`platita-v2`, la de la segunda versión:
 
 ```text
 main
- └─ final-project-VNZ                   rama de la entrega: sale de main y vuelve a main
-     ├─ hu3-c1-registro-de-gasto        un corte de una historia
-     ├─ hu3-c2-registro-de-gasto
-     └─ tarea-scaffold-y-docker         lo que no es una historia
+ └─ final-project-VNZ                   rama de la entrega final: congelada, despliega demo
+     └─ platita-v2                      rama integradora de la segunda versión
+         ├─ hu3-c1-registro-de-gasto    un corte de una historia
+         ├─ hu3-c2-registro-de-gasto
+         └─ tarea-scaffold-y-docker     lo que no es una historia
 ```
 
 - **`main` tiene las entregas cerradas.** Cada entrega se integra a `main` cuando se cierra, y
   la rama de la entrega siguiente sale de ahí.
-- **La rama de la entrega no recibe commits directos.** Todo cambio entra por un pull request
-  desde una rama corta, con los controles en verde. Así la rama de la entrega funciona siempre.
+- **La rama integradora no recibe commits directos.** Todo cambio entra por un pull request
+  desde una rama corta, con los controles en verde. Así la integradora funciona siempre.
 - **Una rama corta por corte vertical.** Una historia se parte en tres
   [cortes](convenciones-de-desarrollo.md#1-cortes-verticales), y cada uno es un pull request.
   La rama se llama `hu<N>-c<corte>-<tema>`. Lo que no resuelve una historia, como el scaffold o
@@ -140,7 +145,7 @@ GitHub condicionan el modelo y no son evidentes:
   lo necesitan: corren al abrir el pull request.
 - **En un pull request contra otro repositorio, GitHub ejecuta los workflows del repositorio
   base**, no los de este. Por eso los pull requests de trabajo se abren dentro del fork, contra
-  la rama de la entrega.
+  la rama integradora.
 - **El portal se publica desde la rama por defecto.** El entorno `github-pages` acepta solo las
   ramas que tiene autorizadas, y Dependabot abre sus pull requests contra la rama por defecto.
   Al abrir una entrega hay que poner su rama como rama por defecto del fork, en
@@ -152,7 +157,7 @@ y protegerla. **Cerrarla** es correr `/security-audit` y `/spec-drift proyecto`,
 de ruta fila por fila,
 dejar al día `prompts.md` e integrar la rama a `main` por pull request.
 
-Que los controles impidan un merge depende, además, de proteger la rama de la entrega con esos
+Que los controles impidan un merge depende, además, de proteger la rama integradora con esos
 controles como obligatorios ([ADR 0021](adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md)).
 
 Si se agrega un documento a `docs/`, hay que sumarlo a la barra lateral en `site/astro.config.mjs`

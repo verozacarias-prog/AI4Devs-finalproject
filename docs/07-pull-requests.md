@@ -1,6 +1,7 @@
 # 7. Pull requests
 
-Todo cambio entra a la rama de la entrega por un pull request, desde una rama de trabajo. Los
+Todo cambio entra a la rama integradora, hoy `platita-v2`, por un pull request, desde una rama de
+trabajo ([cómo colaborar](como-colaborar.md#1-incluir-un-cambio)). Los
 tres que se muestran de cada entrega son los tres cortes verticales de una misma funcionalidad,
 no tres recortes arbitrarios. Un corte vertical atraviesa base de datos, backend y frontend, y
 queda funcionando de punta a punta. Ver

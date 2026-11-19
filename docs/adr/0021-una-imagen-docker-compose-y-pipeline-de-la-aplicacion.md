@@ -19,7 +19,7 @@ Tres decisiones anteriores acotan la respuesta:
 - Las migraciones corren una sola vez, antes de que arranque cualquier proceso, y ningún proceso
   migra al arrancar ([2.4](../02-arquitectura.md#24-infraestructura-y-despliegue)).
 
-El repositorio es un fork del repositorio del curso: el trabajo entra a la rama de la entrega
+El repositorio es un fork del repositorio del curso: el trabajo entra a la rama integradora
 por pull requests dentro del fork, porque un pull request contra el repositorio de origen
 ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el-modelo-de-ramas)).
 
@@ -78,9 +78,9 @@ ejecuta los flujos de allá ([documentación viva](../documentacion-viva.md#7-el
    sin lo que no las publica: el permiso lo tiene su único trabajo, no el flujo.
 8. **El pipeline no guarda secretos.** Ningún control necesita una credencial. Es la regla de
    [Operación](../operacion.md#3-pipeline-de-la-aplicación), y no cambia.
-9. **Qué bloquea el merge.** Los controles corren en cada pull request y en cada push a `main` y
-   a la rama de la entrega. Para que además impidan un merge, la rama de la entrega tiene que estar
-   protegida en este repositorio, con esos controles como obligatorios. Es una configuración de
+9. **Qué bloquea el merge.** Los controles corren en cada pull request y en cada push a `main`,
+   a las ramas de entrega y a la rama integradora, hoy `platita-v2`. Para que además impidan un
+   merge, la integradora tiene que estar protegida en este repositorio, con esos controles como obligatorios. Es una configuración de
    GitHub, que se hace a mano. Con CodeQL son dos cosas distintas: sus trabajos fallan solo si
    el análisis no pudo correr, y lo que encontró lo informa GitHub en un control aparte, que
    falla ante una alerta nueva de severidad alta o crítica. Los dos van como obligatorios.

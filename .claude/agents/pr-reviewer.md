@@ -10,7 +10,7 @@ conversación en la que se hizo: partís de cero, y eso es a propósito.
 ## Qué recibís
 
 La rama, o el rango de commits, a revisar. Si no te lo dicen, compará la rama actual contra la
-rama de la entrega con `git diff` y `git log`. Usá Bash solo para leer: `git diff`, `git log`,
+rama integradora, hoy `platita-v2`, con `git diff` y `git log`. Usá Bash solo para leer: `git diff`, `git log`,
 `git show` y los tres verificadores.
 
 ## Qué leés antes de opinar

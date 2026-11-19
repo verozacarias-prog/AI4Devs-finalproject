@@ -21,7 +21,9 @@ con una recomendación. `gh` se usa con `unset GITHUB_TOKEN`.
 - Leé cada issue con `gh issue view`, la historia de usuario de la que sale y lo que la
   [sección 12 de `AGENTS.md`](../../AGENTS.md#12-qué-leer-antes-de-qué) pide para ese tipo de cambio.
   Si toca movimientos, cuentas, presupuestos o categorías, usá el skill `domain-rules`.
-- Creá la rama desde la rama de la entrega, `hu<N>-c<corte>-<tema>` o `tarea-<tema>`, y pasá la
+- Creá la rama desde la rama integradora, hoy `platita-v2`
+  ([cómo colaborar](../../docs/como-colaborar.md#1-incluir-un-cambio)),
+  `hu<N>-c<corte>-<tema>` o `tarea-<tema>`, y pasá la
   tarjeta de cada issue a "En curso".
 
 ## 2. Especificar
