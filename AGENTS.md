@@ -93,6 +93,7 @@ de pre-commit. No son una recomendación: rompen el commit.
 - `backend/app/adapters/observability/` — envoltorios de los puertos de LLM y de embeddings, que registran cada llamada sin su contenido, y el formato JSON de los registros con su filtro.
 - `backend/tests/` — tests unitarios, de integración y end-to-end.
 - `backend/migrations/` — migraciones de Alembic.
+- `backend/evals/classification/` — el set de regresión del prompt de clasificación, que se corre a mano contra el modelo real, y en `results/` los informes de cada corrida ([§ 11](#11-comandos-de-verificación)).
 - `frontend/` — dashboard web, en React con TypeScript y Vite ([ADR 0026](docs/adr/0026-react-typescript-y-vite-para-el-dashboard.md)), con Tailwind CSS y shadcn/ui ([ADR 0027](docs/adr/0027-tailwind-y-shadcn-ui-para-el-dashboard.md)). `src/api/` tiene el contrato exportado y los tipos generados, `src/pages/` una pantalla por archivo con su test al lado, `src/components/` las piezas que comparten las pantallas, como el menú lateral, con su test al lado, `src/components/ui/` los componentes de shadcn/ui, y `src/design-tokens.css` los tokens de diseño. `e2e/` tiene el test de punta a punta con Playwright, el stack de Compose que levanta y el proveedor del modelo simulado.
 - `site/` — portal de documentación (Astro Starlight). Se genera desde `docs/`; no es fuente.
 - `docs/` — la especificación del proyecto.
@@ -250,6 +251,13 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   ([convenciones de desarrollo](docs/convenciones-de-desarrollo.md#1-cortes-verticales)).
   El sexto, el análisis de seguridad con CodeQL, corre en `.github/workflows/codeql.yml` y no
   tiene comando local: una alerta que no es un problema se descarta en GitHub con su motivo.
+- Prompt de clasificación, desde `backend/`: `python -m evals.classification.run` dice
+  cuántas llamadas al modelo haría el set de regresión y cuánto costarían, sin llamar a nada, y
+  con `--run` lo corre contra el modelo real, con `OPENAI_API_KEY`, guarda el informe en
+  `evals/classification/results/` y lo compara con el último de otra versión del prompt. Cuesta
+  plata y usa la misma clave que el demo: no está en el pipeline, y antes de correrlo se dice
+  cuántas llamadas son y se espera el ok. Un cambio de prompt se mide antes y después
+  ([#157](https://github.com/verozacarias-prog/AI4Devs-finalproject/issues/157)).
 - Dashboard, desde `frontend/`: `npm test` corre los tests de las pantallas, `npm run lint` el
   linter, `npm run typecheck` los tipos, `npm run build` la compilación y
   `npm audit --audit-level=high` las vulnerabilidades. `npm run test:e2e` corre el test de punta

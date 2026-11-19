@@ -13,6 +13,7 @@ scripts
 **/.ruff_cache
 **/node_modules
 backend/tests
+backend/evals
 .env
 .env.*
 !.env.example

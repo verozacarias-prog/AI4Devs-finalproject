@@ -244,6 +244,9 @@ Arquitectura hexagonal dentro del backend, con los nombres de carpetas y fichero
     settings.py          # process configuration, read from environment variables
   /tests
   /migrations          # Alembic
+  /evals
+    /classification    # the regression set of the classification prompt, run by hand against the real model
+      /results         # the report of each run, kept to compare the next version of the prompt
 /frontend                # React, TypeScript and Vite (ADR 0026), Tailwind CSS and shadcn/ui (ADR 0027)
   /src
     /api                 # API contract exported by the backend, the types generated from it, and the API paths in routes.ts
