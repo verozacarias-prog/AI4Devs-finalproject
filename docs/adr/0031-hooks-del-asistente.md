@@ -59,8 +59,9 @@ OpenSpec, que Platita no usa.
 5. **Comandos.**
    - Se rechazan el borrado recursivo (`rm -r`), `mkfs`, `dd`, `chmod 777`, el push forzado
      (`--force`, `--force-with-lease`, `-f` o `+rama`), `git filter-branch`,
-     `git commit --no-verify`, el merge (`gh pr merge` o `gh api …/merge`) y desplegar. También operar
-     contra `production`, que se reconoce como un entorno puesto en `production`
+     `git commit --no-verify` (o `-n`), el merge (`gh pr merge` o `gh api …/merge`) y desplegar.
+     Las banderas cortas cuentan también juntas, como `-fu` o `-nm`. También operar contra
+     `production`, que se reconoce como un entorno puesto en `production` fuera de las comillas
      (`APP_ENV=production`, `--env production`), no como la palabra suelta.
    - Preguntan `git commit`, `git push`, `git reset --hard`, `git clean -f`, el set de regresión
      del prompt con `--run` y la instalación de un paquete.
@@ -92,8 +93,11 @@ OpenSpec, que Platita no usa.
   trabajo, no lo que se arma para esquivarlos. Miran el texto del comando o de la edición, no lo
   que hace, y no hay forma de que esa lista sea completa:
   - Un `rm -rf` dentro del mensaje de un commit se rechaza igual.
+  - Un `NODE_ENV=production` se rechaza aunque no opere contra el entorno `production`.
   - Pasan sin preguntar los secretos leídos con un comando que no está en la lista, como
-    `python -c`, y un comodín como `cat .e*`.
+    `python -c` o `git show HEAD:.env`, y un comodín como `cat .e*`.
+  - Un push con `--mirror`, `--delete` o `:rama` pregunta como cualquier push, y cambiar
+    `.claude/settings.json` desde la shell no pregunta.
   - También pasa un test anulado con lógica y no con `skip`: un `return` al principio, una
     función redefinida con el mismo nombre, o un `conftest.py` que vacía la colección.
   - Lo mismo vale para la línea «Aprobado por» escrita con otro formato o desde la shell.

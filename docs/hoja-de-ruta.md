@@ -130,6 +130,7 @@ la [línea de corte de la entrega final](#alcance-de-la-entrega-final).
 
 | Qué | Se desbloquea cuando | Por qué importa |
 |---|---|---|
+| Que el portal publique `platita-v2` | Llegue la devolución de la entrega final | Hasta entonces el portal muestra lo entregado. Para pasarlo hay que sumar `platita-v2` a los disparadores de `.github/workflows/docs.yml` y autorizarla en el entorno `github-pages`, o ponerla como rama por defecto, que es también la de Dependabot ([documentación viva § 7](documentacion-viva.md#7-el-modelo-de-ramas)) |
 | Documentar los tokens del Design System aparte de los componentes | Ya se puede: el dashboard existe | Para que la app móvil los reutilice en vez de reconstruirlos leyendo código. Hoy viven en `frontend/src/design-tokens.css` ([ADR 0026](adr/0026-react-typescript-y-vite-para-el-dashboard.md)), sin un documento propio |
 | Que la redirección de `/app` a `/app/` salga con `https` detrás del proxy del proveedor | Antes de `production` | En el primer despliegue de `demo` salió con `http`, porque el servidor no confía en los headers del proxy ([ADR 0029](adr/0029-el-entorno-demo-en-render-en-planes-pagos.md)). El navegador igual termina en `https` por HSTS. Está en la issue #129 |
 | Rellenar el [`ui_contract.md`](features/TEMPLATE/ui_contract.md) del estado del sistema | La entrega final | Las pantallas de cuentas, del chat y de la entrada ya tienen el suyo |

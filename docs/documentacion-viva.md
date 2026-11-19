@@ -107,7 +107,9 @@ npm run build        # construye, y regenera llms.txt
 ```
 
 El portal se publica solo, con `.github/workflows/docs.yml`, en cada integración a la rama de la
-entrega en curso, y otra vez al cerrarla, cuando esa rama llega a `main`.
+entrega en curso, y otra vez al cerrarla, cuando esa rama llega a `main`. Lo que se integra a
+`platita-v2` no se publica: hasta la devolución de la entrega final, el portal sigue mostrando lo
+entregado.
 
 ## 7. El modelo de ramas
 
