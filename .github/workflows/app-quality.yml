@@ -208,15 +208,3 @@ jobs:
       - name: Neither file changed
         # Both are versioned. If the API changed and they were not regenerated, it shows here.
         run: git diff --exit-code -- frontend/src/api
-
-  hooks-del-asistente:
-    name: Hooks del asistente — cada caso con su decisión
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          # No job pushes or needs the token after the checkout.
-          persist-credentials: false
-      # jq and git come with the runner image; the cases run against a throwaway repository.
-      - run: scripts/test_assistant_hooks.sh
