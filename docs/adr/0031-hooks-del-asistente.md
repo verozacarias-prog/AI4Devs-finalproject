@@ -27,9 +27,10 @@ OpenSpec, que Platita no usa.
 
 ## Decisión
 
-1. **Cuatro hooks de Claude Code, versionados en `.claude/hooks/`** y registrados en
-   `.claude/settings.json`, para que valgan en cualquier clon. Son scripts de bash que leen con
-   `jq` lo que Claude Code les pasa.
+1. **Cuatro hooks de Claude Code,** que vienen del plugin `fastapi-harness` y se configuran
+   para Platita en `.claude/fastapi-harness.json`
+   ([ADR 0032](0032-el-harness-del-asistente-viene-de-un-plugin.md)). Son scripts de bash que
+   leen con `jq` lo que Claude Code les pasa.
 2. **Secretos.** Ningún archivo de entorno, clave ni credencial se lee, ni con la herramienta de
    lectura ni por la shell: `.env` y sus variantes, `credentials*`, `id_rsa`, `id_ed25519`,
    `*.pem`, `*.key` y `service-account*.json`. Se pueden leer `.env.example` y
@@ -42,8 +43,8 @@ OpenSpec, que Platita no usa.
      `pytestmark` y `@mark.skip`.
    - Borrar o cambiar un test desde la shell también pregunta: `rm`, `mv`, `sed -i`, una
      redirección con `>`, y `git checkout`, `restore` o `rm` sobre un test.
-   - Cambiar los hooks o su configuración, `.claude/hooks/` y `.claude/settings*.json`,
-     pregunta.
+   - Cambiar los hooks o su configuración, `.claude/settings*.json` y
+     `.claude/fastapi-harness.json`, pregunta.
    - El asistente no puede completar la línea «Aprobado por» de un `spec.md`.
    - Editar una migración que ya está en git pregunta.
    - Los archivos de entorno no se editan, ni una ruta con `..`.
@@ -67,10 +68,10 @@ OpenSpec, que Platita no usa.
      del prompt con `--run` y la instalación de un paquete.
    - Git se lee sin el texto entre comillas, para que el mensaje de un commit no se confunda con
      una bandera, y sin sus opciones globales, para que `git -C <dir> push` sea un push.
-6. **Una salida para explorar en local:** `PLATITA_PERMITIR_ROJO=1`, en el `env` de
+6. **Una salida para explorar en local:** `HARNESS_ALLOW_RED=1`, en el `env` de
    `.claude/settings.local.json`, apaga el control del cierre del turno. Nunca dentro de una
    entrega.
-7. **Los hooks tienen sus propios tests,** en `scripts/test_assistant_hooks.sh`, que corre en el
+7. **Los hooks tienen sus propios tests,** en el repositorio del plugin, que corren en su
    pipeline. Cada caso le pasa al hook lo que mandaría Claude Code, contra un repositorio
    descartable.
 

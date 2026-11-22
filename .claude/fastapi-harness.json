@@ -1,0 +1,59 @@
+{
+  "integration_branch": "platita-v2",
+  "secrets_allowed": [".env.example", "frontend/e2e/compose.env"],
+  "tests": {
+    "dirs": ["backend/tests/", "frontend/e2e/"],
+    "file_pattern": "\\.test\\.tsx?"
+  },
+  "specs": {
+    "glob": "docs/features/*/spec.md",
+    "template_dir": "docs/features/TEMPLATE/",
+    "approval_marker": "**Aprobado por:**",
+    "pending_value": "pendiente"
+  },
+  "migrations_dirs": ["backend/migrations/versions/"],
+  "suites": [
+    {
+      "name": "Backend",
+      "watch": ["backend/app", "backend/tests"],
+      "tests_pattern": "^backend/tests/",
+      "cwd": "backend",
+      "runner": ".venv/bin/python",
+      "args": ["-m", "pytest", "-m", "not integration", "-q"],
+      "missing_hint": "falta backend/.venv"
+    },
+    {
+      "name": "Dashboard",
+      "watch": ["frontend/src"],
+      "tests_pattern": "\\.test\\.tsx?$",
+      "cwd": "frontend",
+      "runner": "node_modules/.bin/vitest",
+      "args": ["run"],
+      "missing_hint": "falta frontend/node_modules (npm ci)"
+    }
+  ],
+  "bash_rules": {
+    "deny": [
+      {
+        "pattern": "render[[:space:]]+deploys?([[:space:]]|$)",
+        "message": "Ningún asistente despliega: lo aprueba y lo hace una persona."
+      }
+    ],
+    "ask": [
+      {
+        "pattern": "evals\\.classification\\.run.*[[:space:]]--run([[:space:]]|$)",
+        "message": "El set de regresión con --run llama al modelo real, cuesta plata y usa la clave del demo (AGENTS.md § 11). Antes de correrlo se dice cuántas llamadas son y se espera el ok: corré primero sin --run."
+      }
+    ]
+  },
+  "dependency_hint": "En el backend se agrega al .in y se corre scripts/lock_backend_dependencies.sh.",
+  "rule_refs": {
+    "secrets": "AGENTS.md § 7",
+    "tests": "AGENTS.md § 13 y ADR 0024",
+    "approval": "AGENTS.md § 13",
+    "migrations": "AGENTS.md § 8",
+    "commit": "AGENTS.md § 13",
+    "dependencies": "AGENTS.md § 9"
+  },
+  "notes_dir": ".claude/fastapi-harness/"
+}

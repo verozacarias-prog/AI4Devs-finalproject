@@ -23,14 +23,16 @@ persona se acuerde de invocarla derrota el propósito.
 
 ## Commands
 
-Cuatro comandos versionados en `.claude/commands/`, que se invocan escribiendo `/nombre`. Tres
+Cuatro comandos del plugin `fastapi-harness` ([ADR 0032](adr/0032-el-harness-del-asistente-viene-de-un-plugin.md)),
+que se invocan con su prefijo, como `/fastapi-harness:spec-drift`; acá se nombran sin él. Lo
+propio de Platita para cada uno está en sus notas, en `.claude/fastapi-harness/`. Tres
 son verificaciones, y una verificación se corre cuando la persona decide, no cuando el modelo lo
 infiere. El cuarto, `/ticket`, recorre el flujo de un corte y se detiene en cada punto que decide
 una persona.
 
 | Command | Cuándo | Qué hace |
 |---|---|---|
-| `/ticket` | Al empezar un corte o una tarea, con sus issues | Recorre los pasos de [cómo colaborar](como-colaborar.md#1-incluir-un-cambio), de la issue a la descripción del pull request. Se detiene para que la persona apruebe los casos, pida cada commit y cada revisión, pruebe a mano, y abra e integre el pull request |
+| `/ticket` | Al empezar un corte o una tarea, con sus issues | Recorre los pasos de [cómo colaborar](como-colaborar.md#1-incluir-un-cambio), de la issue a la descripción del pull request. Se detiene para que la persona apruebe los casos, pida cada commit y cada revisión, y pruebe a mano. El asistente abre el pull request cuando la persona pide el push, y el merge lo hace ella |
 | `/ui-states` | Al cerrar el corte vertical 2 | Verifica que la pantalla implemente y testee los cuatro estados, con foco en que *vacío* no esté resuelto como *error* |
 | `/spec-drift` | En modo `corte`, antes del último commit de un corte; en modo `proyecto`, antes de cada entrega | Compara la especificación contra el código y reporta las diferencias **sin resolverlas**. El modo `proyecto` arma la lista de documentos desde `docs/` y dice cuáles no revisó. Al final propone una issue por hallazgo, y las crea solo si la persona las aprueba |
 | `/security-audit` | Antes de cada entrega, no en cada pull request | Audita todo el backend contra el OWASP Top 10 web y el de aplicaciones LLM, de a un hallazgo por vez y por criticidad. No modifica nada. El cruce de diseño está en [seguridad de la capa de IA](seguridad-llm.md) |
@@ -69,13 +71,14 @@ lo escribe el asistente y lo aprueba una persona: ningún asistente despliega ni
 
 ## Agente revisor
 
-Un subagente, versionado en `.claude/agents/`. Es un agente y no un command porque tiene que
+Un subagente del plugin `fastapi-harness`, que se invoca como `fastapi-harness:pr-reviewer`, con
+las notas de Platita en `.claude/fastapi-harness/pr-reviewer.md`. Es un agente y no un command porque tiene que
 partir de cero: corre en un contexto propio, sin la conversación en la que se escribió el
 cambio ([ADR 0022](adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md)).
 
 | Agente | Cuándo | Qué hace |
 |---|---|---|
-| [`pr-reviewer`](../.claude/agents/pr-reviewer.md) | A mano, antes de pedir el merge de cada pull request | Revisa la regla hexagonal más allá del verificador, las reglas de dominio, que nada identificatorio llegue al proveedor ni a un registro, los tests y que en el backend hayan ido antes que el código, la documentación y la tabla de seguridad de la capa de IA. Entrega un informe para pegar en el pull request |
+| [`pr-reviewer`](https://github.com/verozacarias-prog/fastapi-harness/blob/v0.1.1/agents/pr-reviewer.md) | A mano, antes de pedir el merge de cada pull request | Revisa la regla hexagonal más allá del verificador, las reglas de dominio, que nada identificatorio llegue al proveedor ni a un registro, los tests y que en el backend hayan ido antes que el código, la documentación y la tabla de seguridad de la capa de IA. Entrega un informe para pegar en el pull request |
 
 El revisor solo lee e informa. El merge lo hace siempre una persona, y un asistente hace commit
 solo cuando una persona se lo pide.
@@ -83,10 +86,12 @@ solo cuando una persona se lo pide.
 ## Hooks
 
 Hay dos tipos. El de git es el de pre-commit, en [`.githooks/`](../.githooks/), y se activa con
-`git config core.hooksPath .githooks`, una vez por clon. Los del asistente son cuatro, en
-[`.claude/hooks/`](../.claude/hooks/), y Claude Code los corre solo, sin activarlos: actúan en el
-momento en que el asistente lee, edita, corre un comando o termina un turno, antes de que el
-error quede escrito ([ADR 0031](adr/0031-hooks-del-asistente.md)). Necesitan `jq`; sin él se
+`git config core.hooksPath .githooks`, una vez por clon. Los del asistente son cuatro, del plugin
+[`fastapi-harness`](https://github.com/verozacarias-prog/fastapi-harness/blob/v0.1.1/hooks/), configurados para Platita en `.claude/fastapi-harness.json`.
+Una vez instalado el plugin, Claude Code los corre solo: actúan en el momento en que el
+asistente lee, edita, corre un comando o termina un turno, antes de que el error quede escrito
+([ADR 0031](adr/0031-hooks-del-asistente.md) y
+[ADR 0032](adr/0032-el-harness-del-asistente-viene-de-un-plugin.md)). Necesitan `jq`; sin él se
 apagan.
 
 | Hook | Cuándo corre | Qué hace |
@@ -96,21 +101,23 @@ apagan.
 | `block-dangerous-bash.sh` | Antes de un comando | Rechaza `rm -r`, push forzado, reescribir la historia, `git commit --no-verify`, el merge, `production` y despliegues, y leer secretos por la shell. Pregunta antes de `git commit`, `git push`, borrar o cambiar un test, descartar trabajo local, `evals.classification.run --run` y de instalar un paquete |
 | `verify-tests-on-stop.sh` | Al terminar el turno | Corre los tests unitarios del backend o del dashboard, solo la mitad que cambió. En rojo frena una vez, y si sigue en rojo cierra con un aviso. Si lo único que cambió en una mitad son tests, es la fase en rojo y pasa |
 
-Para explorar en local con la suite en rojo, `PLATITA_PERMITIR_ROJO=1` en el `env` de
-`.claude/settings.local.json` apaga el último. Nunca dentro de una entrega. El pipeline prueba
-los cuatro con `scripts/test_assistant_hooks.sh`.
+Para explorar en local con la suite en rojo, `HARNESS_ALLOW_RED=1` en el `env` de
+`.claude/settings.local.json` apaga el último. Nunca dentro de una entrega. Los casos de los
+cuatro los prueba el pipeline del plugin.
 
 El revisor no corre en un hook, por lo que explica el
 [ADR 0022](adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md).
 
 ## Plugin
 
-Un plugin de Claude Code, habilitado en `.claude/settings.json` para que valga en cualquier clon
-y no solo en una máquina. Quien clona el repositorio lo instala una vez, con
-`/plugin install context7@claude-plugins-official`.
+Dos plugins de Claude Code, habilitados en `.claude/settings.json` para que valgan en cualquier
+clon y no solo en una máquina. Quien clona el repositorio los instala una vez, con
+`/plugin install context7@claude-plugins-official` y
+`claude plugin install fastapi-harness@fastapi-harness --scope project`.
 
 | Plugin | Cuándo se usa | Qué hace |
 |---|---|---|
+| `fastapi-harness` | Siempre: los hooks actúan solos, y los comandos y el agente se invocan a mano | Trae los hooks, los comandos y el agente revisor de este documento, en la versión que fija `.claude/settings.json` ([ADR 0032](adr/0032-el-harness-del-asistente-viene-de-un-plugin.md)) |
 | `context7` | Cuando el asistente va a usar una librería y la versión importa | Trae la documentación vigente de esa librería, por versión, en vez de confiar en lo que el modelo recuerda |
 
 No es una verificación y no suma ninguna dependencia al código: es una consulta que hace el
