@@ -281,6 +281,8 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   merge y las evals con `--run` (§ 11 y § 13). Si un hook rechaza o pregunta, no busques otro
   camino para hacer lo mismo: la decisión es de la persona. Sus casos se prueban en el
   repositorio del plugin ([ADR 0032](docs/adr/0032-el-harness-del-asistente-viene-de-un-plugin.md)).
+  El agente `pr-reviewer` y los comandos de este archivo también vienen del plugin, y se invocan
+  con su prefijo, como `fastapi-harness:pr-reviewer` o `/fastapi-harness:security-audit`.
 
 ## 12. Qué leer antes de qué
 

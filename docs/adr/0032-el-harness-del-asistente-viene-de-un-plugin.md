@@ -17,8 +17,8 @@ otro proyecto Python y FastAPI.
    `verozacarias-prog/fastapi-harness`, que es también su marketplace. `.claude/settings.json`
    lo declara y lo fija en un tag, hoy `v0.1.1`. Cada clon lo instala una vez:
    `claude plugin install fastapi-harness@fastapi-harness --scope project`.
-2. **Los hooks controlan lo mismo que decidía el ADR 0031** en sus puntos 2 a 5. Lo que es
-   solo de Platita está en `.claude/fastapi-harness.json`:
+2. **Qué controlan los hooks lo sigue decidiendo el ADR 0031;** este decide de dónde vienen.
+   Lo que es solo de Platita está en `.claude/fastapi-harness.json`:
    - `frontend/e2e/compose.env` como archivo que se puede leer;
    - las carpetas de tests, `backend/tests/` y `frontend/e2e/`, y los `*.test.ts(x)` del
      dashboard;
@@ -27,9 +27,8 @@ otro proyecto Python y FastAPI.
    - las dos suites del cierre del turno, la del backend y la del dashboard;
    - el despliegue con Render, que se rechaza, y el set de regresión con `--run`, que pregunta;
    - la sección de `AGENTS.md` que cada mensaje cita.
-3. **La salida para explorar en local** pasa a ser `HARNESS_ALLOW_RED=1`, en el `env` de
-   `.claude/settings.local.json`. Reemplaza a `PLATITA_PERMITIR_ROJO`. Nunca dentro de una
-   entrega.
+3. **La salida para explorar en local** pasa a llamarse `HARNESS_ALLOW_RED`, porque el plugin
+   no conoce a Platita. Reemplaza a `PLATITA_PERMITIR_ROJO`.
 4. **Los comandos y el agente traen el método;** lo propio de Platita va en
    `.claude/fastapi-harness/<nombre>.md`, versionado en este repositorio. Se invocan con el
    prefijo del plugin, como `/fastapi-harness:spec-drift` y el agente
@@ -53,8 +52,9 @@ otro proyecto Python y FastAPI.
 - Un clon sin el `plugin install` trabaja sin hooks, y solo `/plugin` lo muestra.
 - El pipeline de Platita ya no prueba los hooks: confía en la versión que fija.
 - Para saber qué hace un hook hay que leer dos lugares: el plugin y la configuración de Platita.
-- Lo que el ADR 0031 dice sobre hasta dónde llegan los hooks sigue valiendo: frenan lo que un
-  asistente haría en el curso normal del trabajo, y solo en Claude Code.
+- Los hooks instalados viven fuera del repositorio, en la caché de plugins de Claude Code. El
+  control de que cambiar los hooks pregunta no llega ahí: solo los protege el permiso de Claude
+  Code para escribir fuera del directorio de trabajo.
 
 ## Alternativas descartadas
 
