@@ -27,7 +27,7 @@ lo comprueba.
 
 ## 2. Auditoría antes de cada entrega
 
-El command [`/security-audit`](../.claude/commands/security-audit.md) analiza todo el backend
+El command [`/security-audit`](https://github.com/verozacarias-prog/fastapi-harness/blob/v0.1.1/commands/security-audit.md) analiza todo el backend
 contra el OWASP Top 10 web y contra el de aplicaciones LLM. Muestra un hallazgo por vez, del más
 crítico al menos, con el código vulnerable, el riesgo y la corrección.
 

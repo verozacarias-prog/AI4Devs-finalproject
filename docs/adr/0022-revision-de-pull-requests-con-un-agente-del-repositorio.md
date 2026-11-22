@@ -20,9 +20,10 @@ para otras tareas es un costo, acá es lo que se busca.
 
 ## Decisión
 
-1. **Un agente revisor definido en el repositorio,** en `.claude/agents/pr-reviewer.md`. Corre
-   en un contexto propio, separado del de quien escribió el cambio, y sus criterios están
-   versionados en ese archivo.
+1. **Un agente revisor versionado,** en el plugin `fastapi-harness`
+   ([ADR 0032](0032-el-harness-del-asistente-viene-de-un-plugin.md)), con las notas de Platita
+   en `.claude/fastapi-harness/pr-reviewer.md`. Corre en un contexto propio, separado del de
+   quien escribió el cambio, y sus criterios están versionados en esos dos archivos.
 2. **Se corre a mano, antes de pedir el merge.** No lo dispara ningún hook ni ningún flujo.
 3. **Qué revisa:**
    - la regla hexagonal, más allá de lo que detecta el verificador;

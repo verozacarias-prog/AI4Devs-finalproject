@@ -1,6 +1,6 @@
 # 0031 — Cuatro reglas del asistente las controlan hooks de Claude Code
 
-- Estado: Aceptada
+- Estado: Reemplazada por [0032](0032-el-harness-del-asistente-viene-de-un-plugin.md)
 - Fecha: 2026-11-19
 
 ## Contexto

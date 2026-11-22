@@ -89,6 +89,7 @@ nombres de archivo de código están en inglés.
 - [0029 — El entorno demo en Render, en sus planes pagos más chicos](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0029-el-entorno-demo-en-render-en-planes-pagos/)
 - [0030 — El rol de la aplicación en la base](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0030-rol-de-la-aplicacion-en-la-base/)
 - [0031 — Cuatro reglas del asistente las controlan hooks de Claude Code](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0031-hooks-del-asistente/)
+- [0032 — Los hooks, los comandos y el agente revisor vienen del plugin fastapi-harness](https://verozacarias-prog.github.io/AI4Devs-finalproject/adr/0032-el-harness-del-asistente-viene-de-un-plugin/)
 
 ## Contrato para asistentes de IA
 
