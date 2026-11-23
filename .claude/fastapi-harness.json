@@ -53,6 +53,7 @@
     "approval": "AGENTS.md § 13",
     "migrations": "AGENTS.md § 8",
     "commit": "AGENTS.md § 13",
+    "verify": "AGENTS.md § 11",
     "dependencies": "AGENTS.md § 9"
   }
 }

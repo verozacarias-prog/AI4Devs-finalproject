@@ -15,7 +15,7 @@ otro proyecto Python y FastAPI.
 
 1. **Vienen de un plugin de Claude Code,** `fastapi-harness`, del repositorio público
    `verozacarias-prog/fastapi-harness`, que es también su marketplace. `.claude/settings.json`
-   lo declara y lo fija en un tag, hoy `v0.2.0`. Cada clon lo instala una vez:
+   lo declara y lo fija en un tag, hoy `v0.3.0`. Cada clon lo instala una vez:
    `claude plugin install fastapi-harness@fastapi-harness --scope project`.
 2. **Qué controlan los hooks lo sigue decidiendo el ADR 0031;** este decide de dónde vienen.
    Lo que es solo de Platita está en `.claude/fastapi-harness.json`:
@@ -36,8 +36,10 @@ otro proyecto Python y FastAPI.
    `fastapi-harness:pr-reviewer`.
 5. **Los tests de los hooks** corren en el pipeline del plugin, donde cambian. El de Platita ya
    no los corre.
-6. **Una versión nueva** se toma cambiando `ref` en `.claude/settings.json`, en un pull request,
-   y corriendo `claude plugin update fastapi-harness@fastapi-harness`.
+6. **Una versión nueva** se toma en un pull request que cambia `ref` en `.claude/settings.json`.
+   `claude plugin update` no alcanza: cada clon la instala con los pasos de
+   [«Tomar una versión nueva»](https://github.com/verozacarias-prog/fastapi-harness#tomar-una-versión-nueva)
+   del README del plugin.
 7. **Este ADR es el único lugar de la especificación que nombra el plugin,** junto con el
    [apartado del plugin](../flujo-de-trabajo-con-ia.md#plugin) del flujo de trabajo con IA y el
    comando de instalación de [cómo colaborar](../como-colaborar.md). El resto habla de cada
