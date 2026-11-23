@@ -99,8 +99,8 @@ archivos, que los bloques de código y de Mermaid estén completos, que los nomb
 tengan acentos ni espacios, que la serie numerada no tenga huecos, que los ADR conserven su
 plantilla, y que los skills de `.claude/skills/` abran y cierren su frontmatter y declaren sus
 campos obligatorios. Lo mismo controla en los commands de `.claude/commands/` y en los agentes
-de `.claude/agents/` cuando existen: hoy Platita no tiene ninguno propio, y los del plugin
-`fastapi-harness` los valida el pipeline del plugin
+de `.claude/agents/` cuando existen: hoy Platita no tiene ninguno propio, y los del harness
+del asistente los valida su propio repositorio
 ([ADR 0032](adr/0032-el-harness-del-asistente-viene-de-un-plugin.md)).
 El `name` de un skill tiene que ser el de su directorio, y el de un agente, el de su archivo. Un frontmatter roto no avisa: el
 command no se carga y el skill pierde todos sus campos, cayendo al nombre del directorio y a la

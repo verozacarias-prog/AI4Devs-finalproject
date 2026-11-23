@@ -15,7 +15,7 @@ otro proyecto Python y FastAPI.
 
 1. **Vienen de un plugin de Claude Code,** `fastapi-harness`, del repositorio público
    `verozacarias-prog/fastapi-harness`, que es también su marketplace. `.claude/settings.json`
-   lo declara y lo fija en un tag, hoy `v0.1.1`. Cada clon lo instala una vez:
+   lo declara y lo fija en un tag, hoy `v0.2.0`. Cada clon lo instala una vez:
    `claude plugin install fastapi-harness@fastapi-harness --scope project`.
 2. **Qué controlan los hooks lo sigue decidiendo el ADR 0031;** este decide de dónde vienen.
    Lo que es solo de Platita está en `.claude/fastapi-harness.json`:
@@ -29,14 +29,22 @@ otro proyecto Python y FastAPI.
    - la sección de `AGENTS.md` que cada mensaje cita.
 3. **La salida para explorar en local** pasa a llamarse `HARNESS_ALLOW_RED`, porque el plugin
    no conoce a Platita. Reemplaza a `PLATITA_PERMITIR_ROJO`.
-4. **Los comandos y el agente traen el método;** lo propio de Platita va en
-   `.claude/fastapi-harness/<nombre>.md`, versionado en este repositorio. Se invocan con el
+4. **Los comandos y el agente traen el método;** lo propio de Platita está en `AGENTS.md`, que
+   leen completo, y en los documentos de `docs/` que `AGENTS.md` les indica. Platita no usa las notas que el plugin permite por comando: lo
+   que estaba ahí ya estaba escrito en la especificación, o pasó a ella. Se invocan con el
    prefijo del plugin, como `/fastapi-harness:spec-drift` y el agente
    `fastapi-harness:pr-reviewer`.
 5. **Los tests de los hooks** corren en el pipeline del plugin, donde cambian. El de Platita ya
    no los corre.
 6. **Una versión nueva** se toma cambiando `ref` en `.claude/settings.json`, en un pull request,
    y corriendo `claude plugin update fastapi-harness@fastapi-harness`.
+7. **Este ADR es el único lugar de la especificación que nombra el plugin,** junto con el
+   [apartado del plugin](../flujo-de-trabajo-con-ia.md#plugin) del flujo de trabajo con IA y el
+   comando de instalación de [cómo colaborar](../como-colaborar.md). El resto habla de cada
+   pieza por su rol: `/ticket`, `/spec-drift`, `/security-audit`, `/ui-states` y `pr-reviewer`
+   son los nombres de Platita, y ese apartado dice cómo se invoca cada una. Cambiar de harness
+   es cambiar `.claude/settings.json`, su configuración, ese apartado y ese comando, y escribir
+   un ADR nuevo que reemplace a este.
 
 ## Consecuencias
 

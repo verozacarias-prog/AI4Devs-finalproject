@@ -38,6 +38,9 @@ milestone de la entrega, y su avance se sigue en el
 - El título de un ticket o una tarea empieza con su componente: `[Backend]`, `[FrontEnd]`,
   `[Worker]`, `[Base de datos]`, `[DevOps]`, `[Docs]` o `[Tests]`. Si toca dos, lleva los dos.
 - Una issue organiza el trabajo y enlaza a `docs/`: la especificación sigue estando en `docs/`.
+- Una divergencia entre la especificación y el código que no se corrige en la rama queda en una
+  issue con la etiqueta `bug` si lo que está mal es el código, `documentation` si es la
+  especificación, y `tarea` si falta decidir cuál.
 - El pull request que resuelve una issue la cierra con `Closes #N` en su descripción. Al
   integrarlo, la issue se cierra y su tarjeta pasa a "Hecho". Si la resuelve en parte, lleva
   `Parte de #N` y la issue queda abierta. El del último corte de una historia cierra también la
@@ -51,9 +54,10 @@ claude plugin install fastapi-harness@fastapi-harness --scope project   # los ho
 cd site && npm install                # solo para ver o regenerar el portal
 ```
 
-Los hooks del asistente vienen del plugin `fastapi-harness`: sin el `plugin install`, esa copia
-trabaja sin ellos. Instalados, Claude Code los corre solo, y necesitan `jq` en la máquina. Qué controla cada uno, y cómo apagar el de los tests para explorar en local, está en el
-[flujo de trabajo con IA](flujo-de-trabajo-con-ia.md#hooks).
+Sin la segunda línea, esa copia trabaja sin los hooks del asistente. Qué controla cada uno está
+en el [flujo de trabajo con IA](flujo-de-trabajo-con-ia.md#hooks), y de dónde vienen, qué
+necesitan y cómo apagar el de los tests para explorar en local, en su
+[apartado del plugin](flujo-de-trabajo-con-ia.md#plugin).
 
 **Para incluir un cambio.**
 
@@ -95,7 +99,8 @@ trabaja sin ellos. Instalados, Claude Code los corre solo, y necesitan `jq` en l
 11. **Abrir el pull request contra `platita-v2`,** con el corte en verde y una
    descripción armada desde la plantilla [`pr.md`](features/TEMPLATE/pr.md), con el
    [Definition of Done](07-pull-requests.md#definition-of-done) y `Closes #N`.
-   Correr el agente `pr-reviewer` y resumir su informe.
+   Correr el agente `pr-reviewer` y resumir su informe. Quién abre el pull request y mueve las
+   tarjetas lo dice la [sección 13 de `AGENTS.md`](../AGENTS.md#13-método-de-trabajo).
 12. **Integrar** cuando todos los controles pasan, con un commit de merge y sin aplastar los
     commits, para que se vea que los tests fueron primero. La aprobación y el merge son de una
     persona; un asistente hace commit solo si se lo piden, y nunca hace merge.
