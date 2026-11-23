@@ -27,13 +27,12 @@ OpenSpec, que Platita no usa.
 
 ## Decisión
 
-1. **Cuatro hooks de Claude Code,** que vienen del plugin `fastapi-harness` y se configuran
-   para Platita en `.claude/fastapi-harness.json`
-   ([ADR 0032](0032-el-harness-del-asistente-viene-de-un-plugin.md)). Son scripts de bash que
-   leen con `jq` lo que Claude Code les pasa.
+1. **Cuatro hooks de Claude Code.** De dónde vienen y dónde se configuran para Platita lo
+   decide el [ADR 0032](0032-el-harness-del-asistente-viene-de-un-plugin.md); este decide qué
+   controlan.
 2. **Secretos.** Ningún archivo de entorno, clave ni credencial se lee, ni con la herramienta de
-   lectura ni por la shell: `.env` y sus variantes, `credentials*`, `id_rsa`, `id_ed25519`,
-   `*.pem`, `*.key` y `service-account*.json`. Se pueden leer `.env.example` y
+   lectura, ni con la de búsqueda, ni por la shell: `.env` y sus variantes, `credentials*`,
+   `id_rsa`, `id_ed25519`, `*.pem`, `*.key` y `service-account*.json`. Se pueden leer `.env.example` y
    `frontend/e2e/compose.env`, que están versionados y no tienen secretos.
 3. **Tests, especificación y migraciones.**
    - Sumar líneas enteras a un test existente es libre, con cualquier herramienta. Cambiar o
@@ -43,8 +42,7 @@ OpenSpec, que Platita no usa.
      `pytestmark` y `@mark.skip`.
    - Borrar o cambiar un test desde la shell también pregunta: `rm`, `mv`, `sed -i`, una
      redirección con `>`, y `git checkout`, `restore` o `rm` sobre un test.
-   - Cambiar los hooks o su configuración, `.claude/settings*.json` y
-     `.claude/fastapi-harness.json`, pregunta.
+   - Cambiar los hooks o su configuración, incluidos `.claude/settings*.json`, pregunta.
    - El asistente no puede completar la línea «Aprobado por» de un `spec.md`.
    - Editar una migración que ya está en git pregunta.
    - Los archivos de entorno no se editan, ni una ruta con `..`.
@@ -68,10 +66,10 @@ OpenSpec, que Platita no usa.
      del prompt con `--run` y la instalación de un paquete.
    - Git se lee sin el texto entre comillas, para que el mensaje de un commit no se confunda con
      una bandera, y sin sus opciones globales, para que `git -C <dir> push` sea un push.
-6. **Una salida para explorar en local:** `HARNESS_ALLOW_RED=1`, en el `env` de
-   `.claude/settings.local.json`, apaga el control del cierre del turno. Nunca dentro de una
-   entrega.
-7. **Los hooks tienen sus propios tests,** en el repositorio del plugin, que corren en su
+6. **Una salida para explorar en local:** una variable en el `env` de
+   `.claude/settings.local.json` apaga el control del cierre del turno. Nunca dentro de una
+   entrega. Su nombre lo dice el ADR 0032.
+7. **Los hooks tienen sus propios tests,** en el repositorio de donde vienen, que corren en su
    pipeline. Cada caso le pasa al hook lo que mandaría Claude Code, contra un repositorio
    descartable.
 
@@ -107,8 +105,9 @@ OpenSpec, que Platita no usa.
   los reemplazan.
 - El cierre del turno frena una sola vez. Si el asistente no logra el verde, el turno cierra en
   rojo y lo que queda es el aviso.
-- Sin `jq`, los hooks se apagan solos en lugar de romper la sesión: el control se pierde sin aviso.
-  Lo mismo pasa con el cierre del turno si los tests tardan más de los 300 s de su límite.
+- Si a los hooks les falta lo que necesitan para correr, se apagan solos en lugar de romper la
+  sesión: el control se pierde sin aviso. Lo mismo pasa con el cierre del turno si los tests
+  tardan más que su límite de tiempo.
 - Solo valen en Claude Code. Otra herramienta sigue leyendo `AGENTS.md`, sin ningún control.
 
 ## Alternativas descartadas

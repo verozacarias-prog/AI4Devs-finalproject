@@ -236,7 +236,9 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   sesión documente su `401` y lo que modifica algo su `403`, y que cada operación y cada
   estado que responde estén en `docs/04-api.md`. No valida que `04-api.md` describa cada
   campo, que un endpoint especificado esté implementado, ni que lo especificado para una
-  operación esté en el contrato: compara del contrato hacia la especificación.
+  operación esté en el contrato: compara del contrato hacia la especificación. Tampoco valida
+  que un texto de la referencia de la API diga lo que el código hace: eso lo mira el agente
+  revisor.
 - Los tres tienen que pasar sin errores antes de commitear; el hook de pre-commit los corre solo,
   y el flujo `.github/workflows/docs-quality.yml` los repite en cada pull request junto con
   `markdownlint-cli2` y `lychee`.
@@ -274,15 +276,13 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
   veredicto se resume en el pull request
   ([ADR 0022](docs/adr/0022-revision-de-pull-requests-con-un-agente-del-repositorio.md)).
 - Antes de cada entrega se corre `/security-audit`.
-- Cuatro hooks del asistente, del plugin `fastapi-harness` en la versión que fija
-  `.claude/settings.json` y configurados en `.claude/fastapi-harness.json`, controlan con código
-  parte de este archivo mientras trabajás: los secretos (§ 7), los tests, la línea de aprobación
-  y las migraciones (§ 8 y § 13), la suite en verde al cerrar el turno, y el commit, el push, el
-  merge y las evals con `--run` (§ 11 y § 13). Si un hook rechaza o pregunta, no busques otro
-  camino para hacer lo mismo: la decisión es de la persona. Sus casos se prueban en el
-  repositorio del plugin ([ADR 0032](docs/adr/0032-el-harness-del-asistente-viene-de-un-plugin.md)).
-  El agente `pr-reviewer` y los comandos de este archivo también vienen del plugin, y se invocan
-  con su prefijo, como `fastapi-harness:pr-reviewer` o `/fastapi-harness:security-audit`.
+- Cuatro hooks del asistente controlan con código parte de este archivo mientras trabajás: los
+  secretos (§ 7), los tests, la línea de aprobación y las migraciones (§ 8 y § 13), la suite en
+  verde al cerrar el turno, y el commit, el push, el merge y las evals con `--run` (§ 11 y
+  § 13). Si un hook rechaza o pregunta, no busques otro camino para hacer lo mismo: la decisión
+  es de la persona ([ADR 0031](docs/adr/0031-hooks-del-asistente.md)). De dónde vienen los hooks,
+  los comandos y el agente, y cómo se invocan, está en el
+  [flujo de trabajo con IA](docs/flujo-de-trabajo-con-ia.md#plugin).
 
 ## 12. Qué leer antes de qué
 
@@ -290,6 +290,7 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
 - Ticket de API → [`docs/04-api.md`](docs/04-api.md).
 - Pantalla nueva → [`docs/convenciones-de-desarrollo.md`](docs/convenciones-de-desarrollo.md).
 - Decisión de arquitectura → [`docs/adr/`](docs/adr/).
+- Auditoría de seguridad → [`docs/seguridad-llm.md`](docs/seguridad-llm.md), la sección 2.5 de [`docs/02-arquitectura.md`](docs/02-arquitectura.md) y los ADR [0013](docs/adr/0013-datos-minimos-al-proveedor-de-llm.md), [0016](docs/adr/0016-sesion-de-servidor-en-el-mismo-origen.md), [0017](docs/adr/0017-limites-del-login-y-codigos-con-proposito.md) y [0023](docs/adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md): lo que ya está decidido no se reporta como hallazgo nuevo.
 - Qué entra en la entrega final y qué no → [`docs/hoja-de-ruta.md`](docs/hoja-de-ruta.md#alcance-de-la-entrega-final).
 - Docker, pipeline, registros, métricas del modelo o rutas de salud → los ADR [0021](docs/adr/0021-una-imagen-docker-compose-y-pipeline-de-la-aplicacion.md) y [0023](docs/adr/0023-observabilidad-de-las-llamadas-al-llm-registros-y-eventos-de-seguridad.md), y [`docs/operacion.md`](docs/operacion.md), que separa lo decidido de lo propuesto.
 - Clasificación, memoria, base de conocimiento o prompts → los ADR [0013](docs/adr/0013-datos-minimos-al-proveedor-de-llm.md), [0018](docs/adr/0018-clasificacion-inicial-y-memoria-de-conversacion.md), [0019](docs/adr/0019-base-de-conocimiento-embeddings-ingesta-y-recuperacion.md), [0020](docs/adr/0020-sin-framework-de-orquestacion-de-ia.md), [0025](docs/adr/0025-gpt-5-4-mini-como-modelo-de-lenguaje.md) y [0028](docs/adr/0028-el-modelo-interpreta-el-codigo-controla-las-invariantes.md).
@@ -327,6 +328,8 @@ llaman `hu<N>-c<corte>-<tema>` para un corte de una historia y `tarea-<tema>` pa
 entran por pull request. Los pasos están en [cómo colaborar](docs/como-colaborar.md).
 
 Un asistente hace commit solo cuando una persona se lo pide, y nunca hace merge: la aprobación
-final de un pull request es de una persona.
+final de un pull request es de una persona. Cuando la persona pide el commit y el push, el
+asistente abre también el pull request contra `platita-v2` y pasa las tarjetas de sus issues a
+"En revisión".
 
 Vacío y error no son el mismo estado. Detalle y gates en [`docs/convenciones-de-desarrollo.md`](docs/convenciones-de-desarrollo.md).

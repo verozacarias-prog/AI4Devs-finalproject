@@ -73,7 +73,7 @@ qué merece documentarse, ni dar por buena la semántica de lo que generó.
 
 Cuando la especificación y el código difieren, un asistente no elige un lado: reporta la
 divergencia. El procedimiento completo está en [AGENTS.md](../AGENTS.md) sección 10. El command
-[`/spec-drift`](https://github.com/verozacarias-prog/fastapi-harness/blob/v0.1.1/commands/spec-drift.md) lo corre en dos modos: `corte`, antes del
+[`/spec-drift`](flujo-de-trabajo-con-ia.md#commands) lo corre en dos modos: `corte`, antes del
 último commit de un corte, y `proyecto`, antes de cada entrega. Cada hallazgo termina corregido o
 en una issue que aprueba una persona, para que no quede solo en la conversación.
 

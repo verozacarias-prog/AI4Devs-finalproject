@@ -20,7 +20,7 @@
       "source": {
         "source": "github",
         "repo": "verozacarias-prog/fastapi-harness",
-        "ref": "v0.1.1"
+        "ref": "v0.2.0"
       }
     }
   }

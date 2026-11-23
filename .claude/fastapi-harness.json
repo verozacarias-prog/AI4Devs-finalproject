@@ -54,6 +54,5 @@
     "migrations": "AGENTS.md § 8",
     "commit": "AGENTS.md § 13",
     "dependencies": "AGENTS.md § 9"
-  },
-  "notes_dir": ".claude/fastapi-harness/"
+  }
 }
