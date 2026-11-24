@@ -180,3 +180,8 @@ modelo simulado, entra como Lucía, anota un gasto en el chat y mira el saldo nu
 
 Las ramas, las issues, los pasos para incluir un cambio y los verificadores están en
 [cómo colaborar](docs/como-colaborar.md).
+
+## Licencia
+
+Todos los derechos reservados: el código es visible, pero no se puede usar, copiar ni
+distribuir sin autorización. El detalle está en [`LICENSE`](LICENSE).
