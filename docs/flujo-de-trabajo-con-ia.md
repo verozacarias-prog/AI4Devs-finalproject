@@ -92,12 +92,16 @@ comando o termina un turno, antes de que el error quede escrito
 ([ADR 0031](adr/0031-hooks-del-asistente.md)). De dónde vienen y qué necesitan está en el
 [apartado del plugin](#plugin).
 
-| Control | Cuándo corre | Qué hace |
+| Control | Cuándo corre | Qué regla hace cumplir |
 |---|---|---|
-| Secretos | Antes de leer o buscar en un archivo | Rechaza `.env`, claves y credenciales. `.env.example` y `frontend/e2e/compose.env` se leen |
-| Tests, especificación y migraciones | Antes de editar o escribir | Pregunta antes de cambiar, borrar o deshabilitar algo de un test existente, de editar una migración versionada y de tocar los hooks o su configuración. Rechaza completar la línea «Aprobado por» de un `spec.md` y editar un archivo de entorno. Sumar líneas enteras a un test es libre |
-| Comandos | Antes de un comando | Rechaza `rm -r`, push forzado, reescribir la historia, `git commit --no-verify`, el merge, `production` y despliegues, y leer secretos por la shell. Pregunta antes de `git push`, salvo `--dry-run`, borrar o cambiar un test, descartar trabajo local, `evals.classification.run --run` y de instalar un paquete |
-| Suite en verde | Al terminar el turno | Corre los tests unitarios del backend o del dashboard, solo la mitad que cambió. En rojo frena una vez, y si sigue en rojo cierra con un aviso. Si lo único que cambió en una mitad son tests, es la fase en rojo y pasa |
+| Secretos | Antes de leer, buscar o editar | Ningún secreto entra en el contexto del asistente ([§ 7](../AGENTS.md#7-seguridad)) |
+| Tests, especificación y migraciones | Antes de editar o escribir | Un test no se cambia sin la persona, la línea de aprobación la escribe ella ([§ 13](../AGENTS.md#13-método-de-trabajo)) y una migración aplicada no se edita ([§ 8](../AGENTS.md#8-base-de-datos)) |
+| Comandos | Antes de un comando | El push y el merge son de una persona, y nada saltea el pre-commit, borra en masa ni opera contra `production` ([§ 11](../AGENTS.md#11-comandos-de-verificación) y [§ 13](../AGENTS.md#13-método-de-trabajo)) |
+| Suite en verde | Al terminar el turno | El turno no termina con la suite en rojo, salvo la fase en rojo ([§ 13](../AGENTS.md#13-método-de-trabajo)) |
+
+Qué acciones concretas frena o pregunta cada hook está en la documentación del harness, que
+enlaza el [apartado del plugin](#plugin). La decisión de qué se controla es el
+[ADR 0031](adr/0031-hooks-del-asistente.md).
 
 Para explorar en local con la suite en rojo, una variable en el `env` de
 `.claude/settings.local.json` apaga el último; su nombre está en el
@@ -115,7 +119,7 @@ clon y no solo en una máquina. Quien clona el repositorio los instala una vez, 
 
 | Plugin | Cuándo se usa | Qué hace |
 |---|---|---|
-| `fastapi-harness` | Siempre: los hooks actúan solos, y los comandos y el agente se invocan a mano | Trae los hooks, los comandos y el agente revisor de este documento, en la versión que fija `.claude/settings.json` ([ADR 0032](adr/0032-el-harness-del-asistente-viene-de-un-plugin.md)) |
+| `fastapi-harness` | Siempre: los hooks actúan solos, y los comandos y el agente se invocan a mano | Trae los hooks, los comandos y el agente revisor de este documento, en la versión que fija `.claude/settings.json` ([ADR 0032](adr/0032-el-harness-del-asistente-viene-de-un-plugin.md)). Qué frena o pregunta cada hook, y sus límites, está en su [README](https://github.com/verozacarias-prog/fastapi-harness#readme) |
 | `context7` | Cuando el asistente va a usar una librería y la versión importa | Trae la documentación vigente de esa librería, por versión, en vez de confiar en lo que el modelo recuerda |
 
 Este apartado y el ADR 0032 son los únicos lugares de la especificación que nombran el plugin
@@ -127,7 +131,7 @@ el plugin:
 |---|---|
 | `/ticket`, `/spec-drift`, `/ui-states`, `/security-audit` | `/fastapi-harness:ticket`, `/fastapi-harness:spec-drift`, `/fastapi-harness:ui-states`, `/fastapi-harness:security-audit` |
 | El agente `pr-reviewer` | `fastapi-harness:pr-reviewer` |
-| Los controles de secretos, tests, comandos y suite en verde | `block-secret-reads.sh`, `protect-tests-and-specs.sh`, `block-dangerous-bash.sh` y `verify-tests-on-stop.sh`. Necesitan `jq`; sin él se apagan. Sus casos los prueba el pipeline del plugin |
+| Los controles de secretos, tests, comandos y suite en verde | Los hooks del plugin, que se describen en su README. Sus casos los prueba el pipeline del plugin |
 | La configuración para Platita | `.claude/fastapi-harness.json` |
 | La salida para explorar en local con la suite en rojo | `HARNESS_ALLOW_RED=1` |
 

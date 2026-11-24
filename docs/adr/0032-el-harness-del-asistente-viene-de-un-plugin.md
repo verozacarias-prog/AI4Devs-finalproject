@@ -15,7 +15,7 @@ otro proyecto Python y FastAPI.
 
 1. **Vienen de un plugin de Claude Code,** `fastapi-harness`, del repositorio público
    `verozacarias-prog/fastapi-harness`, que es también su marketplace. `.claude/settings.json`
-   lo declara y lo fija en un tag, hoy `v0.4.0`. Cada clon lo instala una vez:
+   lo declara y lo fija en un tag. Cada clon lo instala una vez:
    `claude plugin install fastapi-harness@fastapi-harness --scope project`.
 2. **Qué controlan los hooks lo sigue decidiendo el ADR 0031;** este decide de dónde vienen.
    Lo que es solo de Platita está en `.claude/fastapi-harness.json`:
