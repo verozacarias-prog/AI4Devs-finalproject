@@ -32,7 +32,7 @@ una persona.
 
 | Command | Cuándo | Qué hace |
 |---|---|---|
-| `/ticket` | Al empezar un corte o una tarea, con sus issues | Recorre los pasos de [cómo colaborar](como-colaborar.md#1-incluir-un-cambio), de la issue a la descripción del pull request. Se detiene para que la persona apruebe los casos, pida cada commit y cada revisión, y pruebe a mano. El asistente abre el pull request cuando la persona pide el commit y el push, y el merge lo hace ella |
+| `/ticket` | Al empezar un corte o una tarea, con sus issues | Recorre los pasos de [cómo colaborar](como-colaborar.md#1-incluir-un-cambio), de la issue a la descripción del pull request. Se detiene para que la persona apruebe los casos, pida cada revisión y el push, y pruebe a mano. El asistente hace el commit de cada paso, abre el pull request cuando la persona pide el push, y el merge lo hace ella |
 | `/ui-states` | Al cerrar el corte vertical 2 | Verifica que la pantalla implemente y testee los cuatro estados, con foco en que *vacío* no esté resuelto como *error* |
 | `/spec-drift` | En modo `corte`, antes del último commit de un corte; en modo `proyecto`, antes de cada entrega | Compara la especificación contra el código y reporta las diferencias **sin resolverlas**. El modo `proyecto` arma la lista de documentos desde `docs/` y dice cuáles no revisó. Al final propone una issue por hallazgo, y las crea solo si la persona las aprueba |
 | `/security-audit` | Antes de cada entrega, no en cada pull request | Audita todo el backend contra el OWASP Top 10 web y el de aplicaciones LLM, de a un hallazgo por vez y por criticidad. No modifica nada. El cruce de diseño está en [seguridad de la capa de IA](seguridad-llm.md) |
@@ -80,7 +80,7 @@ cambio ([ADR 0022](adr/0022-revision-de-pull-requests-con-un-agente-del-reposito
 |---|---|---|
 | `pr-reviewer` | A mano, antes de pedir el merge de cada pull request | Revisa la regla hexagonal más allá del verificador, las reglas de dominio, que nada identificatorio llegue al proveedor ni a un registro, los tests y que en el backend hayan ido antes que el código, la documentación y la tabla de seguridad de la capa de IA. Entrega un informe para pegar en el pull request |
 
-El revisor solo lee e informa. El merge lo hace siempre una persona, y un asistente hace commit
+El revisor solo lee e informa. El merge lo hace siempre una persona, y un asistente hace push
 solo cuando una persona se lo pide.
 
 ## Hooks
@@ -96,7 +96,7 @@ comando o termina un turno, antes de que el error quede escrito
 |---|---|---|
 | Secretos | Antes de leer o buscar en un archivo | Rechaza `.env`, claves y credenciales. `.env.example` y `frontend/e2e/compose.env` se leen |
 | Tests, especificación y migraciones | Antes de editar o escribir | Pregunta antes de cambiar, borrar o deshabilitar algo de un test existente, de editar una migración versionada y de tocar los hooks o su configuración. Rechaza completar la línea «Aprobado por» de un `spec.md` y editar un archivo de entorno. Sumar líneas enteras a un test es libre |
-| Comandos | Antes de un comando | Rechaza `rm -r`, push forzado, reescribir la historia, `git commit --no-verify`, el merge, `production` y despliegues, y leer secretos por la shell. Pregunta antes de `git commit`, `git push`, borrar o cambiar un test, descartar trabajo local, `evals.classification.run --run` y de instalar un paquete |
+| Comandos | Antes de un comando | Rechaza `rm -r`, push forzado, reescribir la historia, `git commit --no-verify`, el merge, `production` y despliegues, y leer secretos por la shell. Pregunta antes de `git push`, salvo `--dry-run`, borrar o cambiar un test, descartar trabajo local, `evals.classification.run --run` y de instalar un paquete |
 | Suite en verde | Al terminar el turno | Corre los tests unitarios del backend o del dashboard, solo la mitad que cambió. En rojo frena una vez, y si sigue en rojo cierra con un aviso. Si lo único que cambió en una mitad son tests, es la fase en rojo y pasa |
 
 Para explorar en local con la suite en rojo, una variable en el `env` de

@@ -103,7 +103,7 @@ necesitan y cómo apagar el de los tests para explorar en local, en su
    tarjetas lo dice la [sección 13 de `AGENTS.md`](../AGENTS.md#13-método-de-trabajo).
 12. **Integrar** cuando todos los controles pasan, con un commit de merge y sin aplastar los
     commits, para que se vea que los tests fueron primero. La aprobación y el merge son de una
-    persona; un asistente hace commit solo si se lo piden, y nunca hace merge.
+    persona; un asistente hace push solo si se lo piden, y nunca hace merge.
 
 **Para abrir y cerrar una entrega.**
 
