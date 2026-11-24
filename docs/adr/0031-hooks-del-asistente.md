@@ -14,7 +14,7 @@ asistente trabaja, lo único que sostiene esas reglas es que el modelo las lea y
 Cuatro de ellas se pueden comprobar en el momento en que el asistente actúa, antes de que el
 error quede escrito: que ningún secreto entre en su contexto, que no cambie un test ni la línea de
 aprobación de una especificación, que no termine un turno con la suite en rojo, y que no haga
-commit, push ni merge, ni gaste en el modelo real, sin que una persona lo pida.
+push ni merge, ni gaste en el modelo real, sin que una persona lo pida.
 
 El [ADR 0024](0024-tests-primero-en-el-backend.md) había previsto un hook que corriera los tests
 después de cada edición, solo para informar, porque en la fase en rojo los tests fallan a
@@ -62,8 +62,8 @@ OpenSpec, que Platita no usa.
      Las banderas cortas cuentan también juntas, como `-fu` o `-nm`. También operar contra
      `production`, que se reconoce como un entorno puesto en `production` fuera de las comillas
      (`APP_ENV=production`, `--env production`), no como la palabra suelta.
-   - Preguntan `git commit`, `git push`, `git reset --hard`, `git clean -f`, el set de regresión
-     del prompt con `--run` y la instalación de un paquete.
+   - Preguntan `git push`, salvo un `--dry-run` de ese mismo push, `git reset --hard`,
+     `git clean -f`, el set de regresión del prompt con `--run` y la instalación de un paquete.
    - Git se lee sin el texto entre comillas, para que el mensaje de un commit no se confunda con
      una bandera, y sin sus opciones globales, para que `git -C <dir> push` sea un push.
 6. **Una salida para explorar en local:** una variable en el `env` de
@@ -87,7 +87,7 @@ OpenSpec, que Platita no usa.
 
 - Cerrar un turno que tocó código tarda unos 6 s si cambió el backend, y unos 25 s si cambiaron
   las dos mitades.
-- Cada commit y cada push piden una confirmación.
+- Cada push pide una confirmación. El commit no: queda en la máquina y se deshace fácil.
 - **Hasta dónde llegan.** Los hooks frenan lo que un asistente haría en el curso normal del
   trabajo, no lo que se arma para esquivarlos. Miran el texto del comando o de la edición, no lo
   que hace, y no hay forma de que esa lista sea completa:

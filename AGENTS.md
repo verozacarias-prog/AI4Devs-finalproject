@@ -278,7 +278,7 @@ estado real, analizá el código; para decidir qué es correcto, la autoridad es
 - Antes de cada entrega se corre `/security-audit`.
 - Cuatro hooks del asistente controlan con código parte de este archivo mientras trabajás: los
   secretos (§ 7), los tests, la línea de aprobación y las migraciones (§ 8 y § 13), la suite en
-  verde al cerrar el turno, y el commit, el push, el merge y las evals con `--run` (§ 11 y
+  verde al cerrar el turno, y el salteo del pre-commit, el push, el merge y las evals con `--run` (§ 11 y
   § 13). Si un hook rechaza o pregunta, no busques otro camino para hacer lo mismo: la decisión
   es de la persona ([ADR 0031](docs/adr/0031-hooks-del-asistente.md)). De dónde vienen los hooks,
   los comandos y el agente, y cómo se invocan, está en el
@@ -327,9 +327,10 @@ de trabajo. `final-project-VNZ` quedó congelada con lo entregado. Las ramas de 
 llaman `hu<N>-c<corte>-<tema>` para un corte de una historia y `tarea-<tema>` para el resto, y
 entran por pull request. Los pasos están en [cómo colaborar](docs/como-colaborar.md).
 
-Un asistente hace commit solo cuando una persona se lo pide, y nunca hace merge: la aprobación
-final de un pull request es de una persona. Cuando la persona pide el commit y el push, el
-asistente abre también el pull request contra `platita-v2` y pasa las tarjetas de sus issues a
+Un asistente hace commit cuando termina un paso, push solo cuando una persona se lo pide, y
+nunca hace merge: la aprobación final de un pull request es de una persona. El commit queda en
+la máquina y se deshace fácil; el push publica. Cuando la persona pide el push, el asistente
+abre también el pull request contra `platita-v2` y pasa las tarjetas de sus issues a
 "En revisión".
 
 Vacío y error no son el mismo estado. Detalle y gates en [`docs/convenciones-de-desarrollo.md`](docs/convenciones-de-desarrollo.md).

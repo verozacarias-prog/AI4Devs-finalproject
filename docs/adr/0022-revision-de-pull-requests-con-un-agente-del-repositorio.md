@@ -42,7 +42,7 @@ para otras tareas es un costo, acá es lo que se busca.
    se pega, para que la descripción se lea en un minuto. Es la plantilla que ya existe,
    [`features/TEMPLATE/pr.md`](../features/TEMPLATE/pr.md).
 6. **La aprobación final es de una persona.** El merge lo hace siempre una persona. Un asistente
-   hace commit solo cuando una persona se lo pide.
+   hace push solo cuando una persona se lo pide.
 
 ## Consecuencias
 
