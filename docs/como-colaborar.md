@@ -55,8 +55,8 @@ cd site && npm install                # solo para ver o regenerar el portal
 ```
 
 Sin la segunda línea, esa copia trabaja sin los hooks del asistente. Qué controla cada uno está
-en el [flujo de trabajo con IA](flujo-de-trabajo-con-ia.md#hooks), y de dónde vienen, qué
-necesitan y cómo apagar el de los tests para explorar en local, en su
+en el [flujo de trabajo con IA](flujo-de-trabajo-con-ia.md#hooks), y de dónde vienen y cómo
+apagar el de los tests para explorar en local, en su
 [apartado del plugin](flujo-de-trabajo-con-ia.md#plugin).
 
 **Para incluir un cambio.**

@@ -86,17 +86,17 @@ solo cuando una persona se lo pide.
 ## Hooks
 
 Hay dos tipos. El de git es el de pre-commit, en [`.githooks/`](../.githooks/), y se activa con
-`git config core.hooksPath .githooks`, una vez por clon. Los del asistente son cuatro, y Claude
-Code los corre solo: actúan en el momento en que el asistente lee, busca, edita, corre un
+`git config core.hooksPath .githooks`, una vez por clon. Los del asistente los corre Claude Code
+solo: actúan en el momento en que el asistente lee, busca, edita, corre un
 comando o termina un turno, antes de que el error quede escrito
-([ADR 0031](adr/0031-hooks-del-asistente.md)). De dónde vienen y qué necesitan está en el
+([ADR 0031](adr/0031-hooks-del-asistente.md)). De dónde vienen está en el
 [apartado del plugin](#plugin).
 
 | Control | Cuándo corre | Qué regla hace cumplir |
 |---|---|---|
 | Secretos | Antes de leer, buscar o editar | Ningún secreto entra en el contexto del asistente ([§ 7](../AGENTS.md#7-seguridad)) |
 | Tests, especificación y migraciones | Antes de editar o escribir | Un test no se cambia sin la persona, la línea de aprobación la escribe ella ([§ 13](../AGENTS.md#13-método-de-trabajo)) y una migración aplicada no se edita ([§ 8](../AGENTS.md#8-base-de-datos)) |
-| Comandos | Antes de un comando | El push y el merge son de una persona, y nada saltea el pre-commit, borra en masa ni opera contra `production` ([§ 11](../AGENTS.md#11-comandos-de-verificación) y [§ 13](../AGENTS.md#13-método-de-trabajo)) |
+| Comandos | Antes de un comando | El push y el merge son de una persona; nada saltea el pre-commit, borra en masa, opera contra `production` ni despliega; el modelo real no se usa sin ok, y un paquete no se instala sin preguntar ([§ 9](../AGENTS.md#9-librerías), [§ 11](../AGENTS.md#11-comandos-de-verificación) y [§ 13](../AGENTS.md#13-método-de-trabajo)) |
 | Suite en verde | Al terminar el turno | El turno no termina con la suite en rojo, salvo la fase en rojo ([§ 13](../AGENTS.md#13-método-de-trabajo)) |
 
 Qué acciones concretas frena o pregunta cada hook está en la documentación del harness, que

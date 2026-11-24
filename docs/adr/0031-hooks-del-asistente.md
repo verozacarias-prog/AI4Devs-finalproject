@@ -38,20 +38,23 @@ OpenSpec, que Platita no usa.
    secretos.
 3. **Tests, especificación y migraciones** ([§ 8](../../AGENTS.md#8-base-de-datos) y
    [§ 13](../../AGENTS.md#13-método-de-trabajo)).
-   - Sumar a un test existente es libre: es la fase en rojo. Cambiar, borrar o deshabilitar
-     algo de uno pregunta.
+   - Sumar un caso a un test existente es libre: es la fase en rojo. Cambiar, borrar o
+     deshabilitar algo de uno pregunta.
    - El asistente no puede completar la línea «Aprobado por» de un `spec.md`.
    - Editar una migración que ya está en git pregunta.
-   - Cambiar los hooks o su configuración pregunta.
+   - Cambiar los hooks o su configuración pregunta, incluidos `.claude/settings.json` y
+     `.claude/fastapi-harness.json`, que son de Platita.
 4. **Cierre del turno** ([§ 13](../../AGENTS.md#13-método-de-trabajo)). Al terminar cada turno
    corren los tests unitarios de la mitad que cambió: el backend, si cambió `backend/app/` o
    `backend/tests/`, y el dashboard, si cambió `frontend/src/`. En rojo, el turno no se cierra.
-   Una mitad cuyos únicos cambios son tests es la fase en rojo, y pasa. Reemplaza el punto 8 del
-   ADR 0024.
+   Una mitad cuyos únicos cambios son tests es la fase en rojo, y pasa. Si a una mitad le falta
+   con qué correr, `backend/.venv` o `frontend/node_modules`, el turno cierra con un aviso.
+   Reemplaza el punto 8 del ADR 0024.
 5. **Comandos** ([§ 9](../../AGENTS.md#9-librerías), [§ 11](../../AGENTS.md#11-comandos-de-verificación)
    y [§ 13](../../AGENTS.md#13-método-de-trabajo)).
-   - Se rechazan el borrado recursivo, el push forzado, reescribir la historia, saltear el
-     pre-commit, el merge, operar contra `production` y desplegar.
+   - Se rechazan el borrado recursivo, borrar un disco, abrir permisos a todos, el push
+     forzado, reescribir la historia, saltear el pre-commit, el merge, operar contra
+     `production` y desplegar.
    - Preguntan el push, descartar trabajo local, el set de regresión del prompt con `--run` y
      la instalación de un paquete.
 6. **Una salida para explorar en local:** una variable en el `env` de
@@ -79,8 +82,8 @@ OpenSpec, que Platita no usa.
 - **Hasta dónde llegan.** Los hooks frenan lo que un asistente haría en el curso normal del
   trabajo, no lo que se arma para esquivarlos. Miran el texto del comando o de la edición, no lo
   que hace, así que a veces frenan de más y a veces dejan pasar: un secreto leído por un
-  programa que lo abre por su cuenta, o un test anulado con lógica y no con `skip`. Los límites
-  concretos están en la documentación del harness. Para eso están el agente revisor, que lee el
+  programa que lo abre por su cuenta, o un test anulado con lógica y no con `skip`. Algunos de
+  esos límites están en la documentación del harness. Para eso están el agente revisor, que lee el
   cambio entero, y la persona. Los hooks no los reemplazan.
 - Si el asistente no logra el verde, el turno puede cerrar en rojo con un aviso, para no dejarlo
   en un bucle con un test que no sabe arreglar.
